@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:nodify="using:Nodify"
+		xmlns:vm="using:TestBuilder.ViewModels"
+		x:Class="TestBuilder.Views.MainWindow"
+		x:DataType="vm:MainWindowViewModel"
+		Width="800"
+		Height="600"
+		Title="Nodify Minimal">
+
+	<Window.DataContext>
+		<vm:MainWindowViewModel />
+	</Window.DataContext>
+
+	<nodify:NodifyEditor ItemsSource="{Binding Nodes}"
+						 Connections="{Binding Connections}"
+						 PendingConnection="{Binding PendingConnection}">
+
+		<!-- Nodes -->
+		<nodify:NodifyEditor.ItemTemplate>
+			<DataTemplate x:DataType="vm:NodeViewModel">
+				<nodify:Node Header="{Binding Title}"
+							 Input="{Binding Input}"
+							 Output="{Binding Output}">
+
+					<nodify:Node.InputConnectorTemplate>
+						<DataTemplate x:DataType="vm:ConnectorViewModel">
+							<nodify:NodeInput Header="{Binding Title}"
+											  IsConnected="{Binding IsConnected}"
+											  Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+						</DataTemplate>
+					</nodify:Node.InputConnectorTemplate>
+
+					<nodify:Node.OutputConnectorTemplate>
+						<DataTemplate x:DataType="vm:ConnectorViewModel">
+							<nodify:NodeOutput Header="{Binding Title}"
+											   IsConnected="{Binding IsConnected}"
+											   Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+						</DataTemplate>
+					</nodify:Node.OutputConnectorTemplate>
+
+				</nodify:Node>
+			</DataTemplate>
+		</nodify:NodifyEditor.ItemTemplate>
+
+		<!-- Connections -->
+		<nodify:NodifyEditor.ConnectionTemplate>
+			<DataTemplate x:DataType="vm:ConnectionViewModel">
+				<nodify:LineConnection
+				Source="{Binding Source.Anchor}"
+				Target="{Binding Target.Anchor}" />
+			</DataTemplate>
+		</nodify:NodifyEditor.ConnectionTemplate>
+
+		<!-- Pending Connections -->
+		<nodify:NodifyEditor.PendingConnectionTemplate>
+			<DataTemplate x:DataType="vm:PendingConnectionViewModel">
+				<nodify:PendingConnection
+				StartedCommand="{Binding StartCommand}"
+				CompletedCommand="{Binding FinishCommand}"
+				AllowOnlyConnectors="True" />
+			</DataTemplate>
+		</nodify:NodifyEditor.PendingConnectionTemplate>
+
+
+	</nodify:NodifyEditor>
+
+</Window>

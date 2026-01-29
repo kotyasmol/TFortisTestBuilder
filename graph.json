@@ -1,0 +1,18 @@
+{
+  "Nodes": [
+    {
+      "Id": "27448655-d800-42a0-a0c7-ffd4a4202f43",
+      "Header": "\u002B1 Node",
+      "Operation": 0,
+      "X": 0,
+      "Y": 0
+    },
+    {
+      "Id": "4fb3c368-97ae-4b67-abfb-ebca608530cb",
+      "Header": "-1 Node",
+      "Operation": 1,
+      "X": 0,
+      "Y": 0
+    }
+  ]
+}
