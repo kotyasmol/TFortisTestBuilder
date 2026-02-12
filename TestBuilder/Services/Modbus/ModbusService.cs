@@ -3,22 +3,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Ports;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace TestBuilder.Services.Modbus
 {
-    /// <summary>
-    /// Универсальный Modbus RTU сервис с асинхронным мониторингом регистров.
-    /// Не зависит от UI и логгеров.
-    /// </summary>
     public class ModbusService : IModbusService, IDisposable
     {
-        private readonly ConcurrentDictionary<(byte slaveId, ushort address), List<Action<ushort[]>>> _watchers
-            = new();
-
+        private readonly ConcurrentDictionary<(byte slaveId, ushort address), List<Action<ushort[]>>> _watchers = new();
         private readonly SemaphoreSlim _ioLock = new(1, 1);
 
         private SerialPort _serialPort;
@@ -32,9 +24,14 @@ namespace TestBuilder.Services.Modbus
         public bool IsConnected { get; private set; }
         public string LastError { get; private set; }
 
-        #region CONNECT / DISCONNECT
+        #region CONNECT
 
-        public async Task<bool> ConnectAsync(string port, int baudRate, Parity parity, int dataBits, StopBits stopBits)
+        public async Task<bool> ConnectAsync(
+            string port,
+            int baudRate,
+            Parity parity,
+            int dataBits,
+            StopBits stopBits)
         {
             try
             {
@@ -45,6 +42,7 @@ namespace TestBuilder.Services.Modbus
                     ReadTimeout = 500,
                     WriteTimeout = 500
                 };
+
                 _serialPort.Open();
 
                 _master = ModbusSerialMaster.CreateRtu(_serialPort);
@@ -65,28 +63,37 @@ namespace TestBuilder.Services.Modbus
             }
         }
 
-        public async Task DisconnectAsync()
+        public async Task<bool> CheckPortAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                StopMonitoring();
-
-                await _ioLock.WaitAsync();
-                try
-                {
-                    _master?.Dispose();
-                    _serialPort?.Close();
-                }
-                finally
-                {
-                    _ioLock.Release();
-                }
-
-                _master = null;
-                _serialPort = null;
-                IsConnected = false;
+                var result = await ReadRegistersAsync(1, 0, 1, cancellationToken);
+                return result.Length == 1;
             }
-            catch { }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task DisconnectAsync()
+        {
+            StopMonitoring();
+
+            await _ioLock.WaitAsync();
+            try
+            {
+                _master?.Dispose();
+                _serialPort?.Close();
+            }
+            finally
+            {
+                _ioLock.Release();
+            }
+
+            _master = null;
+            _serialPort = null;
+            IsConnected = false;
         }
 
         #endregion
@@ -105,18 +112,6 @@ namespace TestBuilder.Services.Modbus
                     list.Add(callback);
                     return list;
                 });
-        }
-
-        public void UnsubscribeRegister(byte slaveId, ushort address, Action<ushort[]> callback)
-        {
-            var key = (slaveId, address);
-
-            if (_watchers.TryGetValue(key, out var list))
-            {
-                list.Remove(callback);
-                if (list.Count == 0)
-                    _watchers.TryRemove(key, out _);
-            }
         }
 
         private void StartMonitoring()
@@ -151,13 +146,13 @@ namespace TestBuilder.Services.Modbus
                     {
                         await _ioLock.WaitAsync(token);
 
-                        ushort[] values = await _master.ReadHoldingRegistersAsync(key.slaveId, key.address, 1);
+                        var values = await _master.ReadHoldingRegistersAsync(
+                            key.slaveId, key.address, 1);
 
-                        if (!_lastValues.TryGetValue(key, out var oldValue) || oldValue != values[0])
+                        if (!_lastValues.TryGetValue(key, out var old) || old != values[0])
                         {
                             _lastValues[key] = values[0];
-
-                            foreach (var cb in callbacks.ToArray())
+                            foreach (var cb in callbacks)
                                 cb(values);
                         }
                     }
@@ -176,11 +171,15 @@ namespace TestBuilder.Services.Modbus
 
         #endregion
 
-        #region DIRECT READ / WRITE
+        #region DIRECT IO
 
-        public async Task<ushort[]> ReadRegistersAsync(byte slaveId, ushort address, ushort count)
+        public async Task<ushort[]> ReadRegistersAsync(
+            byte slaveId,
+            ushort address,
+            ushort count,
+            CancellationToken cancellationToken = default)
         {
-            await _ioLock.WaitAsync();
+            await _ioLock.WaitAsync(cancellationToken);
             try
             {
                 return await _master.ReadHoldingRegistersAsync(slaveId, address, count);
@@ -191,9 +190,14 @@ namespace TestBuilder.Services.Modbus
             }
         }
 
-        public async Task<bool> WriteRegisterAsync(byte slaveId, ushort address, ushort value, bool verify = true)
+        public async Task<bool> WriteRegisterAsync(
+            byte slaveId,
+            ushort address,
+            ushort value,
+            bool verify = true,
+            CancellationToken cancellationToken = default)
         {
-            await _ioLock.WaitAsync();
+            await _ioLock.WaitAsync(cancellationToken);
             try
             {
                 await _master.WriteSingleRegisterAsync(slaveId, address, value);
@@ -201,7 +205,7 @@ namespace TestBuilder.Services.Modbus
                 if (!verify)
                     return true;
 
-                ushort[] read = await _master.ReadHoldingRegistersAsync(slaveId, address, 1);
+                var read = await _master.ReadHoldingRegistersAsync(slaveId, address, 1);
                 return read[0] == value;
             }
             finally

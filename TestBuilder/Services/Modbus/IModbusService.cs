@@ -2,13 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TestBuilder.Services.Modbus
 {
     public interface IModbusService
     {
-        Task<ushort[]> ReadRegistersAsync(byte slaveId, ushort address, ushort count);
-        Task<bool> WriteRegisterAsync(byte slaveId, ushort address, ushort value, bool verify = true);
+        Task<ushort[]> ReadRegistersAsync(
+            byte slaveId,
+            ushort address,
+            ushort count,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> WriteRegisterAsync(
+            byte slaveId,
+            ushort address,
+            ushort value,
+            bool verify = true,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> CheckPortAsync(CancellationToken cancellationToken = default);
     }
 }
