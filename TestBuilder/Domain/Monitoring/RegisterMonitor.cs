@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using TestBuilder.Domain.Modbus; // Здесь будет твой ModbusService/SlaveManager
+using TestBuilder.Domain.Modbus; 
 
 namespace TestBuilder.Domain.Monitoring
 {

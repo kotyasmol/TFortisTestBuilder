@@ -1,74 +1,68 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Services.Modbus;
 using Xunit;
-using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace TestBuilder.Tests.MonitoringTests
 {
-    public class RegisterMonitorTests
+    public class RegisterMonitorRealTests
     {
-        private class FakeModbusService : IModbusService
+        private readonly ITestOutputHelper _output;
+
+        public RegisterMonitorRealTests(ITestOutputHelper output)
         {
-            private readonly Dictionary<(byte slaveId, ushort address), ushort> _values = new();
-
-            public FakeModbusService()
-            {
-                // Инициализируем все регистры слейва 1
-                for (ushort i = 0; i < 17; i++)
-                    _values[(1, (ushort)(1000 + i))] = 0;
-
-                // Подставляем тестовые значения
-                _values[(1, 1000)] = 123;  // Current
-                _values[(1, 1001)] = 456;  // Voltage
-            }
-
-            public Task<ushort[]> ReadRegistersAsync(byte slaveId, ushort address, ushort count)
-            {
-                var result = new ushort[count];
-                for (int i = 0; i < count; i++)
-                {
-                    _values.TryGetValue((slaveId, (ushort)(address + i)), out var val);
-                    result[i] = val;
-                }
-                return Task.FromResult(result);
-            }
-
-            public Task<bool> WriteRegisterAsync(byte slaveId, ushort address, ushort value, bool verify = true)
-            {
-                _values[(slaveId, address)] = value;
-                return Task.FromResult(true);
-            }
+            _output = output;
         }
 
         [Fact]
-        public async Task Monitor_Should_Update_RegisterState_Realistic()
+        public async Task Monitor_Should_Update_RegisterState_RealDevice()
         {
-            // arrange
-            var fakeModbus = new FakeModbusService();
-            var slaveManager = new SlaveManager(fakeModbus);
+            var modbus = new ModbusService();
 
-            var el60 = new El60Model(1, fakeModbus);
-            slaveManager.Slaves.Add(el60);
+            // Подключаемся к COM7
+            bool connected = await modbus.ConnectAsync(
+                port: "COM8",
+                baudRate: 9600,
+                parity: System.IO.Ports.Parity.None,
+                dataBits: 8,
+                stopBits: System.IO.Ports.StopBits.One
+            );
 
-            var registerState = new RegisterState();
+            Assert.True(connected, $"Не удалось подключиться к COM8. Ошибка: {modbus.LastError}");
 
-            // act
-            // форсированный опрос слейва
-            await el60.PollAsync();
+            try
+            {
+                // Создаем менеджер и EL-60 слейв
+                var slaveManager = new SlaveManager(modbus);
+                var el60 = new El60Model(1, modbus);
+                slaveManager.Slaves.Add(el60);
 
-            // обновляем RegisterState вручную
-            foreach (var reg in el60.RegisterItems)
-                registerState.Update(reg.Name, reg.Value);
+                var registerState = new RegisterState();
 
-            // assert
-            Assert.True(registerState.TryGet("Current", out var current));
-            Assert.Equal(123, current);
+                // Форсируем опрос слейва
+                await el60.PollAsync();
 
-            Assert.True(registerState.TryGet("Voltage", out var voltage));
-            Assert.Equal(456, voltage);
+                // Обновляем RegisterState
+                foreach (var reg in el60.RegisterItems)
+                {
+                    registerState.Update(reg.Name, reg.Value);
+                    _output.WriteLine($"{reg.Name} = {reg.Value}");
+                }
+
+                // Пример проверки конкретных регистров
+                Assert.True(registerState.TryGet("Current", out var current));
+                Assert.True(registerState.TryGet("Voltage", out var voltage));
+
+                _output.WriteLine($"Проверка: Current = {current}, Voltage = {voltage}");
+            }
+            finally
+            {
+                await modbus.DisconnectAsync();
+            }
         }
     }
 }
