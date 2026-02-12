@@ -7,62 +7,120 @@
 		Width="800"
 		Height="600"
 		Title="Nodify Minimal">
-
 	<Window.DataContext>
 		<vm:MainWindowViewModel />
 	</Window.DataContext>
 
-	<nodify:NodifyEditor ItemsSource="{Binding Nodes}"
-						 Connections="{Binding Connections}"
-						 PendingConnection="{Binding PendingConnection}">
+	<TabControl>
+		<TabItem Header="ТЕСТИРОВАНИЕ">
+			<ScrollViewer Padding="16">
+				<StackPanel Spacing="8">
+					<TextBlock Text="Подключение к Modbus (COM‑порт)"
+							   FontSize="18"
+							   Margin="0,0,0,8" />
 
-		<!-- Nodes -->
-		<nodify:NodifyEditor.ItemTemplate>
-			<DataTemplate x:DataType="vm:NodeViewModel">
-				<nodify:Node Header="{Binding Title}"
-							 Input="{Binding Input}"
-							 Output="{Binding Output}">
+					<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+						<TextBlock Text="COM‑порт:" VerticalAlignment="Center" />
+						<ComboBox Width="150"
+								  ItemsSource="{Binding AvailablePorts}"
+								  SelectedItem="{Binding SelectedPort}" />
 
-					<nodify:Node.InputConnectorTemplate>
-						<DataTemplate x:DataType="vm:ConnectorViewModel">
-							<nodify:NodeInput Header="{Binding Title}"
-											  IsConnected="{Binding IsConnected}"
-											  Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-						</DataTemplate>
-					</nodify:Node.InputConnectorTemplate>
+						<Button Content="Обновить"
+								Command="{Binding RefreshPortsCommand}" />
+					</StackPanel>
 
-					<nodify:Node.OutputConnectorTemplate>
-						<DataTemplate x:DataType="vm:ConnectorViewModel">
-							<nodify:NodeOutput Header="{Binding Title}"
-											   IsConnected="{Binding IsConnected}"
-											   Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-						</DataTemplate>
-					</nodify:Node.OutputConnectorTemplate>
+					<StackPanel Orientation="Horizontal" Spacing="8">
+						<TextBlock Text="Скорость:" VerticalAlignment="Center" />
+						<TextBox Width="80"
+								 Text="{Binding BaudRate}" />
 
-				</nodify:Node>
-			</DataTemplate>
-		</nodify:NodifyEditor.ItemTemplate>
+						<TextBlock Text="Биты данных:" VerticalAlignment="Center" />
+						<TextBox Width="40"
+								 Text="{Binding DataBits}" />
 
-		<!-- Connections -->
-		<nodify:NodifyEditor.ConnectionTemplate>
-			<DataTemplate x:DataType="vm:ConnectionViewModel">
-				<nodify:LineConnection
-				Source="{Binding Source.Anchor}"
-				Target="{Binding Target.Anchor}" />
-			</DataTemplate>
-		</nodify:NodifyEditor.ConnectionTemplate>
+						<TextBlock Text="Чётность:" VerticalAlignment="Center" />
+						<ComboBox Width="120"
+								  SelectedIndex="{Binding ParityIndex}">
+							<ComboBoxItem Content="None" />
+							<ComboBoxItem Content="Odd" />
+							<ComboBoxItem Content="Even" />
+						</ComboBox>
 
-		<!-- Pending Connections -->
-		<nodify:NodifyEditor.PendingConnectionTemplate>
-			<DataTemplate x:DataType="vm:PendingConnectionViewModel">
-				<nodify:PendingConnection
-				StartedCommand="{Binding StartCommand}"
-				CompletedCommand="{Binding FinishCommand}"
-				AllowOnlyConnectors="True" />
-			</DataTemplate>
-		</nodify:NodifyEditor.PendingConnectionTemplate>
+						<TextBlock Text="Стоп‑биты:" VerticalAlignment="Center" />
+						<ComboBox Width="120"
+								  SelectedIndex="{Binding StopBitsIndex}">
+							<ComboBoxItem Content="One" />
+							<ComboBoxItem Content="Two" />
+						</ComboBox>
+					</StackPanel>
 
+					<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+						<Button Content="Подключиться"
+								Command="{Binding ConnectCommand}" />
 
-	</nodify:NodifyEditor>
+						<Button Content="Отключиться"
+								Command="{Binding DisconnectCommand}" />
+					</StackPanel>
+
+					<TextBlock Text="{Binding StatusMessage}"
+							   Margin="0,8,0,0" />
+				</StackPanel>
+			</ScrollViewer>
+		</TabItem>
+
+		<TabItem Header="ГРАФ">
+			<nodify:NodifyEditor ItemsSource="{Binding Nodes}"
+								 Connections="{Binding Connections}"
+								 PendingConnection="{Binding PendingConnection}">
+
+				<!-- Nodes -->
+				<nodify:NodifyEditor.ItemTemplate>
+					<DataTemplate x:DataType="vm:NodeViewModel">
+						<nodify:Node Header="{Binding Title}"
+									 Input="{Binding Input}"
+									 Output="{Binding Output}">
+
+							<nodify:Node.InputConnectorTemplate>
+								<DataTemplate x:DataType="vm:ConnectorViewModel">
+									<nodify:NodeInput Header="{Binding Title}"
+													  IsConnected="{Binding IsConnected}"
+													  Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+								</DataTemplate>
+							</nodify:Node.InputConnectorTemplate>
+
+							<nodify:Node.OutputConnectorTemplate>
+								<DataTemplate x:DataType="vm:ConnectorViewModel">
+									<nodify:NodeOutput Header="{Binding Title}"
+													   IsConnected="{Binding IsConnected}"
+													   Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+								</DataTemplate>
+							</nodify:Node.OutputConnectorTemplate>
+
+						</nodify:Node>
+					</DataTemplate>
+				</nodify:NodifyEditor.ItemTemplate>
+
+				<!-- Connections -->
+				<nodify:NodifyEditor.ConnectionTemplate>
+					<DataTemplate x:DataType="vm:ConnectionViewModel">
+						<nodify:LineConnection
+						Source="{Binding Source.Anchor}"
+						Target="{Binding Target.Anchor}" />
+					</DataTemplate>
+				</nodify:NodifyEditor.ConnectionTemplate>
+
+				<!-- Pending Connections -->
+				<nodify:NodifyEditor.PendingConnectionTemplate>
+					<DataTemplate x:DataType="vm:PendingConnectionViewModel">
+						<nodify:PendingConnection
+						StartedCommand="{Binding StartCommand}"
+						CompletedCommand="{Binding FinishCommand}"
+						AllowOnlyConnectors="True" />
+					</DataTemplate>
+				</nodify:NodifyEditor.PendingConnectionTemplate>
+
+			</nodify:NodifyEditor>
+		</TabItem>
+	</TabControl>
 
 </Window>
