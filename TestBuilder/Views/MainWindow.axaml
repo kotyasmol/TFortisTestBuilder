@@ -2,6 +2,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:nodify="using:Nodify"
 		xmlns:vm="using:TestBuilder.ViewModels"
+		xmlns:logging="using:TestBuilder.Services.Logging"
 		x:Class="TestBuilder.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		Width="800"
@@ -60,10 +61,37 @@
 
 						<Button Content="Отключиться"
 								Command="{Binding DisconnectCommand}" />
+						
+						<Button Content="Запустить мониторинг"
+								Command="{Binding StartMonitoringCommand}" />
+
+						<Button Content="Остановить мониторинг"
+								Command="{Binding StopMonitoringCommand}" />
 					</StackPanel>
 
 					<TextBlock Text="{Binding StatusMessage}"
 							   Margin="0,8,0,0" />
+
+					<StackPanel Margin="0,12,0,0" Spacing="4"
+								HorizontalAlignment="Left">
+						<TextBlock Text="Лог"
+								   FontWeight="Bold" />
+
+						<Border BorderThickness="1"
+								BorderBrush="Gray">
+							<ListBox ItemsSource="{Binding TestingLogger.Entries}"
+									 Height="150"
+									 Width="350"
+									 ScrollViewer.VerticalScrollBarVisibility="Auto"
+									 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+								<ListBox.ItemTemplate>
+									<DataTemplate x:DataType="logging:LogEntry">
+										<TextBlock Text="{Binding}" />
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+							</ListBox>
+						</Border>
+					</StackPanel>
 				</StackPanel>
 			</ScrollViewer>
 		</TabItem>

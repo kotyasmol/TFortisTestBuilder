@@ -4,7 +4,12 @@ using Nodify;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
+using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Monitoring;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.ViewModels
@@ -12,11 +17,18 @@ namespace TestBuilder.ViewModels
     public partial class MainWindowViewModel : ViewModelBase
     {
         private readonly ModbusService _modbusService = new();
+        private readonly SlaveManager _slaveManager;
+        private readonly RegisterState _registerState = new();
+        private RegisterMonitor _registerMonitor;
+        private CancellationTokenSource _monitorLogCts;
 
         public ObservableCollection<NodeViewModel> Nodes { get; } = new();
         public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
 
         public ObservableCollection<string> AvailablePorts { get; } = new();
+
+        // Логгер для вкладки "ТЕСТИРОВАНИЕ"
+        public ILogger TestingLogger { get; }
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
@@ -56,23 +68,38 @@ namespace TestBuilder.ViewModels
         [ObservableProperty]
         private string? statusMessage;
 
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(StartMonitoringCommand))]
+        [NotifyCanExecuteChangedFor(nameof(StopMonitoringCommand))]
+        private bool isMonitoring;
+
         public PendingConnectionViewModel PendingConnection { get; }
 
         public IAsyncRelayCommand RefreshPortsCommand { get; }
         public IAsyncRelayCommand ConnectCommand { get; }
         public IAsyncRelayCommand DisconnectCommand { get; }
+        public IAsyncRelayCommand StartMonitoringCommand { get; }
+        public IAsyncRelayCommand StopMonitoringCommand { get; }
 
 
         public MainWindowViewModel()
         {
             PendingConnection = new PendingConnectionViewModel(this);
 
-            RefreshPortsCommand = new AsyncRelayCommand(RefreshPortsAsync);
-            ConnectCommand = new AsyncRelayCommand(ConnectAsync, CanConnect);
-            DisconnectCommand = new AsyncRelayCommand(DisconnectAsync, () => IsConnected);
+            _slaveManager = new SlaveManager(_modbusService);
 
-            // Инициализируем список доступных COM-портов
-            _ = RefreshPortsAsync();
+            TestingLogger = LoggingService.Instance.CreateLogger("Testing");
+            TestingLogger.Info("Инициализация вкладки ТЕСТИРОВАНИЕ");
+
+            RefreshPortsCommand = new AsyncRelayCommand(RefreshPortsAsync);
+            // Всегда разрешаем нажатие кнопок, а проверки делаем внутри методов
+            ConnectCommand = new AsyncRelayCommand(ConnectAsync);
+            DisconnectCommand = new AsyncRelayCommand(DisconnectAsync);
+            StartMonitoringCommand = new AsyncRelayCommand(StartMonitoringAsync);
+            StopMonitoringCommand = new AsyncRelayCommand(StopMonitoringAsync);
+
+            // Инициализируем список доступных COM-портов и пробуем автоподключиться
+            _ = InitializeAsync();
 
             var node1 = new NodeViewModel
             {
@@ -96,8 +123,16 @@ namespace TestBuilder.ViewModels
             Connections.Add(new ConnectionViewModel(source, target));
         }
 
+        private async Task InitializeAsync()
+        {
+            await RefreshPortsAsync();
+            await AutoConnectAsync();
+        }
+
         private async Task RefreshPortsAsync()
         {
+            TestingLogger.Info("Сканирование доступных COM‑портов...");
+
             AvailablePorts.Clear();
 
             foreach (var port in SerialPort.GetPortNames().OrderBy(p => p))
@@ -113,6 +148,15 @@ namespace TestBuilder.ViewModels
             StatusMessage = AvailablePorts.Count == 0
                 ? "COM‑порты не найдены"
                 : "Выберите порт и параметры, затем подключитесь";
+
+            if (AvailablePorts.Count == 0)
+            {
+                TestingLogger.Warning("COM‑порты не найдены");
+            }
+            else
+            {
+                TestingLogger.Info($"Найдено COM‑портов: {AvailablePorts.Count}");
+            }
         }
 
         private bool CanConnect()
@@ -130,6 +174,8 @@ namespace TestBuilder.ViewModels
             IsConnecting = true;
             StatusMessage = $"Подключение к {SelectedPort}...";
 
+            TestingLogger.Info($"Подключение к {SelectedPort} (BaudRate={BaudRate}, DataBits={DataBits}, Parity={Parity}, StopBits={StopBits})");
+
             var ok = await _modbusService.ConnectAsync(SelectedPort!, BaudRate, Parity, DataBits, StopBits);
 
             IsConnecting = false;
@@ -138,6 +184,18 @@ namespace TestBuilder.ViewModels
             StatusMessage = ok
                 ? $"Подключено к {SelectedPort}"
                 : $"Ошибка подключения: {_modbusService.LastError}";
+
+            if (ok)
+            {
+                TestingLogger.Info($"Успешное подключение к {SelectedPort}");
+                // После успешного подключения сразу сканируем слейвы и запускаем мониторинг,
+                // как это делалось в предыдущем проекте.
+                await StartMonitoringAsync();
+            }
+            else
+            {
+                TestingLogger.Error($"Ошибка подключения к {SelectedPort}: {_modbusService.LastError}");
+            }
         }
 
         private async Task DisconnectAsync()
@@ -146,11 +204,175 @@ namespace TestBuilder.ViewModels
                 return;
 
             StatusMessage = "Отключение...";
+            TestingLogger.Info("Отключение от Modbus");
+
+            await StopMonitoringAsync();
             await _modbusService.DisconnectAsync();
 
             IsConnected = false;
             IsConnecting = false;
             StatusMessage = "Отключено";
+        }
+
+        private async Task StartMonitoringAsync()
+        {
+            if (!IsConnected || IsMonitoring)
+                return;
+
+            StatusMessage = "Сканирование устройств и запуск мониторинга...";
+            TestingLogger.Info("Сканирование устройств перед запуском мониторинга");
+
+            // Сканируем слейвы
+            await _slaveManager.ScanAsync();
+
+            if (_slaveManager.Slaves.Count == 0)
+            {
+                StatusMessage = "Устройства не найдены, мониторинг не запущен";
+                TestingLogger.Warning("Устройства не найдены, мониторинг не запущен");
+                return;
+            }
+
+            // Создаем и запускаем доменный монитор регистров, если он еще не создан
+            _registerMonitor ??= new RegisterMonitor(_slaveManager, _registerState, TestingLogger)
+            {
+                PollInterval = 1000
+            };
+
+            _registerMonitor.Start();
+
+            // Запускаем отдельный логирующий цикл, который раз в секунду читает значения
+            // из RegisterState и пишет их в лог.
+            _monitorLogCts?.Cancel();
+            _monitorLogCts = new CancellationTokenSource();
+            IsMonitoring = true;
+
+            TestingLogger.Info($"Найдено слейвов: {_slaveManager.Slaves.Count}. Запуск мониторинга и логирования регистров.");
+
+            _ = Task.Run(() => LogLoopAsync(_monitorLogCts.Token));
+        }
+
+        private async Task StopMonitoringAsync()
+        {
+            if (!IsMonitoring)
+                return;
+
+            _monitorLogCts?.Cancel();
+            _registerMonitor?.Stop();
+            IsMonitoring = false;
+
+            StatusMessage = "Мониторинг остановлен";
+            TestingLogger.Info("Мониторинг остановлен");
+
+            // Небольшая пауза, чтобы фоновые задачи успели завершиться
+            await Task.Delay(50);
+        }
+
+        /// <summary>
+        /// Цикл логирования: раз в секунду считывает значения из RegisterState
+        /// и пишет в лог первые 13 регистров каждого слейва.
+        /// Сам опрос устройств выполняет RegisterMonitor.
+        /// </summary>
+        private async Task LogLoopAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                foreach (var slave in _slaveManager.Slaves)
+                {
+                    // Делаем снимок интересующих регистров по именам
+                    var items = slave.RegisterItems;
+                    var count = items.Count < 13 ? items.Count : 13;
+
+                    if (count == 0)
+                        continue;
+
+                    var snapshot = _registerState.GetSnapshot();
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        for (int i = 0; i < count; i++)
+                        {
+                            var reg = items[i];
+                            if (snapshot.TryGetValue(reg.Name, out var value))
+                            {
+                                TestingLogger.Debug($"Slave {slave.SlaveId} {reg.Name}({reg.Address}) = {value}");
+                            }
+                        }
+                    });
+                }
+
+                try
+                {
+                    await Task.Delay(1000, token);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Автоматическое подключение: перебирает доступные COM-порты и
+        /// пытается прочитать 1 регистр (slaveId=1, address=0).
+        /// При первом успешном ответе соединение считается установленным.
+        /// </summary>
+        private async Task AutoConnectAsync()
+        {
+            if (IsConnected || AvailablePorts.Count == 0)
+                return;
+
+            IsConnecting = true;
+            StatusMessage = "Автоподключение к Modbus...";
+
+            TestingLogger.Info("Запуск автоподключения к Modbus");
+
+            const byte testSlaveId = 1;
+            const ushort testAddress = 0;
+
+            foreach (var port in AvailablePorts)
+            {
+                try
+                {
+                    StatusMessage = $"Пробуем порт {port}...";
+
+                    TestingLogger.Debug($"Пробуем порт {port}");
+
+                    var ok = await _modbusService.ConnectAsync(port, BaudRate, Parity, DataBits, StopBits);
+                    if (!ok)
+                    {
+                        TestingLogger.Warning($"Не удалось подключиться к порту {port}: {_modbusService.LastError}");
+                        await _modbusService.DisconnectAsync();
+                        continue;
+                    }
+
+                    // Пробуем прочитать один регистр. Если есть ответ – считаем, что соединение рабочее.
+                    var values = await _modbusService.ReadRegistersAsync(testSlaveId, testAddress, 1);
+                    if (values is { Length: > 0 })
+                    {
+                        SelectedPort = port;
+                        IsConnected = true;
+                        StatusMessage = $"Автоматически подключено к {port} (Slave {testSlaveId}, Addr {testAddress})";
+                        TestingLogger.Info($"Автоматически подключено к {port} (Slave {testSlaveId}, Addr {testAddress})");
+                        // Аналогично старому проекту: как только найден рабочий порт,
+                        // сканируем устройства и запускаем фоновой мониторинг.
+                        await StartMonitoringAsync();
+                        IsConnecting = false;
+                        return;
+                    }
+
+                    await _modbusService.DisconnectAsync();
+                }
+                catch
+                {
+                    TestingLogger.Error($"Ошибка при попытке автоподключения к порту {port}");
+                    await _modbusService.DisconnectAsync();
+                }
+            }
+
+            IsConnecting = false;
+            IsConnected = false;
+            StatusMessage = "Автоподключение не удалось: устройства не отвечают";
+            TestingLogger.Warning("Автоподключение не удалось: устройства не отвечают");
         }
 
         partial void OnParityIndexChanged(int value)

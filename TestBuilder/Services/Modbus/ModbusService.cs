@@ -1,4 +1,4 @@
-﻿using Modbus.Device;
+using Modbus.Device;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -35,25 +35,41 @@ namespace TestBuilder.Services.Modbus
         {
             try
             {
+                // Сначала аккуратно закрываем предыдущее соединение.
                 await DisconnectAsync();
 
-                _serialPort = new SerialPort(port, baudRate, parity, dataBits, stopBits)
+                // Весь блок открытия порта и создания мастера уносим с UI-потока
+                // на thread pool, чтобы SerialPort.Open и внутренние вызовы
+                // NModbus не блокировали интерфейс.
+                return await Task.Run(() =>
                 {
-                    ReadTimeout = 500,
-                    WriteTimeout = 500
-                };
+                    try
+                    {
+                        _serialPort = new SerialPort(port, baudRate, parity, dataBits, stopBits)
+                        {
+                            ReadTimeout = 500,
+                            WriteTimeout = 500
+                        };
 
-                _serialPort.Open();
+                        _serialPort.Open();
 
-                _master = ModbusSerialMaster.CreateRtu(_serialPort);
-                _master.Transport.ReadTimeout = 500;
-                _master.Transport.WriteTimeout = 500;
+                        _master = ModbusSerialMaster.CreateRtu(_serialPort);
+                        _master.Transport.ReadTimeout = 500;
+                        _master.Transport.WriteTimeout = 500;
 
-                IsConnected = true;
-                LastError = null;
+                        IsConnected = true;
+                        LastError = null;
 
-                StartMonitoring();
-                return true;
+                        StartMonitoring();
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        LastError = ex.Message;
+                        IsConnected = false;
+                        return false;
+                    }
+                });
             }
             catch (Exception ex)
             {

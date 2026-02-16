@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ namespace TestBuilder.Domain.Modbus.Models
     public class El60Model : SlaveModelBase
     {
         public const ushort REG_START = 1000;
-        public const ushort REG_COUNT = 17;
+        public const ushort REG_COUNT = 19; // 1000–1018 включительно
 
         // Свойства регистров
         public ushort Current { get; private set; }
@@ -59,6 +59,9 @@ namespace TestBuilder.Domain.Modbus.Models
                 new RegisterItem { Address = 1014, Name = "Auto Mode", Value = 0, IsReadOnly = false, Category = "Auto Control" },
                 new RegisterItem { Address = 1015, Name = "Auto Load Set", Value = 0, IsReadOnly = false, Category = "Auto Control" },
                 new RegisterItem { Address = 1016, Name = "Passive PoE Enable", Value = 0, IsReadOnly = false, Category = "PoE Control" },
+                // Дополнительные служебные/резервные регистры, чтобы покрыть диапазон 1000–1018
+                new RegisterItem { Address = 1017, Name = "Reserved 1", Value = 0, IsReadOnly = true, Category = "Reserved" },
+                new RegisterItem { Address = 1018, Name = "Reserved 2", Value = 0, IsReadOnly = true, Category = "Reserved" },
             };
         }
 
