@@ -54,11 +54,11 @@ namespace TestBuilder.Domain.Modbus
                     SlaveModelBase model = typeValue switch
                     {
                         1 => new El60Model(slaveId, _modbus),
-                        //2 => new Ps1Model(slave, _modbus),
-                        //3 => new Ps2Model(slave, _modbus),
-                        //4 => new El60v5Model(slave, _modbus),
-                        //5 => new Io2Model(slave, _modbus),
-                        //6 => new StandRps1Model(slave, _modbus),
+                        2 => new PS1Model(slaveId, _modbus),
+                        3 => new PS2Model(slaveId, _modbus),
+                        4 => new El60v5Model(slaveId, _modbus),
+                        5 => new IO2Model(slaveId, _modbus),
+                        6 => new StandRpsModel(slaveId, _modbus),
                         //7 => new StandPwr180Model(slave, _modbus),
                         //8 => new Ps3Model(slave, _modbus),
                         //9 => new SimbatModel(slave, _modbus),

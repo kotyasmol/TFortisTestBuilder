@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:logging="using:TestBuilder.Services.Logging"
+             x:Class="TestBuilder.Views.TestView"
+             x:DataType="vm:TestViewModel"
+             Width="500"
+             Height="400">
+
+    <ScrollViewer Padding="16">
+        <StackPanel Spacing="8">
+            
+            <Button Content="{Binding ConnectionButtonText}"
+                    Command="{Binding ToggleConnectionCommand}"
+                    HorizontalAlignment="Stretch"
+                    Padding="8,4"
+                    IsEnabled="True"/>
+
+            <TextBlock Text="{Binding StatusMessage}" 
+                       Margin="0,4,0,8"
+                       TextWrapping="Wrap"/>
+
+            <Border BorderThickness="1" 
+                    BorderBrush="Gray" 
+                    CornerRadius="4">
+                <ListBox ItemsSource="{Binding TestingLogger.Entries}"
+                         Height="250"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="logging:LogEntry">
+                            <TextBlock Text="{Binding}" 
+                                       Margin="2"
+                                       TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

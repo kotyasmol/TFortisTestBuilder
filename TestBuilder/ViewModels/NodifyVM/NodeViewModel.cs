@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestBuilder.ViewModels
+namespace TestBuilder.ViewModels.NodifyVM
 {
     public class NodeViewModel
     {

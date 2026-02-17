@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestBuilder.ViewModels
+namespace TestBuilder.ViewModels.NodifyVM
 {
     public class PendingConnectionViewModel
     {
@@ -23,8 +23,8 @@ namespace TestBuilder.ViewModels
 
             FinishCommand = new RelayCommand<ConnectorViewModel>(target =>
             {
-                if (_source != null && target != null)
-                    _editor.Connect(_source, target);
+               /* if (_source != null && target != null)
+                    _editor.Connect(_source, target);*/
             });
         }
 

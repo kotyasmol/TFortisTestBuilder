@@ -22,6 +22,11 @@ namespace TestBuilder.Domain.Modbus.Models
         /// </summary>
         public List<RegisterItem> RegisterItems { get; protected set; } = new();
 
+        /// <summary>
+        /// Тип устройства (для логов и отображения)
+        /// </summary>
+        public abstract string DeviceType { get; }
+
         protected SlaveModelBase(byte slaveId, IModbusService modbus)
         {
             SlaveId = slaveId;

@@ -1,154 +1,27 @@
 <Window xmlns="https://github.com/avaloniaui"
-		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:nodify="using:Nodify"
-		xmlns:vm="using:TestBuilder.ViewModels"
-		xmlns:logging="using:TestBuilder.Services.Logging"
-		x:Class="TestBuilder.Views.MainWindow"
-		x:DataType="vm:MainWindowViewModel"
-		Width="800"
-		Height="600"
-		Title="Nodify Minimal">
-	<Window.DataContext>
-		<vm:MainWindowViewModel />
-	</Window.DataContext>
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels"
+        xmlns:views="using:TestBuilder.Views"
+        x:Class="TestBuilder.Views.MainWindow"
+        Width="900"
+        Height="650"
+        Title="TestBuilder">
 
-	<TabControl>
-		<TabItem Header="ТЕСТИРОВАНИЕ">
-			<ScrollViewer Padding="16">
-				<StackPanel Spacing="8">
-					<TextBlock Text="Подключение к Modbus (COM‑порт)"
-							   FontSize="18"
-							   Margin="0,0,0,8" />
+    <Window.DataContext>
+        <vm:MainWindowViewModel />
+    </Window.DataContext>
 
-					<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-						<TextBlock Text="COM‑порт:" VerticalAlignment="Center" />
-						<ComboBox Width="150"
-								  ItemsSource="{Binding AvailablePorts}"
-								  SelectedItem="{Binding SelectedPort}" />
+    <DockPanel>
 
-						<Button Content="Обновить"
-								Command="{Binding RefreshPortsCommand}" />
-					</StackPanel>
+        <!-- Верхнее меню / вкладки -->
+        <TabControl DockPanel.Dock="Top">
+            <TabItem Header="Тест">
+                <views:TestView />
+            </TabItem>
+            <TabItem Header="пустая вкладка">
+                <TextBlock Text="Здесь будет другой функционал" />
+            </TabItem>
+        </TabControl>
 
-					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Скорость:" VerticalAlignment="Center" />
-						<TextBox Width="80"
-								 Text="{Binding BaudRate}" />
-
-						<TextBlock Text="Биты данных:" VerticalAlignment="Center" />
-						<TextBox Width="40"
-								 Text="{Binding DataBits}" />
-
-						<TextBlock Text="Чётность:" VerticalAlignment="Center" />
-						<ComboBox Width="120"
-								  SelectedIndex="{Binding ParityIndex}">
-							<ComboBoxItem Content="None" />
-							<ComboBoxItem Content="Odd" />
-							<ComboBoxItem Content="Even" />
-						</ComboBox>
-
-						<TextBlock Text="Стоп‑биты:" VerticalAlignment="Center" />
-						<ComboBox Width="120"
-								  SelectedIndex="{Binding StopBitsIndex}">
-							<ComboBoxItem Content="One" />
-							<ComboBoxItem Content="Two" />
-						</ComboBox>
-					</StackPanel>
-
-					<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-						<Button Content="Подключиться"
-								Command="{Binding ConnectCommand}" />
-
-						<Button Content="Отключиться"
-								Command="{Binding DisconnectCommand}" />
-						
-						<Button Content="Запустить мониторинг"
-								Command="{Binding StartMonitoringCommand}" />
-
-						<Button Content="Остановить мониторинг"
-								Command="{Binding StopMonitoringCommand}" />
-					</StackPanel>
-
-					<TextBlock Text="{Binding StatusMessage}"
-							   Margin="0,8,0,0" />
-
-					<StackPanel Margin="0,12,0,0" Spacing="4"
-								HorizontalAlignment="Left">
-						<TextBlock Text="Лог"
-								   FontWeight="Bold" />
-
-						<Border BorderThickness="1"
-								BorderBrush="Gray">
-							<ListBox ItemsSource="{Binding TestingLogger.Entries}"
-									 Height="150"
-									 Width="350"
-									 ScrollViewer.VerticalScrollBarVisibility="Auto"
-									 ScrollViewer.HorizontalScrollBarVisibility="Auto">
-								<ListBox.ItemTemplate>
-									<DataTemplate x:DataType="logging:LogEntry">
-										<TextBlock Text="{Binding}" />
-									</DataTemplate>
-								</ListBox.ItemTemplate>
-							</ListBox>
-						</Border>
-					</StackPanel>
-				</StackPanel>
-			</ScrollViewer>
-		</TabItem>
-
-		<TabItem Header="ГРАФ">
-			<nodify:NodifyEditor ItemsSource="{Binding Nodes}"
-								 Connections="{Binding Connections}"
-								 PendingConnection="{Binding PendingConnection}">
-
-				<!-- Nodes -->
-				<nodify:NodifyEditor.ItemTemplate>
-					<DataTemplate x:DataType="vm:NodeViewModel">
-						<nodify:Node Header="{Binding Title}"
-									 Input="{Binding Input}"
-									 Output="{Binding Output}">
-
-							<nodify:Node.InputConnectorTemplate>
-								<DataTemplate x:DataType="vm:ConnectorViewModel">
-									<nodify:NodeInput Header="{Binding Title}"
-													  IsConnected="{Binding IsConnected}"
-													  Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-								</DataTemplate>
-							</nodify:Node.InputConnectorTemplate>
-
-							<nodify:Node.OutputConnectorTemplate>
-								<DataTemplate x:DataType="vm:ConnectorViewModel">
-									<nodify:NodeOutput Header="{Binding Title}"
-													   IsConnected="{Binding IsConnected}"
-													   Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-								</DataTemplate>
-							</nodify:Node.OutputConnectorTemplate>
-
-						</nodify:Node>
-					</DataTemplate>
-				</nodify:NodifyEditor.ItemTemplate>
-
-				<!-- Connections -->
-				<nodify:NodifyEditor.ConnectionTemplate>
-					<DataTemplate x:DataType="vm:ConnectionViewModel">
-						<nodify:LineConnection
-						Source="{Binding Source.Anchor}"
-						Target="{Binding Target.Anchor}" />
-					</DataTemplate>
-				</nodify:NodifyEditor.ConnectionTemplate>
-
-				<!-- Pending Connections -->
-				<nodify:NodifyEditor.PendingConnectionTemplate>
-					<DataTemplate x:DataType="vm:PendingConnectionViewModel">
-						<nodify:PendingConnection
-						StartedCommand="{Binding StartCommand}"
-						CompletedCommand="{Binding FinishCommand}"
-						AllowOnlyConnectors="True" />
-					</DataTemplate>
-				</nodify:NodifyEditor.PendingConnectionTemplate>
-
-			</nodify:NodifyEditor>
-		</TabItem>
-	</TabControl>
-
+    </DockPanel>
 </Window>
