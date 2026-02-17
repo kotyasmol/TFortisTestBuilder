@@ -7,36 +7,45 @@
              Width="500"
              Height="400">
 
-    <ScrollViewer Padding="16">
-        <StackPanel Spacing="8">
-            
-            <Button Content="{Binding ConnectionButtonText}"
-                    Command="{Binding ToggleConnectionCommand}"
-                    HorizontalAlignment="Stretch"
-                    Padding="8,4"
-                    IsEnabled="True"/>
+    <StackPanel Spacing="12" >
 
-            <TextBlock Text="{Binding StatusMessage}" 
-                       Margin="0,4,0,8"
-                       TextWrapping="Wrap"/>
+        <!-- Кнопка подключения/отключения -->
+        <Button Content="{Binding ConnectionButtonText}"
+                Command="{Binding ToggleConnectionCommand}"
+                HorizontalAlignment="Stretch"
+                Height="60"
+                FontSize="16"
+                FontWeight="SemiBold" />
 
-            <Border BorderThickness="1" 
-                    BorderBrush="Gray" 
-                    CornerRadius="4">
-                <ListBox ItemsSource="{Binding TestingLogger.Entries}"
-                         Height="250"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                    <ListBox.ItemTemplate>
+        <!-- Статус -->
+        <TextBlock Text="{Binding StatusMessage}"
+                   Margin="0,8"
+                   TextWrapping="Wrap"
+                   FontSize="14" />
+
+        <!-- Лог с прокруткой -->
+        <Border BorderThickness="1"
+                BorderBrush="Gray"
+                CornerRadius="4"
+                Padding="4"
+                VerticalAlignment="Stretch">
+            <ScrollViewer Name="LogScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
+                          Height="280">
+                <ItemsControl Name="LogItemsControl"
+                              ItemsSource="{Binding TestingLogger.Entries}">
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="logging:LogEntry">
-                            <TextBlock Text="{Binding}" 
+                            <TextBlock Text="{Binding}"
                                        Margin="2"
-                                       TextWrapping="Wrap"/>
+                                       TextWrapping="Wrap"
+                                       FontFamily="Consolas" />
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Border>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
 
-        </StackPanel>
-    </ScrollViewer>
+    </StackPanel>
 </UserControl>
