@@ -3,25 +3,25 @@
         xmlns:vm="using:TestBuilder.ViewModels"
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Width="900"
         Height="650"
         Title="TestBuilder">
+
+
 
     <Window.DataContext>
         <vm:MainWindowViewModel />
     </Window.DataContext>
 
     <DockPanel>
-
-        <!-- Верхнее меню / вкладки -->
         <TabControl DockPanel.Dock="Top">
             <TabItem Header="Тест">
-                <views:TestView />
+                <views:TestView DataContext="{Binding TestVM}" />
             </TabItem>
-            <TabItem Header="пустая вкладка">
-                <TextBlock Text="Здесь будет другой функционал" />
+            <TabItem Header="Modbus">
+                <views:ModbusMonitoringView DataContext="{Binding ModbusVM}" />
             </TabItem>
         </TabControl>
-
     </DockPanel>
 </Window>

@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             x:Class="TestBuilder.Views.ModbusMonitoringView"
+             x:DataType="vm:ModbusMonitoringViewModel">
+
+    <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Slaves}">
+            <ItemsControl.ItemTemplate>
+                <!-- DataTemplate без x:DataType, чтобы биндинги разрешались через родител€ -->
+                <DataTemplate>
+                    <Border Margin="5"
+                            Padding="5"
+                            BorderBrush="Gray"
+                            BorderThickness="1">
+                        <StackPanel>
+
+                            <!-- «аголовок устройства -->
+                            <TextBlock FontWeight="Bold"
+                                       Text="{Binding DeviceType}" />
+
+                            <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}"
+                                       Margin="0,0,0,5"/>
+
+                            <!-- “аблица регистров -->
+                            <DataGrid ItemsSource="{Binding RegisterItems}" 
+                                      AutoGenerateColumns="False" 
+                                      IsReadOnly="True" 
+                                      Height="200">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
+                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                                    <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" />
+                                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+
+</UserControl>

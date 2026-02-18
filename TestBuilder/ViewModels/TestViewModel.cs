@@ -15,7 +15,7 @@ namespace TestBuilder.ViewModels
 {
     public partial class TestViewModel : ViewModelBase
     {
-        private readonly ModbusService _modbusService = new();
+        private readonly ModbusService _modbusService;
         private readonly SlaveManager _slaveManager;
         private readonly RegisterState _registerState = new();
         private RegisterMonitor? _registerMonitor;
@@ -36,16 +36,19 @@ namespace TestBuilder.ViewModels
 
         public IAsyncRelayCommand ToggleConnectionCommand { get; }
 
-        public TestViewModel()
+
+        public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
         {
-            IsConnected = false;
-            _slaveManager = new SlaveManager(_modbusService);
+            _modbusService = modbusService;
+            _slaveManager = slaveManager;
+
             TestingLogger = LoggingService.Instance.CreateLogger("Testing");
 
             ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
 
             StatusMessage = "Поиск доступных COM-портов...";
         }
+
 
         private async Task ToggleConnectionAsync()
         {

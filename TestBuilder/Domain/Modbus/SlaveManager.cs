@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Modbus
 {
-    /// <summary>
-    /// Менеджер слейвов Modbus. Скандирует устройства и хранит их модели.
-    /// </summary>
     public class SlaveManager
     {
         private readonly IModbusService _modbus;
@@ -23,33 +18,15 @@ namespace TestBuilder.Domain.Modbus
             _modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
         }
 
-        /// <summary>
-        /// Сканирование доступных устройств.
-        /// </summary>
         public async Task ScanAsync()
         {
-            Slaves.Clear();
+            await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
 
             for (byte slaveId = 1; slaveId <= 30; slaveId++)
             {
                 try
                 {
                     ushort typeValue = (await _modbus.ReadRegistersAsync(slaveId, 0, 1))[0];
-
-                    string deviceType = typeValue switch
-                    {
-                        1 => "EL-60",
-                        2 => "PS-1",
-                        3 => "PS-2",
-                        4 => "EL-60v5",
-                        5 => "IO-02",
-                        6 => "STAND_RPS-01",
-                        7 => "PWR180_STAND",
-                        8 => "PS-3",
-                        9 => "SIMBAT",
-                        10 => "SIMBAT",
-                        _ => $"Неизвестный тип ({typeValue})"
-                    };
 
                     SlaveModelBase model = typeValue switch
                     {
@@ -66,11 +43,17 @@ namespace TestBuilder.Domain.Modbus
                     };
 
                     if (model != null)
-                        Slaves.Add(model);
+                    {
+                        // добавляем в UI-потоке
+                        await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
+
+                        // опрашиваем регистры
+                        await model.PollAsync();
+                    }
                 }
                 catch
                 {
-                    // timeout / нет ответа — можно логировать
+                    // timeout / нет ответа
                 }
             }
         }

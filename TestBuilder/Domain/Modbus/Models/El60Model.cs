@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -41,7 +42,7 @@ namespace TestBuilder.Domain.Modbus.Models
 
         private void InitializeRegisterItems()
         {
-            RegisterItems = new List<RegisterItem>
+            RegisterItems = new ObservableCollection<RegisterItem>
             {
                 new RegisterItem { Address = 1000, Name = "Current", Value = 0, IsReadOnly = true, Category = "Measurements" },
                 new RegisterItem { Address = 1001, Name = "Voltage", Value = 0, IsReadOnly = true, Category = "Measurements" },

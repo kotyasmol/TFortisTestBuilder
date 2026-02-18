@@ -1,20 +1,26 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System;
-using System.IO.Ports;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using TestBuilder.Domain.Modbus;
-using TestBuilder.Domain.Monitoring;
-using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase
     {
-    
+        // Сервис Modbus и менеджер слейвов — единые для всех VM
+        public ModbusService ModbusService { get; }
+        public SlaveManager SlaveManager { get; }
+
+        // Вложенные VM для вкладок
+        public TestViewModel TestVM { get; }
+        public ModbusMonitoringViewModel ModbusVM { get; }
+
+        public MainWindowViewModel()
+        {
+            ModbusService = new ModbusService();
+            SlaveManager = new SlaveManager(ModbusService);
+
+            TestVM = new TestViewModel(ModbusService, SlaveManager);
+            ModbusVM = new ModbusMonitoringViewModel(SlaveManager);
+        }
     }
-    
 }

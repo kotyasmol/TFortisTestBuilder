@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace TestBuilder.Domain.Modbus.Models
 {
     /// <summary>
     /// Модель одного регистра устройства.
     /// </summary>
-    public class RegisterItem
+    public class RegisterItem : INotifyPropertyChanged
     {
+        private ushort _value;
+
         /// <summary>Адрес регистра на слейве</summary>
         public ushort Address { get; set; }
 
@@ -18,12 +17,28 @@ namespace TestBuilder.Domain.Modbus.Models
         public string Name { get; set; }
 
         /// <summary>Текущее значение регистра</summary>
-        public ushort Value { get; set; }
+        public ushort Value
+        {
+            get => _value;
+            set
+            {
+                if (_value == value) return;
+                _value = value;
+                OnPropertyChanged();
+            }
+        }
 
         /// <summary>Признак доступности записи</summary>
         public bool IsReadOnly { get; set; }
 
         /// <summary>Категория/группа регистра (для UI)</summary>
         public string Category { get; set; }
+
+        #region INotifyPropertyChanged
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string propName = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+        #endregion
     }
 }
