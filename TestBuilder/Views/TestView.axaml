@@ -3,49 +3,78 @@
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:logging="using:TestBuilder.Services.Logging"
              x:Class="TestBuilder.Views.TestView"
-             x:DataType="vm:TestViewModel"
-             Width="500"
-             Height="400">
+             x:DataType="vm:TestViewModel">
 
-    <StackPanel Spacing="12" >
+    <Grid ColumnDefinitions="300,*">
 
-        <!-- Кнопка подключения/отключения -->
-        <Button Content="{Binding ConnectionButtonText}"
-                Command="{Binding ToggleConnectionCommand}"
-                HorizontalAlignment="Stretch"
-                Height="60"
-                FontSize="16"
-                FontWeight="SemiBold" />
+        <!-- ================= LEFT SIDE ================= -->
+        <Grid Grid.Column="0"
+              RowDefinitions="Auto,*"
+              Margin="10">
 
-        <!-- Статус -->
-        <TextBlock Text="{Binding StatusMessage}"
-                   Margin="0,8"
-                   TextWrapping="Wrap"
-                   FontSize="14" />
+            <!-- Верхняя панель -->
+            <StackPanel Grid.Row="0"
+                        Spacing="8">
 
-        <!-- Лог с прокруткой -->
-        <Border BorderThickness="1"
+                <Button Content="{Binding ConnectionButtonText}"
+                        Command="{Binding ToggleConnectionCommand}"
+                        Height="40"
+                        FontSize="16"
+                        FontWeight="SemiBold"/>
+
+                <Button Content="Test 1"
+        Command="{Binding Test1Command}"
+        Height="35"/>
+
+                <Button Content="Test 2"
+                        Height="35"/>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Margin="0,6,0,0"
+                           TextWrapping="Wrap"
+                           FontSize="14"/>
+            </StackPanel>
+
+            <!-- Логи -->
+            <Border Grid.Row="1"
+                    BorderThickness="1"
+                    BorderBrush="Gray"
+                    CornerRadius="4"
+                    Padding="4"
+                    Margin="0,10,0,0">
+
+                <ScrollViewer x:Name="LogScrollViewer"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+
+                    <ItemsControl x:Name="LogItemsControl"
+                                  ItemsSource="{Binding TestingLogger.Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="logging:LogEntry">
+                                <TextBlock Text="{Binding}"
+                                           Margin="2"
+                                           TextWrapping="Wrap"
+                                           FontFamily="Consolas"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </ScrollViewer>
+
+            </Border>
+
+        </Grid>
+
+        <!-- ================= RIGHT SIDE ================= -->
+        <Border Grid.Column="1"
+                Margin="10"
                 BorderBrush="Gray"
-                CornerRadius="4"
-                Padding="4"
-                VerticalAlignment="Stretch">
-            <ScrollViewer Name="LogScrollViewer"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto"
-                          Height="280">
-                <ItemsControl Name="LogItemsControl"
-                              ItemsSource="{Binding TestingLogger.Entries}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="logging:LogEntry">
-                            <TextBlock Text="{Binding}"
-                                       Margin="2"
-                                       TextWrapping="Wrap"
-                                       FontFamily="Consolas" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                BorderThickness="1"
+                CornerRadius="4">
+
+            <Canvas Background="#1E1E1E"/>
+
         </Border>
 
-    </StackPanel>
+    </Grid>
 </UserControl>

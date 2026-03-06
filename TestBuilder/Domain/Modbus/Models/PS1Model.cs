@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -35,7 +36,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte ClearStatistics { get; private set; }        // 1113
         public byte HeaterRelayEnable { get; private set; }      // 1114
 
-        public List<RegisterItem> RegisterItems { get; private set; } = new();
+        // Используем базовое ObservableCollection<RegisterItem> из SlaveModelBase
 
         public PS1Model(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)
@@ -45,7 +46,7 @@ namespace TestBuilder.Domain.Modbus.Models
 
         private void InitializeRegisterItems()
         {
-            RegisterItems = new List<RegisterItem>
+            RegisterItems = new ObservableCollection<RegisterItem>
             {
                 new RegisterItem { Address = 1100, Name = "AC Output 1", Value = 0, IsReadOnly = false, Category = "AC Control" },
                 new RegisterItem { Address = 1101, Name = "AC Output 2", Value = 0, IsReadOnly = false, Category = "AC Control" },

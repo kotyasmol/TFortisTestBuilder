@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using TestBuilder.Services.Modbus;
 
@@ -42,8 +42,6 @@ namespace TestBuilder.Domain.Modbus.Models
         // ===== Статистика =====
         public byte ClearStatistics { get; private set; }      // 1219
 
-        public List<RegisterItem> RegisterItems { get; private set; } = new();
-
         public PS2Model(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)
         {
@@ -52,7 +50,7 @@ namespace TestBuilder.Domain.Modbus.Models
 
         private void InitializeRegisterItems()
         {
-            RegisterItems = new List<RegisterItem>
+            RegisterItems = new ObservableCollection<RegisterItem>
             {
                 new RegisterItem { Address = 1200, Name = "AC Output 1", Value = 0, IsReadOnly = false, Category = "AC Control" },
                 new RegisterItem { Address = 1201, Name = "AC Output 2", Value = 0, IsReadOnly = false, Category = "AC Control" },

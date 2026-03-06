@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using System;
 using System.Collections.ObjectModel;
 
@@ -102,14 +103,21 @@ namespace TestBuilder.Services.Logging
 
             public void Log(LogLevel level, string message)
             {
-                Entries.Add(new LogEntry(DateTime.Now, level, Category, message));
+                var entry = new LogEntry(DateTime.Now, level, Category, message);
 
-                // Простейшее ограничение размера лога, чтобы не разрастался бесконечно.
-                if (Entries.Count > 1000)
+                Dispatcher.UIThread.Post(() =>
                 {
-                    Entries.RemoveAt(0);
-                }
+                    // Добавляем новую запись
+                    Entries.Add(entry);
+
+                    // Ограничиваем размер
+                    if (Entries.Count > 1000)
+                    {
+                        Entries.RemoveAt(0);
+                    }
+                });
             }
+
 
             public void Trace(string message) => Log(LogLevel.Trace, message);
             public void Debug(string message) => Log(LogLevel.Debug, message);

@@ -11,10 +11,10 @@ namespace TestBuilder.Domain.Modbus.Models
         private ushort _value;
 
         /// <summary>Адрес регистра на слейве</summary>
-        public ushort Address { get; set; }
+        public int Address { get; set; }
 
         /// <summary>Название регистра (для UI)</summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>Текущее значение регистра</summary>
         public ushort Value
@@ -32,13 +32,13 @@ namespace TestBuilder.Domain.Modbus.Models
         public bool IsReadOnly { get; set; }
 
         /// <summary>Категория/группа регистра (для UI)</summary>
-        public string Category { get; set; }
+        public string Category { get; set; } = string.Empty;
 
         #region INotifyPropertyChanged
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected void OnPropertyChanged([CallerMemberName] string propName = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         #endregion
     }
 }

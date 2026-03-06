@@ -10,6 +10,8 @@ namespace TestBuilder.ViewModels
         public ModbusService ModbusService { get; }
         public SlaveManager SlaveManager { get; }
 
+        
+
         // Вложенные VM для вкладок
         public TestViewModel TestVM { get; }
         public ModbusMonitoringViewModel ModbusVM { get; }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using TestBuilder.Services.Modbus;
 
@@ -47,7 +47,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte Rs485Read { get; private set; }       // 1528
         public byte Rs485Write { get; private set; }      // 1529
 
-        public List<RegisterItem> RegisterItems { get; private set; } = new();
+        public ObservableCollection<RegisterItem> RegisterItems { get; private set; } = new();
 
         public IO2Model(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)

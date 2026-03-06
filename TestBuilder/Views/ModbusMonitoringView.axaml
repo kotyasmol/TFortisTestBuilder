@@ -1,14 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:models="using:TestBuilder.Domain.Modbus.Models"
              x:Class="TestBuilder.Views.ModbusMonitoringView"
              x:DataType="vm:ModbusMonitoringViewModel">
 
     <ScrollViewer>
         <ItemsControl ItemsSource="{Binding Slaves}">
             <ItemsControl.ItemTemplate>
-                <!-- DataTemplate без x:DataType, чтобы биндинги разрешались через родителя -->
-                <DataTemplate>
+                <!-- Указываем x:DataType для шаблона, чтобы биндинги внутри разрешались как SlaveModelBase -->
+                <DataTemplate x:DataType="models:SlaveModelBase">
                     <Border Margin="5"
                             Padding="5"
                             BorderBrush="Gray"

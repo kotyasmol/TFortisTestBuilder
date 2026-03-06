@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using TestBuilder.Services.Modbus;
 
@@ -9,6 +9,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public const ushort REG_START = 1300;
         public const ushort REG_COUNT = 20; // 1300–1319
         public override string DeviceType => "Stand Rps";
+
         // ===== Управление подключениями =====
         public byte Ac230Enable { get; private set; }          // 1300
         public byte LatrEnable { get; private set; }           // 1301
@@ -45,8 +46,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte MaxRadiatorTemperature { get; private set; } // 1318
         public byte ClearStatistics { get; private set; }        // 1319
 
-        public List<RegisterItem> RegisterItems { get; private set; } = new();
-
+        // Используем ObservableCollection из базового класса (не скрываем свойство)
         public StandRpsModel(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)
         {
@@ -55,7 +55,8 @@ namespace TestBuilder.Domain.Modbus.Models
 
         private void InitializeRegisterItems()
         {
-            RegisterItems = new List<RegisterItem>
+            // Заполняем базовое свойство ObservableCollection
+            RegisterItems = new ObservableCollection<RegisterItem>
             {
                 new RegisterItem { Address = 1300, Name = "AC 230V Enable", Value = 0, IsReadOnly = false, Category = "Power Control" },
                 new RegisterItem { Address = 1301, Name = "LATR Enable", Value = 0, IsReadOnly = false, Category = "Power Control" },
@@ -90,81 +91,12 @@ namespace TestBuilder.Domain.Modbus.Models
         public override async Task PollAsync()
         {
             var regs = await Modbus.ReadRegistersAsync(SlaveId, REG_START, REG_COUNT);
-
-            Ac230Enable = (byte)regs[0];
-            LatrEnable = (byte)regs[1];
-            BatteryEnable = (byte)regs[2];
-            BatteryPolarity = (byte)regs[3];
-            ThermoEmulator = unchecked((sbyte)regs[4]);
-
-            Relay1State = (byte)regs[5];
-            Relay2State = (byte)regs[6];
-
-            LoadKey = (byte)regs[7];
-            ChargeControlResistance = regs[8];
-
-            BatteryVoltage = regs[9];
-            BatteryCurrent = regs[10];
-
-            Input230Present = (byte)regs[11];
-            Output230Present = (byte)regs[12];
-
-            SensorTemp1 = unchecked((sbyte)regs[13]);
-            SensorTemp2 = unchecked((sbyte)regs[14]);
-
-            FanControlKey = (byte)regs[15];
-            FanOffTemperature = regs[16];
-            FanOnTemperature = (byte)regs[17];
-
-            MaxRadiatorTemperature = (byte)regs[18];
-            ClearStatistics = (byte)regs[19];
-
+            // Обновляем значения в существующих RegisterItems, ожидая, что RegisterItem.Value вызывает PropertyChanged
             for (int i = 0; i < REG_COUNT && i < RegisterItems.Count; i++)
                 RegisterItems[i].Value = regs[i];
 
             OnPropertyChanged(string.Empty);
             OnPropertyChanged(nameof(RegisterItems));
         }
-
-        public async Task WriteRegisterAsync(ushort address, ushort value)
-        {
-            await Modbus.WriteRegisterAsync(SlaveId, address, value);
-            await PollAsync();
-        }
-
-        // ===== Быстрое управление =====
-
-        public Task EnableAc(bool enable) =>
-            WriteRegisterAsync(1300, (ushort)(enable ? 1 : 0));
-
-        public Task EnableBattery(bool enable) =>
-            WriteRegisterAsync(1302, (ushort)(enable ? 1 : 0));
-
-        public Task SetBatteryPolarity(byte polarity) =>
-            WriteRegisterAsync(1303, polarity);
-
-        public Task SetThermoEmulator(sbyte value) =>
-            WriteRegisterAsync(1304, unchecked((ushort)value));
-
-        public Task EnableLoad(bool enable) =>
-            WriteRegisterAsync(1307, (ushort)(enable ? 1 : 0));
-
-        public Task SetChargeResistance(ushort ohm) =>
-            WriteRegisterAsync(1308, ohm);
-
-        public Task EnableFans(bool enable) =>
-            WriteRegisterAsync(1315, (ushort)(enable ? 1 : 0));
-
-        public Task SetFanOffTemperature(ushort temp) =>
-            WriteRegisterAsync(1316, temp);
-
-        public Task SetFanOnTemperature(byte temp) =>
-            WriteRegisterAsync(1317, temp);
-
-        public Task SetMaxRadiatorTemperature(byte temp) =>
-            WriteRegisterAsync(1318, temp);
-
-        public Task ClearStats() =>
-            WriteRegisterAsync(1319, 1);
     }
 }
