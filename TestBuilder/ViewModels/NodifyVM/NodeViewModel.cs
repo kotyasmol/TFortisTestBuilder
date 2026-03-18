@@ -1,15 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Avalonia;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TestBuilder.ViewModels.NodifyVM
 {
-    public class NodeViewModel
+    public partial class NodeViewModel : ObservableObject
     {
-        public string Title { get; set; } = string.Empty;
+        [ObservableProperty]
+        private string title = string.Empty;
+
+        [ObservableProperty]
+        private Point location;
+
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
     }

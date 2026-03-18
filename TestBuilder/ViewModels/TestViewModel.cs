@@ -2,18 +2,22 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
+using TestBuilder.ViewModels.NodifyVM;
+using Avalonia;
 
 namespace TestBuilder.ViewModels;
 
-public partial class TestViewModel : ViewModelBase
+public partial class TestViewModel : ViewModelBase, IGraphEditor
 {
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
@@ -42,6 +46,16 @@ public partial class TestViewModel : ViewModelBase
     public IAsyncRelayCommand ToggleConnectionCommand { get; }
     public IAsyncRelayCommand Test1Command { get; }
 
+
+    // NODIFY
+
+    public ObservableCollection<NodeViewModel> Nodes { get; } = new();
+    public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
+    public PendingConnectionViewModel PendingConnection { get; }
+    public ICommand DisconnectConnectorCommand { get; }
+
+
+
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
         _modbusService = modbusService;
@@ -52,8 +66,75 @@ public partial class TestViewModel : ViewModelBase
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         Test1Command = new AsyncRelayCommand(PulseLoadSetAAsync);
 
+        // ===== Nodify init =====
+        PendingConnection = new PendingConnectionViewModel(this);
+
+        DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel>(connector =>
+        {
+            var connection = Connections.FirstOrDefault(x =>
+                x.Source == connector || x.Target == connector);
+
+            if (connection != null)
+            {
+                connection.Source.IsConnected = false;
+                connection.Target.IsConnected = false;
+                Connections.Remove(connection);
+            }
+        });
+
+        InitGraph(); // 👈 важно
+
         StatusMessage = "Готов к подключению.";
     }
+
+    // GRAPH INIT
+    // =========================
+    private void InitGraph()
+    {
+        var start = CreateNode("Start", 100, 100, hasOutput: true);
+        var step = CreateNode("Step", 400, 150, hasInput: true, hasOutput: true);
+        var end = CreateNode("End", 700, 200, hasInput: true);
+
+        Nodes.Add(start);
+        Nodes.Add(step);
+        Nodes.Add(end);
+
+        Connections.Add(new ConnectionViewModel(
+            start.Output.First(),
+            step.Input.First()
+        ));
+
+        Connections.Add(new ConnectionViewModel(
+            step.Output.First(),
+            end.Input.First()
+        ));
+    }
+
+    private NodeViewModel CreateNode(string title, double x, double y, bool hasInput = false, bool hasOutput = false)
+    {
+        var node = new NodeViewModel
+        {
+            Title = title,
+            Location = new Point(x, y)
+        };
+
+        if (hasInput)
+            node.Input.Add(new ConnectorViewModel { Title = "In" });
+
+        if (hasOutput)
+            node.Output.Add(new ConnectorViewModel { Title = "Out" });
+
+        return node;
+    }
+
+    // =========================
+    // CONNECT (используется Nodify)
+    // =========================
+    public void Connect(ConnectorViewModel source, ConnectorViewModel target)
+    {
+        Connections.Add(new ConnectionViewModel(source, target));
+    }
+
 
     private async Task PulseLoadSetAAsync()
     {
@@ -96,7 +177,6 @@ public partial class TestViewModel : ViewModelBase
             TestingLogger.Error($"Ошибка Test1: {ex.Message}");
         }
     }
-
     private async Task ToggleConnectionAsync()
     {
         try
@@ -114,7 +194,6 @@ public partial class TestViewModel : ViewModelBase
 
         OnPropertyChanged(nameof(ConnectionButtonText));
     }
-
     private async Task ConnectAsync()
     {
         StatusMessage = "Поиск COM-портов...";
@@ -167,7 +246,6 @@ public partial class TestViewModel : ViewModelBase
 
         StatusMessage = "Не удалось подключиться.";
     }
-
     private async Task StartMonitoringAsync()
     {
         await _slaveManager.ScanAsync();
@@ -194,7 +272,6 @@ public partial class TestViewModel : ViewModelBase
 
         _ = Task.Run(() => LogLoopAsync(_monitorCts.Token));
     }
-
     private async Task DisconnectAsync()
     {
         StatusMessage = "Отключение...";
@@ -211,7 +288,6 @@ public partial class TestViewModel : ViewModelBase
         IsConnected = false;
         StatusMessage = "Отключено.";
     }
-
     private async Task LogLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)

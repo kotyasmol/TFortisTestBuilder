@@ -2,40 +2,33 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:logging="using:TestBuilder.Services.Logging"
+             xmlns:nodify="using:Nodify"
+             xmlns:nodifyvm="using:TestBuilder.ViewModels.NodifyVM"
              x:Class="TestBuilder.Views.TestView"
              x:DataType="vm:TestViewModel">
 
     <Grid ColumnDefinitions="300,*">
 
-        <!-- ================= LEFT SIDE ================= -->
-        <Grid Grid.Column="0"
-              RowDefinitions="Auto,*"
-              Margin="10">
+        <!-- LEFT PANEL -->
+        <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="10">
 
-            <!-- Верхняя панель -->
-            <StackPanel Grid.Row="0"
-                        Spacing="8">
-
+            <StackPanel Grid.Row="0" Spacing="8">
                 <Button Content="{Binding ConnectionButtonText}"
                         Command="{Binding ToggleConnectionCommand}"
                         Height="40"
                         FontSize="16"
                         FontWeight="SemiBold"/>
-
                 <Button Content="Test 1"
-        Command="{Binding Test1Command}"
-        Height="35"/>
-
-                <Button Content="Test 2"
+                        Command="{Binding Test1Command}"
                         Height="35"/>
-
+                <Button Content="Test 2" Height="35"/>
                 <TextBlock Text="{Binding StatusMessage}"
                            Margin="0,6,0,0"
                            TextWrapping="Wrap"
                            FontSize="14"/>
             </StackPanel>
 
-            <!-- Логи -->
+            <!-- LOGS -->
             <Border Grid.Row="1"
                     BorderThickness="1"
                     BorderBrush="Gray"
@@ -43,12 +36,9 @@
                     Padding="4"
                     Margin="0,10,0,0">
 
-                <ScrollViewer x:Name="LogScrollViewer"
-                              VerticalScrollBarVisibility="Auto"
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
-
-                    <ItemsControl x:Name="LogItemsControl"
-                                  ItemsSource="{Binding TestingLogger.Entries}">
+                    <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="logging:LogEntry">
                                 <TextBlock Text="{Binding}"
@@ -58,21 +48,77 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-
                 </ScrollViewer>
 
             </Border>
 
         </Grid>
 
-        <!-- ================= RIGHT SIDE ================= -->
+        <!-- RIGHT PANEL: NODIFY -->
         <Border Grid.Column="1"
                 Margin="10"
                 BorderBrush="Gray"
                 BorderThickness="1"
                 CornerRadius="4">
 
-            <Canvas Background="#1E1E1E"/>
+            <nodify:NodifyEditor
+                ItemsSource="{Binding Nodes}"
+                Connections="{Binding Connections}"
+                PendingConnection="{Binding PendingConnection}"
+                DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}">
+
+                <!-- NODES -->
+                <nodify:NodifyEditor.ItemTemplate>
+                    <DataTemplate x:DataType="nodifyvm:NodeViewModel">
+                        <nodify:Node Header="{Binding Title}"
+                                     Input="{Binding Input}"
+                                     Output="{Binding Output}">
+
+                            <!-- INPUT -->
+                            <nodify:Node.InputConnectorTemplate>
+                                <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                    <nodify:NodeInput
+                                        Header="{Binding Title}"
+                                        
+                                        IsConnected="{Binding IsConnected}"
+                                        Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                </DataTemplate>
+                            </nodify:Node.InputConnectorTemplate>
+
+                            <!-- OUTPUT -->
+                            <nodify:Node.OutputConnectorTemplate>
+                                <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                    <nodify:NodeOutput
+                                        Header="{Binding Title}"
+                                        IsConnected="{Binding IsConnected}"
+                                        Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                </DataTemplate>
+                            </nodify:Node.OutputConnectorTemplate>
+
+                        </nodify:Node>
+                    </DataTemplate>
+                </nodify:NodifyEditor.ItemTemplate>
+
+                <!-- CONNECTIONS -->
+                <nodify:NodifyEditor.ConnectionTemplate>
+                    <DataTemplate x:DataType="nodifyvm:ConnectionViewModel">
+                        <nodify:LineConnection
+                            Source="{Binding Source.Anchor}"
+                            Target="{Binding Target.Anchor}" />
+                    </DataTemplate>
+                </nodify:NodifyEditor.ConnectionTemplate>
+
+                <!-- PENDING CONNECTION -->
+                <nodify:NodifyEditor.PendingConnectionTemplate>
+                    <DataTemplate x:DataType="nodifyvm:PendingConnectionViewModel">
+                        <nodify:PendingConnection
+                            StartedCommand="{Binding StartCommand}"
+                            CompletedCommand="{Binding FinishCommand}"
+                            AllowOnlyConnectors="True"/>
+                    </DataTemplate>
+                </nodify:NodifyEditor.PendingConnectionTemplate>
+
+            </nodify:NodifyEditor>
 
         </Border>
 

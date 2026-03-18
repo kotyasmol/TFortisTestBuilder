@@ -30,7 +30,7 @@ public partial class TestView : UserControl
         {
             Dispatcher.UIThread.Post(() =>
             {
-                LogScrollViewer?.ScrollToEnd();
+                //LogScrollViewer?.ScrollToEnd(); --- вернуться позже. Пока не работает, возможно из-за структуры разметки.
             });
         }
     }
