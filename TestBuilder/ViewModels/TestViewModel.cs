@@ -54,7 +54,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     public PendingConnectionViewModel PendingConnection { get; }
     public ICommand DisconnectConnectorCommand { get; }
 
-
+    [ObservableProperty]
+    private Avalonia.Point location;
 
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
@@ -98,6 +99,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         Nodes.Add(start);
         Nodes.Add(step);
         Nodes.Add(end);
+
+
 
         Connections.Add(new ConnectionViewModel(
             start.Output.First(),

@@ -11,11 +11,6 @@
 		<AvaloniaResource Include="Assets\**" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\nodify-avalonia-avalonia_port\Nodify\Nodify.csproj" />
-		<ProjectReference Include="..\nodify-avalonia-avalonia_port\Examples\Nodify.Shared\Nodify.Shared.csproj" />
-	</ItemGroup>
-
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="11.1.0" />
@@ -30,6 +25,7 @@
 		<PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.1.0.4" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
 		<PackageReference Include="NModbus4" Version="2.1.0" />
+		<PackageReference Include="NodifyAvalonia" Version="6.6.0" />
 		<PackageReference Include="System.IO.Ports" Version="10.0.2" />
 	</ItemGroup>
 

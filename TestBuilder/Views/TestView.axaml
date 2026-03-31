@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:logging="using:TestBuilder.Services.Logging"
@@ -54,7 +54,7 @@
 
         </Grid>
 
-        <!-- RIGHT PANEL: NODIFY -->
+        <!-- RIGHT PANEL -->
         <Border Grid.Column="1"
                 Margin="10"
                 BorderBrush="Gray"
@@ -66,6 +66,18 @@
                 Connections="{Binding Connections}"
                 PendingConnection="{Binding PendingConnection}"
                 DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}">
+
+                <!--  ВОТ ЭТО КЛЮЧЕВОЕ МЕСТО -->
+                <nodify:NodifyEditor.ItemContainerTheme>
+                    <ControlTheme TargetType="nodify:ItemContainer"
+                                  BasedOn="{StaticResource {x:Type nodify:ItemContainer}}">
+                        
+                        <Setter Property="Location"
+                                Value="{Binding Location}"
+                                x:DataType="nodifyvm:NodeViewModel"/>
+                    
+                    </ControlTheme>
+                </nodify:NodifyEditor.ItemContainerTheme>
 
                 <!-- NODES -->
                 <nodify:NodifyEditor.ItemTemplate>
@@ -79,7 +91,6 @@
                                 <DataTemplate x:DataType="vm:ConnectorViewModel">
                                     <nodify:NodeInput
                                         Header="{Binding Title}"
-                                        
                                         IsConnected="{Binding IsConnected}"
                                         Anchor="{Binding Anchor, Mode=OneWayToSource}" />
                                 </DataTemplate>
@@ -108,7 +119,7 @@
                     </DataTemplate>
                 </nodify:NodifyEditor.ConnectionTemplate>
 
-                <!-- PENDING CONNECTION -->
+                <!-- PENDING -->
                 <nodify:NodifyEditor.PendingConnectionTemplate>
                     <DataTemplate x:DataType="nodifyvm:PendingConnectionViewModel">
                         <nodify:PendingConnection

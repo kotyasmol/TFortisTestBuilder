@@ -10,11 +10,7 @@
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
-				<ResourceInclude Source="avares://Nodify.Shared/Themes/Icons.xaml" />
-				<ResourceInclude Source="avares://Nodify.Shared/Themes/Generic.xaml" />
-				<ResourceInclude Source="avares://Nodify.Shared/Themes/Dark.xaml" />
-				<ResourceInclude Source="avares://Nodify/Themes/Generic.xaml" />
-				<ResourceInclude Source="avares://Nodify/Themes/Dark.xaml" />
+				<ResourceInclude Source="avares://Nodify/Theme.axaml" />
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
