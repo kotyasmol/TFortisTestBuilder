@@ -26,6 +26,19 @@ namespace TestBuilder.Domain.Modbus.Models
 
         public abstract Task PollAsync();
 
+        /// <summary>
+        /// Обновляет RegisterItems из массива значений в UI-потоке.
+        /// Вызывай это в конце каждого PollAsync вместо ручного цикла.
+        /// </summary>
+        protected Task UpdateRegisterItemsAsync(ushort[] regs)
+        {
+            return Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                for (int i = 0; i < regs.Length && i < RegisterItems.Count; i++)
+                    RegisterItems[i].Value = regs[i];
+            }).GetTask();
+        }
+
         protected void OnPropertyChanged([CallerMemberName] string prop = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));

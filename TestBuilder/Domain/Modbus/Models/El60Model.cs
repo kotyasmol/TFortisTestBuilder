@@ -86,11 +86,7 @@ namespace TestBuilder.Domain.Modbus.Models
             AutoLoadSet = regs[15];
             PassivePoEEnable = (byte)regs[16];
 
-            for (int i = 0; i < REG_COUNT && i < RegisterItems.Count; i++)
-                RegisterItems[i].Value = regs[i];
-
-            OnPropertyChanged(string.Empty);
-            OnPropertyChanged(nameof(RegisterItems));
+            await UpdateRegisterItemsAsync(regs);
         }
 
         public async Task WriteRegisterAsync(ushort address, ushort value)

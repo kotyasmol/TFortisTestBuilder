@@ -5,42 +5,73 @@
              x:Class="TestBuilder.Views.ModbusMonitoringView"
              x:DataType="vm:ModbusMonitoringViewModel">
 
-    <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Slaves}">
-            <ItemsControl.ItemTemplate>
-                <!-- ��������� x:DataType ��� �������, ����� �������� ������ ����������� ��� SlaveModelBase -->
-                <DataTemplate x:DataType="models:SlaveModelBase">
-                    <Border Margin="5"
-                            Padding="5"
-                            BorderBrush="Gray"
-                            BorderThickness="1">
-                        <StackPanel>
+	<DockPanel>
 
-                            <!-- ��������� ���������� -->
-                            <TextBlock FontWeight="Bold"
-                                       Text="{Binding DeviceType}" />
+		<!-- Панель управления сверху -->
+		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Spacing="10">
+			<Button Content="Сканировать"
+                    Command="{Binding ScanCommand}"
+                    IsEnabled="{Binding !IsScanning}" />
+			<TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
+                       IsVisible="{Binding !IsConnected}"
+                       Foreground="Red"
+                       VerticalAlignment="Center" />
+			<TextBlock Text="Сканирование..."
+                       IsVisible="{Binding IsScanning}"
+                       VerticalAlignment="Center" />
+			<TextBlock Text="Мониторинг запущен"
+                       IsVisible="{Binding IsMonitoring}"
+                       Foreground="Green"
+                       VerticalAlignment="Center" />
+		</StackPanel>
 
-                            <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}"
-                                       Margin="0,0,0,5"/>
+		<!-- Пустое состояние -->
+		<TextBlock DockPanel.Dock="Top"
+                   Text="Устройства не найдены. Подключите железо и нажмите Сканировать."
+                   IsVisible="{Binding !Slaves.Count}"
+                   Margin="10"
+                   Foreground="Gray" />
 
-                            <!-- ������� ��������� -->
-                            <DataGrid ItemsSource="{Binding RegisterItems}" 
-                                      AutoGenerateColumns="False" 
-                                      IsReadOnly="True" 
-                                      Height="200">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
-                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-                                    <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" />
-                                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" />
-                                </DataGrid.Columns>
-                            </DataGrid>
+		<!-- Список устройств -->
+		
+			<ItemsControl ItemsSource="{Binding Slaves}"
+                          HorizontalAlignment="Stretch">
 
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<StackPanel HorizontalAlignment="Stretch" />
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+
+				<ItemsControl.ItemTemplate>
+					<DataTemplate x:DataType="models:SlaveModelBase">
+						<Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1">
+							<Grid RowDefinitions="Auto,Auto,300">
+								<TextBlock Grid.Row="0"
+                                           FontWeight="Bold"
+                                           Text="{Binding DeviceType}" />
+								<TextBlock Grid.Row="1"
+                                           Margin="0,0,0,5"
+                                           Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
+								<DataGrid Grid.Row="2"
+                                          ItemsSource="{Binding RegisterItems}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True">
+									<DataGrid.Columns>
+										<DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
+										<DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
+										<DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
+										<DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*" />
+									</DataGrid.Columns>
+								</DataGrid>
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+
+			</ItemsControl>
+		
+
+	</DockPanel>
 
 </UserControl>
