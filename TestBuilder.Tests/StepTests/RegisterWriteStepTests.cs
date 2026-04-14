@@ -15,7 +15,7 @@ namespace TestBuilder.Tests.StepTests
         {
             // Arrange
             var context = new TestContext();
-            var step = new RegisterWriteStep("CR2032", 3300);
+            var step = new ModbusWriteStep("CR2032", 3300);
 
             // Act
             var result = await step.ExecuteAsync(context, CancellationToken.None);

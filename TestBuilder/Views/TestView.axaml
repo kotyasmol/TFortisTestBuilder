@@ -18,8 +18,8 @@
                         Height="40"
                         FontSize="16"
                         FontWeight="SemiBold"/>
-                <Button Content="Test 1"
-                        Command="{Binding Test1Command}"
+                <Button Content="RUN GRAPH"
+                        Command="{Binding RunGraphCommand}"
                         Height="35"/>
                 <Button Content="Test 2" Height="35"/>
                 <TextBlock Text="{Binding StatusMessage}"

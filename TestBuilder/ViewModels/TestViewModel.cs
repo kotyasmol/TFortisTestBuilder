@@ -1,19 +1,23 @@
-﻿using Avalonia.Threading;
+﻿using Avalonia;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
-using Avalonia;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
 
@@ -47,6 +51,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     public IAsyncRelayCommand Test1Command { get; }
 
 
+    public IAsyncRelayCommand RunGraphCommand { get; }
+
+
     // NODIFY
 
     public ObservableCollection<NodeViewModel> Nodes { get; } = new();
@@ -66,6 +73,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         Test1Command = new AsyncRelayCommand(PulseLoadSetAAsync);
+
+        RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
+
+
 
         // ===== Nodify init =====
         PendingConnection = new PendingConnectionViewModel(this);
@@ -93,7 +104,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     private void InitGraph()
     {
         var start = CreateNode("Start", 100, 100, hasOutput: true);
-        var step = CreateNode("Step", 400, 150, hasInput: true, hasOutput: true);
+        var step = new ModbusWriteNodeViewModel
+        {
+            Location = new Point(400, 150),
+            SlaveId = 1,
+            Address = 1412,
+            Value = 1
+        };
         var end = CreateNode("End", 700, 200, hasInput: true);
 
         Nodes.Add(start);
@@ -137,6 +154,77 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     {
         Connections.Add(new ConnectionViewModel(source, target));
     }
+
+
+    private async Task RunGraphAsync()
+    {
+        if (!IsConnected)
+        {
+            TestingLogger.Warning("Нет подключения.");
+            return;
+        }
+
+        try
+        {
+            // 1. Найти стартовую ноду (без входящих)
+            var startNodeVm = Nodes.FirstOrDefault(n =>
+                !Connections.Any(c => c.Target == n.Input.FirstOrDefault()));
+
+            if (startNodeVm == null)
+            {
+                TestingLogger.Error("Стартовая нода не найдена.");
+                return;
+            }
+
+            // 2. Построить TestNode цепочку
+            var map = new Dictionary<NodeViewModel, TestNode>();
+
+            foreach (var node in Nodes)
+            {
+                // Создаём TestNode с шагом сразу через конструктор
+                map[node] = node switch
+                {
+                ModbusWriteNodeViewModel writeNode => new TestNode(writeNode.CreateStep(_modbusService))
+                };
+            }
+
+            // 3. Назначаем связи Next/OnTrue/OnFalse
+            foreach (var node in Nodes)
+            {
+                var testNode = map[node];
+
+                var connection = Connections.FirstOrDefault(c =>
+                    c.Source == node.Output.FirstOrDefault());
+
+                if (connection != null)
+                {
+                    var nextNodeVm = Nodes.FirstOrDefault(n =>
+                        n.Input.Contains(connection.Target));
+
+                    if (nextNodeVm != null)
+                    {
+                        testNode.Next = map[nextNodeVm];
+                    }
+                }
+            }
+
+            var executor = new TestExecutor();
+
+            var context = new TestContext
+            {
+                CancellationToken = CancellationToken.None
+            };
+
+            await executor.ExecuteAsync(map[startNodeVm], context, CancellationToken.None);
+
+            TestingLogger.Info("Граф выполнен.");
+        }
+        catch (Exception ex)
+        {
+            TestingLogger.Error($"Ошибка выполнения графа: {ex.Message}");
+        }
+    }
+
 
 
     private async Task PulseLoadSetAAsync()
