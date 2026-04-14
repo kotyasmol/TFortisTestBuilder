@@ -131,11 +131,7 @@ namespace TestBuilder.Domain.Modbus.Models
             Rs485Read = (byte)regs[28];
             Rs485Write = (byte)regs[29];
 
-            for (int i = 0; i < REG_COUNT && i < RegisterItems.Count; i++)
-                RegisterItems[i].Value = regs[i];
-
-            OnPropertyChanged(string.Empty);
-            OnPropertyChanged(nameof(RegisterItems));
+            await UpdateRegisterItemsAsync(regs);
         }
 
         public async Task WriteRegisterAsync(ushort address, ushort value)

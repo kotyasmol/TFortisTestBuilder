@@ -92,11 +92,7 @@ namespace TestBuilder.Domain.Modbus.Models
             ClearStatistics = (byte)regs[13];
             HeaterRelayEnable = (byte)regs[14];
 
-            for (int i = 0; i < REG_COUNT && i < RegisterItems.Count; i++)
-                RegisterItems[i].Value = regs[i];
-
-            OnPropertyChanged(string.Empty);
-            OnPropertyChanged(nameof(RegisterItems));
+            await UpdateRegisterItemsAsync(regs);
         }
 
         public async Task WriteRegisterAsync(ushort address, ushort value)

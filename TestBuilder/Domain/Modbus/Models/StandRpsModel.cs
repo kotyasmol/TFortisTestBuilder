@@ -92,11 +92,7 @@ namespace TestBuilder.Domain.Modbus.Models
         {
             var regs = await Modbus.ReadRegistersAsync(SlaveId, REG_START, REG_COUNT);
             // Обновляем значения в существующих RegisterItems, ожидая, что RegisterItem.Value вызывает PropertyChanged
-            for (int i = 0; i < REG_COUNT && i < RegisterItems.Count; i++)
-                RegisterItems[i].Value = regs[i];
-
-            OnPropertyChanged(string.Empty);
-            OnPropertyChanged(nameof(RegisterItems));
+            await UpdateRegisterItemsAsync(regs);
         }
     }
 }

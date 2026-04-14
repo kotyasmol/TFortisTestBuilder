@@ -44,11 +44,14 @@ namespace TestBuilder.Domain.Modbus
 
                     if (model != null)
                     {
-                        // добавляем в UI-потоке
-                        await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
 
                         // опрашиваем регистры
                         await model.PollAsync();
+
+                        // добавляем в UI-потоке
+                        await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
+
+                      
                     }
                 }
                 catch
