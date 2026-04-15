@@ -19,7 +19,7 @@
             <TabItem Header="Тест">
                 <views:TestView DataContext="{Binding TestVM}" />
             </TabItem>
-            <TabItem Header="Modbus">
+            <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
                 <views:ModbusMonitoringView DataContext="{Binding ModbusVM}" />
             </TabItem>
         </TabControl>

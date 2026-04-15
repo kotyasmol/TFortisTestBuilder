@@ -26,6 +26,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
     private readonly RegisterState _registerState = new();
+    private readonly Action? _onSlavesFound;
+    private readonly Action? _onSlavesLost;
 
     private RegisterMonitor? _registerMonitor;
     private CancellationTokenSource? _monitorCts;
@@ -60,10 +62,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     [ObservableProperty]
     private Avalonia.Point location;
 
-    public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
+    public TestViewModel(ModbusService modbusService, SlaveManager slaveManager, Action? onSlavesFound = null, Action? onSlavesLost = null)
     {
         _modbusService = modbusService;
         _slaveManager = slaveManager;
+        _onSlavesFound = onSlavesFound;
+        _onSlavesLost = onSlavesLost;
 
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
 
@@ -206,6 +210,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         IsConnected = false;
         StatusMessage = "Отключено.";
+        _onSlavesLost?.Invoke();
     }
 
     private async Task StartMonitoringAsync()
@@ -221,8 +226,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         StatusMessage = $"Найдено устройств: {count}. Можно начинать тестирование.";
         TestingLogger.Info($"Найдено {count} устройств.");
+        _onSlavesFound?.Invoke();
 
-        _registerMonitor = new RegisterMonitor( _slaveManager, _registerState, TestingLogger)
+        _registerMonitor = new RegisterMonitor(_slaveManager, _registerState, TestingLogger)
         {
             PollInterval = 1000
         };
@@ -291,6 +297,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             TestingLogger.Error(ex.ToString());
         }
     }
+
     private async Task PulseLoadSetAAsync()
     {
         if (!IsConnected)

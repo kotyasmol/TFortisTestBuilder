@@ -49,7 +49,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:SlaveModelBase">
-                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="500" VerticalAlignment="Top">
+                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="500">
                                 <Grid RowDefinitions="Auto,Auto">
                                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                                         <StackPanel Grid.Column="0">
@@ -69,11 +69,16 @@
                                                   DoubleTapped="OnDataGridDoubleTapped"
                                                   AutoGenerateColumns="False"
                                                   IsReadOnly="True"
+                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                   GridLinesVisibility="All"
                                                   BorderThickness="1"
                                                   BorderBrush="Gray"
                                                   CanUserResizeColumns="True"
-                                                  CanUserSortColumns="True">
+                                                  CanUserSortColumns="True"
+                                                  Height="{Binding GridHeight}">
+                                                  
+                                                  
+                                                
                                             <DataGrid.Resources>
                                                 <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
                                             </DataGrid.Resources>

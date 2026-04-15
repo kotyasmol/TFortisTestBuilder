@@ -34,6 +34,11 @@ namespace TestBuilder.Domain.Modbus.Models
 
         public string ToggleIcon => IsExpanded ? "▲" : "▼";
 
+        // <summary>
+        /// Высота DataGrid — 32px на каждый регистр + 36px заголовок
+        /// </summary>
+        public double GridHeight => RegisterItems.Count * 33 + 36;
+
         private RegisterItem? _selectedRegister;
         public RegisterItem? SelectedRegister
         {
