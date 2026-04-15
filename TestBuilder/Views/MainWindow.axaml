@@ -4,8 +4,8 @@
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="900"
-        Height="650"
+        Width="1200"
+        Height="768"
         Title="TestBuilder">
 
 

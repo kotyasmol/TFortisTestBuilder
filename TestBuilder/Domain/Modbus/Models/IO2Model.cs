@@ -47,7 +47,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte Rs485Read { get; private set; }       // 1528
         public byte Rs485Write { get; private set; }      // 1529
 
-        public ObservableCollection<RegisterItem> RegisterItems { get; private set; } = new();
+       
 
         public IO2Model(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)

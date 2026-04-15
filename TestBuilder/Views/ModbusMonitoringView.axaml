@@ -31,32 +31,61 @@
                    IsVisible="{Binding !Slaves.Count}"
                    Margin="10"
                    Foreground="Gray" />
+        <!-- Логи из вкладки Тест -->
+        <Border DockPanel.Dock="Bottom"
+                Height="150"
+                BorderBrush="Gray"
+                BorderThickness="0,1,0,0">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       FontFamily="Consolas"
+                                       FontSize="11"
+                                       Margin="5,1" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
 
 		<!-- Список устройств -->
-		
+		 <ScrollViewer>
 			<ItemsControl ItemsSource="{Binding Slaves}"
                           HorizontalAlignment="Stretch">
 
 				<ItemsControl.ItemsPanel>
 					<ItemsPanelTemplate>
-						<StackPanel HorizontalAlignment="Stretch" />
+						<WrapPanel Orientation="Horizontal"/>
 					</ItemsPanelTemplate>
 				</ItemsControl.ItemsPanel>
 
 				<ItemsControl.ItemTemplate>
 					<DataTemplate x:DataType="models:SlaveModelBase">
-						<Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1">
-							<Grid RowDefinitions="Auto,Auto,300">
-								<TextBlock Grid.Row="0"
-                                           FontWeight="Bold"
-                                           Text="{Binding DeviceType}" />
-								<TextBlock Grid.Row="1"
-                                           Margin="0,0,0,5"
-                                           Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
-								<DataGrid Grid.Row="2"
+						<Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="550">
+                            <Grid RowDefinitions="Auto,Auto">
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock FontWeight="Bold" Text="{Binding DeviceType}" />
+                                        <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="{Binding ToggleIcon}"
+                                            Command="{Binding ToggleExpandedCommand}"
+                                            VerticalAlignment="Center"
+                                            Padding="8,4" />
+                                </Grid>
+                                <DataGrid Grid.Row="1"
+                                          IsVisible="{Binding IsExpanded}"
                                           ItemsSource="{Binding RegisterItems}"
                                           AutoGenerateColumns="False"
-                                          IsReadOnly="True">
+                                          IsReadOnly="True"
+                                          GridLinesVisibility="All"
+                                          BorderThickness="1"
+                                          BorderBrush="Gray"
+                                          CanUserResizeColumns="True"
+                                          CanUserSortColumns="True">
 									<DataGrid.Columns>
 										<DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
 										<DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
@@ -70,7 +99,7 @@
 				</ItemsControl.ItemTemplate>
 
 			</ItemsControl>
-		
+		</ScrollViewer>
 
 	</DockPanel>
 

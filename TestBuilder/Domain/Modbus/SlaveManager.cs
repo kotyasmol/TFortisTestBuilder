@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -22,9 +22,7 @@ namespace TestBuilder.Domain.Modbus
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
 
-            int found = 0;
-
-            for (byte slaveId = 1; slaveId <= 21; slaveId += 2)
+            for (byte slaveId = 1; slaveId <= 23; slaveId+=2)
             {
                 try
                 {

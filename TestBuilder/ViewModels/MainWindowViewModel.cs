@@ -22,7 +22,7 @@ namespace TestBuilder.ViewModels
             SlaveManager = new SlaveManager(ModbusService);
 
             TestVM = new TestViewModel(ModbusService, SlaveManager);
-            ModbusVM = new ModbusMonitoringViewModel(SlaveManager,ModbusService);
+            ModbusVM = new ModbusMonitoringViewModel(SlaveManager,ModbusService, TestVM.TestingLogger);
         }
     }
 }
