@@ -23,6 +23,7 @@ namespace TestBuilder.Domain.Monitoring
         /// Интервал опроса в миллисекундах.
         /// </summary>
         public int PollInterval { get; set; } = 1000;
+        public bool VerboseLogging { get; set; } = false;
 
         public RegisterMonitor(SlaveManager slaveManager, RegisterState registerState, ILogger logger)
         {
@@ -126,6 +127,8 @@ namespace TestBuilder.Domain.Monitoring
                 foreach (var reg in slave.RegisterItems)
                 {
                     _registerState.Update(reg.Name, reg.Value);
+                    if (VerboseLogging)
+                        _logger.Debug($"Slave {slave.SlaveId} | {reg.Name} ({reg.Address}) = {reg.Value}");
                 }
             }
             catch (TaskCanceledException)

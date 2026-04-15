@@ -2,105 +2,157 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:models="using:TestBuilder.Domain.Modbus.Models"
+             xmlns:converters="using:TestBuilder.Converters"
              x:Class="TestBuilder.Views.ModbusMonitoringView"
              x:DataType="vm:ModbusMonitoringViewModel">
 
-	<DockPanel>
+    <DockPanel>
 
-		<!-- Панель управления сверху -->
-		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Spacing="10">
-			<Button Content="Сканировать"
+        <!-- Панель управления сверху -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Spacing="10">
+            <Button Content="Сканировать"
                     Command="{Binding ScanCommand}"
                     IsEnabled="{Binding !IsScanning}" />
-			<TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
+            <Button Content="{Binding VerboseButtonText}"
+                    Command="{Binding ToggleVerboseCommand}" />
+            <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
                        IsVisible="{Binding !IsConnected}"
                        Foreground="Red"
                        VerticalAlignment="Center" />
-			<TextBlock Text="Сканирование..."
+            <TextBlock Text="Сканирование..."
                        IsVisible="{Binding IsScanning}"
                        VerticalAlignment="Center" />
-			<TextBlock Text="Мониторинг запущен"
+            <TextBlock Text="Мониторинг запущен"
                        IsVisible="{Binding IsMonitoring}"
                        Foreground="Green"
                        VerticalAlignment="Center" />
-		</StackPanel>
+        </StackPanel>
 
-		<!-- Пустое состояние -->
-		<TextBlock DockPanel.Dock="Top"
+        <!-- Пустое состояние -->
+        <TextBlock DockPanel.Dock="Top"
                    Text="Устройства не найдены. Подключите железо и нажмите Сканировать."
                    IsVisible="{Binding !Slaves.Count}"
                    Margin="10"
                    Foreground="Gray" />
-        <!-- Логи из вкладки Тест -->
-        <Border DockPanel.Dock="Bottom"
-                Height="150"
-                BorderBrush="Gray"
-                BorderThickness="0,1,0,0">
-            <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+
+        <!-- Основной контент -->
+        <Grid ColumnDefinitions="*,300">
+
+            <!-- Левая часть — список устройств -->
+            <ScrollViewer Grid.Column="0" Background="#F0F0F0">
+                <ItemsControl ItemsSource="{Binding Slaves}"
+                              HorizontalAlignment="Stretch">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}"
-                                       FontFamily="Consolas"
-                                       FontSize="11"
-                                       Margin="5,1" />
+                        <DataTemplate x:DataType="models:SlaveModelBase">
+                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="500" VerticalAlignment="Top">
+                                <Grid RowDefinitions="Auto,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock FontWeight="Bold" Text="{Binding DeviceType}" />
+                                            <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding ToggleIcon}"
+                                                Command="{Binding ToggleExpandedCommand}"
+                                                VerticalAlignment="Center"
+                                                Padding="8,4" />
+                                    </Grid>
+                                    <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsExpanded}">
+                                        <DataGrid Grid.Row="0"
+                                                  ItemsSource="{Binding RegisterItems}"
+                                                  SelectedItem="{Binding SelectedRegister}"
+                                                  AutoGenerateColumns="False"
+                                                  IsReadOnly="True"
+                                                  GridLinesVisibility="All"
+                                                  BorderThickness="1"
+                                                  BorderBrush="Gray"
+                                                  CanUserResizeColumns="True"
+                                                  CanUserSortColumns="True">
+                                            <DataGrid.Resources>
+                                                <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
+                                            </DataGrid.Resources>
+                                            <DataGrid.Styles>
+                                                <Style Selector="DataGridRow">
+                                                    <Setter Property="Background">
+                                                        <Setter.Value>
+                                                            <Binding Path="IsReadOnly"
+                                                                     Converter="{StaticResource BoolToBackground}"
+                                                                     x:DataType="models:RegisterItem" />
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </DataGrid.Styles>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
+                                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                                                <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
+                                                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <Border Grid.Row="1"
+                                                IsVisible="{Binding IsWritePanelVisible}"
+                                                Background="#EEF5FF"
+                                                BorderBrush="#4A90D9"
+                                                BorderThickness="1"
+                                                Padding="8,5"
+                                                Margin="0,3,0,0">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding SelectedRegister.Name}"
+                                                           FontWeight="Bold"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="→" VerticalAlignment="Center" />
+                                                <TextBox Text="{Binding WriteValue}"
+                                                         Width="100"
+                                                         VerticalAlignment="Center" />
+                                                <Button Content="Записать"
+                                                        Command="{Binding WriteRegisterCommand}"
+                                                        VerticalAlignment="Center" />
+                                                <Button Content="✕"
+                                                        Command="{Binding ClearSelectionCommand}"
+                                                        VerticalAlignment="Center"
+                                                        Padding="6,2" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-        </Border>
 
-		<!-- Список устройств -->
-		 <ScrollViewer>
-			<ItemsControl ItemsSource="{Binding Slaves}"
-                          HorizontalAlignment="Stretch">
+            <!-- Правая панель — логи -->
+            <DockPanel Grid.Column="1" Background="#F8F8F8">
+                <TextBlock DockPanel.Dock="Top"
+                           Text="Логи"
+                           FontWeight="Bold"
+                           Margin="8,8,8,4" />
+                <Border DockPanel.Dock="Top"
+                        Height="1"
+                        Background="Gray"
+                        Margin="0,0,0,4" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           Margin="5,1"
+                                           TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
 
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<WrapPanel Orientation="Horizontal"/>
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
+        </Grid>
 
-				<ItemsControl.ItemTemplate>
-					<DataTemplate x:DataType="models:SlaveModelBase">
-						<Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="550">
-                            <Grid RowDefinitions="Auto,Auto">
-                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock FontWeight="Bold" Text="{Binding DeviceType}" />
-                                        <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1"
-                                            Content="{Binding ToggleIcon}"
-                                            Command="{Binding ToggleExpandedCommand}"
-                                            VerticalAlignment="Center"
-                                            Padding="8,4" />
-                                </Grid>
-                                <DataGrid Grid.Row="1"
-                                          IsVisible="{Binding IsExpanded}"
-                                          ItemsSource="{Binding RegisterItems}"
-                                          AutoGenerateColumns="False"
-                                          IsReadOnly="True"
-                                          GridLinesVisibility="All"
-                                          BorderThickness="1"
-                                          BorderBrush="Gray"
-                                          CanUserResizeColumns="True"
-                                          CanUserSortColumns="True">
-									<DataGrid.Columns>
-										<DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
-										<DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
-										<DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
-										<DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*" />
-									</DataGrid.Columns>
-								</DataGrid>
-							</Grid>
-						</Border>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-
-			</ItemsControl>
-		</ScrollViewer>
-
-	</DockPanel>
+    </DockPanel>
 
 </UserControl>
