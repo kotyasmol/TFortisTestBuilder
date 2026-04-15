@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -18,7 +18,7 @@ namespace TestBuilder.Domain.Modbus
             _modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
         }
 
-        public async Task ScanAsync()
+        public async Task<int> ScanAsync()
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
 
@@ -44,21 +44,20 @@ namespace TestBuilder.Domain.Modbus
 
                     if (model != null)
                     {
-
-                        // опрашиваем регистры
                         await model.PollAsync();
 
-                        // добавляем в UI-потоке
                         await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
 
-                      
+                        found++; // ✅ считаем
                     }
                 }
                 catch
                 {
-                    // timeout / нет ответа
+                    // ignore
                 }
             }
+
+            return found; // ✅ ключевой момент
         }
     }
 }
