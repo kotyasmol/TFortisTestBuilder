@@ -3,7 +3,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Modbus.Models
@@ -18,10 +20,28 @@ namespace TestBuilder.Domain.Modbus.Models
 
         public abstract string DeviceType { get; }
 
+        private bool _isExpanded = true;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded == value) return;
+                _isExpanded = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ToggleIcon));
+            }
+        }
+
+        public string ToggleIcon => IsExpanded ? "▲" : "▼";
+
+        public IRelayCommand ToggleExpandedCommand { get; }
+
         protected SlaveModelBase(byte slaveId, IModbusService modbus)
         {
             SlaveId = slaveId;
             Modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
+            ToggleExpandedCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
         }
 
         public abstract Task PollAsync();

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Modbus.Models;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.ViewModels
@@ -45,11 +46,13 @@ namespace TestBuilder.ViewModels
         }
 
         public AsyncRelayCommand ScanCommand { get; }
+        public ILogger TestingLogger { get; }
 
-        public ModbusMonitoringViewModel(SlaveManager slaveManager, ModbusService modbusService)
+        public ModbusMonitoringViewModel(SlaveManager slaveManager, ModbusService modbusService, ILogger testingLogger)
         {
             _slaveManager = slaveManager;
             _modbusService = modbusService;
+            TestingLogger = testingLogger;
             ScanCommand = new AsyncRelayCommand(ScanAndStartAsync);
         }
 
