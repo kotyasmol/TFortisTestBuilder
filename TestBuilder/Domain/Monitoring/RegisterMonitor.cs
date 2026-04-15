@@ -76,15 +76,12 @@ namespace TestBuilder.Domain.Monitoring
                     // Делаем снимок списка слейвов, чтобы не зависеть от изменений коллекции.
                     var slavesSnapshot = new System.Collections.Generic.List<TestBuilder.Domain.Modbus.Models.SlaveModelBase>(_slaveManager.Slaves);
 
-                    // Параллельный опрос всех слейвов: каждый слейв в своей задаче.
-                    var tasks = new System.Collections.Generic.List<Task>(slavesSnapshot.Count);
-
+                    // Последовательный опрос — один COM-порт не может работать параллельно
                     foreach (var slave in slavesSnapshot)
                     {
-                        tasks.Add(PollSingleSlaveAsync(slave, token));
+                        if (token.IsCancellationRequested) break;
+                        await PollSingleSlaveAsync(slave, token);
                     }
-
-                    await Task.WhenAll(tasks);
                 }
                 catch (TaskCanceledException)
                 {

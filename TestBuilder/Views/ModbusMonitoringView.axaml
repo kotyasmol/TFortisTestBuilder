@@ -62,10 +62,11 @@
                                                 VerticalAlignment="Center"
                                                 Padding="8,4" />
                                     </Grid>
-                                    <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsExpanded}">
-                                        <DataGrid Grid.Row="0"
+                                    <Grid Grid.Row="1" IsVisible="{Binding IsExpanded}">
+                                        <DataGrid 
                                                   ItemsSource="{Binding RegisterItems}"
                                                   SelectedItem="{Binding SelectedRegister}"
+                                                  DoubleTapped="OnDataGridDoubleTapped"
                                                   AutoGenerateColumns="False"
                                                   IsReadOnly="True"
                                                   GridLinesVisibility="All"
@@ -94,30 +95,7 @@
                                                 <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
                                             </DataGrid.Columns>
                                         </DataGrid>
-                                        <Border Grid.Row="1"
-                                                IsVisible="{Binding IsWritePanelVisible}"
-                                                Background="#EEF5FF"
-                                                BorderBrush="#4A90D9"
-                                                BorderThickness="1"
-                                                Padding="8,5"
-                                                Margin="0,3,0,0">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding SelectedRegister.Name}"
-                                                           FontWeight="Bold"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Text="→" VerticalAlignment="Center" />
-                                                <TextBox Text="{Binding WriteValue}"
-                                                         Width="100"
-                                                         VerticalAlignment="Center" />
-                                                <Button Content="Записать"
-                                                        Command="{Binding WriteRegisterCommand}"
-                                                        VerticalAlignment="Center" />
-                                                <Button Content="✕"
-                                                        Command="{Binding ClearSelectionCommand}"
-                                                        VerticalAlignment="Center"
-                                                        Padding="6,2" />
-                                            </StackPanel>
-                                        </Border>
+                                        
                                     </Grid>
                                 </Grid>
                             </Border>
