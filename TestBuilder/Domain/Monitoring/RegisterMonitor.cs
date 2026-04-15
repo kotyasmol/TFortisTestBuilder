@@ -55,7 +55,7 @@ namespace TestBuilder.Domain.Monitoring
             if (_cts == null)
                 return;
 
-            _logger.Info("Остановка мониторинга регистров (отмена токена).");
+            _logger.Info("Остановка мониторинга.");
 
             // Отмена без блокирующего ожидания завершения задачи,
             // чтобы не блокировать UI‑поток.
@@ -126,7 +126,6 @@ namespace TestBuilder.Domain.Monitoring
                 foreach (var reg in slave.RegisterItems)
                 {
                     _registerState.Update(reg.Name, reg.Value);
-                    _logger.Debug($"Read OK: Slave {slave.SlaveId}, Reg {reg.Name} (Addr={reg.Address}) = {reg.Value}");
                 }
             }
             catch (TaskCanceledException)

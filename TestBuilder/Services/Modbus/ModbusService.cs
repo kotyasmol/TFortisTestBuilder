@@ -142,7 +142,6 @@ namespace TestBuilder.Services.Modbus
 
                 var result = await master.ReadHoldingRegistersAsync(slaveId, address, count);
 
-                // 👇 уведомляем подписчиков (без отдельного мониторинга)
                 NotifyWatchers(slaveId, address, result);
 
                 return result;

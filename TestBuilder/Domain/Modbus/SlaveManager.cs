@@ -18,11 +18,13 @@ namespace TestBuilder.Domain.Modbus
             _modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
         }
 
-        public async Task ScanAsync()
+        public async Task<int> ScanAsync()
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
 
-            for (byte slaveId = 1; slaveId <= 21; slaveId+=2)
+            int found = 0;
+
+            for (byte slaveId = 1; slaveId <= 21; slaveId += 2)
             {
                 try
                 {
@@ -44,21 +46,20 @@ namespace TestBuilder.Domain.Modbus
 
                     if (model != null)
                     {
-
-                        // опрашиваем регистры
                         await model.PollAsync();
 
-                        // добавляем в UI-потоке
                         await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
 
-                      
+                        found++; // ✅ считаем
                     }
                 }
                 catch
                 {
-                    // timeout / нет ответа
+                    // ignore
                 }
             }
+
+            return found; // ✅ ключевой момент
         }
     }
 }

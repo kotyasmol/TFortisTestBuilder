@@ -168,7 +168,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 if (!connected)
                     continue;
 
-                // ✅ проверка соединения
                 if (!await _modbusService.CheckPortAsync())
                 {
                     await _modbusService.DisconnectAsync();
@@ -211,67 +210,24 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private async Task StartMonitoringAsync()
     {
-        await _slaveManager.ScanAsync();
+        int count = await _slaveManager.ScanAsync();
 
-        if (_slaveManager.Slaves.Count == 0)
+        if (count == 0)
         {
             StatusMessage = "Слейвы не найдены.";
+            TestingLogger.Warning("Слейвы не найдены.");
             return;
         }
 
-        _registerMonitor = new RegisterMonitor(
-            _slaveManager,
-            _registerState,
-            TestingLogger)
+        StatusMessage = $"Найдено устройств: {count}. Можно начинать тестирование.";
+        TestingLogger.Info($"Найдено {count} устройств.");
+
+        _registerMonitor = new RegisterMonitor( _slaveManager, _registerState, TestingLogger)
         {
             PollInterval = 1000
         };
 
         _registerMonitor.Start();
-
-        _monitorCts = new CancellationTokenSource();
-        _ = Task.Run(() => LogLoopAsync(_monitorCts.Token));
-    }
-
-    private async Task LogLoopAsync(CancellationToken token)
-    {
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                var snapshot = _registerState.GetSnapshot();
-
-                foreach (var slave in _slaveManager.Slaves)
-                {
-                    foreach (var reg in slave.RegisterItems)
-                    {
-                        if (snapshot.TryGetValue(reg.Name, out var value))
-                        {
-                            Dispatcher.UIThread.Post(() =>
-                                TestingLogger.Debug(
-                                    $"[Мониторинг] SlvID={slave.SlaveId}, " +
-                                    $"Рег={reg.Name}({reg.Address}), " +
-                                    $"Значение={value}"
-                                ));
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Dispatcher.UIThread.Post(() =>
-                    TestingLogger.Error($"Ошибка мониторинга: {ex.Message}"));
-            }
-
-            try
-            {
-                await Task.Delay(1000, token);
-            }
-            catch (TaskCanceledException)
-            {
-                break;
-            }
-        }
     }
 
     private async Task RunGraphAsync()
@@ -335,7 +291,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             TestingLogger.Error(ex.ToString());
         }
     }
-
     private async Task PulseLoadSetAAsync()
     {
         if (!IsConnected)
