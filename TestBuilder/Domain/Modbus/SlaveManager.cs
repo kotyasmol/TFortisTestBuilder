@@ -21,11 +21,12 @@ namespace TestBuilder.Domain.Modbus
         public async Task<int> ScanAsync()
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
-
+            int found = 0;
             for (byte slaveId = 1; slaveId <= 23; slaveId+=2)
             {
                 try
                 {
+                    
                     ushort typeValue = (await _modbus.ReadRegistersAsync(slaveId, 0, 1))[0];
 
                     SlaveModelBase model = typeValue switch
