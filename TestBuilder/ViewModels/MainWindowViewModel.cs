@@ -10,7 +10,8 @@ namespace TestBuilder.ViewModels
         public ModbusService ModbusService { get; }
         public SlaveManager SlaveManager { get; }
 
-        
+        [ObservableProperty]
+        private bool _isSlavesFound = false;
 
         // Вложенные VM для вкладок
         public TestViewModel TestVM { get; }
@@ -21,8 +22,11 @@ namespace TestBuilder.ViewModels
             ModbusService = new ModbusService();
             SlaveManager = new SlaveManager(ModbusService);
 
-            TestVM = new TestViewModel(ModbusService, SlaveManager);
-            ModbusVM = new ModbusMonitoringViewModel(SlaveManager,ModbusService, TestVM.TestingLogger);
+            TestVM = new TestViewModel(ModbusService, SlaveManager, OnSlavesFound, OnSlavesLost);
+            ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
         }
+
+        private void OnSlavesFound() => IsSlavesFound = true;
+        private void OnSlavesLost() => IsSlavesFound = false;
     }
 }

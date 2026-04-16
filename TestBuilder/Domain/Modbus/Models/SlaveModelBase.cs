@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Services.Modbus;
@@ -12,7 +11,7 @@ namespace TestBuilder.Domain.Modbus.Models
 {
     public abstract class SlaveModelBase : INotifyPropertyChanged
     {
-        protected IModbusService Modbus { get; }
+        public IModbusService Modbus { get; }
 
         public byte SlaveId { get; }
 
@@ -34,6 +33,25 @@ namespace TestBuilder.Domain.Modbus.Models
         }
 
         public string ToggleIcon => IsExpanded ? "▲" : "▼";
+
+        // <summary>
+        /// Высота DataGrid — 32px на каждый регистр + 36px заголовок
+        /// </summary>
+        public double GridHeight => RegisterItems.Count * 33 + 36;
+
+        private RegisterItem? _selectedRegister;
+        public RegisterItem? SelectedRegister
+        {
+            get => _selectedRegister;
+            set
+            {
+                // Если кликнули на RO регистр — игнорируем
+                if (value?.IsReadOnly == true)
+                    value = null;
+                _selectedRegister = value;
+                OnPropertyChanged();
+            }
+        }
 
         public IRelayCommand ToggleExpandedCommand { get; }
 

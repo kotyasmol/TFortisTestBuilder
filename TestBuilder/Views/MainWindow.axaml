@@ -4,8 +4,8 @@
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1200"
-        Height="768"
+        Width="1366"
+        Height="800"
         Title="TestBuilder">
 
 
@@ -19,7 +19,7 @@
             <TabItem Header="Тест">
                 <views:TestView DataContext="{Binding TestVM}" />
             </TabItem>
-            <TabItem Header="Modbus">
+            <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
                 <views:ModbusMonitoringView DataContext="{Binding ModbusVM}" />
             </TabItem>
         </TabControl>
