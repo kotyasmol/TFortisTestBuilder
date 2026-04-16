@@ -13,8 +13,6 @@
             <Button Content="Сканировать"
                     Command="{Binding ScanCommand}"
                     IsEnabled="{Binding !IsScanning}" />
-            <Button Content="{Binding VerboseButtonText}"
-                    Command="{Binding ToggleVerboseCommand}" />
             <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
                        IsVisible="{Binding !IsConnected}"
                        Foreground="Red"

@@ -45,24 +45,7 @@ namespace TestBuilder.ViewModels
             }
         }
 
-        private bool _verboseLogging;
-        public bool VerboseLogging
-        {
-            get => _verboseLogging;
-            set
-            {
-                if (_verboseLogging == value) return;
-                _verboseLogging = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(VerboseButtonText));
-                TestingLogger.Info(value ? "Verbose логи включены" : "Verbose логи выключены");
-            }
-        }
-
-        public string VerboseButtonText => VerboseLogging ? "Verbose: ON" : "Verbose: OFF";
-
         public AsyncRelayCommand ScanCommand { get; }
-        public RelayCommand ToggleVerboseCommand { get; }
         public ILogger TestingLogger { get; }
 
         public ModbusMonitoringViewModel(SlaveManager slaveManager, ModbusService modbusService, ILogger testingLogger)
@@ -71,7 +54,6 @@ namespace TestBuilder.ViewModels
             _modbusService = modbusService;
             TestingLogger = testingLogger;
             ScanCommand = new AsyncRelayCommand(ScanAndStartAsync);
-            ToggleVerboseCommand = new RelayCommand(() => VerboseLogging = !VerboseLogging);
         }
 
         public async Task ScanAndStartAsync()
@@ -117,12 +99,6 @@ namespace TestBuilder.ViewModels
                     try
                     {
                         await slave.PollAsync();
-
-                        if (VerboseLogging)
-                        {
-                            foreach (var reg in slave.RegisterItems)
-                                TestingLogger.Debug($"Slave {slave.SlaveId} | {reg.Name} ({reg.Address}) = {reg.Value}");
-                        }
                     }
                     catch { }
                 }
