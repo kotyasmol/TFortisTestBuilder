@@ -36,14 +36,15 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
+            Console.WriteLine($"WriteRegister: slave={_slaveId}, addr={_address}, val={_value}");
             var ok = await _modbusService.WriteRegisterAsync(
                 _slaveId,
                 _address,
                 _value,
-                true,
+                false,
                 cancellationToken);
-
-            return ok ? StepResult.Next : StepResult.False;
+            Console.WriteLine($"WriteRegister result: {ok}");
+            return ok ? StepResult.True : StepResult.False;
         }
     }
 }
