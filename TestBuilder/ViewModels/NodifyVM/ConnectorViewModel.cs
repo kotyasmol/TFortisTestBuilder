@@ -1,10 +1,6 @@
 ﻿using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels
 {
@@ -17,5 +13,7 @@ namespace TestBuilder.ViewModels
         private bool isConnected;
 
         public string Title { get; set; } = string.Empty;
+
+        public NodeViewModel? Parent { get; set; }
     }
 }

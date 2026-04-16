@@ -43,7 +43,6 @@ namespace TestBuilder.Domain.Steps
                 _value,
                 false,
                 cancellationToken);
-            Console.WriteLine($"WriteRegister result: {ok}");
             return ok ? StepResult.True : StepResult.False;
         }
     }
