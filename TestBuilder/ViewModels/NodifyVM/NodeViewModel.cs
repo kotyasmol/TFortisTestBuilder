@@ -9,14 +9,22 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty]
         private string title = string.Empty;
 
-
         [ObservableProperty]
-        private Avalonia.Point location;
+        private Point location;
 
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
 
+        public void AddInput(ConnectorViewModel connector)
+        {
+            connector.Parent = this;
+            Input.Add(connector);
+        }
 
-
+        public void AddOutput(ConnectorViewModel connector)
+        {
+            connector.Parent = this;
+            Output.Add(connector);
+        }
     }
 }
