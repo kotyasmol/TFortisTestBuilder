@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="nodify-avalonia-avalonia_port/Examples/Nodify.Calculator/Nodify.Calculator.csproj" />
+  <Project Path="nodify-avalonia-avalonia_port/Examples/Nodify.StateMachine/Nodify.StateMachine.csproj" />
   <Project Path="TestBuilder.Tests/TestBuilder.Tests.csproj" Id="48ca6f28-4d43-41cf-bd0b-05dd3e6577a7" />
   <Project Path="TestBuilder/TestBuilder.csproj" />
 </Solution>

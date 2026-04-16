@@ -262,7 +262,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 map[node] = node switch
                 {
                     ModbusWriteNodeViewModel writeNode => new TestNode(writeNode.CreateStep(_modbusService)),
-                    _ => throw new NotSupportedException($"Node type {node.GetType().Name} not supported")
+                    _ => new TestNode(null)
                 };
             }
 

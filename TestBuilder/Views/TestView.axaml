@@ -4,8 +4,47 @@
              xmlns:logging="using:TestBuilder.Services.Logging"
              xmlns:nodify="using:Nodify"
              xmlns:nodifyvm="using:TestBuilder.ViewModels.NodifyVM"
+             xmlns:stepvm="using:TestBuilder.ViewModels.StepVM"
+             xmlns:views="using:TestBuilder.Views"
              x:Class="TestBuilder.Views.TestView"
              x:DataType="vm:TestViewModel">
+
+    <UserControl.Resources>
+
+        <!-- Сетка: мелкая (15px) -->
+        <GeometryDrawing x:Key="SmallGridGeometry"
+                         Geometry="M0,0 L0,1 0.03,1 0.03,0.03 1,0.03 1,0 Z"
+                         Brush="#2A2A2E" />
+
+        <DrawingBrush x:Key="SmallGridBrush"
+                      TileMode="Tile"
+                      DestinationRect="0 0 15 15"
+                      TransformOrigin="0,0"
+                      Transform="{Binding DpiScaledViewportTransform, ElementName=Editor}"
+                      Drawing="{StaticResource SmallGridGeometry}" />
+
+        <!-- Сетка: крупная (150px) -->
+        <GeometryDrawing x:Key="LargeGridGeometry"
+                         Geometry="M0,0 L0,1 0.015,1 0.015,0.015 1,0.015 1,0 Z"
+                         Brush="#2A2A2E" />
+
+        <DrawingBrush x:Key="LargeGridBrush"
+                      TileMode="Tile"
+                      Opacity="0.6"
+                      DestinationRect="0 0 150 150"
+                      Transform="{Binding DpiScaledViewportTransform, ElementName=Editor}"
+                      Drawing="{StaticResource LargeGridGeometry}" />
+
+        <!-- Градиентная рамка нод (фиолетово-розовая как в Calculator) -->
+        <LinearGradientBrush x:Key="NodeBorderBrush"
+                             StartPoint="0%,0%"
+                             EndPoint="100%,100%">
+            <GradientStop Color="#6366f1" Offset="0" />
+            <GradientStop Color="#a855f7" Offset="0.5" />
+            <GradientStop Color="#ec4899" Offset="1" />
+        </LinearGradientBrush>
+
+    </UserControl.Resources>
 
     <Grid ColumnDefinitions="300,*">
 
@@ -31,11 +70,10 @@
             <!-- LOGS -->
             <Border Grid.Row="1"
                     BorderThickness="1"
-                    BorderBrush="Gray"
+                    BorderBrush="#3F3F3F"
                     CornerRadius="4"
                     Padding="4"
                     Margin="0,10,0,0">
-
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
@@ -49,71 +87,126 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-
             </Border>
 
         </Grid>
 
-        <!-- RIGHT PANEL -->
+        <!-- RIGHT PANEL — граф -->
         <Border Grid.Column="1"
                 Margin="10"
-                BorderBrush="Gray"
+                BorderBrush="#3F3F3F"
                 BorderThickness="1"
-                CornerRadius="4">
+                CornerRadius="4"
+                Background="#1B1B1C">
 
             <nodify:NodifyEditor
+                x:Name="Editor"
                 ItemsSource="{Binding Nodes}"
                 Connections="{Binding Connections}"
                 PendingConnection="{Binding PendingConnection}"
-                DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}">
+                DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}"
+                Background="{StaticResource SmallGridBrush}"
+                GridCellSize="15">
 
-                <!--  ВОТ ЭТО КЛЮЧЕВОЕ МЕСТО -->
+                <!-- Поверх мелкой сетки — крупная -->
+                <nodify:NodifyEditor.Styles>
+                    <Style Selector="nodify|NodifyEditor">
+                        <Setter Property="Background" Value="{StaticResource SmallGridBrush}" />
+                    </Style>
+                </nodify:NodifyEditor.Styles>
+
+                <!-- ItemContainer — градиентная рамка -->
                 <nodify:NodifyEditor.ItemContainerTheme>
                     <ControlTheme TargetType="nodify:ItemContainer"
                                   BasedOn="{StaticResource {x:Type nodify:ItemContainer}}">
-                        
                         <Setter Property="Location"
                                 Value="{Binding Location}"
                                 x:DataType="nodifyvm:NodeViewModel"/>
-                    
+                        <Setter Property="BorderBrush"
+                                Value="{StaticResource NodeBorderBrush}"/>
+                        <Setter Property="BorderThickness"
+                                Value="2"/>
                     </ControlTheme>
                 </nodify:NodifyEditor.ItemContainerTheme>
 
-                <!-- NODES -->
+                <!-- NODES — с селектором шаблонов -->
                 <nodify:NodifyEditor.ItemTemplate>
-                    <DataTemplate x:DataType="nodifyvm:NodeViewModel">
-                        <nodify:Node Header="{Binding Title}"
-                                     Input="{Binding Input}"
-                                     Output="{Binding Output}">
+                    <views:NodeTemplateSelector>
 
-                            <!-- INPUT -->
-                            <nodify:Node.InputConnectorTemplate>
-                                <DataTemplate x:DataType="vm:ConnectorViewModel">
-                                    <nodify:NodeInput
-                                        Header="{Binding Title}"
-                                        IsConnected="{Binding IsConnected}"
-                                        Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-                                </DataTemplate>
-                            </nodify:Node.InputConnectorTemplate>
+                        <!-- Обычная нода -->
+                        <views:NodeTemplateSelector.DefaultTemplate>
+                            <DataTemplate x:DataType="nodifyvm:NodeViewModel">
+                                <nodify:Node Header="{Binding Title}"
+                                             Input="{Binding Input}"
+                                             Output="{Binding Output}">
+                                    <nodify:Node.InputConnectorTemplate>
+                                        <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                            <nodify:NodeInput
+                                                Header="{Binding Title}"
+                                                IsConnected="{Binding IsConnected}"
+                                                Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                        </DataTemplate>
+                                    </nodify:Node.InputConnectorTemplate>
+                                    <nodify:Node.OutputConnectorTemplate>
+                                        <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                            <nodify:NodeOutput
+                                                Header="{Binding Title}"
+                                                IsConnected="{Binding IsConnected}"
+                                                Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                        </DataTemplate>
+                                    </nodify:Node.OutputConnectorTemplate>
+                                </nodify:Node>
+                            </DataTemplate>
+                        </views:NodeTemplateSelector.DefaultTemplate>
 
-                            <!-- OUTPUT -->
-                            <nodify:Node.OutputConnectorTemplate>
-                                <DataTemplate x:DataType="vm:ConnectorViewModel">
-                                    <nodify:NodeOutput
-                                        Header="{Binding Title}"
-                                        IsConnected="{Binding IsConnected}"
-                                        Anchor="{Binding Anchor, Mode=OneWayToSource}" />
-                                </DataTemplate>
-                            </nodify:Node.OutputConnectorTemplate>
+                        <!-- ModbusWrite нода с полями ввода -->
+                        <views:NodeTemplateSelector.ModbusWriteTemplate>
+                            <DataTemplate x:DataType="stepvm:ModbusWriteNodeViewModel">
+                                <nodify:Node Header="{Binding Title}"
+                                             Input="{Binding Input}"
+                                             Output="{Binding Output}">
+                                    <nodify:Node.InputConnectorTemplate>
+                                        <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                            <nodify:NodeInput
+                                                Header="{Binding Title}"
+                                                IsConnected="{Binding IsConnected}"
+                                                Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                        </DataTemplate>
+                                    </nodify:Node.InputConnectorTemplate>
+                                    <nodify:Node.OutputConnectorTemplate>
+                                        <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                            <nodify:NodeOutput
+                                                Header="{Binding Title}"
+                                                IsConnected="{Binding IsConnected}"
+                                                Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                        </DataTemplate>
+                                    </nodify:Node.OutputConnectorTemplate>
+                                    <!-- Поля ввода -->
+                                    <StackPanel Margin="8,4" Spacing="6" Width="180">
+                                        <Grid ColumnDefinitions="70,*">
+                                            <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox Grid.Column="1" Text="{Binding SlaveId}" FontSize="12"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="70,*">
+                                            <TextBlock Grid.Column="0" Text="Address:" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox Grid.Column="1" Text="{Binding Address}" FontSize="12"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="70,*">
+                                            <TextBlock Grid.Column="0" Text="Value:" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox Grid.Column="1" Text="{Binding Value}" FontSize="12"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </nodify:Node>
+                            </DataTemplate>
+                        </views:NodeTemplateSelector.ModbusWriteTemplate>
 
-                        </nodify:Node>
-                    </DataTemplate>
+                    </views:NodeTemplateSelector>
                 </nodify:NodifyEditor.ItemTemplate>
 
-                <!-- CONNECTIONS -->
+                <!-- CONNECTIONS — изогнутые как в Calculator -->
                 <nodify:NodifyEditor.ConnectionTemplate>
                     <DataTemplate x:DataType="nodifyvm:ConnectionViewModel">
-                        <nodify:LineConnection
+                        <nodify:CircuitConnection
                             Source="{Binding Source.Anchor}"
                             Target="{Binding Target.Anchor}" />
                     </DataTemplate>

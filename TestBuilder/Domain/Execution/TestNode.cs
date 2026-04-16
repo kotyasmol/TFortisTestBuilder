@@ -15,7 +15,7 @@ namespace TestBuilder.Domain.Execution
         /// <summary>
         /// Логика, выполняемая в данном узле.
         /// </summary>
-        public  ITestStep Step { get; init; }
+        public  ITestStep? Step { get; init; }
 
         /// <summary>
         /// Следующий узел при линейном выполнении.
@@ -36,7 +36,7 @@ namespace TestBuilder.Domain.Execution
 
         public TestNode(ITestStep step)
         {
-            Step = step ?? throw new ArgumentNullException(nameof(step));
+            Step = step;
         }
     }
 }

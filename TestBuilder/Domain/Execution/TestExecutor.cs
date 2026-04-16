@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,6 +23,13 @@ namespace TestBuilder.Domain.Execution
             while (current != null)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                // Start/End ноды не имеют шага — просто переходим к следующей
+                if (current.Step == null)
+                {
+                    current = current.Next;
+                    continue;
+                }
 
                 var result = await current.Step
                     .ExecuteAsync(context, cancellationToken);
