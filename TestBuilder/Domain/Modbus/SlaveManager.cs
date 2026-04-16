@@ -27,6 +27,7 @@ namespace TestBuilder.Domain.Modbus
             {
                 try
                 {
+                    
                     ushort typeValue = (await _modbus.ReadRegistersAsync(slaveId, 0, 1))[0];
 
                     SlaveModelBase model = typeValue switch

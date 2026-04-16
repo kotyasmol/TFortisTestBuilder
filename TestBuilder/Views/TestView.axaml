@@ -48,48 +48,36 @@
 
     <Grid ColumnDefinitions="300,*">
 
-        <!-- LEFT PANEL -->
-        <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="10">
+		<!-- LEFT PANEL -->
+		<Border Grid.Column="0">
+			<Grid RowDefinitions="auto,*" Margin="10">
 
-            <StackPanel Grid.Row="0" Spacing="8">
-                <Button Content="{Binding ConnectionButtonText}"
-                        Command="{Binding ToggleConnectionCommand}"
-                        Height="40"
-                        FontSize="16"
-                        FontWeight="SemiBold"/>
-                <Button Content="RUN GRAPH"
-                        Command="{Binding RunGraphCommand}"
-                        Height="35"/>
-                <Button Content="Test 2" Height="35"/>
-                <TextBlock Text="{Binding StatusMessage}"
-                           Margin="0,6,0,0"
-                           TextWrapping="Wrap"
-                           FontSize="14"/>
-            </StackPanel>
+				<StackPanel Grid.Row="0" Spacing="8">
+					<Button Content="{Binding ConnectionButtonText}"
+							Command="{Binding ToggleConnectionCommand}"
+							Height="40"
+							FontSize="16"
+							FontWeight="SemiBold"/>
 
-            <!-- LOGS -->
-            <Border Grid.Row="1"
-                    BorderThickness="1"
-                    BorderBrush="#3F3F3F"
-                    CornerRadius="4"
-                    Padding="4"
-                    Margin="0,10,0,0">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="logging:LogEntry">
-                                <TextBlock Text="{Binding}"
-                                           Margin="2"
-                                           TextWrapping="Wrap"
-                                           FontFamily="Consolas"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Border>
+					<Button Content="RUN GRAPH"
+							Command="{Binding RunGraphCommand}"
+							Height="35"/>
 
-        </Grid>
+					<Button Content="Test 2" Height="35"/>
+
+					<TextBlock Text="{Binding StatusMessage}"
+							   Margin="0,6,0,0"
+							   TextWrapping="Wrap"
+							   FontSize="14"/>
+				</StackPanel>
+
+				<!-- LOGS -->
+				<Border Grid.Row="1"
+						BorderThickness="1"
+						BorderBrush="Gray"
+						CornerRadius="4"
+						Padding="4"
+						Margin="0,10,0,0">
 
         <!-- RIGHT PANEL — граф -->
         <Border Grid.Column="1"
@@ -212,19 +200,29 @@
                     </DataTemplate>
                 </nodify:NodifyEditor.ConnectionTemplate>
 
-                <!-- PENDING -->
-                <nodify:NodifyEditor.PendingConnectionTemplate>
-                    <DataTemplate x:DataType="nodifyvm:PendingConnectionViewModel">
-                        <nodify:PendingConnection
-                            StartedCommand="{Binding StartCommand}"
-                            CompletedCommand="{Binding FinishCommand}"
-                            AllowOnlyConnectors="True"/>
-                    </DataTemplate>
-                </nodify:NodifyEditor.PendingConnectionTemplate>
+							<!-- INPUT -->
+							<nodify:Node.InputConnectorTemplate>
+								<DataTemplate x:DataType="vm:ConnectorViewModel">
+									<nodify:NodeInput
+									Header="{Binding Title}"
+									IsConnected="{Binding IsConnected}"
+									Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+								</DataTemplate>
+							</nodify:Node.InputConnectorTemplate>
 
-            </nodify:NodifyEditor>
+							<!-- OUTPUT -->
+							<nodify:Node.OutputConnectorTemplate>
+								<DataTemplate x:DataType="vm:ConnectorViewModel">
+									<nodify:NodeOutput
+									Header="{Binding Title}"
+									IsConnected="{Binding IsConnected}"
+									Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+								</DataTemplate>
+							</nodify:Node.OutputConnectorTemplate>
 
-        </Border>
+						</nodify:Node>
+					</DataTemplate>
+				</nodify:NodifyEditor.ItemTemplate>
 
     </Grid>
 </UserControl>

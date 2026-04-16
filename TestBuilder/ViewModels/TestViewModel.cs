@@ -96,7 +96,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private void InitGraph()
     {
-        var start = CreateNode("Start", 100, 100, hasOutput: true);
+        var start = new StartNodeViewModel
+        {
+            Location = new Point(100, 100)
+        };
 
         var step = new ModbusWriteNodeViewModel
         {
@@ -106,7 +109,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             Value = 1
         };
 
-        var end = CreateNode("End", 700, 200, hasInput: true);
+        var end = new EndNodeViewModel
+        {
+            Location = new Point(700, 200)
+        };
 
         Nodes.Add(start);
         Nodes.Add(step);
@@ -246,8 +252,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         try
         {
-            var startNodeVm = Nodes.FirstOrDefault(n =>
-                !Connections.Any(c => c.Target == n.Input.FirstOrDefault()));
+            // ✅ ищем именно StartNode
+            var startNodeVm = Nodes
+                .OfType<StartNodeViewModel>()
+                .FirstOrDefault();
 
             if (startNodeVm == null)
             {
@@ -257,29 +265,46 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
             var map = new Dictionary<NodeViewModel, TestNode>();
 
+            // ✅ создаем TestNode для каждой VM
             foreach (var node in Nodes)
             {
                 map[node] = node switch
                 {
-                    ModbusWriteNodeViewModel writeNode => new TestNode(writeNode.CreateStep(_modbusService)),
-                    _ => new TestNode(null)
+                    ModbusWriteNodeViewModel writeNode =>
+                        new TestNode(writeNode.CreateStep(_modbusService)),
+
+                    StartNodeViewModel start =>
+                        new TestNode(start.CreateStep()),
+
+                    EndNodeViewModel end =>
+                        new TestNode(end.CreateStep()),
+
+                    _ => throw new NotSupportedException(
+                        $"Node type {node.GetType().Name} not supported")
                 };
             }
 
+            // ✅ связываем ноды
             foreach (var node in Nodes)
             {
                 var testNode = map[node];
 
-                var connection = Connections.FirstOrDefault(c =>
-                    c.Source == node.Output.FirstOrDefault());
+                var output = node.Output.FirstOrDefault();
+                if (output == null)
+                    continue;
 
-                if (connection != null)
+                var connection = Connections
+                    .FirstOrDefault(c => c.Source == output);
+
+                if (connection == null)
+                    continue;
+
+                var nextNodeVm = Nodes.FirstOrDefault(n =>
+                    n.Input.Contains(connection.Target));
+
+                if (nextNodeVm != null && map.ContainsKey(nextNodeVm))
                 {
-                    var nextNodeVm = Nodes.FirstOrDefault(n =>
-                        n.Input.Contains(connection.Target));
-
-                    if (nextNodeVm != null)
-                        testNode.Next = map[nextNodeVm];
+                    testNode.Next = map[nextNodeVm];
                 }
             }
 
@@ -287,7 +312,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
             await executor.ExecuteAsync(
                 map[startNodeVm],
-                new TestContext { CancellationToken = CancellationToken.None },
+                new TestContext
+                {
+                    CancellationToken = CancellationToken.None
+                },
                 CancellationToken.None);
 
             TestingLogger.Info("Граф выполнен.");
