@@ -38,7 +38,7 @@
         <!-- Основной контент -->
         <Grid ColumnDefinitions="*,300">
 
-            <!-- Левая часть — список устройств -->
+            <!-- Левая часть — без внешнего ScrollViewer -->
             <ScrollViewer Grid.Column="0" Background="#F0F0F0">
                 <ItemsControl ItemsSource="{Binding Slaves}"
                               HorizontalAlignment="Stretch">
@@ -49,8 +49,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:SlaveModelBase">
-                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="500">
-                                <Grid RowDefinitions="Auto,Auto">
+                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="600" VerticalAlignment="Top">
+                                <Grid RowDefinitions="Auto,*">
                                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                                         <StackPanel Grid.Column="0">
                                             <TextBlock FontWeight="Bold" Text="{Binding DeviceType}" />
@@ -62,46 +62,39 @@
                                                 VerticalAlignment="Center"
                                                 Padding="8,4" />
                                     </Grid>
-                                    <Grid Grid.Row="1" IsVisible="{Binding IsExpanded}">
-                                        <DataGrid 
-                                                  ItemsSource="{Binding RegisterItems}"
-                                                  SelectedItem="{Binding SelectedRegister}"
-                                                  DoubleTapped="OnDataGridDoubleTapped"
-                                                  AutoGenerateColumns="False"
-                                                  IsReadOnly="True"
-                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                  GridLinesVisibility="All"
-                                                  BorderThickness="1"
-                                                  BorderBrush="Gray"
-                                                  CanUserResizeColumns="True"
-                                                  CanUserSortColumns="True"
-                                                  Height="{Binding GridHeight}">
-                                                  
-                                                  
-                                                
-                                            <DataGrid.Resources>
-                                                <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
-                                            </DataGrid.Resources>
-                                            <DataGrid.Styles>
-                                                <Style Selector="DataGridRow">
-                                                    <Setter Property="Background">
-                                                        <Setter.Value>
-                                                            <Binding Path="IsReadOnly"
-                                                                     Converter="{StaticResource BoolToBackground}"
-                                                                     x:DataType="models:RegisterItem" />
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </Style>
-                                            </DataGrid.Styles>
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
-                                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                                                <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
-                                                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-                                        
-                                    </Grid>
+                                    <DataGrid Grid.Row="1"
+                                              IsVisible="{Binding IsExpanded}"
+                                              ItemsSource="{Binding RegisterItems}"
+                                              DoubleTapped="OnDataGridDoubleTapped"
+                                              AutoGenerateColumns="False"
+                                              IsReadOnly="True"
+                                              GridLinesVisibility="All"
+                                              BorderThickness="1"
+                                              BorderBrush="Gray"
+                                              CanUserResizeColumns="True"
+                                              CanUserSortColumns="True"
+                                              Height="{Binding GridHeight}">
+                                        <DataGrid.Resources>
+                                            <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
+                                        </DataGrid.Resources>
+                                        <DataGrid.Styles>
+                                            <Style Selector="DataGridRow">
+                                                <Setter Property="Background">
+                                                    <Setter.Value>
+                                                        <Binding Path="IsReadOnly"
+                                                                 Converter="{StaticResource BoolToBackground}"
+                                                                 x:DataType="models:RegisterItem" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </DataGrid.Styles>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
+                                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                                            <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
+                                            <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
                                 </Grid>
                             </Border>
                         </DataTemplate>

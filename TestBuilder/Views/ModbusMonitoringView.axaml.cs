@@ -5,6 +5,8 @@ using System.Linq;
 using TestBuilder.ViewModels;
 using Avalonia.Input;
 using TestBuilder.Domain.Modbus.Models;
+using Avalonia.VisualTree;
+using Avalonia.Controls.Primitives;
 namespace TestBuilder.Views;
 
 public partial class ModbusMonitoringView : UserControl
@@ -36,11 +38,27 @@ public partial class ModbusMonitoringView : UserControl
         }
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        AddHandler(RequestBringIntoViewEvent, OnRequestBringIntoView,
+                   handledEventsToo: true);
+    }
+
+    private void OnRequestBringIntoView(object? sender, RequestBringIntoViewEventArgs e)
+    {
+        // Блокируем автоскролл от DataGrid
+            e.Handled = true;
+    }
+
     private async void OnDataGridDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is not DataGrid dataGrid) return;
         if (dataGrid.DataContext is not SlaveModelBase slave) return;
-        if (slave.SelectedRegister is not RegisterItem register) return;
+        // Получаем кликнутую строку через визуальное дерево
+        if (e.Source is not Control source) return;
+        var row = source.FindAncestorOfType<DataGridRow>();
+        if (row?.DataContext is not RegisterItem register) return;
         if (register.IsReadOnly) return;
 
         var dialog = new WriteRegisterDialog(slave, register);
