@@ -112,8 +112,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         Nodes.Add(step);
         Nodes.Add(end);
 
-        Connections.Add(new ConnectionViewModel(start.Output.First(), step.Input.First()));
-        Connections.Add(new ConnectionViewModel(step.Output.First(), end.Input.First()));
+        Connections.Add(new ConnectionViewModel(start.Output.First(), step.In));
+        Connections.Add(new ConnectionViewModel(step.TrueOut, end.Input.First()));
     }
 
     private NodeViewModel CreateNode(string title, double x, double y, bool hasInput = false, bool hasOutput = false)
@@ -247,7 +247,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         try
         {
             var startNodeVm = Nodes.FirstOrDefault(n =>
-                !Connections.Any(c => c.Target == n.Input.FirstOrDefault()));
+                !Connections.Any(c => c.Target.Parent == n));
 
             if (startNodeVm == null)
             {
@@ -261,25 +261,36 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             {
                 map[node] = node switch
                 {
-                    ModbusWriteNodeViewModel writeNode => new TestNode(writeNode.CreateStep(_modbusService)),
-                    _ => new TestNode(null)
+                    ModbusWriteNodeViewModel writeNode =>
+                        new TestNode(writeNode.CreateStep(_modbusService)),
+
+                    _ => new TestNode(new PassThroughStep())
                 };
             }
 
-            foreach (var node in Nodes)
+            // 🔥 НОРМАЛЬНАЯ СВЯЗКА
+            foreach (var connection in Connections)
             {
-                var testNode = map[node];
+                var sourceNode = connection.Source.Parent;
+                var targetNode = connection.Target.Parent;
 
-                var connection = Connections.FirstOrDefault(c =>
-                    c.Source == node.Output.FirstOrDefault());
+                if (sourceNode == null || targetNode == null)
+                    continue;
 
-                if (connection != null)
+                var sourceTestNode = map[sourceNode];
+                var targetTestNode = map[targetNode];
+
+                if (sourceNode is ModbusWriteNodeViewModel writeNode)
                 {
-                    var nextNodeVm = Nodes.FirstOrDefault(n =>
-                        n.Input.Contains(connection.Target));
+                    if (connection.Source == writeNode.TrueOut)
+                        sourceTestNode.OnTrue = targetTestNode;
 
-                    if (nextNodeVm != null)
-                        testNode.Next = map[nextNodeVm];
+                    else if (connection.Source == writeNode.FalseOut)
+                        sourceTestNode.OnFalse = targetTestNode;
+                }
+                else
+                {
+                    sourceTestNode.Next = targetTestNode;
                 }
             }
 

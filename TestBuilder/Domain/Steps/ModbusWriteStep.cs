@@ -43,7 +43,7 @@ namespace TestBuilder.Domain.Steps
                 true,
                 cancellationToken);
 
-            return ok ? StepResult.Next : StepResult.False;
+            return ok ? StepResult.True : StepResult.False;
         }
     }
 }

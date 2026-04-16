@@ -1,14 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
-using Tmds.DBus.Protocol;
 
 namespace TestBuilder.ViewModels.StepVM
 {
@@ -23,12 +17,21 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty]
         private ushort value;
 
+        public ConnectorViewModel In { get; }
+        public ConnectorViewModel TrueOut { get; }
+        public ConnectorViewModel FalseOut { get; }
+
         public ModbusWriteNodeViewModel()
         {
             Title = "Write Register";
 
-            Input.Add(new ConnectorViewModel { Title = "In" });
-            Output.Add(new ConnectorViewModel { Title = "Out" });
+            In = new ConnectorViewModel { Title = "In" };
+            TrueOut = new ConnectorViewModel { Title = "True" };
+            FalseOut = new ConnectorViewModel { Title = "False" };
+
+            AddInput(In);
+            AddOutput(TrueOut);
+            AddOutput(FalseOut);
         }
 
         public ITestStep CreateStep(IModbusService modbusService)
