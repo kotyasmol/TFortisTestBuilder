@@ -106,15 +106,23 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             Max = 1
         };
 
+        var delay = new DelayNodeViewModel
+        {
+            Location = new Point(600, 100),
+            Milliseconds = 2000
+        };
+
         var end = new EndNodeViewModel { Location = new Point(850, 100) };
 
         Nodes.Add(start);
         Nodes.Add(write);
+        Nodes.Add(delay);
         Nodes.Add(check);
         Nodes.Add(end);
 
         Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
-        Connections.Add(new ConnectionViewModel(write.TrueOut, check.In));
+        Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));
+        Connections.Add(new ConnectionViewModel(delay.Out, check.In));
         Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
     }
 
@@ -228,6 +236,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                     CheckRegisterRangeNodeViewModel check =>
                         new TestNode(check.CreateStep()),
 
+                    DelayNodeViewModel delay =>
+                        new TestNode(delay.CreateStep(TestingLogger)),
+
                     _ => new TestNode(new PassThroughStep())
                 };
             }
@@ -256,6 +267,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                         src.OnTrue = dst;
                     else if (connection.Source == check.FalseOut)
                         src.OnFalse = dst;
+                }
+                else if (source is DelayNodeViewModel delay)
+                {
+                    src.Next = dst;
                 }
                 else
                 {
