@@ -5,20 +5,20 @@ using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
 {
-    public sealed class StartStep : ITestStep
+    public class LabelStep : ITestStep
     {
+        private readonly string _text;
         private readonly ILogger _logger;
 
-        public StartStep(ILogger logger)
+        public LabelStep(string text, ILogger logger)
         {
+            _text = text;
             _logger = logger;
         }
 
-        public Task<StepResult> ExecuteAsync(
-            TestContext context,
-            CancellationToken cancellationToken)
+        public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
-            _logger.Info("Тест начат");
+            _logger.Info($"=== {_text} ===");
             return Task.FromResult(StepResult.True);
         }
     }

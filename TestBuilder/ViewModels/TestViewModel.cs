@@ -121,13 +121,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         };
 
         Nodes.Add(start);
+        Nodes.Add(label);
         Nodes.Add(write);
         Nodes.Add(delay);
         Nodes.Add(check);
         Nodes.Add(end);
-        Nodes.Add(label);
 
-        Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
+
+        Connections.Add(new ConnectionViewModel(start.Output.First(), label.In));
+        Connections.Add(new ConnectionViewModel(label.Out, write.In));
         Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));
         Connections.Add(new ConnectionViewModel(delay.Out, check.In));
         Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
@@ -241,10 +243,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                         new TestNode(write.CreateStep(_modbusService, TestingLogger)),
 
                     CheckRegisterRangeNodeViewModel check =>
-                        new TestNode(check.CreateStep()),
+                        new TestNode(check.CreateStep(TestingLogger)),
 
                     DelayNodeViewModel delay =>
                         new TestNode(delay.CreateStep(TestingLogger)),
+
+                    StartNodeViewModel start =>
+                        new TestNode(start.CreateStep(TestingLogger)),
+
+                    EndNodeViewModel end =>
+                        new TestNode(end.CreateStep(TestingLogger)),
+
+                    LabelNodeViewModel label =>
+                        new TestNode(label.CreateStep(TestingLogger)),
 
                     _ => new TestNode(new PassThroughStep())
                 };
@@ -254,6 +265,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             {
                 var source = connection.Source.Parent;
                 var target = connection.Target.Parent;
+
+                TestingLogger.Info($"Связка: {source?.GetType().Name} -> {target?.GetType().Name}");
+
 
                 if (source == null || target == null)
                     continue;
@@ -279,10 +293,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 {
                     src.Next = dst;
                 }
+                else if (source is StartNodeViewModel)
+                {
+                    src.OnTrue = dst;
+                }
+                else if (source is LabelNodeViewModel)
+                {
+                    src.OnTrue = dst;
+                }
                 else
                 {
                     src.Next = dst;
                 }
+         
             }
 
             var context = new TestContext(_registerState)

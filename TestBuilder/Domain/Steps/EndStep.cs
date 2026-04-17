@@ -1,20 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
 {
     public sealed class EndStep : ITestStep
     {
+        private readonly ILogger _logger;
+
+        public EndStep(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         public Task<StepResult> ExecuteAsync(
             TestContext context,
             CancellationToken cancellationToken)
         {
-            Console.WriteLine("End step");
+            _logger.Info("Тест завершён");
             return Task.FromResult(StepResult.True);
         }
     }

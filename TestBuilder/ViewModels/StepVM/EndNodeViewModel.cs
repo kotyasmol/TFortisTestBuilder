@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 using TestBuilder.ViewModels.NodifyVM;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.ViewModels.StepVM
 {
@@ -17,9 +18,9 @@ namespace TestBuilder.ViewModels.StepVM
             AddInput(new ConnectorViewModel { Title = "In" });
         }
 
-        public ITestStep CreateStep()
+        public ITestStep CreateStep(ILogger logger)
         {
-            return new EndStep();
+            return new EndStep(logger);
         }
     }
 }
