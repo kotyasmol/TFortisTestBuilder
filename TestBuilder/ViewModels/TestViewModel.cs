@@ -121,13 +121,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         };
 
         Nodes.Add(start);
+        Nodes.Add(label);
         Nodes.Add(write);
         Nodes.Add(delay);
         Nodes.Add(check);
         Nodes.Add(end);
-        Nodes.Add(label);
 
-        Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
+
+        Connections.Add(new ConnectionViewModel(start.Output.First(), label.In));
+        Connections.Add(new ConnectionViewModel(label.Out, write.In));
         Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));
         Connections.Add(new ConnectionViewModel(delay.Out, check.In));
         Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
@@ -252,6 +254,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                     EndNodeViewModel end =>
                         new TestNode(end.CreateStep(TestingLogger)),
 
+                    LabelNodeViewModel label =>
+                        new TestNode(label.CreateStep(TestingLogger)),
+
                     _ => new TestNode(new PassThroughStep())
                 };
             }
@@ -292,10 +297,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 {
                     src.OnTrue = dst;
                 }
+                else if (source is LabelNodeViewModel)
+                {
+                    src.OnTrue = dst;
+                }
                 else
                 {
                     src.Next = dst;
                 }
+         
             }
 
             var context = new TestContext(_registerState)
