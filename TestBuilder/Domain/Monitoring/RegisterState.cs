@@ -13,32 +13,23 @@ namespace TestBuilder.Domain.Monitoring
     /// </summary>
     public class RegisterState
     {
-        private readonly ConcurrentDictionary<string, int> _values = new();
+        private readonly ConcurrentDictionary<RegisterKey, int> _values = new();
 
         /// <summary>
         /// Обновляет значение регистра. Используется мониторингом.
         /// </summary>
-        public void Update(string registerName, int value)
+        public void Update(byte slaveId, int address, int value)
         {
-            _values[registerName] = value;
+            _values[new RegisterKey(slaveId, address)] = value;
         }
 
         /// <summary>
         /// Попытка получить последнее известное значение регистра.
         /// </summary>
-        public bool TryGet(string registerName, out int value)
+        public bool TryGet(byte slaveId, int address, out int value)
         {
-            return _values.TryGetValue(registerName, out value);
+            return _values.TryGetValue(new RegisterKey(slaveId, address), out value);
         }
 
-        /// <summary>
-        /// Получить значение регистра по имени. Возвращает 0, если регистра нет.
-        /// </summary>
-        public int Get(string registerName) => _values.TryGetValue(registerName, out var val) ? val : 0;
-
-        /// <summary>
-        /// Получить снимок текущих значений всех регистров.
-        /// </summary>
-        public Dictionary<string, int> GetSnapshot() => new Dictionary<string, int>(_values);
     }
 }

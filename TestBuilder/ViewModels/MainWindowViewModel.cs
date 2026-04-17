@@ -22,11 +22,9 @@ namespace TestBuilder.ViewModels
             ModbusService = new ModbusService();
             SlaveManager = new SlaveManager(ModbusService);
 
-            TestVM = new TestViewModel(ModbusService, SlaveManager, OnSlavesFound, OnSlavesLost);
+            TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
         }
 
-        private void OnSlavesFound() => IsSlavesFound = true;
-        private void OnSlavesLost() => IsSlavesFound = false;
     }
 }

@@ -26,19 +26,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
     private readonly RegisterState _registerState = new();
-    private readonly Action? _onSlavesFound;
-    private readonly Action? _onSlavesLost;
 
     private RegisterMonitor? _registerMonitor;
     private CancellationTokenSource? _monitorCts;
 
     public ILogger TestingLogger { get; }
 
-    private const byte TEST_SLAVE_ID = 1;
-    private const ushort LOAD_SET_A_ADDRESS = 1412;
-
     [ObservableProperty]
     private bool isConnected;
+
+    [ObservableProperty]
+    private bool isMonitoringActive;
 
     [ObservableProperty]
     private string? statusMessage;
@@ -50,29 +48,22 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         IsConnected ? "Отключиться" : "Подключиться";
 
     public IAsyncRelayCommand ToggleConnectionCommand { get; }
-    public IAsyncRelayCommand Test1Command { get; }
     public IAsyncRelayCommand RunGraphCommand { get; }
 
-    // NODIFY
+    // Nodify
     public ObservableCollection<NodeViewModel> Nodes { get; } = new();
     public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
     public PendingConnectionViewModel PendingConnection { get; }
     public ICommand DisconnectConnectorCommand { get; }
 
-    [ObservableProperty]
-    private Avalonia.Point location;
-
-    public TestViewModel(ModbusService modbusService, SlaveManager slaveManager, Action? onSlavesFound = null, Action? onSlavesLost = null)
+    public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
         _modbusService = modbusService;
         _slaveManager = slaveManager;
-        _onSlavesFound = onSlavesFound;
-        _onSlavesLost = onSlavesLost;
 
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
-        Test1Command = new AsyncRelayCommand(PulseLoadSetAAsync);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
 
         PendingConnection = new PendingConnectionViewModel(this);
@@ -96,47 +87,35 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private void InitGraph()
     {
-        var start = new StartNodeViewModel
-        {
-            Location = new Point(100, 100)
-        };
+        var start = new StartNodeViewModel { Location = new Point(100, 100) };
 
-        var step = new ModbusWriteNodeViewModel
+        var write = new ModbusWriteNodeViewModel
         {
-            Location = new Point(400, 150),
+            Location = new Point(350, 100),
             SlaveId = 1,
             Address = 1412,
             Value = 1
         };
 
-        var end = new EndNodeViewModel
+        var check = new CheckRegisterRangeNodeViewModel
         {
-            Location = new Point(700, 200)
+            Location = new Point(600, 100),
+            SlaveId = 1,
+            Address = 1412,
+            Min = 1,
+            Max = 1
         };
+
+        var end = new EndNodeViewModel { Location = new Point(850, 100) };
 
         Nodes.Add(start);
-        Nodes.Add(step);
+        Nodes.Add(write);
+        Nodes.Add(check);
         Nodes.Add(end);
 
-        Connections.Add(new ConnectionViewModel(start.Output.First(), step.In));
-        Connections.Add(new ConnectionViewModel(step.TrueOut, end.Input.First()));
-    }
-
-    private NodeViewModel CreateNode(string title, double x, double y, bool hasInput = false, bool hasOutput = false)
-    {
-        var node = new NodeViewModel
-        {
-            Title = title,
-            Location = new Point(x, y)
-        };
-
-        if (hasInput)
-            node.Input.Add(new ConnectorViewModel { Title = "In" });
-
-        if (hasOutput)
-            node.Output.Add(new ConnectorViewModel { Title = "Out" });
-
-        return node;
+        Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
+        Connections.Add(new ConnectionViewModel(write.TrueOut, check.In));
+        Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
     }
 
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
@@ -146,18 +125,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private async Task ToggleConnectionAsync()
     {
-        try
-        {
-            if (IsConnected)
-                await DisconnectAsync();
-            else
-                await ConnectAsync();
-        }
-        catch (Exception ex)
-        {
-            TestingLogger.Error(ex.ToString());
-            StatusMessage = ex.Message;
-        }
+        if (IsConnected)
+            await DisconnectAsync();
+        else
+            await ConnectAsync();
 
         OnPropertyChanged(nameof(ConnectionButtonText));
     }
@@ -191,9 +162,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 await StartMonitoringAsync();
                 return;
             }
-            catch (Exception ex)
+            catch
             {
-                TestingLogger.Error(ex.Message);
                 await _modbusService.DisconnectAsync();
             }
         }
@@ -201,23 +171,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         StatusMessage = "Не удалось подключиться.";
     }
 
-    private async Task DisconnectAsync()
-    {
-        StatusMessage = "Отключение...";
-
-        _monitorCts?.Cancel();
-        _monitorCts?.Dispose();
-        _monitorCts = null;
-
-        _registerMonitor?.Stop();
-        _registerMonitor = null;
-
-        await _modbusService.DisconnectAsync();
-
-        IsConnected = false;
-        StatusMessage = "Отключено.";
-        _onSlavesLost?.Invoke();
-    }
 
     private async Task StartMonitoringAsync()
     {
@@ -226,118 +179,102 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         if (count == 0)
         {
             StatusMessage = "Слейвы не найдены.";
-            TestingLogger.Warning("Слейвы не найдены.");
             return;
         }
 
-        StatusMessage = $"Найдено устройств: {count}. Можно начинать тестирование.";
-        TestingLogger.Info($"Найдено {count} устройств.");
-        _onSlavesFound?.Invoke();
-
-        _registerMonitor = new RegisterMonitor(_slaveManager, _registerState, TestingLogger)
-        {
-            PollInterval = 1000
-        };
-
+        _registerMonitor = new RegisterMonitor(_slaveManager, _registerState, TestingLogger);
         _registerMonitor.Start();
+
+        IsMonitoringActive = true; 
+
+        StatusMessage = $"Найдено устройств: {count}";
     }
+
+        private async Task DisconnectAsync()
+    {
+        _monitorCts?.Cancel();
+        _registerMonitor?.Stop();
+
+        await _modbusService.DisconnectAsync();
+
+        IsConnected = false;
+        IsMonitoringActive = false; // 👈 ВЫКЛЮЧИЛИ
+
+        StatusMessage = "Отключено.";
+    }
+
 
     private async Task RunGraphAsync()
     {
         if (!IsConnected)
-        {
-            TestingLogger.Warning("Нет подключения.");
             return;
-        }
 
-        try
-        {
-            var startNodeVm = Nodes.FirstOrDefault(n =>
-                !Connections.Any(c => c.Target.Parent == n));
+        var startNodeVm = Nodes.FirstOrDefault(n =>
+            !Connections.Any(c => c.Target.Parent == n));
 
-            if (startNodeVm == null)
-            {
-                TestingLogger.Error("Стартовая нода не найдена.");
-                return;
-            }
-
-            var map = new Dictionary<NodeViewModel, TestNode>();
-
-            // ✅ создаем TestNode для каждой VM
-            foreach (var node in Nodes)
-            {
-                map[node] = node switch
-                {
-                    ModbusWriteNodeViewModel writeNode =>
-                        new TestNode(writeNode.CreateStep(_modbusService)),
-
-                    _ => new TestNode(new PassThroughStep())
-                };
-            }
-
-            // 🔥 НОРМАЛЬНАЯ СВЯЗКА
-            foreach (var connection in Connections)
-            {
-                var sourceNode = connection.Source.Parent;
-                var targetNode = connection.Target.Parent;
-
-                if (sourceNode == null || targetNode == null)
-                    continue;
-
-                var sourceTestNode = map[sourceNode];
-                var targetTestNode = map[targetNode];
-
-                if (sourceNode is ModbusWriteNodeViewModel writeNode)
-                {
-                    if (connection.Source == writeNode.TrueOut)
-                        sourceTestNode.OnTrue = targetTestNode;
-
-                    else if (connection.Source == writeNode.FalseOut)
-                        sourceTestNode.OnFalse = targetTestNode;
-                }
-                else
-                {
-                    sourceTestNode.Next = targetTestNode;
-                }
-            }
-
-            var executor = new TestExecutor();
-
-            await executor.ExecuteAsync(
-                map[startNodeVm],
-                new TestContext
-                {
-                    CancellationToken = CancellationToken.None
-                },
-                CancellationToken.None);
-
-            TestingLogger.Info("Граф выполнен.");
-        }
-        catch (Exception ex)
-        {
-            TestingLogger.Error(ex.ToString());
-        }
-    }
-
-    private async Task PulseLoadSetAAsync()
-    {
-        if (!IsConnected)
-        {
-            TestingLogger.Warning("Нет подключения.");
+        if (startNodeVm == null)
             return;
+
+        var map = new Dictionary<NodeViewModel, TestNode>();
+
+        foreach (var node in Nodes)
+        {
+            map[node] = node switch
+            {
+                ModbusWriteNodeViewModel write =>
+                    new TestNode(write.CreateStep(_modbusService)),
+
+                CheckRegisterRangeNodeViewModel check =>
+                    new TestNode(check.CreateStep()),
+
+                _ => new TestNode(new PassThroughStep())
+            };
         }
 
-        try
+        foreach (var connection in Connections)
         {
-            await _modbusService.WriteRegisterAsync(TEST_SLAVE_ID, LOAD_SET_A_ADDRESS, 1);
-            await Task.Delay(3000);
-            await _modbusService.WriteRegisterAsync(TEST_SLAVE_ID, LOAD_SET_A_ADDRESS, 0);
+            var source = connection.Source.Parent;
+            var target = connection.Target.Parent;
 
-            TestingLogger.Info("Импульс завершён.");
+            if (source == null || target == null)
+                continue;
+
+            var src = map[source];
+            var dst = map[target];
+
+            if (source is ModbusWriteNodeViewModel write)
+            {
+                if (connection.Source == write.TrueOut)
+                    src.OnTrue = dst;
+                else if (connection.Source == write.FalseOut)
+                    src.OnFalse = dst;
+            }
+            else if (source is CheckRegisterRangeNodeViewModel check)
+            {
+                if (connection.Source == check.TrueOut)
+                    src.OnTrue = dst;
+                else if (connection.Source == check.FalseOut)
+                    src.OnFalse = dst;
+            }
+            else
+            {
+                src.Next = dst;
+            }
         }
-        catch (Exception ex)
+
+        var context = new TestContext(_registerState)
         {
-            TestingLogger.Error(ex.ToString());
-        }
+            CancellationToken = CancellationToken.None,
+            IsConnected = IsConnected
+        };
+
+        var executor = new TestExecutor();
+
+        await executor.ExecuteAsync(
+            map[startNodeVm],
+            context,
+            CancellationToken.None);
+
+        TestingLogger.Info("Граф выполнен.");
     }
 }
