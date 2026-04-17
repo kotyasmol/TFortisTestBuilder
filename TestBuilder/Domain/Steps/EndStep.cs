@@ -15,7 +15,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             Console.WriteLine("End step");
-            return Task.FromResult(StepResult.Next);
+            return Task.FromResult(StepResult.True);
         }
     }
 }

@@ -20,7 +20,7 @@ namespace TestBuilder.Domain.Steps
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             await Task.Delay(Milliseconds, cancellationToken);
-            return StepResult.Next;
+            return StepResult.True;
         }
     }
 }
