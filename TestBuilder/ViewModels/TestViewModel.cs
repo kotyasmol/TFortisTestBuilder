@@ -354,7 +354,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             "Start" => new StartNodeViewModel { Location = location },
             "End" => new EndNodeViewModel { Location = location },
             "Write Register" => new ModbusWriteNodeViewModel { Location = location },
-            "Check Range" => new CheckRegisterRangeNodeViewModel { Location = location },
+            "Check Register Range" => new CheckRegisterRangeNodeViewModel { Location = location },
             "Delay" => new DelayNodeViewModel { Location = location },
             "Label" => new LabelNodeViewModel { Location = location },
             _ => null
