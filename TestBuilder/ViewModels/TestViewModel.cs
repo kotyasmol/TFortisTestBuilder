@@ -106,15 +106,30 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             Max = 1
         };
 
+        var delay = new DelayNodeViewModel
+        {
+            Location = new Point(600, 100),
+            Milliseconds = 2000
+        };
+
         var end = new EndNodeViewModel { Location = new Point(850, 100) };
+
+        var label = new LabelNodeViewModel
+        {
+            Location = new Point(100, 300),
+            Text = "Этап 1: Запись и проверка"
+        };
 
         Nodes.Add(start);
         Nodes.Add(write);
+        Nodes.Add(delay);
         Nodes.Add(check);
         Nodes.Add(end);
+        Nodes.Add(label);
 
         Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
-        Connections.Add(new ConnectionViewModel(write.TrueOut, check.In));
+        Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));
+        Connections.Add(new ConnectionViewModel(delay.Out, check.In));
         Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
     }
 
@@ -185,12 +200,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         _registerMonitor = new RegisterMonitor(_slaveManager, _registerState, TestingLogger);
         _registerMonitor.Start();
 
-        IsMonitoringActive = true; 
+        IsMonitoringActive = true;
 
         StatusMessage = $"Найдено устройств: {count}";
     }
 
-        private async Task DisconnectAsync()
+    private async Task DisconnectAsync()
     {
         _monitorCts?.Cancel();
         _registerMonitor?.Stop();
@@ -209,71 +224,85 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         if (!IsConnected)
             return;
 
-        var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
-
-        if (startNodeVm == null)
-            return;
-
-        var map = new Dictionary<NodeViewModel, TestNode>();
-
-        foreach (var node in Nodes)
+        try
         {
-            map[node] = node switch
+            var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
+
+            if (startNodeVm == null)
+                return;
+
+            var map = new Dictionary<NodeViewModel, TestNode>();
+
+            foreach (var node in Nodes)
             {
-                ModbusWriteNodeViewModel write =>
-                    new TestNode(write.CreateStep(_modbusService, TestingLogger)),
+                map[node] = node switch
+                {
+                    ModbusWriteNodeViewModel write =>
+                        new TestNode(write.CreateStep(_modbusService, TestingLogger)),
 
-                CheckRegisterRangeNodeViewModel check =>
-                    new TestNode(check.CreateStep()),
+                    CheckRegisterRangeNodeViewModel check =>
+                        new TestNode(check.CreateStep()),
 
-                _ => new TestNode(new PassThroughStep())
+                    DelayNodeViewModel delay =>
+                        new TestNode(delay.CreateStep(TestingLogger)),
+
+                    _ => new TestNode(new PassThroughStep())
+                };
+            }
+
+            foreach (var connection in Connections)
+            {
+                var source = connection.Source.Parent;
+                var target = connection.Target.Parent;
+
+                if (source == null || target == null)
+                    continue;
+
+                var src = map[source];
+                var dst = map[target];
+
+                if (source is ModbusWriteNodeViewModel write)
+                {
+                    if (connection.Source == write.TrueOut)
+                        src.OnTrue = dst;
+                    else if (connection.Source == write.FalseOut)
+                        src.OnFalse = dst;
+                }
+                else if (source is CheckRegisterRangeNodeViewModel check)
+                {
+                    if (connection.Source == check.TrueOut)
+                        src.OnTrue = dst;
+                    else if (connection.Source == check.FalseOut)
+                        src.OnFalse = dst;
+                }
+                else if (source is DelayNodeViewModel delay)
+                {
+                    src.Next = dst;
+                }
+                else
+                {
+                    src.Next = dst;
+                }
+            }
+
+            var context = new TestContext(_registerState)
+            {
+                CancellationToken = CancellationToken.None,
+                IsConnected = IsConnected
             };
+
+            var executor = new TestExecutor();
+
+            await executor.ExecuteAsync(
+                map[startNodeVm],
+                context,
+                CancellationToken.None);
+
+            TestingLogger.Info("Граф выполнен.");
         }
-
-        foreach (var connection in Connections)
+        catch (Exception ex)
         {
-            var source = connection.Source.Parent;
-            var target = connection.Target.Parent;
-
-            if (source == null || target == null)
-                continue;
-
-            var src = map[source];
-            var dst = map[target];
-
-            if (source is ModbusWriteNodeViewModel write)
-            {
-                if (connection.Source == write.TrueOut)
-                    src.OnTrue = dst;
-                else if (connection.Source == write.FalseOut)
-                    src.OnFalse = dst;
-            }
-            else if (source is CheckRegisterRangeNodeViewModel check)
-            {
-                if (connection.Source == check.TrueOut)
-                    src.OnTrue = dst;
-                else if (connection.Source == check.FalseOut)
-                    src.OnFalse = dst;
-            }
-            else
-            {
-                src.Next = dst;
-            }
+            TestingLogger.Error(ex.ToString());
         }
-
-        var context = new TestContext(_registerState)
-        {
-            CancellationToken = CancellationToken.None,
-            IsConnected = IsConnected
-        };
-
-        var executor = new TestExecutor();
-
-        await executor.ExecuteAsync(
-            map[startNodeVm],
-            context,
-            CancellationToken.None);
-
-        TestingLogger.Info("Граф выполнен.");
     }
 }

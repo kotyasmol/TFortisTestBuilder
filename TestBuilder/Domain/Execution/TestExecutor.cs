@@ -34,6 +34,8 @@ namespace TestBuilder.Domain.Execution
                 var result = await current.Step
                     .ExecuteAsync(context, cancellationToken);
 
+                Console.WriteLine($"Step: {current.Step.GetType().Name}, Result: {result}, OnTrue: {current.OnTrue?.Step?.GetType().Name}, OnFalse: {current.OnFalse?.Step?.GetType().Name}, Next: {current.Next?.Step?.GetType().Name}");
+
                 current = result switch
                 {
                     StepResult.Next => current.Next,
