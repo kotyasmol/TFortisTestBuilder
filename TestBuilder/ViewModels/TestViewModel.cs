@@ -57,14 +57,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     public ICommand DisconnectConnectorCommand { get; }
 
     // Доступные ноды для панели
-    public ObservableCollection<string> AvailableNodeTypes { get; } = new()
+    public ObservableCollection<NodeViewModel> AvailableNodes { get; } = new()
 {
-    "Start",
-    "End",
-    "Write Register",
-    "Check Range",
-    "Delay",
-    "Label"
+    new StartNodeViewModel(),
+    new EndNodeViewModel(),
+    new ModbusWriteNodeViewModel(),
+    new CheckRegisterRangeNodeViewModel(),
+    new DelayNodeViewModel(),
+    new LabelNodeViewModel()
 };
 
     public ICommand AddNodeCommand { get; }
@@ -344,8 +344,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private void AddNode(string? nodeType)
     {
-        var location = new Point(200, 200);
+        AddNodeAtLocation(nodeType, new Point(200, 200));
+    }
 
+    public void AddNodeAtLocation(string? nodeType, Point location)
+    {
         NodeViewModel? node = nodeType switch
         {
             "Start" => new StartNodeViewModel { Location = location },
@@ -359,5 +362,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         if (node != null)
             Nodes.Add(node);
+    
     }
 }
