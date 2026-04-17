@@ -56,6 +56,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     public PendingConnectionViewModel PendingConnection { get; }
     public ICommand DisconnectConnectorCommand { get; }
 
+    // Доступные ноды для панели
+    public ObservableCollection<NodeViewModel> AvailableNodes { get; } = new()
+{
+    new StartNodeViewModel(),
+    new EndNodeViewModel(),
+    new ModbusWriteNodeViewModel(),
+    new CheckRegisterRangeNodeViewModel(),
+    new DelayNodeViewModel(),
+    new LabelNodeViewModel()
+};
+
+    public ICommand AddNodeCommand { get; }
+
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
         _modbusService = modbusService;
@@ -67,7 +80,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
 
         PendingConnection = new PendingConnectionViewModel(this);
-
+        AddNodeCommand = new RelayCommand<string>(AddNode);
         DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel>(connector =>
         {
             var connection = Connections.FirstOrDefault(x =>
@@ -327,5 +340,28 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             TestingLogger.Error(ex.ToString());
         }
+    }
+
+    private void AddNode(string? nodeType)
+    {
+        AddNodeAtLocation(nodeType, new Point(200, 200));
+    }
+
+    public void AddNodeAtLocation(string? nodeType, Point location)
+    {
+        NodeViewModel? node = nodeType switch
+        {
+            "Start" => new StartNodeViewModel { Location = location },
+            "End" => new EndNodeViewModel { Location = location },
+            "Write Register" => new ModbusWriteNodeViewModel { Location = location },
+            "Check Register Range" => new CheckRegisterRangeNodeViewModel { Location = location },
+            "Delay" => new DelayNodeViewModel { Location = location },
+            "Label" => new LabelNodeViewModel { Location = location },
+            _ => null
+        };
+
+        if (node != null)
+            Nodes.Add(node);
+    
     }
 }
