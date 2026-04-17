@@ -209,8 +209,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         if (!IsConnected)
             return;
 
-        _registerMonitor?.Stop();
-
         try
         {
             var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
@@ -283,10 +281,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         catch (Exception ex)
         {
             TestingLogger.Error(ex.ToString());
-        }
-        finally
-        {
-            _registerMonitor?.Start();
         }
     }
 }
