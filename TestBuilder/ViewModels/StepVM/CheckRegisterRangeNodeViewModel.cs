@@ -3,6 +3,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 using TestBuilder.ViewModels.NodifyVM;
 using Tmds.DBus.Protocol;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.ViewModels.StepVM
 {
@@ -37,9 +38,9 @@ namespace TestBuilder.ViewModels.StepVM
             AddOutput(FalseOut);
         }
 
-        public ITestStep CreateStep()
+        public ITestStep CreateStep(ILogger logger)
         {
-            return new CheckRegisterRangeStep(SlaveId, Address, Min, Max);
+            return new CheckRegisterRangeStep(SlaveId, Address, Min, Max, logger);
         }
     }
 }

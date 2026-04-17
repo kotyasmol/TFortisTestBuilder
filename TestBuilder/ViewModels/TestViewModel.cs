@@ -241,10 +241,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                         new TestNode(write.CreateStep(_modbusService, TestingLogger)),
 
                     CheckRegisterRangeNodeViewModel check =>
-                        new TestNode(check.CreateStep()),
+                        new TestNode(check.CreateStep(TestingLogger)),
 
                     DelayNodeViewModel delay =>
                         new TestNode(delay.CreateStep(TestingLogger)),
+
+                    StartNodeViewModel start =>
+                        new TestNode(start.CreateStep(TestingLogger)),
+
+                    EndNodeViewModel end =>
+                        new TestNode(end.CreateStep(TestingLogger)),
 
                     _ => new TestNode(new PassThroughStep())
                 };
@@ -254,6 +260,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             {
                 var source = connection.Source.Parent;
                 var target = connection.Target.Parent;
+
+                TestingLogger.Info($"Связка: {source?.GetType().Name} -> {target?.GetType().Name}");
+
 
                 if (source == null || target == null)
                     continue;
@@ -278,6 +287,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 else if (source is DelayNodeViewModel delay)
                 {
                     src.Next = dst;
+                }
+                else if (source is StartNodeViewModel)
+                {
+                    src.OnTrue = dst;
                 }
                 else
                 {
