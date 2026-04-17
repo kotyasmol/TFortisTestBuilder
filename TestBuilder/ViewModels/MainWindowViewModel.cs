@@ -24,6 +24,12 @@ namespace TestBuilder.ViewModels
 
             TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
+
+            TestVM.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
+                    IsSlavesFound = TestVM.IsMonitoringActive;
+            };
         }
 
     }
