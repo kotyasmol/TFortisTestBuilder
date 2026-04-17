@@ -123,7 +123,7 @@ namespace TestBuilder.Domain.Monitoring
                 // Обновляем RegisterState и логируем успешные чтения.
                 foreach (var reg in slave.RegisterItems)
                 {
-                    _registerState.Update(reg.Name, reg.Value);
+                    _registerState.Update(slave.SlaveId, reg.Address, reg.Value);
                     if (VerboseLogging)
                         _logger.Debug($"Slave {slave.SlaveId} | {reg.Name} ({reg.Address}) = {reg.Value}");
                 }
