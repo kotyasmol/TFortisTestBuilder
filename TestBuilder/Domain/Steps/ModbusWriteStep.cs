@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Steps
@@ -19,14 +20,17 @@ namespace TestBuilder.Domain.Steps
         private readonly byte _slaveId;
         private readonly ushort _address;
         private readonly ushort _value;
+        private readonly ILogger _logger;
 
         public ModbusWriteStep(
-            IModbusService modbusService,
-            byte slaveId,
-            ushort address,
-            ushort value)
+    IModbusService modbusService,
+    ILogger logger,
+    byte slaveId,
+    ushort address,
+    ushort value)
         {
             _modbusService = modbusService;
+            _logger = logger;
             _slaveId = slaveId;
             _address = address;
             _value = value;
@@ -36,7 +40,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            Console.WriteLine($"WriteRegister: slave={_slaveId}, addr={_address}, val={_value}");
+            _logger.Info($"WRITE STEP: slave={_slaveId}, addr={_address}, val={_value}");
             var ok = await _modbusService.WriteRegisterAsync(
                 _slaveId,
                 _address,

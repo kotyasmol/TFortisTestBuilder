@@ -209,8 +209,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         if (!IsConnected)
             return;
 
-        var startNodeVm = Nodes.FirstOrDefault(n =>
-            !Connections.Any(c => c.Target.Parent == n));
+        var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
 
         if (startNodeVm == null)
             return;
@@ -222,7 +221,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             map[node] = node switch
             {
                 ModbusWriteNodeViewModel write =>
-                    new TestNode(write.CreateStep(_modbusService)),
+                    new TestNode(write.CreateStep(_modbusService, TestingLogger)),
 
                 CheckRegisterRangeNodeViewModel check =>
                     new TestNode(check.CreateStep()),

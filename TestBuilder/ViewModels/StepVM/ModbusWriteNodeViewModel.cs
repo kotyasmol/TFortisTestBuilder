@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -34,9 +35,9 @@ namespace TestBuilder.ViewModels.StepVM
             AddOutput(FalseOut);
         }
 
-        public ITestStep CreateStep(IModbusService modbusService)
+        public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new ModbusWriteStep(modbusService, SlaveId, Address, Value);
+            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value);
         }
     }
 }
