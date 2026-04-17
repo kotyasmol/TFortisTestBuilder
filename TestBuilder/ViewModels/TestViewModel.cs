@@ -114,11 +114,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         var end = new EndNodeViewModel { Location = new Point(850, 100) };
 
+        var label = new LabelNodeViewModel
+        {
+            Location = new Point(100, 300),
+            Text = "Этап 1: Запись и проверка"
+        };
+
         Nodes.Add(start);
         Nodes.Add(write);
         Nodes.Add(delay);
         Nodes.Add(check);
         Nodes.Add(end);
+        Nodes.Add(label);
 
         Connections.Add(new ConnectionViewModel(start.Output.First(), write.In));
         Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));

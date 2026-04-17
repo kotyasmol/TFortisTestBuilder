@@ -10,6 +10,7 @@ public class NodeTemplateSelector : IDataTemplate
     public IDataTemplate? ModbusWriteTemplate { get; set; }
     public IDataTemplate? CheckRegisterRangeTemplate { get; set; }
     public IDataTemplate? DelayTemplate { get; set; }
+    public IDataTemplate? LabelTemplate { get; set; }
 
     public Control? Build(object? param)
     {
@@ -23,6 +24,9 @@ public class NodeTemplateSelector : IDataTemplate
 
             DelayNodeViewModel =>
                 DelayTemplate?.Build(param),
+
+            LabelNodeViewModel =>
+                LabelTemplate?.Build(param),
 
             _ =>
                 DefaultTemplate?.Build(param)
