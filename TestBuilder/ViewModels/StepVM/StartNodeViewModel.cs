@@ -14,7 +14,7 @@ namespace TestBuilder.ViewModels.StepVM
         public StartNodeViewModel()
         {
             Title = "Start";
-            Output.Add(new ConnectorViewModel { Title = "Out" });
+            AddOutput(new ConnectorViewModel { Title = "Out" });
         }
 
         public ITestStep CreateStep()
