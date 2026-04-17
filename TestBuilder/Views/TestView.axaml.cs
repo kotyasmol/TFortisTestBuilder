@@ -12,7 +12,13 @@ public partial class TestView : UserControl
     {
         InitializeComponent();
     }
-
+    private void OnAddNodeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.CommandParameter is string nodeType && DataContext is TestViewModel vm)
+        {
+            vm.AddNodeCommand.Execute(nodeType);
+        }
+    }
     // Автопрокрутка логов вниз
     protected override void OnDataContextChanged(EventArgs e)
     {

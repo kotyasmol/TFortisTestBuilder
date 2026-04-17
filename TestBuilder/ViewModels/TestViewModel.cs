@@ -56,6 +56,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     public PendingConnectionViewModel PendingConnection { get; }
     public ICommand DisconnectConnectorCommand { get; }
 
+    // Доступные ноды для панели
+    public ObservableCollection<string> AvailableNodeTypes { get; } = new()
+{
+    "Start",
+    "End",
+    "Write Register",
+    "Check Range",
+    "Delay",
+    "Label"
+};
+
+    public ICommand AddNodeCommand { get; }
+
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
         _modbusService = modbusService;
@@ -67,7 +80,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
 
         PendingConnection = new PendingConnectionViewModel(this);
-
+        AddNodeCommand = new RelayCommand<string>(AddNode);
         DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel>(connector =>
         {
             var connection = Connections.FirstOrDefault(x =>
@@ -327,5 +340,24 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             TestingLogger.Error(ex.ToString());
         }
+    }
+
+    private void AddNode(string? nodeType)
+    {
+        var location = new Point(200, 200);
+
+        NodeViewModel? node = nodeType switch
+        {
+            "Start" => new StartNodeViewModel { Location = location },
+            "End" => new EndNodeViewModel { Location = location },
+            "Write Register" => new ModbusWriteNodeViewModel { Location = location },
+            "Check Range" => new CheckRegisterRangeNodeViewModel { Location = location },
+            "Delay" => new DelayNodeViewModel { Location = location },
+            "Label" => new LabelNodeViewModel { Location = location },
+            _ => null
+        };
+
+        if (node != null)
+            Nodes.Add(node);
     }
 }
