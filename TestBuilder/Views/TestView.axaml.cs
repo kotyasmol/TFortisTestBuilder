@@ -18,15 +18,6 @@ public partial class TestView : UserControl
     {
         InitializeComponent();
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
-
-        // При клике на редактор — принудительно берём фокус
-        Editor.AddHandler(PointerPressedEvent, OnEditorPointerPressed, handledEventsToo: true);
-    }
-
-    // Принудительно даём фокус редактору при любом клике на него
-    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        Editor.Focus();
     }
 
     // Подписка на KeyDown окна при появлении в дереве
