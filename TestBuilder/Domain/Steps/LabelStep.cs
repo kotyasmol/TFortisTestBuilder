@@ -16,10 +16,12 @@ namespace TestBuilder.Domain.Steps
             _logger = logger;
         }
 
-        public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
+        public Task<StepResult> ExecuteAsync(
+            TestContext context,
+            CancellationToken cancellationToken)
         {
             _logger.Info($"=== {_text} ===");
-            return Task.FromResult(StepResult.True);
+            return Task.FromResult(StepResult.Next);
         }
     }
 }

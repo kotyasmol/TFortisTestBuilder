@@ -16,12 +16,14 @@ namespace TestBuilder.Domain.Steps
             _logger = logger;
         }
 
-        public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
+        public async Task<StepResult> ExecuteAsync(
+            TestContext context,
+            CancellationToken cancellationToken)
         {
             _logger.Info($"Delay: ожидание {Milliseconds} мс...");
             await Task.Delay(Milliseconds, cancellationToken);
             _logger.Info($"Delay: завершено");
-            return StepResult.True;
+            return StepResult.Next;
         }
     }
 }

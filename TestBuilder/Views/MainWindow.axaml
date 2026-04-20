@@ -8,8 +8,6 @@
         Height="800"
         Title="TestBuilder">
 
-
-
     <Window.DataContext>
         <vm:MainWindowViewModel />
     </Window.DataContext>

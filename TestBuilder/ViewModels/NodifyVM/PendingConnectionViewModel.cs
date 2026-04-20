@@ -18,12 +18,19 @@ namespace TestBuilder.ViewModels.NodifyVM
 
             FinishCommand = new RelayCommand<ConnectorViewModel>(target =>
             {
-                if (_source != null && target != null)
+                if (_source != null && target != null && _source != target)
                 {
-                    _editor.Connect(_source, target);
+                    // Не соединяем коннекторы одной и той же ноды
+                    if (_source.Parent != target.Parent)
+                        _editor.Connect(_source, target);
                 }
+
+                _source = null; // Всегда сбрасываем после попытки соединения
             });
         }
+
+        // Сброс незавершённого соединения (например после ClearGraph)
+        public void Reset() => _source = null;
 
         public IRelayCommand<ConnectorViewModel> StartCommand { get; }
         public IRelayCommand<ConnectorViewModel> FinishCommand { get; }
