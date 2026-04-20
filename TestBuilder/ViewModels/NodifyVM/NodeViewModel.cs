@@ -12,6 +12,9 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty]
         private Point location;
 
+        [ObservableProperty]
+        private bool isSelected;
+
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
 

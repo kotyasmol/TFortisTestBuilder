@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -17,6 +18,43 @@ public partial class TestView : UserControl
     {
         InitializeComponent();
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
+
+        // При клике на редактор — принудительно берём фокус
+        Editor.AddHandler(PointerPressedEvent, OnEditorPointerPressed, handledEventsToo: true);
+    }
+
+    // Принудительно даём фокус редактору при любом клике на него
+    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        Editor.Focus();
+    }
+
+    // Подписка на KeyDown окна при появлении в дереве
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel != null)
+            topLevel.KeyDown += OnWindowKeyDown;
+    }
+
+    // Отписка при уходе из дерева
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel != null)
+            topLevel.KeyDown -= OnWindowKeyDown;
+    }
+
+    // Delete — удаляем выделенные ноды
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete && DataContext is TestViewModel vm)
+        {
+            vm.DeleteSelectedNodesCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     // Автопрокрутка логов вниз
@@ -70,5 +108,19 @@ public partial class TestView : UserControl
             vm.AddNodeAtLocation(nodeType, location);
             e.Handled = true;
         }
+    }
+
+    // Кнопка Очистить — выделяем все и удаляем через тот же механизм что и Delete
+    public void OnClearGraph(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel vm)
+            return;
+
+        Editor.SelectAll();
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            vm.DeleteSelectedNodesCommand.Execute(null);
+        }, DispatcherPriority.Background);
     }
 }

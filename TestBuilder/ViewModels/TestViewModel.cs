@@ -53,19 +53,22 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     // Nodify
     public ObservableCollection<NodeViewModel> Nodes { get; } = new();
     public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
+    public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new();
     public PendingConnectionViewModel PendingConnection { get; }
     public ICommand DisconnectConnectorCommand { get; }
+    public ICommand DeleteSelectedNodesCommand { get; }
+    public ICommand ClearGraphCommand { get; }
 
-    // Доступные ноды для панели
+    // Доступные ноды для панели drag-and-drop
     public ObservableCollection<NodeViewModel> AvailableNodes { get; } = new()
-{
-    new StartNodeViewModel(),
-    new EndNodeViewModel(),
-    new ModbusWriteNodeViewModel(),
-    new CheckRegisterRangeNodeViewModel(),
-    new DelayNodeViewModel(),
-    new LabelNodeViewModel()
-};
+    {
+        new StartNodeViewModel(),
+        new EndNodeViewModel(),
+        new ModbusWriteNodeViewModel(),
+        new CheckRegisterRangeNodeViewModel(),
+        new DelayNodeViewModel(),
+        new LabelNodeViewModel()
+    };
 
     public ICommand AddNodeCommand { get; }
 
@@ -81,6 +84,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         PendingConnection = new PendingConnectionViewModel(this);
         AddNodeCommand = new RelayCommand<string>(AddNode);
+
         DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel>(connector =>
         {
             var connection = Connections.FirstOrDefault(x =>
@@ -94,58 +98,64 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             }
         });
 
-        InitGraph();
+        DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes);
+        ClearGraphCommand = new RelayCommand(ClearGraph);
+
         StatusMessage = "Готов к подключению.";
     }
 
-    private void InitGraph()
+    // Полная очистка холста — выделяем все ноды и удаляем через DeleteSelectedNodes
+    // чтобы Nodify корректно обновил UI (прямая очистка коллекций ломает состояние)
+    public void ClearGraph()
     {
-        var start = new StartNodeViewModel { Location = new Point(100, 100) };
-
-        var write = new ModbusWriteNodeViewModel
+        // Выделяем все ноды
+        foreach (var node in Nodes)
         {
-            Location = new Point(350, 100),
-            SlaveId = 1,
-            Address = 1412,
-            Value = 1
-        };
+            if (!SelectedNodes.Contains(node))
+                SelectedNodes.Add(node);
+        }
 
-        var check = new CheckRegisterRangeNodeViewModel
+        // Удаляем через стандартный механизм
+        DeleteSelectedNodes();
+
+        // Сбрасываем незавершённое соединение если было
+        PendingConnection.Reset();
+    }
+
+    // Удаление выделенных нод с правильным сбросом IsConnected на оставшихся
+    public void DeleteSelectedNodes()
+    {
+        var selected = SelectedNodes.ToList();
+
+        foreach (var node in selected)
         {
-            Location = new Point(600, 100),
-            SlaveId = 1,
-            Address = 1412,
-            Min = 1,
-            Max = 1
-        };
+            // Удаляем все соединения связанные с этой нодой
+            var toRemove = Connections
+                .Where(c => c.Source.Parent == node || c.Target.Parent == node)
+                .ToList();
 
-        var delay = new DelayNodeViewModel
+            foreach (var conn in toRemove)
+            {
+                conn.Source.IsConnected = false;
+                conn.Target.IsConnected = false;
+                Connections.Remove(conn);
+            }
+
+            Nodes.Remove(node);
+        }
+
+        SelectedNodes.Clear();
+
+        // Пересчитываем IsConnected для оставшихся нод
+        // чтобы освободить коннекторы у которых больше нет соединений
+        foreach (var node in Nodes)
         {
-            Location = new Point(600, 100),
-            Milliseconds = 2000
-        };
-
-        var end = new EndNodeViewModel { Location = new Point(850, 100) };
-
-        var label = new LabelNodeViewModel
-        {
-            Location = new Point(100, 300),
-            Text = "Этап 1: Запись и проверка"
-        };
-
-        Nodes.Add(start);
-        Nodes.Add(label);
-        Nodes.Add(write);
-        Nodes.Add(delay);
-        Nodes.Add(check);
-        Nodes.Add(end);
-
-
-        Connections.Add(new ConnectionViewModel(start.Output.First(), label.In));
-        Connections.Add(new ConnectionViewModel(label.Out, write.In));
-        Connections.Add(new ConnectionViewModel(write.TrueOut, delay.In));
-        Connections.Add(new ConnectionViewModel(delay.Out, check.In));
-        Connections.Add(new ConnectionViewModel(check.TrueOut, end.Input.First()));
+            foreach (var connector in node.Input.Concat(node.Output))
+            {
+                connector.IsConnected = Connections.Any(c =>
+                    c.Source == connector || c.Target == connector);
+            }
+        }
     }
 
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
@@ -201,7 +211,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         StatusMessage = "Не удалось подключиться.";
     }
 
-
     private async Task StartMonitoringAsync()
     {
         int count = await _slaveManager.ScanAsync();
@@ -228,11 +237,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         await _modbusService.DisconnectAsync();
 
         IsConnected = false;
-        IsMonitoringActive = false; // 👈 ВЫКЛЮЧИЛИ
+        IsMonitoringActive = false;
 
         StatusMessage = "Отключено.";
     }
-
 
     private async Task RunGraphAsync()
     {
@@ -244,92 +252,82 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
 
             if (startNodeVm == null)
+            {
+                TestingLogger.Warning("Нет ноды Start на холсте!");
                 return;
+            }
 
+            // Шаг 1: создаём TestNode для каждой ноды на холсте
             var map = new Dictionary<NodeViewModel, TestNode>();
 
             foreach (var node in Nodes)
             {
                 map[node] = node switch
                 {
-                    ModbusWriteNodeViewModel write =>
-                        new TestNode(write.CreateStep(_modbusService, TestingLogger)),
-
-                    CheckRegisterRangeNodeViewModel check =>
-                        new TestNode(check.CreateStep(TestingLogger)),
-
-                    DelayNodeViewModel delay =>
-                        new TestNode(delay.CreateStep(TestingLogger)),
-
                     StartNodeViewModel start =>
                         new TestNode(start.CreateStep(TestingLogger)),
 
                     EndNodeViewModel end =>
                         new TestNode(end.CreateStep(TestingLogger)),
 
+                    DelayNodeViewModel delay =>
+                        new TestNode(delay.CreateStep(TestingLogger)),
+
                     LabelNodeViewModel label =>
                         new TestNode(label.CreateStep(TestingLogger)),
+
+                    ModbusWriteNodeViewModel write =>
+                        new TestNode(write.CreateStep(_modbusService, TestingLogger)),
+
+                    CheckRegisterRangeNodeViewModel check =>
+                        new TestNode(check.CreateStep(TestingLogger)),
 
                     _ => new TestNode(new PassThroughStep())
                 };
             }
 
+            // Шаг 2: строим переходы между нодами по соединениям
             foreach (var connection in Connections)
             {
-                var source = connection.Source.Parent;
-                var target = connection.Target.Parent;
+                var sourceVm = connection.Source.Parent;
+                var targetVm = connection.Target.Parent;
 
-                TestingLogger.Info($"Связка: {source?.GetType().Name} -> {target?.GetType().Name}");
-
-
-                if (source == null || target == null)
+                if (sourceVm == null || targetVm == null)
                     continue;
 
-                var src = map[source];
-                var dst = map[target];
+                var src = map[sourceVm];
+                var dst = map[targetVm];
 
-                if (source is ModbusWriteNodeViewModel write)
+                // Ветвящиеся ноды: смотрим на конкретный выходной коннектор (True/False)
+                if (sourceVm is ModbusWriteNodeViewModel writeVm)
                 {
-                    if (connection.Source == write.TrueOut)
+                    if (connection.Source == writeVm.TrueOut)
                         src.OnTrue = dst;
-                    else if (connection.Source == write.FalseOut)
+                    else if (connection.Source == writeVm.FalseOut)
                         src.OnFalse = dst;
                 }
-                else if (source is CheckRegisterRangeNodeViewModel check)
+                else if (sourceVm is CheckRegisterRangeNodeViewModel checkVm)
                 {
-                    if (connection.Source == check.TrueOut)
+                    if (connection.Source == checkVm.TrueOut)
                         src.OnTrue = dst;
-                    else if (connection.Source == check.FalseOut)
+                    else if (connection.Source == checkVm.FalseOut)
                         src.OnFalse = dst;
                 }
-                else if (source is DelayNodeViewModel delay)
-                {
-                    src.Next = dst;
-                }
-                else if (source is StartNodeViewModel)
-                {
-                    src.OnTrue = dst;
-                }
-                else if (source is LabelNodeViewModel)
-                {
-                    src.OnTrue = dst;
-                }
+                // Линейные ноды (Start, End, Delay, Label): всегда Next
                 else
                 {
                     src.Next = dst;
                 }
-         
             }
 
+            // Шаг 3: запускаем граф начиная со Start
             var context = new TestContext(_registerState)
             {
                 CancellationToken = CancellationToken.None,
                 IsConnected = IsConnected
             };
 
-            var executor = new TestExecutor();
-
-            await executor.ExecuteAsync(
+            await new TestExecutor().ExecuteAsync(
                 map[startNodeVm],
                 context,
                 CancellationToken.None);
@@ -339,6 +337,25 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         catch (Exception ex)
         {
             TestingLogger.Error(ex.ToString());
+        }
+        finally
+        {
+            // Сбрасываем состояние коннекторов после выполнения графа
+            // чтобы можно было строить новый граф без перезапуска
+            ResetConnectorsState();
+        }
+    }
+
+    // Пересчитываем IsConnected на всех коннекторах по текущим соединениям
+    private void ResetConnectorsState()
+    {
+        foreach (var node in Nodes)
+        {
+            foreach (var connector in node.Input.Concat(node.Output))
+            {
+                connector.IsConnected = Connections.Any(c =>
+                    c.Source == connector || c.Target == connector);
+            }
         }
     }
 
@@ -362,6 +379,5 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         if (node != null)
             Nodes.Add(node);
-    
     }
 }

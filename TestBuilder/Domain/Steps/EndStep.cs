@@ -19,7 +19,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             _logger.Info("Тест завершён");
-            return Task.FromResult(StepResult.True);
+            return Task.FromResult(StepResult.Next);
         }
     }
 }
