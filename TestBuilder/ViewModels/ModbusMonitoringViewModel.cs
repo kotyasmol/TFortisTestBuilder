@@ -54,6 +54,11 @@ namespace TestBuilder.ViewModels
             _modbusService = modbusService;
             TestingLogger = testingLogger;
             ScanCommand = new AsyncRelayCommand(ScanAndStartAsync);
+
+            // Подписываемся на изменение состояния подключения —
+            // уведомляем UI что IsConnected изменилось
+            _modbusService.IsConnectedChanged += (_, _) =>
+                OnPropertyChanged(nameof(IsConnected));
         }
 
         public async Task ScanAndStartAsync()

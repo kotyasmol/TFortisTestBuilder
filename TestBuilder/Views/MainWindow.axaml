@@ -15,10 +15,10 @@
     <DockPanel>
         <TabControl DockPanel.Dock="Top">
             <TabItem Header="Тест">
-                <views:TestView DataContext="{Binding TestVM}" />
+                <views:TestView x:Name="TestViewControl" />
             </TabItem>
             <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
-                <views:ModbusMonitoringView DataContext="{Binding ModbusVM}" />
+                <views:ModbusMonitoringView x:Name="ModbusViewControl" />
             </TabItem>
         </TabControl>
     </DockPanel>
