@@ -15,10 +15,23 @@ namespace TestBuilder.Services.Modbus
         private SerialPort? _serialPort;
         private IModbusSerialMaster? _master;
 
-        // 👇 подписчики (оставляем, но без агрессивного мониторинга)
         private readonly ConcurrentDictionary<(byte slaveId, ushort address), List<Action<ushort[]>>> _watchers = new();
 
-        public bool IsConnected { get; private set; }
+        private bool _isConnected;
+        public bool IsConnected
+        {
+            get => _isConnected;
+            private set
+            {
+                if (_isConnected == value) return;
+                _isConnected = value;
+                IsConnectedChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        // Событие срабатывает когда IsConnected меняется
+        public event EventHandler? IsConnectedChanged;
+
         public string? LastError { get; private set; }
 
         #region CONNECT
@@ -200,10 +213,7 @@ namespace TestBuilder.Services.Modbus
                     {
                         cb(values);
                     }
-                    catch
-                    {
-                        // не валим поток из-за UI-ошибки
-                    }
+                    catch { }
                 }
             }
         }
