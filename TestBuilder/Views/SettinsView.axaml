@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             x:Class="TestBuilder.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <StackPanel Margin="20" Spacing="16" MaxWidth="600">
+
+        <TextBlock Text="Настройки"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"/>
+
+        <!-- Папка с профилями -->
+        <TextBlock Text="Папка с профилями тестирования (JSON):"
+                   FontSize="14"/>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0"
+                     Text="{Binding GraphsFolder}"
+                     IsReadOnly="True"
+                     Watermark="Папка не выбрана..."
+                     VerticalContentAlignment="Center"/>
+            <Button Grid.Column="1"
+                    Content="Обзор..."
+                    Command="{Binding SelectFolderCommand}"
+                    Margin="8,0,0,0"
+                    Height="35"/>
+        </Grid>
+
+        <TextBlock Text="Профили из этой папки будут отображаться в списке на вкладке Тест."
+                   FontSize="12"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"/>
+
+    </StackPanel>
+
+</UserControl>

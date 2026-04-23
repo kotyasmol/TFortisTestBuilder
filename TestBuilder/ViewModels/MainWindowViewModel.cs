@@ -16,6 +16,7 @@ namespace TestBuilder.ViewModels
         // Вложенные VM для вкладок
         public TestViewModel TestVM { get; }
         public ModbusMonitoringViewModel ModbusVM { get; }
+        public SettingsViewModel SettingsVM { get; }
 
         public MainWindowViewModel()
         {
@@ -24,6 +25,7 @@ namespace TestBuilder.ViewModels
 
             TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
+            SettingsVM = new SettingsViewModel();
 
             TestVM.PropertyChanged += (_, e) =>
             {
