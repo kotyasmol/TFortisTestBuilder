@@ -18,6 +18,11 @@ using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Services;
+using TestBuilder.Serialization;
+using Avalonia.Platform.Storage;
+using System.IO;
+using System.Text.Json;
 
 namespace TestBuilder.ViewModels;
 
@@ -71,6 +76,36 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     };
 
     public ICommand AddNodeCommand { get; }
+    public IAsyncRelayCommand SaveGraphCommand { get; }
+    public IAsyncRelayCommand LoadProfileCommand { get; }
+
+    // Список профилей
+    public ObservableCollection<GraphProfile> Profiles { get; } = new();
+
+    private string _profileSearch = string.Empty;
+    public string ProfileSearch
+    {
+        get => _profileSearch;
+        set
+        {
+            _profileSearch = value;
+            OnPropertyChanged(nameof(ProfileSearch));
+            RefreshProfiles();
+        }
+    }
+
+    private GraphProfile? _selectedProfile;
+    public GraphProfile? SelectedProfile
+    {
+        get => _selectedProfile;
+        set
+        {
+            _selectedProfile = value;
+            OnPropertyChanged(nameof(SelectedProfile));
+            if (value != null)
+                LoadProfile(value.FilePath);
+        }
+    }
 
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
@@ -100,6 +135,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes);
         ClearGraphCommand = new RelayCommand(ClearGraph);
+        SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync);
+        LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
+
+        RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
     }
@@ -247,6 +286,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         if (!IsConnected)
             return;
 
+        var profileName = SelectedProfile?.Name ?? "без профиля";
+        TestingLogger.Info($"Запуск графа: {profileName}");
         try
         {
             var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
@@ -356,6 +397,93 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 connector.IsConnected = Connections.Any(c =>
                     c.Source == connector || c.Target == connector);
             }
+        }
+    }
+
+    public void RefreshProfiles()
+    {
+        var folder = AppSettings.Instance.GraphsFolder;
+        Profiles.Clear();
+
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return;
+
+        foreach (var file in Directory.GetFiles(folder, "*.json"))
+        {
+            var name = GraphSerializer.ReadProfileName(file) ?? Path.GetFileNameWithoutExtension(file);
+
+            // Фильтрация по поиску
+            if (!string.IsNullOrWhiteSpace(ProfileSearch) &&
+                !name.Contains(ProfileSearch, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            Profiles.Add(new GraphProfile(file, name));
+        }
+    }
+
+    private void LoadProfile(string filePath)
+    {
+        try
+        {
+            var json = File.ReadAllText(filePath);
+            var name = GraphSerializer.Deserialize(json, this);
+            StatusMessage = $"Загружен профиль: {name}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка загрузки: {ex.Message}";
+        }
+    }
+
+    private async Task SaveGraphAsync()
+    {
+        var folder = AppSettings.Instance.GraphsFolder;
+
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            StatusMessage = "Укажите папку для профилей в настройках.";
+            return;
+        }
+
+        // Запрашиваем имя профиля через простой диалог ввода
+        var topLevel = Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (topLevel == null) return;
+
+        // Показываем диалог сохранения только для имени файла
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Сохранить профиль",
+            DefaultExtension = "json",
+            SuggestedFileName = "profile",
+            SuggestedStartLocation = await topLevel.StorageProvider
+                .TryGetFolderFromPathAsync(folder),
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("JSON профиль") { Patterns = new[] { "*.json" } }
+            }
+        });
+
+        if (file == null) return;
+
+        try
+        {
+            // Имя профиля = имя файла без расширения
+            var profileName = Path.GetFileNameWithoutExtension(file.Name);
+            var json = GraphSerializer.Serialize(this, profileName);
+            await using var stream = await file.OpenWriteAsync();
+            await using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(json);
+
+            StatusMessage = $"Профиль сохранён: {profileName}";
+            RefreshProfiles();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка сохранения: {ex.Message}";
         }
     }
 

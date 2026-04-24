@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using TestBuilder.ViewModels;
 
 namespace TestBuilder.Views
@@ -9,23 +10,20 @@ namespace TestBuilder.Views
         {
             InitializeComponent();
 
-            // Устанавливаем DataContext для вложенных view напрямую из кода,
-            // а не через {Binding TestVM} в XAML.
-            //
-            // Проблема: при переключении вкладок Avalonia TabControl пересоздаёт
-            // контент вкладки. В момент пересоздания Avalonia временно устанавливает
-            // родительский DataContext (MainWindowViewModel) на дочерний view,
-            // и только потом применяет Binding. За это время NodifyEditor успевает
-            // получить неправильный DataContext и теряет привязку к PendingConnection.
-            // После этого соединения между нодами перестают создаваться.
-            //
-            // Решение: устанавливать DataContext один раз явно из кода — тогда
-            // он никогда не меняется при переключении вкладок.
-            if (DataContext is MainWindowViewModel vm)
-            {
-                TestViewControl.DataContext = vm.TestVM;
-                ModbusViewControl.DataContext = vm.ModbusVM;
-            }
+            // Устанавливаем DataContext после того как все контролы созданы
+            DataContextChanged += (_, _) => AssignDataContexts();
+
+            // На случай если DataContext уже установлен до подписки
+            Dispatcher.UIThread.Post(AssignDataContexts);
+        }
+
+        private void AssignDataContexts()
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+
+            TestViewControl.DataContext = vm.TestVM;
+            ModbusViewControl.DataContext = vm.ModbusVM;
+            SettingsViewControl.DataContext = vm.SettingsVM;
         }
     }
 }

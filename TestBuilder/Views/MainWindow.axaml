@@ -20,6 +20,9 @@
             <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
                 <views:ModbusMonitoringView x:Name="ModbusViewControl" />
             </TabItem>
+            <TabItem Header="Настройки">
+                <views:SettingsView x:Name="SettingsViewControl" />
+            </TabItem>
         </TabControl>
     </DockPanel>
 </Window>
