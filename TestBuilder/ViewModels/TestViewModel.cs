@@ -398,9 +398,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         IsMonitoringActive = true;
         StatusMessage = $"Найдено устройств: {count}";
-        // Сначала заполняем SlaveRegistry, потом уведомляем ноды
-        SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
-        SlaveRegistry.Instance.NotifyConnected(true);
     }
 
     private async Task DisconnectAsync()
