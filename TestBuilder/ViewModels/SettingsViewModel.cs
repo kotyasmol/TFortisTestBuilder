@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Threading.Tasks;
@@ -12,14 +13,34 @@ namespace TestBuilder.ViewModels
         [ObservableProperty]
         private string graphsFolder = string.Empty;
 
+        [ObservableProperty]
+        private bool isDarkTheme;
+
         public IAsyncRelayCommand SelectFolderCommand { get; }
 
         public SettingsViewModel()
         {
-            // Загружаем сохранённый путь
             GraphsFolder = AppSettings.Instance.GraphsFolder;
+            IsDarkTheme = AppSettings.Instance.Theme == "Dark";
 
             SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
+
+            // Применяем сохранённую тему при старте
+            ApplyTheme(IsDarkTheme);
+        }
+
+        partial void OnIsDarkThemeChanged(bool value)
+        {
+            ApplyTheme(value);
+            AppSettings.Instance.Theme = value ? "Dark" : "Light";
+            AppSettings.Instance.Save();
+        }
+
+        private static void ApplyTheme(bool dark)
+        {
+            if (Avalonia.Application.Current != null)
+                Avalonia.Application.Current.RequestedThemeVariant =
+                    dark ? ThemeVariant.Dark : ThemeVariant.Light;
         }
 
         private async Task SelectFolderAsync()
@@ -41,8 +62,6 @@ namespace TestBuilder.ViewModels
             if (folders.Count == 0) return;
 
             GraphsFolder = folders[0].Path.LocalPath;
-
-            // Сохраняем в .settings
             AppSettings.Instance.GraphsFolder = GraphsFolder;
             AppSettings.Instance.Save();
         }

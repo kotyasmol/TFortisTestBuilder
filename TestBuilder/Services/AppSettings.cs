@@ -29,6 +29,10 @@ namespace TestBuilder.Services
         [JsonPropertyName("graphsFolder")]
         public string GraphsFolder { get; set; } = string.Empty;
 
+        /// <summary>Тема приложения: "Light" или "Dark"</summary>
+        [JsonPropertyName("theme")]
+        public string Theme { get; set; } = "Light";
+
         // ─── Load / Save ──────────────────────────────────────────────────────
 
         private static AppSettings Load()
