@@ -33,7 +33,7 @@ namespace TestBuilder.Services
 
             foreach (var node in graph.Nodes)
             {
-                map[node] = new TestNode(CreateStep(node));
+                map[node] = new TestNode(CreateStep(node), node);
             }
 
             foreach (var connection in graph.Connections)

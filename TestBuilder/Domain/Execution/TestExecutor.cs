@@ -6,53 +6,92 @@ namespace TestBuilder.Domain.Execution
 {
     /// <summary>
     /// Исполнитель графа тестирования.
-    /// Последовательно выполняет узлы, обрабатывает линейные и условные переходы.
+    /// Отвечает за последовательное выполнение узлов и обработку переходов.
     /// </summary>
     public sealed class TestExecutor
     {
+        /// <summary>
+        /// Запускает выполнение теста, начиная с указанного узла.
+        /// </summary>
         public async Task<ExecutionStatus> ExecuteAsync(
             TestNode startNode,
             TestContext context,
             CancellationToken cancellationToken)
         {
-            try
+            TestNode? current = startNode;
+
+            while (current != null)
             {
-                TestNode? current = startNode;
+                cancellationToken.ThrowIfCancellationRequested();
 
-                while (current != null)
+                await NotifyNodeStartedAsync(current, context, cancellationToken);
+
+                StepResult result;
+
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
                     if (current.Step == null)
                     {
-                        current = current.Next;
-                        continue;
+                        result = StepResult.Next;
                     }
-
-                    var result = await current.Step.ExecuteAsync(context, cancellationToken);
+                    else
+                    {
+                        result = await current.Step.ExecuteAsync(
+                            context,
+                            cancellationToken);
+                    }
 
                     if (result == StepResult.Stop)
                         return ExecutionStatus.Completed;
-
-                    var next = result switch
-                    {
-                        StepResult.Next => current.Next,
-                        StepResult.True => current.OnTrue,
-                        StepResult.False => current.OnFalse,
-                        _ => throw new InvalidOperationException($"Неизвестный результат шага: {result}")
-                    };
-
-                    if (next == null && result == StepResult.False)
-                        return ExecutionStatus.Failed;
-
-                    current = next;
+                }
+                finally
+                {
+                    await NotifyNodeFinishedAsync(current, context, cancellationToken);
                 }
 
-                return ExecutionStatus.Completed;
+                Console.WriteLine(
+                    $"Step: {current.Step?.GetType().Name}, Result: {result}, OnTrue: {current.OnTrue?.Step?.GetType().Name}, OnFalse: {current.OnFalse?.Step?.GetType().Name}, Next: {current.Next?.Step?.GetType().Name}");
+
+                current = result switch
+                {
+                    StepResult.Next => current.Next,
+                    StepResult.True => current.OnTrue,
+                    StepResult.False => current.OnFalse,
+                    _ => throw new InvalidOperationException()
+                };
+
+                if (current == null && result == StepResult.False)
+                    return ExecutionStatus.Failed;
             }
-            catch (OperationCanceledException)
+
+            return ExecutionStatus.Completed;
+        }
+
+        private static async Task NotifyNodeStartedAsync(
+            TestNode node,
+            TestContext context,
+            CancellationToken cancellationToken)
+        {
+            if (context.ExecutionObserver != null)
             {
-                return ExecutionStatus.Cancelled;
+                await context.ExecutionObserver.NodeStartedAsync(
+                    node,
+                    context,
+                    cancellationToken);
+            }
+        }
+
+        private static async Task NotifyNodeFinishedAsync(
+            TestNode node,
+            TestContext context,
+            CancellationToken cancellationToken)
+        {
+            if (context.ExecutionObserver != null)
+            {
+                await context.ExecutionObserver.NodeFinishedAsync(
+                    node,
+                    context,
+                    cancellationToken);
             }
         }
     }
