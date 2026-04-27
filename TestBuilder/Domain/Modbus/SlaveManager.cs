@@ -22,7 +22,7 @@ namespace TestBuilder.Domain.Modbus
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
             int found = 0;
-            for (byte slaveId = 1; slaveId <= 23; slaveId+=2)
+            for (byte slaveId = 1; slaveId <=23; slaveId+=1)
 
             {
                 try
@@ -38,9 +38,10 @@ namespace TestBuilder.Domain.Modbus
                         4 => new El60v5Model(slaveId, _modbus),
                         5 => new IO2Model(slaveId, _modbus),
                         6 => new StandRpsModel(slaveId, _modbus),
-                        //7 => new StandPwr180Model(slave, _modbus),
-                        //8 => new Ps3Model(slave, _modbus),
-                        //9 => new SimbatModel(slave, _modbus),
+                        7 => new StandPwr180Model(slaveId, _modbus),
+                        8 => new Ps3Model(slaveId, _modbus),
+                        9 => new Simbat24Model(slaveId, _modbus),
+                        10 => new Simbat48Model(slaveId, _modbus),
                         _ => null
                     };
 
@@ -50,7 +51,7 @@ namespace TestBuilder.Domain.Modbus
 
                         await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
 
-                        found++; // ✅ считаем
+                        found++; 
                     }
                 }
                 catch
@@ -59,7 +60,7 @@ namespace TestBuilder.Domain.Modbus
                 }
             }
 
-            return found; // ✅ ключевой момент
+            return found; 
         }
     }
 }
