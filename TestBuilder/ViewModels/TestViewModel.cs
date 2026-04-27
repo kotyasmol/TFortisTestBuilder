@@ -129,6 +129,31 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
+    private ConnectionViewModel? _selectedConnection;
+
+    public ConnectionViewModel? SelectedConnection
+    {
+        get => _selectedConnection;
+        private set
+        {
+            if (ReferenceEquals(_selectedConnection, value))
+                return;
+
+            if (_selectedConnection != null)
+                _selectedConnection.IsSelected = false;
+
+            _selectedConnection = value;
+
+            if (_selectedConnection != null)
+            {
+                _selectedConnection.IsSelected = true;
+                SelectedNodes.Clear();
+            }
+
+            OnPropertyChanged(nameof(SelectedConnection));
+        }
+    }
+
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
         _modbusService = modbusService;
@@ -158,6 +183,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     partial void OnCurrentGraphChanged(GraphWorkspaceViewModel value)
     {
+        SelectedConnection = null;
+
         OnPropertyChanged(nameof(Nodes));
         OnPropertyChanged(nameof(Connections));
         OnPropertyChanged(nameof(SelectedNodes));
@@ -165,6 +192,41 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         CanGoBackGraph = _graphStack.Count > 0;
 
         PendingConnection?.Reset();
+    }
+    public void SelectConnection(ConnectionViewModel? connection)
+    {
+        SelectedConnection = connection;
+    }
+
+    public void DeleteSelectedConnection()
+    {
+        DeleteConnection(SelectedConnection);
+    }
+
+    public void DeleteConnection(ConnectionViewModel? connection)
+    {
+        if (connection == null)
+            return;
+
+        if (!Connections.Contains(connection))
+            return;
+
+        RemoveConnection(connection);
+
+        ResetConnectorsState();
+
+        StatusMessage = "Соединение удалено.";
+    }
+
+    private void RemoveConnection(ConnectionViewModel connection)
+    {
+        connection.Source.IsConnected = false;
+        connection.Target.IsConnected = false;
+
+        Connections.Remove(connection);
+
+        if (ReferenceEquals(SelectedConnection, connection))
+            SelectedConnection = null;
     }
 
     public void ResetToRootGraph()
@@ -216,6 +278,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void DeleteSelectedNodes()
     {
+        SelectedConnection = null;
+
         var selected = SelectedNodes
             .Where(node => node is not BodyStartNodeViewModel && node is not BodyEndNodeViewModel)
             .ToList();
@@ -228,9 +292,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             foreach (var conn in toRemove)
             {
-                conn.Source.IsConnected = false;
-                conn.Target.IsConnected = false;
-                Connections.Remove(conn);
+                RemoveConnection(conn);
             }
 
             Nodes.Remove(node);
@@ -245,10 +307,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
     {
-        Connections.Add(new ConnectionViewModel(source, target));
+        SelectedConnection = null;
 
-        source.IsConnected = true;
-        target.IsConnected = true;
+        Connections.Add(new ConnectionViewModel(source, target));
     }
 
     private void DisconnectConnector(ConnectorViewModel? connector)
@@ -256,15 +317,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (connector == null)
             return;
 
-        var connection = Connections.FirstOrDefault(x => x.Source == connector || x.Target == connector);
+        var connection = Connections.FirstOrDefault(x =>
+            x.Source == connector ||
+            x.Target == connector);
 
-        if (connection == null)
-            return;
-
-        connection.Source.IsConnected = false;
-        connection.Target.IsConnected = false;
-
-        Connections.Remove(connection);
+        DeleteConnection(connection);
     }
 
     private async Task ToggleConnectionAsync()
