@@ -33,6 +33,21 @@
                    Opacity="0.6"
                    TextWrapping="Wrap"/>
 
+        <!-- Тема -->
+        <Separator Margin="0,8"/>
+
+        <TextBlock Text="Тема оформления:"
+                   FontSize="14"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <RadioButton Content="Светлая"
+                         IsChecked="{Binding !IsDarkTheme}"
+                         FontSize="14"/>
+            <RadioButton Content="Тёмная"
+                         IsChecked="{Binding IsDarkTheme}"
+                         FontSize="14"/>
+        </StackPanel>
+
     </StackPanel>
 
 </UserControl>
