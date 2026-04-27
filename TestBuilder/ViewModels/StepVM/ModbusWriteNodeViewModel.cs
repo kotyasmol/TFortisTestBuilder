@@ -18,8 +18,13 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty]
         private ushort value;
 
+        [ObservableProperty]
+        private bool useCurrentSlaveId;
+
         public ConnectorViewModel In { get; }
+
         public ConnectorViewModel TrueOut { get; }
+
         public ConnectorViewModel FalseOut { get; }
 
         public ModbusWriteNodeViewModel()
@@ -37,7 +42,13 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value);
+            return new ModbusWriteStep(
+                modbusService,
+                logger,
+                SlaveId,
+                Address,
+                Value,
+                UseCurrentSlaveId);
         }
     }
 }

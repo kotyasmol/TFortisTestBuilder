@@ -5,7 +5,6 @@ namespace TestBuilder.Serialization
 {
     public class GraphDto
     {
-        
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
 
@@ -21,7 +20,6 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("id")]
         public string Id { get; set; } = "";
 
-        // "Start" | "End" | "Delay" | "Label" | "Write Register" | "Check Register Range"
         [JsonPropertyName("type")]
         public string Type { get; set; } = "";
 
@@ -46,6 +44,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public byte? SlaveId { get; set; }
 
+        [JsonPropertyName("useCurrentSlaveId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseCurrentSlaveId { get; set; }
+
         [JsonPropertyName("address")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ushort? Address { get; set; }
@@ -63,6 +65,27 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("max")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Max { get; set; }
+
+        // --- For Slaves ---
+        [JsonPropertyName("fromSlaveId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public byte? FromSlaveId { get; set; }
+
+        [JsonPropertyName("toSlaveId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public byte? ToSlaveId { get; set; }
+
+        [JsonPropertyName("step")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public byte? Step { get; set; }
+
+        [JsonPropertyName("stopOnError")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? StopOnError { get; set; }
+
+        [JsonPropertyName("body")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public GraphDto? Body { get; set; }
     }
 
     public class ConnectionDto

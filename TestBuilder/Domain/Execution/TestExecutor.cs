@@ -6,43 +6,53 @@ namespace TestBuilder.Domain.Execution
 {
     /// <summary>
     /// Исполнитель графа тестирования.
-    /// Отвечает за последовательное выполнение узлов и обработку переходов.
+    /// Последовательно выполняет узлы, обрабатывает линейные и условные переходы.
     /// </summary>
     public sealed class TestExecutor
     {
-        /// <summary>
-        /// Запускает выполнение теста, начиная с указанного узла.
-        /// </summary>
-        public async Task ExecuteAsync(
+        public async Task<ExecutionStatus> ExecuteAsync(
             TestNode startNode,
             TestContext context,
             CancellationToken cancellationToken)
         {
-            TestNode? current = startNode;
-
-            while (current != null)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                TestNode? current = startNode;
 
-                // Start/End ноды не имеют шага — просто переходим к следующей
-                if (current.Step == null)
+                while (current != null)
                 {
-                    current = current.Next;
-                    continue;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (current.Step == null)
+                    {
+                        current = current.Next;
+                        continue;
+                    }
+
+                    var result = await current.Step.ExecuteAsync(context, cancellationToken);
+
+                    if (result == StepResult.Stop)
+                        return ExecutionStatus.Completed;
+
+                    var next = result switch
+                    {
+                        StepResult.Next => current.Next,
+                        StepResult.True => current.OnTrue,
+                        StepResult.False => current.OnFalse,
+                        _ => throw new InvalidOperationException($"Неизвестный результат шага: {result}")
+                    };
+
+                    if (next == null && result == StepResult.False)
+                        return ExecutionStatus.Failed;
+
+                    current = next;
                 }
 
-                var result = await current.Step
-                    .ExecuteAsync(context, cancellationToken);
-
-                Console.WriteLine($"Step: {current.Step.GetType().Name}, Result: {result}, OnTrue: {current.OnTrue?.Step?.GetType().Name}, OnFalse: {current.OnFalse?.Step?.GetType().Name}, Next: {current.Next?.Step?.GetType().Name}");
-
-                current = result switch
-                {
-                    StepResult.Next => current.Next,
-                    StepResult.True => current.OnTrue,
-                    StepResult.False => current.OnFalse,
-                    _ => throw new InvalidOperationException()
-                };
+                return ExecutionStatus.Completed;
+            }
+            catch (OperationCanceledException)
+            {
+                return ExecutionStatus.Cancelled;
             }
         }
     }

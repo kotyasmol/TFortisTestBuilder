@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using TestBuilder.Serialization;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
 
@@ -19,17 +20,25 @@ namespace TestBuilder.Services
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        // ─── СОХРАНЕНИЕ ───────────────────────────────────────────────────────
-
         public static string Serialize(TestViewModel vm, string profileName)
         {
-            var dto = new GraphDto { Name = profileName };
+            var dto = SerializeGraph(vm.RootGraph, profileName);
+            return JsonSerializer.Serialize(dto, JsonOptions);
+        }
+
+        private static GraphDto SerializeGraph(GraphWorkspaceViewModel graph, string name)
+        {
+            var dto = new GraphDto
+            {
+                Name = name
+            };
 
             var nodeIds = new Dictionary<NodeViewModel, string>();
-            for (int i = 0; i < vm.Nodes.Count; i++)
-                nodeIds[vm.Nodes[i]] = i.ToString();
 
-            foreach (var node in vm.Nodes)
+            for (var i = 0; i < graph.Nodes.Count; i++)
+                nodeIds[graph.Nodes[i]] = i.ToString();
+
+            foreach (var node in graph.Nodes)
             {
                 var n = new NodeDto
                 {
@@ -44,31 +53,48 @@ namespace TestBuilder.Services
                     case DelayNodeViewModel d:
                         n.Milliseconds = d.Milliseconds;
                         break;
+
                     case LabelNodeViewModel l:
                         n.Text = l.Text;
                         break;
+
                     case ModbusWriteNodeViewModel w:
                         n.SlaveId = w.SlaveId;
                         n.Address = w.Address;
                         n.Value = w.Value;
+                        n.UseCurrentSlaveId = w.UseCurrentSlaveId;
                         break;
+
                     case CheckRegisterRangeNodeViewModel c:
                         n.SlaveId = c.SlaveId;
                         n.Address = c.Address;
                         n.Min = c.Min;
                         n.Max = c.Max;
+                        n.UseCurrentSlaveId = c.UseCurrentSlaveId;
+                        break;
+
+                    case ForEachSlaveNodeViewModel f:
+                        n.FromSlaveId = f.FromSlaveId;
+                        n.ToSlaveId = f.ToSlaveId;
+                        n.Step = f.Step;
+                        n.StopOnError = f.StopOnError;
+                        n.Body = SerializeGraph(f.BodyGraph, f.BodyGraph.Title);
                         break;
                 }
 
                 dto.Nodes.Add(n);
             }
 
-            foreach (var conn in vm.Connections)
+            foreach (var conn in graph.Connections)
             {
                 var src = conn.Source.Parent;
                 var tgt = conn.Target.Parent;
-                if (src == null || tgt == null) continue;
-                if (!nodeIds.ContainsKey(src) || !nodeIds.ContainsKey(tgt)) continue;
+
+                if (src == null || tgt == null)
+                    continue;
+
+                if (!nodeIds.ContainsKey(src) || !nodeIds.ContainsKey(tgt))
+                    continue;
 
                 dto.Connections.Add(new ConnectionDto
                 {
@@ -79,28 +105,55 @@ namespace TestBuilder.Services
                 });
             }
 
-            return JsonSerializer.Serialize(dto, JsonOptions);
+            return dto;
         }
-
-        // ─── ЗАГРУЗКА ─────────────────────────────────────────────────────────
 
         public static string Deserialize(string json, TestViewModel vm)
         {
             var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
-            vm.ClearGraph();
+            vm.ResetToRootGraph();
+            vm.RootGraph.Clear();
+
+            DeserializeGraph(dto, vm.RootGraph, isBodyGraph: false);
+            vm.ResetToRootGraph();
+
+            return dto.Name;
+        }
+
+        private static void DeserializeGraph(GraphDto dto, GraphWorkspaceViewModel graph, bool isBodyGraph)
+        {
+            graph.Clear();
+            graph.Title = dto.Name;
+            graph.IsBodyGraph = isBodyGraph;
 
             var nodeMap = new Dictionary<string, NodeViewModel>();
 
             foreach (var n in dto.Nodes)
             {
                 var location = new Point(n.X, n.Y);
-
                 NodeViewModel node = n.Type switch
                 {
-                    "Start" => new StartNodeViewModel { Location = location },
-                    "End" => new EndNodeViewModel { Location = location },
+                    "Start" => new StartNodeViewModel
+                    {
+                        Location = location
+                    },
+
+                    "End" => new EndNodeViewModel
+                    {
+                        Location = location
+                    },
+
+                    "Body Start" => new BodyStartNodeViewModel
+                    {
+                        Location = location
+                    },
+
+                    "Body End" => new BodyEndNodeViewModel
+                    {
+                        Location = location
+                    },
 
                     "Delay" => new DelayNodeViewModel
                     {
@@ -119,7 +172,8 @@ namespace TestBuilder.Services
                         Location = location,
                         SlaveId = n.SlaveId ?? 0,
                         Address = n.Address ?? 0,
-                        Value = n.Value ?? 0
+                        Value = n.Value ?? 0,
+                        UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
                     },
 
                     "Check Register Range" => new CheckRegisterRangeNodeViewModel
@@ -128,36 +182,62 @@ namespace TestBuilder.Services
                         SlaveId = n.SlaveId ?? 0,
                         Address = n.Address ?? 0,
                         Min = n.Min ?? 0,
-                        Max = n.Max ?? 0
+                        Max = n.Max ?? 0,
+                        UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
                     },
+
+                    "For Slaves" => CreateForEachSlaveNode(n, location),
 
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {n.Type}")
                 };
 
                 nodeMap[n.Id] = node;
-                vm.Nodes.Add(node);
+                graph.Nodes.Add(node);
             }
 
             foreach (var c in dto.Connections)
             {
-                if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode)) continue;
-                if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode)) continue;
+                if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode))
+                    continue;
+
+                if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode))
+                    continue;
 
                 var srcConn = srcNode.Output.Concat(srcNode.Input)
                     .FirstOrDefault(x => x.Title == c.SourceConnector);
+
                 var tgtConn = tgtNode.Input.Concat(tgtNode.Output)
                     .FirstOrDefault(x => x.Title == c.TargetConnector);
 
-                if (srcConn == null || tgtConn == null) continue;
+                if (srcConn == null || tgtConn == null)
+                    continue;
 
-                vm.Connect(srcConn, tgtConn);
+                graph.Connections.Add(new ConnectionViewModel(srcConn, tgtConn));
             }
-
-            // Возвращаем имя профиля чтобы показать в UI
-            return dto.Name;
         }
 
-        // ─── ЧТЕНИЕ ТОЛЬКО ИМЕНИ (без загрузки графа) ────────────────────────
+        private static ForEachSlaveNodeViewModel CreateForEachSlaveNode(NodeDto n, Point location)
+        {
+            var node = new ForEachSlaveNodeViewModel
+            {
+                Location = location,
+                FromSlaveId = n.FromSlaveId ?? 1,
+                ToSlaveId = n.ToSlaveId ?? 20,
+                Step = n.Step ?? 1,
+                StopOnError = n.StopOnError ?? true
+            };
+
+            if (n.Body != null)
+            {
+                DeserializeGraph(n.Body, node.BodyGraph, isBodyGraph: true);
+            }
+            else
+            {
+                node.EnsureDefaultBodyNodes();
+            }
+
+            return node;
+        }
 
         public static string? ReadProfileName(string filePath)
         {
