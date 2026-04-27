@@ -51,17 +51,19 @@ namespace TestBuilder.Services.Modbus
                 {
                     try
                     {
+                        const int timeoutMs = 5000;
+
                         var serialPort = new SerialPort(port, baudRate, parity, dataBits, stopBits)
                         {
-                            ReadTimeout = 500,
-                            WriteTimeout = 500
+                            ReadTimeout = timeoutMs,
+                            WriteTimeout = timeoutMs
                         };
 
                         serialPort.Open();
 
                         var master = ModbusSerialMaster.CreateRtu(serialPort);
-                        master.Transport.ReadTimeout = 500;
-                        master.Transport.WriteTimeout = 500;
+                        master.Transport.ReadTimeout = timeoutMs;
+                        master.Transport.WriteTimeout = timeoutMs;
 
                         _serialPort = serialPort;
                         _master = master;
