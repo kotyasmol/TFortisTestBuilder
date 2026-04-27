@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+
 using Avalonia.Threading;
+
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Services.Modbus;
 
@@ -21,16 +23,16 @@ namespace TestBuilder.Domain.Modbus
         public async Task<int> ScanAsync()
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
-            int found = 0;
-            for (byte slaveId = 1; slaveId <=23; slaveId+=2)
 
+            int found = 0;
+
+            for (byte slaveId = 1; slaveId <= 23; slaveId += 2)
             {
                 try
                 {
-                    
                     ushort typeValue = (await _modbus.ReadRegistersAsync(slaveId, 0, 1))[0];
 
-                    SlaveModelBase model = typeValue switch
+                    SlaveModelBase? model = typeValue switch
                     {
                         1 => new El60Model(slaveId, _modbus),
                         2 => new PS1Model(slaveId, _modbus),
@@ -47,20 +49,23 @@ namespace TestBuilder.Domain.Modbus
 
                     if (model != null)
                     {
-                        await model.PollAsync();
-
                         await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
-
-                        found++; 
+                        found++;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, unknown type={typeValue}");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, error={ex.GetType().Name}: {ex.Message}");
                 }
+
+                await Task.Delay(150);
             }
 
-            return found; 
+            return found;
         }
     }
 }

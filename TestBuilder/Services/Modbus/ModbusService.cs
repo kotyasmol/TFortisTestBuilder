@@ -1,4 +1,5 @@
 using Modbus.Device;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,24 +13,29 @@ namespace TestBuilder.Services.Modbus
     {
         private readonly SemaphoreSlim _ioLock = new(1, 1);
 
+        private readonly TimeSpan _minRequestGap = TimeSpan.FromMilliseconds(150);
+        private DateTime _lastRequestTimeUtc = DateTime.MinValue;
+
         private SerialPort? _serialPort;
         private IModbusSerialMaster? _master;
 
         private readonly ConcurrentDictionary<(byte slaveId, ushort address), List<Action<ushort[]>>> _watchers = new();
 
         private bool _isConnected;
+
         public bool IsConnected
         {
             get => _isConnected;
             private set
             {
-                if (_isConnected == value) return;
+                if (_isConnected == value)
+                    return;
+
                 _isConnected = value;
                 IsConnectedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        // Событие срабатывает когда IsConnected меняется
         public event EventHandler? IsConnectedChanged;
 
         public string? LastError { get; private set; }
@@ -51,7 +57,7 @@ namespace TestBuilder.Services.Modbus
                 {
                     try
                     {
-                        const int timeoutMs = 5000;
+                        const int timeoutMs = 1000;
 
                         var serialPort = new SerialPort(port, baudRate, parity, dataBits, stopBits)
                         {
@@ -61,12 +67,24 @@ namespace TestBuilder.Services.Modbus
 
                         serialPort.Open();
 
+                        try
+                        {
+                            serialPort.DiscardInBuffer();
+                            serialPort.DiscardOutBuffer();
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+
                         var master = ModbusSerialMaster.CreateRtu(serialPort);
                         master.Transport.ReadTimeout = timeoutMs;
                         master.Transport.WriteTimeout = timeoutMs;
 
                         _serialPort = serialPort;
                         _master = master;
+                        _lastRequestTimeUtc = DateTime.MinValue;
+
                         IsConnected = true;
                         LastError = null;
 
@@ -91,13 +109,16 @@ namespace TestBuilder.Services.Modbus
         public async Task DisconnectAsync()
         {
             await _ioLock.WaitAsync();
+
             try
             {
                 _master?.Dispose();
                 _serialPort?.Close();
+                _serialPort?.Dispose();
 
                 _master = null;
                 _serialPort = null;
+
                 IsConnected = false;
             }
             finally
@@ -132,7 +153,11 @@ namespace TestBuilder.Services.Modbus
                 _ => new List<Action<ushort[]>> { callback },
                 (_, list) =>
                 {
-                    list.Add(callback);
+                    lock (list)
+                    {
+                        list.Add(callback);
+                    }
+
                     return list;
                 });
         }
@@ -148,6 +173,7 @@ namespace TestBuilder.Services.Modbus
             CancellationToken cancellationToken = default)
         {
             await _ioLock.WaitAsync(cancellationToken);
+
             try
             {
                 var master = _master;
@@ -155,14 +181,34 @@ namespace TestBuilder.Services.Modbus
                 if (master == null)
                     throw new InvalidOperationException("Modbus not connected");
 
-                var result = await master.ReadHoldingRegistersAsync(slaveId, address, count);
+                await WaitBusGapAsync(cancellationToken);
 
-                NotifyWatchers(slaveId, address, result);
+                try
+                {
+                    var result = await master.ReadHoldingRegistersAsync(slaveId, address, count);
 
-                return result;
+                    NotifyWatchers(slaveId, address, result);
+
+                    LastError = null;
+
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    LastError = ex.Message;
+
+                    Console.WriteLine(
+                        $"[MODBUS READ ERROR] slave={slaveId}, address={address}, count={count}, " +
+                        $"{ex.GetType().Name}: {ex.Message}");
+
+                    await RecoverAfterIoErrorAsync();
+
+                    throw;
+                }
             }
             finally
             {
+                _lastRequestTimeUtc = DateTime.UtcNow;
                 _ioLock.Release();
             }
         }
@@ -175,6 +221,7 @@ namespace TestBuilder.Services.Modbus
             CancellationToken cancellationToken = default)
         {
             await _ioLock.WaitAsync(cancellationToken);
+
             try
             {
                 var master = _master;
@@ -182,20 +229,82 @@ namespace TestBuilder.Services.Modbus
                 if (master == null)
                     throw new InvalidOperationException("Modbus not connected");
 
-                await master.WriteSingleRegisterAsync(slaveId, address, value);
+                await WaitBusGapAsync(cancellationToken);
 
-                if (!verify)
-                    return true;
+                try
+                {
+                    await master.WriteSingleRegisterAsync(slaveId, address, value);
 
-                var read = await master.ReadHoldingRegistersAsync(slaveId, address, 1);
+                    _lastRequestTimeUtc = DateTime.UtcNow;
 
-                NotifyWatchers(slaveId, address, read);
+                    if (!verify)
+                    {
+                        LastError = null;
+                        return true;
+                    }
 
-                return read[0] == value;
+                    await WaitBusGapAsync(cancellationToken);
+
+                    var read = await master.ReadHoldingRegistersAsync(slaveId, address, 1);
+
+                    NotifyWatchers(slaveId, address, read);
+
+                    LastError = null;
+
+                    return read[0] == value;
+                }
+                catch (Exception ex)
+                {
+                    LastError = ex.Message;
+
+                    Console.WriteLine(
+                        $"[MODBUS WRITE ERROR] slave={slaveId}, address={address}, value={value}, " +
+                        $"{ex.GetType().Name}: {ex.Message}");
+
+                    await RecoverAfterIoErrorAsync();
+
+                    throw;
+                }
             }
             finally
             {
+                _lastRequestTimeUtc = DateTime.UtcNow;
                 _ioLock.Release();
+            }
+        }
+
+        #endregion
+
+        #region BUS HELPERS
+
+        private async Task WaitBusGapAsync(CancellationToken cancellationToken)
+        {
+            var elapsed = DateTime.UtcNow - _lastRequestTimeUtc;
+            var delay = _minRequestGap - elapsed;
+
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, cancellationToken);
+        }
+
+        private async Task RecoverAfterIoErrorAsync()
+        {
+            try
+            {
+                _serialPort?.DiscardInBuffer();
+                _serialPort?.DiscardOutBuffer();
+            }
+            catch
+            {
+                // ignore
+            }
+
+            try
+            {
+                await Task.Delay(250);
+            }
+            catch
+            {
+                // ignore
             }
         }
 
@@ -207,15 +316,25 @@ namespace TestBuilder.Services.Modbus
         {
             var key = (slaveId, address);
 
-            if (_watchers.TryGetValue(key, out var callbacks))
+            if (!_watchers.TryGetValue(key, out var callbacks))
+                return;
+
+            Action<ushort[]>[] snapshot;
+
+            lock (callbacks)
             {
-                foreach (var cb in callbacks)
+                snapshot = callbacks.ToArray();
+            }
+
+            foreach (var callback in snapshot)
+            {
+                try
                 {
-                    try
-                    {
-                        cb(values);
-                    }
-                    catch { }
+                    callback(values);
+                }
+                catch
+                {
+                    // ignore
                 }
             }
         }
@@ -226,6 +345,7 @@ namespace TestBuilder.Services.Modbus
         {
             _master?.Dispose();
             _serialPort?.Dispose();
+            _ioLock.Dispose();
         }
     }
 }
