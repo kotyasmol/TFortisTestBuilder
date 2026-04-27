@@ -1,10 +1,11 @@
 ﻿using Avalonia;
-using Avalonia.Threading;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
@@ -14,15 +15,12 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
+using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
-using TestBuilder.Services;
-using TestBuilder.Serialization;
-using Avalonia.Platform.Storage;
-using System.IO;
-using System.Text.Json;
 
 namespace TestBuilder.ViewModels;
 
@@ -31,6 +29,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
     private readonly RegisterState _registerState = new();
+    private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
 
     private RegisterMonitor? _registerMonitor;
     private CancellationTokenSource? _monitorCts;
@@ -49,22 +48,46 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     [ObservableProperty]
     private string? selectedPort;
 
-    public string ConnectionButtonText =>
-        IsConnected ? "Отключиться" : "Подключиться";
+    [ObservableProperty]
+    private GraphWorkspaceViewModel currentGraph;
+
+    [ObservableProperty]
+    private bool canGoBackGraph;
+
+    public GraphWorkspaceViewModel RootGraph { get; } = new()
+    {
+        Title = "Основной граф",
+        IsBodyGraph = false
+    };
+
+    public string ConnectionButtonText => IsConnected ? "Отключиться" : "Подключиться";
 
     public IAsyncRelayCommand ToggleConnectionCommand { get; }
+
     public IAsyncRelayCommand RunGraphCommand { get; }
 
-    // Nodify
-    public ObservableCollection<NodeViewModel> Nodes { get; } = new();
-    public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
-    public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new();
+    public ObservableCollection<NodeViewModel> Nodes => CurrentGraph.Nodes;
+
+    public ObservableCollection<ConnectionViewModel> Connections => CurrentGraph.Connections;
+
+    public ObservableCollection<NodeViewModel> SelectedNodes => CurrentGraph.SelectedNodes;
+
     public PendingConnectionViewModel PendingConnection { get; }
+
     public ICommand DisconnectConnectorCommand { get; }
+
     public ICommand DeleteSelectedNodesCommand { get; }
+
     public ICommand ClearGraphCommand { get; }
 
-    // Доступные ноды для панели drag-and-drop
+    public ICommand AddNodeCommand { get; }
+
+    public ICommand GoBackGraphCommand { get; }
+
+    public IAsyncRelayCommand SaveGraphCommand { get; }
+
+    public IAsyncRelayCommand LoadProfileCommand { get; }
+
     public ObservableCollection<NodeViewModel> AvailableNodes { get; } = new()
     {
         new StartNodeViewModel(),
@@ -72,17 +95,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         new ModbusWriteNodeViewModel(),
         new CheckRegisterRangeNodeViewModel(),
         new DelayNodeViewModel(),
-        new LabelNodeViewModel()
+        new LabelNodeViewModel(),
+        new ForEachSlaveNodeViewModel()
     };
 
-    public ICommand AddNodeCommand { get; }
-    public IAsyncRelayCommand SaveGraphCommand { get; }
-    public IAsyncRelayCommand LoadProfileCommand { get; }
-
-    // Список профилей
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
 
     private string _profileSearch = string.Empty;
+
     public string ProfileSearch
     {
         get => _profileSearch;
@@ -95,6 +115,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     }
 
     private GraphProfile? _selectedProfile;
+
     public GraphProfile? SelectedProfile
     {
         get => _selectedProfile;
@@ -102,6 +123,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             _selectedProfile = value;
             OnPropertyChanged(nameof(SelectedProfile));
+
             if (value != null)
                 LoadProfile(value.FilePath);
         }
@@ -112,29 +134,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         _modbusService = modbusService;
         _slaveManager = slaveManager;
 
+        CurrentGraph = RootGraph;
+
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
-
         PendingConnection = new PendingConnectionViewModel(this);
-        AddNodeCommand = new RelayCommand<string>(AddNode);
 
-        DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel>(connector =>
-        {
-            var connection = Connections.FirstOrDefault(x =>
-                x.Source == connector || x.Target == connector);
-
-            if (connection != null)
-            {
-                connection.Source.IsConnected = false;
-                connection.Target.IsConnected = false;
-                Connections.Remove(connection);
-            }
-        });
-
+        AddNodeCommand = new RelayCommand<string?>(AddNode);
+        DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel?>(DisconnectConnector);
         DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes);
         ClearGraphCommand = new RelayCommand(ClearGraph);
+        GoBackGraphCommand = new RelayCommand(GoBackGraph);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
 
@@ -143,32 +155,66 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         StatusMessage = "Готов к подключению.";
     }
 
-    // Полная очистка холста — выделяем все ноды и удаляем через DeleteSelectedNodes
-    // чтобы Nodify корректно обновил UI (прямая очистка коллекций ломает состояние)
+    partial void OnCurrentGraphChanged(GraphWorkspaceViewModel value)
+    {
+        OnPropertyChanged(nameof(Nodes));
+        OnPropertyChanged(nameof(Connections));
+        OnPropertyChanged(nameof(SelectedNodes));
+        CanGoBackGraph = _graphStack.Count > 0;
+        PendingConnection?.Reset();
+    }
+
+    public void ResetToRootGraph()
+    {
+        _graphStack.Clear();
+        CurrentGraph = RootGraph;
+        CanGoBackGraph = false;
+        PendingConnection.Reset();
+    }
+
+    [RelayCommand]
+    private void OpenCompositeNodeBody(NodeViewModel? node)
+    {
+        if (node is not ICompositeNodeViewModel composite)
+            return;
+
+        _graphStack.Push(CurrentGraph);
+        CurrentGraph = composite.BodyGraph;
+        CanGoBackGraph = true;
+        StatusMessage = $"Открыто тело ноды: {node.Title}.";
+    }
+
+    private void GoBackGraph()
+    {
+        if (_graphStack.Count == 0)
+            return;
+
+        CurrentGraph = _graphStack.Pop();
+        CanGoBackGraph = _graphStack.Count > 0;
+        StatusMessage = $"Открыт граф: {CurrentGraph.Title}.";
+    }
+
     public void ClearGraph()
     {
-        // Выделяем все ноды
         foreach (var node in Nodes)
         {
             if (!SelectedNodes.Contains(node))
                 SelectedNodes.Add(node);
         }
 
-        // Удаляем через стандартный механизм
         DeleteSelectedNodes();
-
-        // Сбрасываем незавершённое соединение если было
         PendingConnection.Reset();
+        EnsureBodyBoundaryNodesIfNeeded();
     }
 
-    // Удаление выделенных нод с правильным сбросом IsConnected на оставшихся
     public void DeleteSelectedNodes()
     {
-        var selected = SelectedNodes.ToList();
+        var selected = SelectedNodes
+            .Where(node => node is not BodyStartNodeViewModel && node is not BodyEndNodeViewModel)
+            .ToList();
 
         foreach (var node in selected)
         {
-            // Удаляем все соединения связанные с этой нодой
             var toRemove = Connections
                 .Where(c => c.Source.Parent == node || c.Target.Parent == node)
                 .ToList();
@@ -184,22 +230,28 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         }
 
         SelectedNodes.Clear();
-
-        // Пересчитываем IsConnected для оставшихся нод
-        // чтобы освободить коннекторы у которых больше нет соединений
-        foreach (var node in Nodes)
-        {
-            foreach (var connector in node.Input.Concat(node.Output))
-            {
-                connector.IsConnected = Connections.Any(c =>
-                    c.Source == connector || c.Target == connector);
-            }
-        }
+        ResetConnectorsState();
+        EnsureBodyBoundaryNodesIfNeeded();
     }
 
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
     {
         Connections.Add(new ConnectionViewModel(source, target));
+    }
+
+    private void DisconnectConnector(ConnectorViewModel? connector)
+    {
+        if (connector == null)
+            return;
+
+        var connection = Connections.FirstOrDefault(x => x.Source == connector || x.Target == connector);
+
+        if (connection == null)
+            return;
+
+        connection.Source.IsConnected = false;
+        connection.Target.IsConnected = false;
+        Connections.Remove(connection);
     }
 
     private async Task ToggleConnectionAsync()
@@ -222,8 +274,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             try
             {
-                var connected = await _modbusService
-                    .ConnectAsync(port, 9600, Parity.None, 8, StopBits.One);
+                var connected = await _modbusService.ConnectAsync(port, 9600, Parity.None, 8, StopBits.One);
 
                 if (!connected)
                     continue;
@@ -252,7 +303,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     private async Task StartMonitoringAsync()
     {
-        int count = await _slaveManager.ScanAsync();
+        var count = await _slaveManager.ScanAsync();
 
         if (count == 0)
         {
@@ -264,7 +315,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         _registerMonitor.Start();
 
         IsMonitoringActive = true;
-
         StatusMessage = $"Найдено устройств: {count}";
     }
 
@@ -272,12 +322,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     {
         _monitorCts?.Cancel();
         _registerMonitor?.Stop();
-
         await _modbusService.DisconnectAsync();
 
         IsConnected = false;
         IsMonitoringActive = false;
-
         StatusMessage = "Отключено.";
     }
 
@@ -288,92 +336,30 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         var profileName = SelectedProfile?.Name ?? "без профиля";
         TestingLogger.Info($"Запуск графа: {profileName}");
+
         try
         {
-            var startNodeVm = Nodes.FirstOrDefault(n => n is StartNodeViewModel);
+            ResetToRootGraph();
 
-            if (startNodeVm == null)
-            {
-                TestingLogger.Warning("Нет ноды Start на холсте!");
-                return;
-            }
+            var compiler = new GraphCompiler(_modbusService, TestingLogger);
+            var graph = compiler.Compile(RootGraph);
 
-            // Шаг 1: создаём TestNode для каждой ноды на холсте
-            var map = new Dictionary<NodeViewModel, TestNode>();
-
-            foreach (var node in Nodes)
-            {
-                map[node] = node switch
-                {
-                    StartNodeViewModel start =>
-                        new TestNode(start.CreateStep(TestingLogger)),
-
-                    EndNodeViewModel end =>
-                        new TestNode(end.CreateStep(TestingLogger)),
-
-                    DelayNodeViewModel delay =>
-                        new TestNode(delay.CreateStep(TestingLogger)),
-
-                    LabelNodeViewModel label =>
-                        new TestNode(label.CreateStep(TestingLogger)),
-
-                    ModbusWriteNodeViewModel write =>
-                        new TestNode(write.CreateStep(_modbusService, TestingLogger)),
-
-                    CheckRegisterRangeNodeViewModel check =>
-                        new TestNode(check.CreateStep(TestingLogger)),
-
-                    _ => new TestNode(new PassThroughStep())
-                };
-            }
-
-            // Шаг 2: строим переходы между нодами по соединениям
-            foreach (var connection in Connections)
-            {
-                var sourceVm = connection.Source.Parent;
-                var targetVm = connection.Target.Parent;
-
-                if (sourceVm == null || targetVm == null)
-                    continue;
-
-                var src = map[sourceVm];
-                var dst = map[targetVm];
-
-                // Ветвящиеся ноды: смотрим на конкретный выходной коннектор (True/False)
-                if (sourceVm is ModbusWriteNodeViewModel writeVm)
-                {
-                    if (connection.Source == writeVm.TrueOut)
-                        src.OnTrue = dst;
-                    else if (connection.Source == writeVm.FalseOut)
-                        src.OnFalse = dst;
-                }
-                else if (sourceVm is CheckRegisterRangeNodeViewModel checkVm)
-                {
-                    if (connection.Source == checkVm.TrueOut)
-                        src.OnTrue = dst;
-                    else if (connection.Source == checkVm.FalseOut)
-                        src.OnFalse = dst;
-                }
-                // Линейные ноды (Start, End, Delay, Label): всегда Next
-                else
-                {
-                    src.Next = dst;
-                }
-            }
-
-            // Шаг 3: запускаем граф начиная со Start
             var context = new TestContext(_registerState)
             {
                 CancellationToken = CancellationToken.None,
-                IsConnected = IsConnected
+                IsConnected = IsConnected,
+                ProfileName = profileName
             };
 
-            await new TestExecutor().ExecuteAsync(
-                map[startNodeVm],
+            var result = await new TestExecutor().ExecuteAsync(
+                graph.StartNode,
                 context,
                 CancellationToken.None);
 
-            TestingLogger.Info("Граф выполнен.");
+            if (result == ExecutionStatus.Completed)
+                TestingLogger.Info("Граф выполнен успешно.");
+            else
+                TestingLogger.Warning($"Граф завершен с результатом: {result}.");
         }
         catch (Exception ex)
         {
@@ -381,28 +367,40 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         }
         finally
         {
-            // Сбрасываем состояние коннекторов после выполнения графа
-            // чтобы можно было строить новый граф без перезапуска
-            ResetConnectorsState();
+            ResetConnectorsStateRecursive(RootGraph);
         }
     }
 
-    // Пересчитываем IsConnected на всех коннекторах по текущим соединениям
     private void ResetConnectorsState()
     {
-        foreach (var node in Nodes)
+        ResetConnectorsState(CurrentGraph);
+    }
+
+    private static void ResetConnectorsState(GraphWorkspaceViewModel graph)
+    {
+        foreach (var node in graph.Nodes)
         {
             foreach (var connector in node.Input.Concat(node.Output))
             {
-                connector.IsConnected = Connections.Any(c =>
-                    c.Source == connector || c.Target == connector);
+                connector.IsConnected = graph.Connections.Any(c => c.Source == connector || c.Target == connector);
             }
+        }
+    }
+
+    private static void ResetConnectorsStateRecursive(GraphWorkspaceViewModel graph)
+    {
+        ResetConnectorsState(graph);
+
+        foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
+        {
+            ResetConnectorsStateRecursive(composite.BodyGraph);
         }
     }
 
     public void RefreshProfiles()
     {
         var folder = AppSettings.Instance.GraphsFolder;
+
         Profiles.Clear();
 
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
@@ -412,10 +410,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             var name = GraphSerializer.ReadProfileName(file) ?? Path.GetFileNameWithoutExtension(file);
 
-            // Фильтрация по поиску
             if (!string.IsNullOrWhiteSpace(ProfileSearch) &&
                 !name.Contains(ProfileSearch, StringComparison.OrdinalIgnoreCase))
+            {
                 continue;
+            }
 
             Profiles.Add(new GraphProfile(file, name));
         }
@@ -445,35 +444,36 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             return;
         }
 
-        // Запрашиваем имя профиля через простой диалог ввода
-        var topLevel = Avalonia.Application.Current?.ApplicationLifetime
-            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+        var topLevel = Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
 
-        if (topLevel == null) return;
+        if (topLevel == null)
+            return;
 
-        // Показываем диалог сохранения только для имени файла
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Сохранить профиль",
             DefaultExtension = "json",
             SuggestedFileName = "profile",
-            SuggestedStartLocation = await topLevel.StorageProvider
-                .TryGetFolderFromPathAsync(folder),
+            SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(folder),
             FileTypeChoices = new[]
             {
-                new FilePickerFileType("JSON профиль") { Patterns = new[] { "*.json" } }
+                new FilePickerFileType("JSON профиль")
+                {
+                    Patterns = new[] { "*.json" }
+                }
             }
         });
 
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try
         {
-            // Имя профиля = имя файла без расширения
             var profileName = Path.GetFileNameWithoutExtension(file.Name);
             var json = GraphSerializer.Serialize(this, profileName);
+
             await using var stream = await file.OpenWriteAsync();
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(json);
@@ -494,6 +494,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
     public void AddNodeAtLocation(string? nodeType, Point location)
     {
+        if (CurrentGraph.IsBodyGraph && (nodeType == "Start" || nodeType == "End"))
+        {
+            StatusMessage = "Внутри тела цикла используются Body Start и Body End. Обычные Start/End сюда добавлять не нужно.";
+            return;
+        }
+
         NodeViewModel? node = nodeType switch
         {
             "Start" => new StartNodeViewModel { Location = location },
@@ -502,10 +508,33 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             "Check Register Range" => new CheckRegisterRangeNodeViewModel { Location = location },
             "Delay" => new DelayNodeViewModel { Location = location },
             "Label" => new LabelNodeViewModel { Location = location },
+            "For Slaves" => new ForEachSlaveNodeViewModel { Location = location },
             _ => null
         };
 
         if (node != null)
             Nodes.Add(node);
+    }
+
+    private void EnsureBodyBoundaryNodesIfNeeded()
+    {
+        if (!CurrentGraph.IsBodyGraph)
+            return;
+
+        if (!Nodes.Any(n => n is BodyStartNodeViewModel))
+        {
+            Nodes.Add(new BodyStartNodeViewModel
+            {
+                Location = new Point(100, 120)
+            });
+        }
+
+        if (!Nodes.Any(n => n is BodyEndNodeViewModel))
+        {
+            Nodes.Add(new BodyEndNodeViewModel
+            {
+                Location = new Point(560, 120)
+            });
+        }
     }
 }

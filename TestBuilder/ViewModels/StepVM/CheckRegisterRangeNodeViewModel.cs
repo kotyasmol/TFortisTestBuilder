@@ -1,9 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
-using TestBuilder.ViewModels.NodifyVM;
-using Tmds.DBus.Protocol;
 using TestBuilder.Services.Logging;
+using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels.StepVM
 {
@@ -21,8 +20,13 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty]
         private int max;
 
+        [ObservableProperty]
+        private bool useCurrentSlaveId;
+
         public ConnectorViewModel In { get; }
+
         public ConnectorViewModel TrueOut { get; }
+
         public ConnectorViewModel FalseOut { get; }
 
         public CheckRegisterRangeNodeViewModel()
@@ -40,7 +44,13 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(ILogger logger)
         {
-            return new CheckRegisterRangeStep(SlaveId, Address, Min, Max, logger);
+            return new CheckRegisterRangeStep(
+                SlaveId,
+                Address,
+                Min,
+                Max,
+                logger,
+                UseCurrentSlaveId);
         }
     }
 }
