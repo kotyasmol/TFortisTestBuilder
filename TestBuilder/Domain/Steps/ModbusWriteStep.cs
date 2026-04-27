@@ -37,17 +37,54 @@ namespace TestBuilder.Domain.Steps
         }
 
         public async Task<StepResult> ExecuteAsync(
-            TestContext context,
-            CancellationToken cancellationToken)
+     TestContext context,
+     CancellationToken cancellationToken)
         {
-            _logger.Info($"WRITE STEP: slave={_slaveId}, addr={_address}, val={_value}");
-            var ok = await _modbusService.WriteRegisterAsync(
+            _logger.Info($"ШАГ ЗАПИСИ: устройство={_slaveId}, регистр={_address}, значение={_value}");
+
+            var writeOk = await _modbusService.WriteRegisterAsync(
                 _slaveId,
                 _address,
                 _value,
                 false,
                 cancellationToken);
-            return ok ? StepResult.True : StepResult.False;
+
+            if (!writeOk)
+            {
+                _logger.Info($"ШАГ ЗАПИСИ: ошибка записи. Устройство={_slaveId}, регистр={_address}, значение={_value}");
+                return StepResult.False;
+            }
+
+            _logger.Info($"ШАГ ЗАПИСИ: запись выполнена. Ожидание 1 секунда перед проверкой.");
+
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+
+            var readValues = await _modbusService.ReadRegistersAsync(
+                _slaveId,
+                _address,
+                1,
+                cancellationToken);
+
+            if (readValues == null || readValues.Length == 0)
+            {
+                _logger.Info($"ШАГ ЗАПИСИ: ошибка проверки. Не удалось прочитать регистр. Устройство={_slaveId}, регистр={_address}");
+                return StepResult.False;
+            }
+
+            var actualValue = readValues[0];
+
+            if (actualValue != _value)
+            {
+                _logger.Info(
+                    $"ШАГ ЗАПИСИ: проверка не пройдена. Устройство={_slaveId}, регистр={_address}, ожидалось={_value}, прочитано={actualValue}");
+
+                return StepResult.False;
+            }
+
+            _logger.Info(
+                $"ШАГ ЗАПИСИ: проверка пройдена. Устройство={_slaveId}, регистр={_address}, значение={actualValue}");
+
+            return StepResult.True;
         }
     }
 }
