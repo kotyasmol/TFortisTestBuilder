@@ -6,7 +6,7 @@ namespace TestBuilder.Domain.Execution
 {
     public sealed class TestContext
     {
-        public RegisterMonitor RegisterMonitor { get; set; }
+        public RegisterMonitor? RegisterMonitor { get; set; }
 
         public RegisterState RegisterState { get; }
 
@@ -14,20 +14,14 @@ namespace TestBuilder.Domain.Execution
 
         public bool IsConnected { get; set; }
 
-        public string ProfileName { get; set; } = string.Empty;
+        public string? ProfileName { get; set; }
 
         public bool HasCriticalError { get; set; }
 
-        /// <summary>
-        /// Текущий Modbus slaveId, заданный управляющей нодой цикла.
-        /// Шаги внутри цикла могут брать slaveId отсюда вместо фиксированного значения.
-        /// </summary>
         public byte? CurrentSlaveId { get; set; }
 
-        /// <summary>
-        /// Универсальное хранилище переменных сценария.
-        /// Сейчас используется для slaveId, позже можно использовать для обычных for/while-блоков.
-        /// </summary>
+        public IExecutionObserver? ExecutionObserver { get; set; }
+
         public Dictionary<string, object> Variables { get; } = new();
 
         public TestContext(RegisterState registerState)
@@ -35,21 +29,17 @@ namespace TestBuilder.Domain.Execution
             RegisterState = registerState;
         }
 
+        public T? GetVariable<T>(string name)
+        {
+            if (Variables.TryGetValue(name, out var value) && value is T typed)
+                return typed;
+
+            return default;
+        }
+
         public void SetVariable(string name, object value)
         {
             Variables[name] = value;
-        }
-
-        public bool TryGetVariable<T>(string name, out T? value)
-        {
-            if (Variables.TryGetValue(name, out var raw) && raw is T typed)
-            {
-                value = typed;
-                return true;
-            }
-
-            value = default;
-            return false;
         }
     }
 }

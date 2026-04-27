@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -14,7 +15,6 @@ using System.Windows.Input;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
-using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
@@ -24,7 +24,7 @@ using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
 
-public partial class TestViewModel : ViewModelBase, IGraphEditor
+public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObserver
 {
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
@@ -140,6 +140,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
+
         PendingConnection = new PendingConnectionViewModel(this);
 
         AddNodeCommand = new RelayCommand<string?>(AddNode);
@@ -160,7 +161,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         OnPropertyChanged(nameof(Nodes));
         OnPropertyChanged(nameof(Connections));
         OnPropertyChanged(nameof(SelectedNodes));
+
         CanGoBackGraph = _graphStack.Count > 0;
+
         PendingConnection?.Reset();
     }
 
@@ -181,6 +184,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         _graphStack.Push(CurrentGraph);
         CurrentGraph = composite.BodyGraph;
         CanGoBackGraph = true;
+
         StatusMessage = $"Открыто тело ноды: {node.Title}.";
     }
 
@@ -191,6 +195,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         CurrentGraph = _graphStack.Pop();
         CanGoBackGraph = _graphStack.Count > 0;
+
         StatusMessage = $"Открыт граф: {CurrentGraph.Title}.";
     }
 
@@ -203,7 +208,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         }
 
         DeleteSelectedNodes();
+
         PendingConnection.Reset();
+
         EnsureBodyBoundaryNodesIfNeeded();
     }
 
@@ -230,13 +237,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         }
 
         SelectedNodes.Clear();
+
         ResetConnectorsState();
+
         EnsureBodyBoundaryNodesIfNeeded();
     }
 
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
     {
         Connections.Add(new ConnectionViewModel(source, target));
+
+        source.IsConnected = true;
+        target.IsConnected = true;
     }
 
     private void DisconnectConnector(ConnectorViewModel? connector)
@@ -251,6 +263,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
         connection.Source.IsConnected = false;
         connection.Target.IsConnected = false;
+
         Connections.Remove(connection);
     }
 
@@ -274,7 +287,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             try
             {
-                var connected = await _modbusService.ConnectAsync(port, 9600, Parity.None, 8, StopBits.One);
+                var connected = await _modbusService.ConnectAsync(
+                    port,
+                    9600,
+                    Parity.None,
+                    8,
+                    StopBits.One);
 
                 if (!connected)
                     continue;
@@ -290,6 +308,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
                 StatusMessage = $"Подключено к {port}";
 
                 await StartMonitoringAsync();
+
                 return;
             }
             catch
@@ -311,7 +330,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             return;
         }
 
-        _registerMonitor = new RegisterMonitor(_slaveManager, _registerState, TestingLogger);
+        _registerMonitor = new RegisterMonitor(
+            _slaveManager,
+            _registerState,
+            TestingLogger);
+
         _registerMonitor.Start();
 
         IsMonitoringActive = true;
@@ -321,25 +344,35 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
     private async Task DisconnectAsync()
     {
         _monitorCts?.Cancel();
+
         _registerMonitor?.Stop();
+
         await _modbusService.DisconnectAsync();
 
         IsConnected = false;
         IsMonitoringActive = false;
         StatusMessage = "Отключено.";
+
+        OnPropertyChanged(nameof(ConnectionButtonText));
     }
 
     private async Task RunGraphAsync()
     {
         if (!IsConnected)
+        {
+            StatusMessage = "Перед запуском графа необходимо подключиться к стенду.";
             return;
+        }
 
         var profileName = SelectedProfile?.Name ?? "без профиля";
+
         TestingLogger.Info($"Запуск графа: {profileName}");
 
         try
         {
             ResetToRootGraph();
+
+            ClearExecutionHighlightsRecursive(RootGraph);
 
             var compiler = new GraphCompiler(_modbusService, TestingLogger);
             var graph = compiler.Compile(RootGraph);
@@ -348,7 +381,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             {
                 CancellationToken = CancellationToken.None,
                 IsConnected = IsConnected,
-                ProfileName = profileName
+                ProfileName = profileName,
+                ExecutionObserver = this
             };
 
             var result = await new TestExecutor().ExecuteAsync(
@@ -367,7 +401,49 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         }
         finally
         {
+            ClearExecutionHighlightsRecursive(RootGraph);
             ResetConnectorsStateRecursive(RootGraph);
+        }
+    }
+
+    public async Task NodeStartedAsync(
+        TestNode node,
+        TestContext context,
+        CancellationToken cancellationToken)
+    {
+        if (node.Source is not NodeViewModel nodeViewModel)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            nodeViewModel.IsExecuting = true;
+        });
+    }
+
+    public async Task NodeFinishedAsync(
+        TestNode node,
+        TestContext context,
+        CancellationToken cancellationToken)
+    {
+        if (node.Source is not NodeViewModel nodeViewModel)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            nodeViewModel.IsExecuting = false;
+        });
+    }
+
+    private static void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph)
+    {
+        foreach (var node in graph.Nodes)
+        {
+            node.IsExecuting = false;
+
+            if (node is ICompositeNodeViewModel composite)
+            {
+                ClearExecutionHighlightsRecursive(composite.BodyGraph);
+            }
         }
     }
 
@@ -382,7 +458,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             foreach (var connector in node.Input.Concat(node.Output))
             {
-                connector.IsConnected = graph.Connections.Any(c => c.Source == connector || c.Target == connector);
+                connector.IsConnected = graph.Connections.Any(c =>
+                    c.Source == connector ||
+                    c.Target == connector);
             }
         }
     }
@@ -426,6 +504,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
         {
             var json = File.ReadAllText(filePath);
             var name = GraphSerializer.Deserialize(json, this);
+
+            ResetToRootGraph();
+            ClearExecutionHighlightsRecursive(RootGraph);
+            ResetConnectorsStateRecursive(RootGraph);
+
             StatusMessage = $"Загружен профиль: {name}";
         }
         catch (Exception ex)
@@ -444,9 +527,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
             return;
         }
 
-        var topLevel = Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-            ? desktop.MainWindow
-            : null;
+        var topLevel = Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
 
         if (topLevel == null)
             return;
@@ -476,9 +560,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor
 
             await using var stream = await file.OpenWriteAsync();
             await using var writer = new StreamWriter(stream);
+
             await writer.WriteAsync(json);
 
             StatusMessage = $"Профиль сохранён: {profileName}";
+
             RefreshProfiles();
         }
         catch (Exception ex)

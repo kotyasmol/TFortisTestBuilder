@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TestBuilder.Domain.Execution
+﻿namespace TestBuilder.Domain.Execution
 {
     /// <summary>
     /// Узел графа тестирования.
@@ -15,7 +9,13 @@ namespace TestBuilder.Domain.Execution
         /// <summary>
         /// Логика, выполняемая в данном узле.
         /// </summary>
-        public  ITestStep? Step { get; init; }
+        public ITestStep? Step { get; init; }
+
+        /// <summary>
+        /// Исходная визуальная нода, из которой был скомпилирован TestNode.
+        /// Domain не знает конкретный тип UI, поэтому поле имеет тип object.
+        /// </summary>
+        public object? Source { get; init; }
 
         /// <summary>
         /// Следующий узел при линейном выполнении.
@@ -32,11 +32,10 @@ namespace TestBuilder.Domain.Execution
         /// </summary>
         public TestNode? OnFalse { get; set; }
 
-
-
-        public TestNode(ITestStep step)
+        public TestNode(ITestStep? step, object? source = null)
         {
             Step = step;
+            Source = source;
         }
     }
 }
