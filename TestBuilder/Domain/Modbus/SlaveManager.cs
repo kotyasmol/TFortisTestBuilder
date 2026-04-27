@@ -22,7 +22,7 @@ namespace TestBuilder.Domain.Modbus
         {
             await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
             int found = 0;
-            for (byte slaveId = 1; slaveId <=23; slaveId+=1)
+            for (byte slaveId = 1; slaveId <=23; slaveId+=2)
 
             {
                 try
