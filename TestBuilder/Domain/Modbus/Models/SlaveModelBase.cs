@@ -19,6 +19,8 @@ namespace TestBuilder.Domain.Modbus.Models
 
         public abstract string DeviceType { get; }
 
+        public override string ToString() => $"{SlaveId} — {DeviceType}";
+
         private bool _isExpanded = true;
         public bool IsExpanded
         {
