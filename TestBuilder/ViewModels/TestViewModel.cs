@@ -365,6 +365,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 StatusMessage = $"Подключено к {port}";
 
                 await StartMonitoringAsync();
+                SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
+                SlaveRegistry.Instance.NotifyConnected(true);
 
                 return;
             }
@@ -409,6 +411,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         IsConnected = false;
         IsMonitoringActive = false;
         StatusMessage = "Отключено.";
+        SlaveRegistry.Instance.NotifyConnected(false);
 
         OnPropertyChanged(nameof(ConnectionButtonText));
     }

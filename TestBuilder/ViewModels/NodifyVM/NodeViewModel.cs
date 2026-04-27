@@ -1,7 +1,10 @@
 ﻿using Avalonia;
 using Avalonia.Media;
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TestBuilder.Domain.Modbus.Models;
+using TestBuilder.Services;
 
 namespace TestBuilder.ViewModels.NodifyVM
 {
@@ -13,21 +16,17 @@ namespace TestBuilder.ViewModels.NodifyVM
         private static readonly IBrush ExecutingBorderBrush =
             new SolidColorBrush(Color.FromRgb(255, 214, 10));
 
-        [ObservableProperty]
-        private string title = string.Empty;
-
-        [ObservableProperty]
-        private Point location;
-
-        [ObservableProperty]
-        private bool isSelected;
-
-        [ObservableProperty]
-        private bool isExecuting;
+        [ObservableProperty] private string title = string.Empty;
+        [ObservableProperty] private Point location;
+        [ObservableProperty] private bool isSelected;
+        [ObservableProperty] private bool isExecuting;
 
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
-
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
+
+        // Список слейвов для ComboBox в нодах
+        public ObservableCollection<SlaveModelBase> AvailableSlaves { get; } = new();
+        public bool IsConnected => SlaveRegistry.Instance.IsConnected;
 
         public IBrush ExecutionBorderBrush =>
             IsExecuting ? ExecutingBorderBrush : DefaultBorderBrush;
@@ -39,6 +38,28 @@ namespace TestBuilder.ViewModels.NodifyVM
         {
             OnPropertyChanged(nameof(ExecutionBorderBrush));
             OnPropertyChanged(nameof(ExecutionBorderThickness));
+        }
+
+        protected NodeViewModel()
+        {
+            SlaveRegistry.Instance.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SlaveRegistry.IsConnected))
+                {
+                    OnPropertyChanged(nameof(IsConnected));
+                    SyncSlaves();
+                }
+            };
+
+            if (SlaveRegistry.Instance.Slaves.Count > 0)
+                SyncSlaves();
+        }
+
+        public void SyncSlaves()
+        {
+            AvailableSlaves.Clear();
+            foreach (var s in SlaveRegistry.Instance.Slaves)
+                AvailableSlaves.Add(s);
         }
 
         public void AddInput(ConnectorViewModel connector)

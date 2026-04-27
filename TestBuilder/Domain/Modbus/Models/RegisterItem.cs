@@ -34,6 +34,8 @@ namespace TestBuilder.Domain.Modbus.Models
         /// <summary>Категория/группа регистра (для UI)</summary>
         public string Category { get; set; } = string.Empty;
 
+        public override string ToString() => $"{Address} — {Name}";
+
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler? PropertyChanged;
 
