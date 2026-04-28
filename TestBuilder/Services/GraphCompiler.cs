@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services.Http;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
@@ -19,11 +20,21 @@ namespace TestBuilder.Services
     public sealed class GraphCompiler
     {
         private readonly IModbusService _modbusService;
+        private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
 
         public GraphCompiler(IModbusService modbusService, ILogger logger)
+            : this(modbusService, new HttpRequestService(), logger)
+        {
+        }
+
+        public GraphCompiler(
+            IModbusService modbusService,
+            IHttpRequestService httpRequestService,
+            ILogger logger)
         {
             _modbusService = modbusService;
+            _httpRequestService = httpRequestService;
             _logger = logger;
         }
 
@@ -42,13 +53,19 @@ namespace TestBuilder.Services
                 var targetVm = connection.Target.Parent;
 
                 if (sourceVm == null || targetVm == null)
+                {
                     continue;
+                }
 
                 if (!map.TryGetValue(sourceVm, out var source))
+                {
                     continue;
+                }
 
                 if (!map.TryGetValue(targetVm, out var target))
+                {
                     continue;
+                }
 
                 BindTransition(sourceVm, connection.Source, source, target);
             }
@@ -57,7 +74,9 @@ namespace TestBuilder.Services
             startVm ??= graph.Nodes.OfType<StartNodeViewModel>().FirstOrDefault();
 
             if (startVm == null)
+            {
                 throw new InvalidOperationException($"В графе '{graph.Title}' отсутствует стартовая нода.");
+            }
 
             return new CompiledGraph(map[startVm]);
         }
@@ -74,6 +93,7 @@ namespace TestBuilder.Services
                 LabelNodeViewModel label => label.CreateStep(_logger),
                 ModbusWriteNodeViewModel write => write.CreateStep(_modbusService, _logger),
                 CheckRegisterRangeNodeViewModel check => check.CreateStep(_logger),
+                HttpRequestNodeViewModel http => http.CreateStep(_httpRequestService, _logger),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
             };
@@ -102,23 +122,50 @@ namespace TestBuilder.Services
             {
                 case ModbusWriteNodeViewModel writeVm:
                     if (sourceConnector == writeVm.TrueOut)
+                    {
                         source.OnTrue = target;
+                    }
                     else if (sourceConnector == writeVm.FalseOut)
+                    {
                         source.OnFalse = target;
+                    }
+
                     break;
 
                 case CheckRegisterRangeNodeViewModel checkVm:
                     if (sourceConnector == checkVm.TrueOut)
+                    {
                         source.OnTrue = target;
+                    }
                     else if (sourceConnector == checkVm.FalseOut)
+                    {
                         source.OnFalse = target;
+                    }
+
+                    break;
+
+                case HttpRequestNodeViewModel httpVm:
+                    if (sourceConnector == httpVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == httpVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
                     break;
 
                 case ForEachSlaveNodeViewModel forVm:
                     if (sourceConnector == forVm.SuccessOut)
+                    {
                         source.Next = target;
+                    }
                     else if (sourceConnector == forVm.ErrorOut)
+                    {
                         source.OnFalse = target;
+                    }
+
                     break;
 
                 default:

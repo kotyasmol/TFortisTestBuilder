@@ -23,6 +23,7 @@ namespace TestBuilder.Services
         public static string Serialize(TestViewModel vm, string profileName)
         {
             var dto = SerializeGraph(vm.RootGraph, profileName);
+
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
 
@@ -36,7 +37,9 @@ namespace TestBuilder.Services
             var nodeIds = new Dictionary<NodeViewModel, string>();
 
             for (var i = 0; i < graph.Nodes.Count; i++)
+            {
                 nodeIds[graph.Nodes[i]] = i.ToString();
+            }
 
             foreach (var node in graph.Nodes)
             {
@@ -73,6 +76,13 @@ namespace TestBuilder.Services
                         n.UseCurrentSlaveId = c.UseCurrentSlaveId;
                         break;
 
+                    case HttpRequestNodeViewModel h:
+                        n.Url = h.Url;
+                        n.TimeoutMs = h.TimeoutMs;
+                        n.OutputVariableName = h.OutputVariableName;
+                        n.RequireSuccessStatusCode = h.RequireSuccessStatusCode;
+                        break;
+
                     case ForEachSlaveNodeViewModel f:
                         n.FromSlaveId = f.FromSlaveId;
                         n.ToSlaveId = f.ToSlaveId;
@@ -91,10 +101,14 @@ namespace TestBuilder.Services
                 var tgt = conn.Target.Parent;
 
                 if (src == null || tgt == null)
+                {
                     continue;
+                }
 
                 if (!nodeIds.ContainsKey(src) || !nodeIds.ContainsKey(tgt))
+                {
                     continue;
+                }
 
                 dto.Connections.Add(new ConnectionDto
                 {
@@ -117,6 +131,7 @@ namespace TestBuilder.Services
             vm.RootGraph.Clear();
 
             DeserializeGraph(dto, vm.RootGraph, isBodyGraph: false);
+
             vm.ResetToRootGraph();
 
             return dto.Name;
@@ -133,6 +148,7 @@ namespace TestBuilder.Services
             foreach (var n in dto.Nodes)
             {
                 var location = new Point(n.X, n.Y);
+
                 NodeViewModel node = n.Type switch
                 {
                     "Start" => new StartNodeViewModel
@@ -186,6 +202,15 @@ namespace TestBuilder.Services
                         UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
                     },
 
+                    "HTTP Request" => new HttpRequestNodeViewModel
+                    {
+                        Location = location,
+                        Url = n.Url ?? "http://192.168.0.1/test.shtml",
+                        TimeoutMs = n.TimeoutMs ?? 30000,
+                        OutputVariableName = n.OutputVariableName ?? "testPageHtml",
+                        RequireSuccessStatusCode = n.RequireSuccessStatusCode ?? true
+                    },
+
                     "For Slaves" => CreateForEachSlaveNode(n, location),
 
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {n.Type}")
@@ -198,10 +223,14 @@ namespace TestBuilder.Services
             foreach (var c in dto.Connections)
             {
                 if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode))
+                {
                     continue;
+                }
 
                 if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode))
+                {
                     continue;
+                }
 
                 var srcConn = srcNode.Output.Concat(srcNode.Input)
                     .FirstOrDefault(x => x.Title == c.SourceConnector);
@@ -210,7 +239,9 @@ namespace TestBuilder.Services
                     .FirstOrDefault(x => x.Title == c.TargetConnector);
 
                 if (srcConn == null || tgtConn == null)
+                {
                     continue;
+                }
 
                 graph.Connections.Add(new ConnectionViewModel(srcConn, tgtConn));
             }
@@ -245,6 +276,7 @@ namespace TestBuilder.Services
             {
                 var json = File.ReadAllText(filePath);
                 var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions);
+
                 return dto?.Name;
             }
             catch

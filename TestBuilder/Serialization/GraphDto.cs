@@ -66,6 +66,23 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Max { get; set; }
 
+        // --- HTTP Request ---
+        [JsonPropertyName("url")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Url { get; set; }
+
+        [JsonPropertyName("timeoutMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TimeoutMs { get; set; }
+
+        [JsonPropertyName("outputVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? OutputVariableName { get; set; }
+
+        [JsonPropertyName("requireSuccessStatusCode")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? RequireSuccessStatusCode { get; set; }
+
         // --- For Slaves ---
         [JsonPropertyName("fromSlaveId")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
