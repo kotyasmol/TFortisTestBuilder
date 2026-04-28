@@ -45,7 +45,7 @@ public partial class WriteRegisterDialog : Window
         {
             await _slave.Modbus.WriteRegisterAsync(slaveId, (ushort)_register.Address, value);
             await _slave.PollAsync();
-            ResultText.Text = "Response ok";
+            ResultText.Text = "Запись выполнена успешно";
             ResultText.Foreground = Avalonia.Media.Brushes.Green;
         }
         catch

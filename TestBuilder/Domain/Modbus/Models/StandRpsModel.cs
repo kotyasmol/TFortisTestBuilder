@@ -58,33 +58,33 @@ namespace TestBuilder.Domain.Modbus.Models
             // Заполняем базовое свойство ObservableCollection
             RegisterItems = new ObservableCollection<RegisterItem>
             {
-                new RegisterItem { Address = 1300, Name = "AC 230V Enable", Value = 0, IsReadOnly = false, Category = "Power Control" },
-                new RegisterItem { Address = 1301, Name = "LATR Enable", Value = 0, IsReadOnly = false, Category = "Power Control" },
-                new RegisterItem { Address = 1302, Name = "Battery Enable", Value = 0, IsReadOnly = false, Category = "Power Control" },
-                new RegisterItem { Address = 1303, Name = "Battery Polarity", Value = 0, IsReadOnly = false, Category = "Power Control" },
-                new RegisterItem { Address = 1304, Name = "Thermo Emulator", Value = 0, IsReadOnly = false, Category = "Temperature Control" },
+                new RegisterItem { Address = 1300, Name = "Подключение AC (230V)", Value = 0, IsReadOnly = false, Category = "Управление питанием" },
+                new RegisterItem { Address = 1301, Name = "Подключение ЛАТР", Value = 0, IsReadOnly = false, Category = "Управление питанием" },
+                new RegisterItem { Address = 1302, Name = "Подключение АКБ", Value = 0, IsReadOnly = false, Category = "Управление питанием" },
+                new RegisterItem { Address = 1303, Name = "Полярность АКБ", Value = 0, IsReadOnly = false, Category = "Управление питанием" },
+                new RegisterItem { Address = 1304, Name = "Имитатор термодатчика", Value = 0, IsReadOnly = false, Category = "Управление температурой" },
 
-                new RegisterItem { Address = 1305, Name = "Relay 1 State (AC_OK)", Value = 0, IsReadOnly = true, Category = "Relay State" },
-                new RegisterItem { Address = 1306, Name = "Relay 2 State", Value = 0, IsReadOnly = true, Category = "Relay State" },
+                new RegisterItem { Address = 1305, Name = "Состояние реле 1 (AC_OK)", Value = 0, IsReadOnly = true, Category = "Состояние реле" },
+                new RegisterItem { Address = 1306, Name = "Состояние реле 2 (Relay)", Value = 0, IsReadOnly = true, Category = "Состояние реле" },
 
-                new RegisterItem { Address = 1307, Name = "Load Key", Value = 0, IsReadOnly = false, Category = "Load Control" },
-                new RegisterItem { Address = 1308, Name = "Charge Control Resistance (Ohm)", Value = 0, IsReadOnly = false, Category = "Load Control" },
+                new RegisterItem { Address = 1307, Name = "Ключ подключения нагрузки", Value = 0, IsReadOnly = false, Category = "Управление нагрузкой" },
+                new RegisterItem { Address = 1308, Name = "Сопротивление контроля тока, Ом", Value = 0, IsReadOnly = false, Category = "Управление нагрузкой" },
 
-                new RegisterItem { Address = 1309, Name = "Battery Voltage (mV)", Value = 0, IsReadOnly = true, Category = "Measurements" },
-                new RegisterItem { Address = 1310, Name = "Battery Current (mA)", Value = 0, IsReadOnly = true, Category = "Measurements" },
+                new RegisterItem { Address = 1309, Name = "Напряжение АКБ, мВ", Value = 0, IsReadOnly = true, Category = "Измерения" },
+                new RegisterItem { Address = 1310, Name = "Ток АКБ, мА", Value = 0, IsReadOnly = true, Category = "Измерения" },
 
-                new RegisterItem { Address = 1311, Name = "Input 230V Present", Value = 0, IsReadOnly = true, Category = "Power Status" },
-                new RegisterItem { Address = 1312, Name = "Output 230V Present", Value = 0, IsReadOnly = true, Category = "Power Status" },
+                new RegisterItem { Address = 1311, Name = "Наличие 230V на входе RPS", Value = 0, IsReadOnly = true, Category = "Статус питания" },
+                new RegisterItem { Address = 1312, Name = "Наличие 230V на выходе RPS", Value = 0, IsReadOnly = true, Category = "Статус питания" },
 
-                new RegisterItem { Address = 1313, Name = "Sensor Temp 1 (°C)", Value = 0, IsReadOnly = true, Category = "Temperature" },
-                new RegisterItem { Address = 1314, Name = "Sensor Temp 2 (°C)", Value = 0, IsReadOnly = true, Category = "Temperature" },
+                new RegisterItem { Address = 1313, Name = "Температура датчика 1", Value = 0, IsReadOnly = true, Category = "Температура" },
+                new RegisterItem { Address = 1314, Name = "Температура датчика 2", Value = 0, IsReadOnly = true, Category = "Температура" },
 
-                new RegisterItem { Address = 1315, Name = "Fan Control Key", Value = 0, IsReadOnly = false, Category = "Fan Control" },
-                new RegisterItem { Address = 1316, Name = "Fan Off Temperature", Value = 0, IsReadOnly = false, Category = "Fan Control" },
-                new RegisterItem { Address = 1317, Name = "Fan On Temperature", Value = 0, IsReadOnly = false, Category = "Fan Control" },
+                new RegisterItem { Address = 1315, Name = "Ключ управления вентиляторами", Value = 0, IsReadOnly = false, Category = "Управление вентилятором" },
+                new RegisterItem { Address = 1316, Name = "Температура выключения вентиляторов", Value = 0, IsReadOnly = false, Category = "Управление вентилятором" },
+                new RegisterItem { Address = 1317, Name = "Температура включения вентиляторов", Value = 0, IsReadOnly = false, Category = "Управление вентилятором" },
 
-                new RegisterItem { Address = 1318, Name = "Max Radiator Temperature", Value = 0, IsReadOnly = false, Category = "Temperature Control" },
-                new RegisterItem { Address = 1319, Name = "Clear Statistics", Value = 0, IsReadOnly = false, Category = "Statistics" },
+                new RegisterItem { Address = 1318, Name = "Макс. температура радиатора", Value = 0, IsReadOnly = false, Category = "Управление температурой" },
+                new RegisterItem { Address = 1319, Name = "Очистка статистики", Value = 0, IsReadOnly = false, Category = "Статистика" },
             };
         }
 

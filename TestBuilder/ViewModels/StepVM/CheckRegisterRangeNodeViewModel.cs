@@ -50,8 +50,8 @@ namespace TestBuilder.ViewModels.StepVM
 
         public CheckRegisterRangeNodeViewModel()
         {
-            Title = "Check Register Range";
-            In = new ConnectorViewModel { Title = "In" };
+            Title = "Проверка диапазона";
+            In = new ConnectorViewModel { Title = "Вход" };
             TrueOut = new ConnectorViewModel { Title = "True" };
             FalseOut = new ConnectorViewModel { Title = "False" };
             AddInput(In);

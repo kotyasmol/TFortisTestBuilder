@@ -26,7 +26,7 @@ namespace TestBuilder.Domain.Modbus
 
             int found = 0;
 
-            for (byte slaveId = 1; slaveId <= 23; slaveId += 2)
+            for (byte slaveId = 1; slaveId <= 35; slaveId += 2)
             {
                 try
                 {

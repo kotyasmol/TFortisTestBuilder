@@ -12,9 +12,9 @@ namespace TestBuilder.ViewModels.StepVM
 
         public BodyStartNodeViewModel()
         {
-            Title = "Body Start";
+            Title = "Тело: начало";
 
-            Out = new ConnectorViewModel { Title = "Out" };
+            Out = new ConnectorViewModel { Title = "Выход" };
             AddOutput(Out);
         }
     }

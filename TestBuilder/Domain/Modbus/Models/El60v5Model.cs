@@ -50,17 +50,37 @@ namespace TestBuilder.Domain.Modbus.Models
         private void InitializeRegisterItems()
         {
             RegisterItems.Clear();
-            for (ushort addr = REG_START; addr < REG_START + REG_COUNT; addr++)
-            {
-                RegisterItems.Add(new RegisterItem
-                {
-                    Address = addr,
-                    Name = $"Register {addr}",
-                    Value = 0,
-                    IsReadOnly = IsReadOnly(addr),
-                    Category = "EL60v5"
-                });
-            }
+            RegisterItems.Add(new RegisterItem { Address = 1400, Name = "Текущий ток, канал A, мА", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1401, Name = "Текущий ток, канал B, мА", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1402, Name = "Текущее напряжение, канал A, мВ", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1403, Name = "Текущее напряжение, канал B, мВ", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1404, Name = "Макс. ток, канал A, мА", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1405, Name = "Макс. ток, канал B, мА", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1406, Name = "Макс. напряжение, канал A", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1407, Name = "Макс. напряжение, канал B", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1408, Name = "Мин. ток, канал A, мА", IsReadOnly = false, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1409, Name = "Мин. ток, канал B, мА", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1410, Name = "Мин. напряжение, канал A", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1411, Name = "Мин. напряжение, канал B", IsReadOnly = true, Category = "Статистика" });
+            RegisterItems.Add(new RegisterItem { Address = 1412, Name = "Установка нагрузки, канал A, мВт", IsReadOnly = false, Category = "Управление" });
+            RegisterItems.Add(new RegisterItem { Address = 1413, Name = "Установка нагрузки, канал B, мВт", IsReadOnly = false, Category = "Управление" });
+            RegisterItems.Add(new RegisterItem { Address = 1414, Name = "Включение нагрузки, канал A", IsReadOnly = false, Category = "Управление" });
+            RegisterItems.Add(new RegisterItem { Address = 1415, Name = "Включение нагрузки, канал B", IsReadOnly = false, Category = "Управление" });
+            RegisterItems.Add(new RegisterItem { Address = 1416, Name = "Температура радиатора, канал A", IsReadOnly = true, Category = "Температура" });
+            RegisterItems.Add(new RegisterItem { Address = 1417, Name = "Температура радиатора, канал B", IsReadOnly = true, Category = "Температура" });
+            RegisterItems.Add(new RegisterItem { Address = 1418, Name = "Макс. температура радиатора, канал A", IsReadOnly = false, Category = "Управление температурой" });
+            RegisterItems.Add(new RegisterItem { Address = 1419, Name = "Макс. температура радиатора, канал B", IsReadOnly = false, Category = "Управление температурой" });
+            RegisterItems.Add(new RegisterItem { Address = 1420, Name = "Авт. включение нагрузки, канал A", IsReadOnly = false, Category = "Автоуправление" });
+            RegisterItems.Add(new RegisterItem { Address = 1421, Name = "Авт. включение нагрузки, канал B", IsReadOnly = false, Category = "Автоуправление" });
+            RegisterItems.Add(new RegisterItem { Address = 1422, Name = "Авт. установка нагрузки, канал A", IsReadOnly = false, Category = "Автоуправление" });
+            RegisterItems.Add(new RegisterItem { Address = 1423, Name = "Авт. установка нагрузки, канал B", IsReadOnly = false, Category = "Автоуправление" });
+            RegisterItems.Add(new RegisterItem { Address = 1424, Name = "Включение Passive PoE, канал A", IsReadOnly = false, Category = "Управление PoE" });
+            RegisterItems.Add(new RegisterItem { Address = 1425, Name = "Включение Passive PoE, канал B", IsReadOnly = false, Category = "Управление PoE" });
+            RegisterItems.Add(new RegisterItem { Address = 1426, Name = "T2P, канал A", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1427, Name = "T2P, канал B", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1428, Name = "ALERT, канал A", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1429, Name = "ALERT, канал B", IsReadOnly = true, Category = "Измерения" });
+            RegisterItems.Add(new RegisterItem { Address = 1430, Name = "Очистка статистики", IsReadOnly = false, Category = "Статистика" });
         }
 
         private bool IsReadOnly(ushort addr) =>

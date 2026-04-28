@@ -14,8 +14,8 @@ namespace TestBuilder.ViewModels.StepVM
     {
         public EndNodeViewModel()
         {
-            Title = "End";
-            AddInput(new ConnectorViewModel { Title = "In" });
+            Title = "Конец";
+            AddInput(new ConnectorViewModel { Title = "Вход" });
         }
 
         public ITestStep CreateStep(ILogger logger)

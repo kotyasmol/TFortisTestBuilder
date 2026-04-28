@@ -48,23 +48,23 @@ namespace TestBuilder.Domain.Modbus.Models
         {
             RegisterItems = new ObservableCollection<RegisterItem>
             {
-                new RegisterItem { Address = 1100, Name = "AC Output 1", Value = 0, IsReadOnly = false, Category = "AC Control" },
-                new RegisterItem { Address = 1101, Name = "AC Output 2", Value = 0, IsReadOnly = false, Category = "AC Control" },
-                new RegisterItem { Address = 1102, Name = "Sensor Output 1", Value = 0, IsReadOnly = false, Category = "Sensor Control" },
-                new RegisterItem { Address = 1103, Name = "Sensor Output 2", Value = 0, IsReadOnly = false, Category = "Sensor Control" },
-                new RegisterItem { Address = 1104, Name = "Load Resistor 1", Value = 0, IsReadOnly = false, Category = "Load Control" },
+                new RegisterItem { Address = 1100, Name = "Выход AC1", Value = 0, IsReadOnly = false, Category = "Управление AC" },
+                new RegisterItem { Address = 1101, Name = "Выход AC2", Value = 0, IsReadOnly = false, Category = "Управление AC" },
+                new RegisterItem { Address = 1102, Name = "Выход Sensor1", Value = 0, IsReadOnly = false, Category = "Управление сенсором" },
+                new RegisterItem { Address = 1103, Name = "Выход Sensor2", Value = 0, IsReadOnly = false, Category = "Управление сенсором" },
+                new RegisterItem { Address = 1104, Name = "Нагрузочный резистор", Value = 0, IsReadOnly = false, Category = "Управление нагрузкой" },
 
-                new RegisterItem { Address = 1105, Name = "Battery Voltage Set (mV)", Value = 0, IsReadOnly = false, Category = "Battery Control" },
-                new RegisterItem { Address = 1106, Name = "Charge/Discharge Current (mA)", Value = 0, IsReadOnly = true, Category = "Measurements" },
-                new RegisterItem { Address = 1107, Name = "Heater Current (mA)", Value = 0, IsReadOnly = true, Category = "Measurements" },
-                new RegisterItem { Address = 1108, Name = "Battery Voltage Measured", Value = 0, IsReadOnly = true, Category = "Measurements" },
+                new RegisterItem { Address = 1105, Name = "Установка напряжения АКБ, мВ", Value = 0, IsReadOnly = false, Category = "Управление АКБ" },
+                new RegisterItem { Address = 1106, Name = "Ток зарядки/разрядки АКБ, мА", Value = 0, IsReadOnly = true, Category = "Измерения" },
+                new RegisterItem { Address = 1107, Name = "Ток нагревателей АКБ, мА", Value = 0, IsReadOnly = true, Category = "Измерения" },
+                new RegisterItem { Address = 1108, Name = "Напряжение на выходе АКБ", Value = 0, IsReadOnly = true, Category = "Измерения" },
 
-                new RegisterItem { Address = 1109, Name = "Battery Output Enable", Value = 0, IsReadOnly = false, Category = "Battery Control" },
-                new RegisterItem { Address = 1110, Name = "Polarity Mode", Value = 0, IsReadOnly = false, Category = "Battery Control" },
-                new RegisterItem { Address = 1111, Name = "Min Charge Current (mA)", Value = 0, IsReadOnly = true, Category = "Statistics" },
-                new RegisterItem { Address = 1112, Name = "Max Charge Current (mA)", Value = 0, IsReadOnly = true, Category = "Statistics" },
-                new RegisterItem { Address = 1113, Name = "Clear Statistics", Value = 0, IsReadOnly = false, Category = "Statistics" },
-                new RegisterItem { Address = 1114, Name = "Heater Relay Enable", Value = 0, IsReadOnly = false, Category = "Heater Control" },
+                new RegisterItem { Address = 1109, Name = "Подключение выхода АКБ", Value = 0, IsReadOnly = false, Category = "Управление АКБ" },
+                new RegisterItem { Address = 1110, Name = "Полярность измерений", Value = 0, IsReadOnly = false, Category = "Управление АКБ" },
+                new RegisterItem { Address = 1111, Name = "Мин. ток заряда, мА", Value = 0, IsReadOnly = true, Category = "Статистика" },
+                new RegisterItem { Address = 1112, Name = "Макс. ток заряда, мА", Value = 0, IsReadOnly = true, Category = "Статистика" },
+                new RegisterItem { Address = 1113, Name = "Очистка статистики", Value = 0, IsReadOnly = false, Category = "Статистика" },
+                new RegisterItem { Address = 1114, Name = "Реле нагревателя", Value = 0, IsReadOnly = false, Category = "Управление нагревателем" },
             };
         }
 

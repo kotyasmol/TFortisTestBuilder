@@ -50,8 +50,8 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ModbusWriteNodeViewModel()
         {
-            Title = "Write Register";
-            In = new ConnectorViewModel { Title = "In" };
+            Title = "Запись регистра";
+            In = new ConnectorViewModel { Title = "Вход" };
             TrueOut = new ConnectorViewModel { Title = "True" };
             FalseOut = new ConnectorViewModel { Title = "False" };
             AddInput(In);

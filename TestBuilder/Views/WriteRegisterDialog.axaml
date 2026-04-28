@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="TestBuilder.Views.WriteRegisterDialog"
-        Title="Write Single Register"
+        Title="Запись регистра"
         Width="300"
         Height="250"
         WindowStartupLocation="CenterOwner"
@@ -15,22 +15,22 @@
         </Grid>
 
         <Grid ColumnDefinitions="100,*">
-            <TextBlock Grid.Column="0" Text="Address:" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="AddressBox" IsReadOnly="True" />
         </Grid>
 
         <Grid ColumnDefinitions="100,*">
-            <TextBlock Grid.Column="0" Text="Value:" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="ValueBox" />
         </Grid>
 
         <Border Height="1" Background="Gray" Margin="0,5" />
 
-        <TextBlock x:Name="ResultText" Text="N/A" Foreground="Gray" />
+        <TextBlock x:Name="ResultText" Text="Нет данных" Foreground="Gray" />
 
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-            <Button Content="Send" x:Name="SendButton" Width="80" />
-            <Button Content="Cancel" x:Name="CancelButton" Width="80" />
+            <Button Content="Отправить" x:Name="SendButton" Width="100" />
+            <Button Content="Отмена" x:Name="CancelButton" Width="90" />
         </StackPanel>
 
     </StackPanel>

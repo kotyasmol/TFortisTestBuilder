@@ -640,7 +640,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void AddNodeAtLocation(string? nodeType, Point location)
     {
-        if (CurrentGraph.IsBodyGraph && (nodeType == "Start" || nodeType == "End"))
+        if (CurrentGraph.IsBodyGraph && (nodeType == "Старт" || nodeType == "Конец"))
         {
             StatusMessage = "Внутри тела цикла используются Body Start и Body End. Обычные Start/End сюда добавлять не нужно.";
             return;
@@ -648,13 +648,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         NodeViewModel? node = nodeType switch
         {
-            "Start" => new StartNodeViewModel { Location = location },
-            "End" => new EndNodeViewModel { Location = location },
-            "Write Register" => new ModbusWriteNodeViewModel { Location = location },
-            "Check Register Range" => new CheckRegisterRangeNodeViewModel { Location = location },
-            "Delay" => new DelayNodeViewModel { Location = location },
-            "Label" => new LabelNodeViewModel { Location = location },
-            "For Slaves" => new ForEachSlaveNodeViewModel { Location = location },
+            "Старт" => new StartNodeViewModel { Location = location },
+            "Конец" => new EndNodeViewModel { Location = location },
+            "Запись регистра" => new ModbusWriteNodeViewModel { Location = location },
+            "Проверка диапазона" => new CheckRegisterRangeNodeViewModel { Location = location },
+            "Задержка" => new DelayNodeViewModel { Location = location },
+            "Метка" => new LabelNodeViewModel { Location = location },
+            "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
             _ => null
         };
 

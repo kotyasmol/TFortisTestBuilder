@@ -37,7 +37,7 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ForEachSlaveNodeViewModel()
         {
-            Title = "For Slaves";
+            Title = "Цикл For";
 
             In = new ConnectorViewModel { Title = "In" };
             SuccessOut = new ConnectorViewModel { Title = "Success" };
