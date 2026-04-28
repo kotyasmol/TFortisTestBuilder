@@ -47,8 +47,8 @@ namespace TestBuilder.Domain.Modbus.Models
         {
             RegisterItems = new ObservableCollection<RegisterItem>
             {
-                new RegisterItem { Address = 1200, Name = "Выход AC1", Value = 0, IsReadOnly = true, Category = "Выходы" },
-                new RegisterItem { Address = 1201, Name = "Выход AC2", Value = 0, IsReadOnly = true, Category = "Выходы" },
+                new RegisterItem { Address = 1200, Name = "Выход AC1", Value = 0, IsReadOnly = false, Category = "Выходы" },
+                new RegisterItem { Address = 1201, Name = "Выход AC2", Value = 0, IsReadOnly = false, Category = "Выходы" },
                 new RegisterItem { Address = 1202, Name = "Выход Sensor1", Value = 0, IsReadOnly = true, Category = "Сенсоры" },
                 new RegisterItem { Address = 1203, Name = "Выход Sensor2", Value = 0, IsReadOnly = true, Category = "Сенсоры" },
                 new RegisterItem { Address = 1204, Name = "Ключ зарядки", Value = 0, IsReadOnly = false, Category = "Зарядка" },
