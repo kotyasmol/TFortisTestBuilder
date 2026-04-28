@@ -16,9 +16,9 @@ namespace TestBuilder.ViewModels.StepVM
 
         public LabelNodeViewModel()
         {
-            Title = "Label";
-            In = new ConnectorViewModel { Title = "In" };
-            Out = new ConnectorViewModel { Title = "Out" };
+            Title = "Метка";
+            In = new ConnectorViewModel { Title = "Вход" };
+            Out = new ConnectorViewModel { Title = "Выход" };
             AddInput(In);
             AddOutput(Out);
         }

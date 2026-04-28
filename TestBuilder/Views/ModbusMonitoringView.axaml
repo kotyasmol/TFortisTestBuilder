@@ -94,10 +94,10 @@
                                             </Style>
                                         </DataGrid.Styles>
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="80" />
-                                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                                            <DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=OneWay}" Width="80" />
-                                            <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
+                                            <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" />
+                                            <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="*" />
+                                            <DataGridTextColumn Header="Значение" Binding="{Binding Value, Mode=OneWay}" Width="80" />
+                                            <DataGridTextColumn Header="Категория" Binding="{Binding Category}" Width="120" />
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </Grid>

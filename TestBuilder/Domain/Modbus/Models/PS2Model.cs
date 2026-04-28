@@ -52,31 +52,31 @@ namespace TestBuilder.Domain.Modbus.Models
         {
             RegisterItems = new ObservableCollection<RegisterItem>
             {
-                new RegisterItem { Address = 1200, Name = "AC Output 1", Value = 0, IsReadOnly = false, Category = "AC Control" },
-                new RegisterItem { Address = 1201, Name = "AC Output 2", Value = 0, IsReadOnly = false, Category = "AC Control" },
-                new RegisterItem { Address = 1202, Name = "Sensor Output 1", Value = 0, IsReadOnly = false, Category = "Sensor Control" },
-                new RegisterItem { Address = 1203, Name = "Sensor Output 2", Value = 0, IsReadOnly = false, Category = "Sensor Control" },
-                new RegisterItem { Address = 1204, Name = "Charge Current Key", Value = 0, IsReadOnly = false, Category = "Charge Control" },
+                new RegisterItem { Address = 1200, Name = "Выход AC1", Value = 0, IsReadOnly = false, Category = "Управление AC" },
+                new RegisterItem { Address = 1201, Name = "Выход AC2", Value = 0, IsReadOnly = false, Category = "Управление AC" },
+                new RegisterItem { Address = 1202, Name = "Выход Sensor1", Value = 0, IsReadOnly = false, Category = "Управление сенсором" },
+                new RegisterItem { Address = 1203, Name = "Выход Sensor2", Value = 0, IsReadOnly = false, Category = "Управление сенсором" },
+                new RegisterItem { Address = 1204, Name = "Ключ измерения тока зарядки", Value = 0, IsReadOnly = false, Category = "Управление зарядкой" },
 
-                new RegisterItem { Address = 1205, Name = "Charge Voltage (mV)", Value = 0, IsReadOnly = true, Category = "Charge Measurements" },
-                new RegisterItem { Address = 1206, Name = "Charge Current (mA)", Value = 0, IsReadOnly = true, Category = "Charge Measurements" },
-                new RegisterItem { Address = 1207, Name = "Charge Voltage Max (mV)", Value = 0, IsReadOnly = true, Category = "Charge Statistics" },
-                new RegisterItem { Address = 1208, Name = "Charge Voltage Min (mV)", Value = 0, IsReadOnly = true, Category = "Charge Statistics" },
-                new RegisterItem { Address = 1209, Name = "Charge Control Resistance (Ohm)", Value = 0, IsReadOnly = false, Category = "Charge Control" },
+                new RegisterItem { Address = 1205, Name = "Напряжение зарядки, мВ", Value = 0, IsReadOnly = true, Category = "Измерения зарядки" },
+                new RegisterItem { Address = 1206, Name = "Ток зарядки, мА", Value = 0, IsReadOnly = true, Category = "Измерения зарядки" },
+                new RegisterItem { Address = 1207, Name = "Макс. напряжение зарядки, мВ", Value = 0, IsReadOnly = true, Category = "Статистика зарядки" },
+                new RegisterItem { Address = 1208, Name = "Мин. напряжение зарядки, мВ", Value = 0, IsReadOnly = true, Category = "Статистика зарядки" },
+                new RegisterItem { Address = 1209, Name = "Сопротивление контроля тока, Ом", Value = 0, IsReadOnly = false, Category = "Управление зарядкой" },
 
-                new RegisterItem { Address = 1210, Name = "Discharge Current Key", Value = 0, IsReadOnly = true, Category = "Discharge Control" },
-                new RegisterItem { Address = 1211, Name = "Discharge Voltage (mV)", Value = 0, IsReadOnly = true, Category = "Discharge Measurements" },
-                new RegisterItem { Address = 1212, Name = "Discharge Current (mA)", Value = 0, IsReadOnly = true, Category = "Discharge Measurements" },
-                new RegisterItem { Address = 1213, Name = "Discharge Voltage Max (mV)", Value = 0, IsReadOnly = true, Category = "Discharge Statistics" },
-                new RegisterItem { Address = 1214, Name = "Discharge Voltage Min (mV)", Value = 0, IsReadOnly = true, Category = "Discharge Statistics" },
+                new RegisterItem { Address = 1210, Name = "Ключ измерения тока разрядки", Value = 0, IsReadOnly = true, Category = "Управление разрядкой" },
+                new RegisterItem { Address = 1211, Name = "Напряжение разрядки, мВ", Value = 0, IsReadOnly = true, Category = "Измерения разрядки" },
+                new RegisterItem { Address = 1212, Name = "Ток разрядки, мА", Value = 0, IsReadOnly = true, Category = "Измерения разрядки" },
+                new RegisterItem { Address = 1213, Name = "Макс. напряжение разрядки, мВ", Value = 0, IsReadOnly = true, Category = "Статистика разрядки" },
+                new RegisterItem { Address = 1214, Name = "Мин. напряжение разрядки, мВ", Value = 0, IsReadOnly = true, Category = "Статистика разрядки" },
 
-                new RegisterItem { Address = 1215, Name = "Heater Relay Enable", Value = 0, IsReadOnly = false, Category = "Heater Control" },
-                new RegisterItem { Address = 1216, Name = "Heater Current (mA)", Value = 0, IsReadOnly = true, Category = "Heater Measurements" },
+                new RegisterItem { Address = 1215, Name = "Реле нагревателя", Value = 0, IsReadOnly = false, Category = "Управление нагревателем" },
+                new RegisterItem { Address = 1216, Name = "Ток нагревателей АКБ, мА", Value = 0, IsReadOnly = true, Category = "Измерения нагревателя" },
 
-                new RegisterItem { Address = 1217, Name = "Radiator Temperature (°C)", Value = 0, IsReadOnly = true, Category = "Temperature" },
-                new RegisterItem { Address = 1218, Name = "Max Radiator Temperature (°C)", Value = 0, IsReadOnly = false, Category = "Temperature Control" },
+                new RegisterItem { Address = 1217, Name = "Температура радиатора, °C", Value = 0, IsReadOnly = true, Category = "Температура" },
+                new RegisterItem { Address = 1218, Name = "Макс. температура радиатора, °C", Value = 0, IsReadOnly = false, Category = "Управление температурой" },
 
-                new RegisterItem { Address = 1219, Name = "Clear Statistics", Value = 0, IsReadOnly = false, Category = "Statistics" },
+                new RegisterItem { Address = 1219, Name = "Очистка статистики", Value = 0, IsReadOnly = false, Category = "Статистика" },
             };
         }
 

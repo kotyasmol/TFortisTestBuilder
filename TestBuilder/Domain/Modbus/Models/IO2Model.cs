@@ -47,7 +47,7 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte Rs485Read { get; private set; }       // 1528
         public byte Rs485Write { get; private set; }      // 1529
 
-       
+
 
         public IO2Model(byte slaveId, IModbusService modbus)
             : base(slaveId, modbus)
@@ -57,17 +57,41 @@ namespace TestBuilder.Domain.Modbus.Models
 
         private void InitializeRegisterItems()
         {
-            for (ushort addr = REG_START; addr < REG_START + REG_COUNT; addr++)
-            {
-                RegisterItems.Add(new RegisterItem
-                {
-                    Address = addr,
-                    Name = $"Register {addr}",
-                    Value = 0,
-                    IsReadOnly = IsReadOnly(addr),
-                    Category = GetCategory(addr)
-                });
-            }
+            RegisterItems.Clear();
+            // Выходы
+            RegisterItems.Add(new RegisterItem { Address = 1500, Name = "Выход 1", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1501, Name = "Выход 2", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1502, Name = "Выход 3", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1503, Name = "Выход 4", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1504, Name = "Выход 5", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1505, Name = "Выход 6", IsReadOnly = false, Category = "Выходы" });
+            RegisterItems.Add(new RegisterItem { Address = 1506, Name = "Выход 7", IsReadOnly = false, Category = "Выходы" });
+            // Входы
+            RegisterItems.Add(new RegisterItem { Address = 1507, Name = "Состояние входа 1", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1508, Name = "Состояние входа 2", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1509, Name = "Состояние входа 3", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1510, Name = "Состояние входа 4", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1511, Name = "Состояние входа 5", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1512, Name = "Состояние входа 6", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1513, Name = "Состояние входа 7", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1514, Name = "Состояние входа 8", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1515, Name = "Состояние входа 9", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1516, Name = "Состояние входа 10", IsReadOnly = true, Category = "Входы" });
+            RegisterItems.Add(new RegisterItem { Address = 1517, Name = "Состояние входа 11", IsReadOnly = true, Category = "Входы" });
+            // I2C
+            RegisterItems.Add(new RegisterItem { Address = 1518, Name = "I2C адрес чипа", IsReadOnly = false, Category = "I2C" });
+            RegisterItems.Add(new RegisterItem { Address = 1519, Name = "I2C адрес регистра", IsReadOnly = false, Category = "I2C" });
+            RegisterItems.Add(new RegisterItem { Address = 1520, Name = "I2C данные", IsReadOnly = false, Category = "I2C" });
+            RegisterItems.Add(new RegisterItem { Address = 1521, Name = "I2C флаг готовности", IsReadOnly = true, Category = "I2C" });
+            RegisterItems.Add(new RegisterItem { Address = 1522, Name = "I2C старт чтения", IsReadOnly = false, Category = "I2C" });
+            RegisterItems.Add(new RegisterItem { Address = 1523, Name = "I2C старт записи", IsReadOnly = false, Category = "I2C" });
+            // RS485
+            RegisterItems.Add(new RegisterItem { Address = 1524, Name = "RS485 адрес Modbus ID", IsReadOnly = false, Category = "RS485" });
+            RegisterItems.Add(new RegisterItem { Address = 1525, Name = "RS485 адрес регистра", IsReadOnly = false, Category = "RS485" });
+            RegisterItems.Add(new RegisterItem { Address = 1526, Name = "RS485 данные", IsReadOnly = false, Category = "RS485" });
+            RegisterItems.Add(new RegisterItem { Address = 1527, Name = "RS485 флаг готовности", IsReadOnly = true, Category = "RS485" });
+            RegisterItems.Add(new RegisterItem { Address = 1528, Name = "RS485 старт чтения", IsReadOnly = false, Category = "RS485" });
+            RegisterItems.Add(new RegisterItem { Address = 1529, Name = "RS485 старт записи", IsReadOnly = false, Category = "RS485" });
         }
 
         private bool IsReadOnly(ushort addr)

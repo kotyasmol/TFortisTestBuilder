@@ -12,9 +12,9 @@ namespace TestBuilder.ViewModels.StepVM
 
         public BodyEndNodeViewModel()
         {
-            Title = "Body End";
+            Title = "Тело: конец";
 
-            In = new ConnectorViewModel { Title = "In" };
+            In = new ConnectorViewModel { Title = "Вход" };
             AddInput(In);
         }
     }
