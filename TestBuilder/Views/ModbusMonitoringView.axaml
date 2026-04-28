@@ -15,14 +15,14 @@
                     IsEnabled="{Binding !IsScanning}" />
             <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
                        IsVisible="{Binding !IsConnected}"
-                       Foreground="Red"
+                       Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"
                        VerticalAlignment="Center" />
             <TextBlock Text="Сканирование..."
                        IsVisible="{Binding IsScanning}"
                        VerticalAlignment="Center" />
             <TextBlock Text="Мониторинг запущен"
                        IsVisible="{Binding IsMonitoring}"
-                       Foreground="Green"
+                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
                        VerticalAlignment="Center" />
         </StackPanel>
 
@@ -31,13 +31,13 @@
                    Text="Устройства не найдены. Подключите железо и нажмите Сканировать."
                    IsVisible="{Binding !Slaves.Count}"
                    Margin="10"
-                   Foreground="Gray" />
+                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
 
         <!-- Основной контент -->
         <Grid ColumnDefinitions="*,300">
 
             <!-- Левая часть -->
-            <ScrollViewer Grid.Column="0" Background="#F0F0F0" x:Name="MainScrollViewer"
+            <ScrollViewer Grid.Column="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" x:Name="MainScrollViewer"
                           BringIntoViewOnFocusChange="False">
                 <ItemsControl ItemsSource="{Binding Slaves}"
                               HorizontalAlignment="Stretch">
@@ -48,7 +48,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:SlaveModelBase">
-                            <Border Margin="5" Padding="5" BorderBrush="Gray" BorderThickness="1" Width="600">
+                            <Border Margin="5" Padding="5" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" Width="600">
                                 <Grid RowDefinitions="Auto,Auto">
                                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                                         <StackPanel Grid.Column="0">
@@ -70,7 +70,7 @@
                                               IsReadOnly="True"
                                               GridLinesVisibility="All"
                                               BorderThickness="1"
-                                              BorderBrush="Gray"
+                                              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                                               CanUserResizeColumns="True"
                                               CanUserSortColumns="True"
                                               Height="{Binding GridHeight}">
@@ -108,14 +108,14 @@
             </ScrollViewer>
 
             <!-- Правая панель — логи -->
-            <DockPanel Grid.Column="1" Background="#F8F8F8">
+            <DockPanel Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                 <TextBlock DockPanel.Dock="Top"
                            Text="Логи"
                            FontWeight="Bold"
                            Margin="8,8,8,4" />
                 <Border DockPanel.Dock="Top"
                         Height="1"
-                        Background="Gray"
+                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         Margin="0,0,0,4" />
                 <ScrollViewer>
                     <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">

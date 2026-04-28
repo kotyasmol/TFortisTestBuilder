@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Nodify;
 using System;
@@ -21,8 +24,6 @@ public partial class TestView : UserControl
 
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
 
-        // Перехватываем клики на ComboBox — иначе Nodify захватывает pointer
-        // и ComboBox не может открыть dropdown
         Editor.AddHandler(
             PointerPressedEvent,
             OnEditorPointerPressed,
@@ -34,6 +35,17 @@ public partial class TestView : UserControl
             if (isVisible)
                 Editor.PopAllStates();
         });
+
+        Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
+            .Subscribe(_ => UpdateEditorBackground());
+    }
+
+    private void UpdateEditorBackground()
+    {
+        var isDark = Application.Current?.RequestedThemeVariant == ThemeVariant.Dark;
+        var brushKey = isDark ? "SmallGridBrush" : "SmallGridBrushLight";
+        if (this.Resources.TryGetResource(brushKey, ActualThemeVariant, out var brush) && brush is Avalonia.Media.IBrush b)
+            Editor.Background = b;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -55,9 +67,7 @@ public partial class TestView : UserControl
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (DataContext is not TestViewModel vm)
-            return;
-
+        if (DataContext is not TestViewModel vm) return;
         if (e.Key == Key.Delete)
         {
             if (vm.SelectedNodes.Count > 0)
@@ -67,7 +77,6 @@ public partial class TestView : UserControl
             e.Handled = true;
             return;
         }
-
         if (e.Key == Key.Escape && vm.SelectedConnection != null)
         {
             vm.SelectConnection(null);
@@ -100,9 +109,7 @@ public partial class TestView : UserControl
 
     public void OnNodeDrag(object? sender, PointerEventArgs e)
     {
-        if (_leftButtonPressed &&
-            sender is Nodify.Node node &&
-            node.DataContext is NodeViewModel vm)
+        if (_leftButtonPressed && sender is Nodify.Node node && node.DataContext is NodeViewModel vm)
         {
             var data = new DataObject();
             data.Set("NodeType", vm.Title);
@@ -135,8 +142,6 @@ public partial class TestView : UserControl
         e.Handled = true;
     }
 
-    // Если клик попал на ComboBox — помечаем как Handled
-    // чтобы Nodify ItemContainer не захватил pointer и ComboBox мог открыться
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var source = e.Source as Control;
