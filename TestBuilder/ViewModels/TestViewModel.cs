@@ -95,6 +95,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new ModbusWriteNodeViewModel(),
         new CheckRegisterRangeNodeViewModel(),
         new DelayNodeViewModel(),
+        new HttpRequestNodeViewModel(),
         new LabelNodeViewModel(),
         new ForEachSlaveNodeViewModel()
     };
@@ -653,6 +654,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Write Register" => new ModbusWriteNodeViewModel { Location = location },
             "Check Register Range" => new CheckRegisterRangeNodeViewModel { Location = location },
             "Delay" => new DelayNodeViewModel { Location = location },
+            "HTTP Request" => new HttpRequestNodeViewModel { Location = location },
             "Label" => new LabelNodeViewModel { Location = location },
             "For Slaves" => new ForEachSlaveNodeViewModel { Location = location },
             _ => null
