@@ -20,33 +20,42 @@ namespace TestBuilder.Services
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        // Маппинг ViewModel -> английский тип для JSON
+        private static string GetNodeType(NodeViewModel node) => node switch
+        {
+            StartNodeViewModel => "Start",
+            EndNodeViewModel => "End",
+            BodyStartNodeViewModel => "Body Start",
+            BodyEndNodeViewModel => "Body End",
+            DelayNodeViewModel => "Delay",
+            LabelNodeViewModel => "Label",
+            ModbusWriteNodeViewModel => "Write Register",
+            CheckRegisterRangeNodeViewModel => "Check Register Range",
+            HttpRequestNodeViewModel => "HTTP Request",
+            ForEachSlaveNodeViewModel => "For Slaves",
+            _ => node.Title
+        };
+
         public static string Serialize(TestViewModel vm, string profileName)
         {
             var dto = SerializeGraph(vm.RootGraph, profileName);
-
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
 
         private static GraphDto SerializeGraph(GraphWorkspaceViewModel graph, string name)
         {
-            var dto = new GraphDto
-            {
-                Name = name
-            };
-
+            var dto = new GraphDto { Name = name };
             var nodeIds = new Dictionary<NodeViewModel, string>();
 
             for (var i = 0; i < graph.Nodes.Count; i++)
-            {
                 nodeIds[graph.Nodes[i]] = i.ToString();
-            }
 
             foreach (var node in graph.Nodes)
             {
                 var n = new NodeDto
                 {
                     Id = nodeIds[node],
-                    Type = node.Title,
+                    Type = GetNodeType(node),  // всегда английский
                     X = node.Location.X,
                     Y = node.Location.Y
                 };
@@ -101,14 +110,10 @@ namespace TestBuilder.Services
                 var tgt = conn.Target.Parent;
 
                 if (src == null || tgt == null)
-                {
                     continue;
-                }
 
                 if (!nodeIds.ContainsKey(src) || !nodeIds.ContainsKey(tgt))
-                {
                     continue;
-                }
 
                 dto.Connections.Add(new ConnectionDto
                 {
@@ -151,56 +156,29 @@ namespace TestBuilder.Services
 
                 NodeViewModel node = n.Type switch
                 {
-                    "Start" => new StartNodeViewModel
-                    {
-                        Location = location
-                    },
+                    "Start" or "Старт" => new StartNodeViewModel { Location = location },
 
-                    "End" => new EndNodeViewModel
-                    {
-                        Location = location
-                    },
+                    "End" or "Конец" => new EndNodeViewModel { Location = location },
 
-                    "Body Start" => new BodyStartNodeViewModel
-                    {
-                        Location = location
-                    },
+                    "Body Start" or "Тело: начало" => new BodyStartNodeViewModel { Location = location },
 
-                    "Body End" => new BodyEndNodeViewModel
-                    {
-                        Location = location
-                    },
+                    "Body End" or "Тело: конец" => new BodyEndNodeViewModel { Location = location },
 
-                    "Delay" => new DelayNodeViewModel
+                    "Delay" or "Задержка" => new DelayNodeViewModel
                     {
                         Location = location,
                         Milliseconds = n.Milliseconds ?? 1000
                     },
 
-                    "Label" => new LabelNodeViewModel
+                    "Label" or "Метка" => new LabelNodeViewModel
                     {
                         Location = location,
                         Text = n.Text ?? "Этап"
                     },
 
-                    "Write Register" => new ModbusWriteNodeViewModel
-                    {
-                        Location = location,
-                        SlaveId = n.SlaveId ?? 0,
-                        Address = n.Address ?? 0,
-                        Value = n.Value ?? 0,
-                        UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
-                    },
+                    "Write Register" or "Запись регистра" => CreateModbusWriteNode(n, location),
 
-                    "Check Register Range" => new CheckRegisterRangeNodeViewModel
-                    {
-                        Location = location,
-                        SlaveId = n.SlaveId ?? 0,
-                        Address = n.Address ?? 0,
-                        Min = n.Min ?? 0,
-                        Max = n.Max ?? 0,
-                        UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
-                    },
+                    "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
                     "HTTP Request" => new HttpRequestNodeViewModel
                     {
@@ -211,7 +189,7 @@ namespace TestBuilder.Services
                         RequireSuccessStatusCode = n.RequireSuccessStatusCode ?? true
                     },
 
-                    "For Slaves" => CreateForEachSlaveNode(n, location),
+                    "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {n.Type}")
                 };
@@ -223,14 +201,10 @@ namespace TestBuilder.Services
             foreach (var c in dto.Connections)
             {
                 if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode))
-                {
                     continue;
-                }
 
                 if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode))
-                {
                     continue;
-                }
 
                 var srcConn = srcNode.Output.Concat(srcNode.Input)
                     .FirstOrDefault(x => x.Title == c.SourceConnector);
@@ -239,12 +213,44 @@ namespace TestBuilder.Services
                     .FirstOrDefault(x => x.Title == c.TargetConnector);
 
                 if (srcConn == null || tgtConn == null)
-                {
                     continue;
-                }
 
                 graph.Connections.Add(new ConnectionViewModel(srcConn, tgtConn));
             }
+        }
+
+        private static ModbusWriteNodeViewModel CreateModbusWriteNode(NodeDto n, Point location)
+        {
+            var node = new ModbusWriteNodeViewModel
+            {
+                Location = location,
+                SlaveId = n.SlaveId ?? 0,
+                Address = n.Address ?? 0,
+                Value = n.Value ?? 0,
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+            };
+
+            // Восстанавливаем SelectedSlave и SelectedRegister из SlaveRegistry
+            node.RestoreSelections();
+
+            return node;
+        }
+
+        private static CheckRegisterRangeNodeViewModel CreateCheckRangeNode(NodeDto n, Point location)
+        {
+            var node = new CheckRegisterRangeNodeViewModel
+            {
+                Location = location,
+                SlaveId = n.SlaveId ?? 0,
+                Address = n.Address ?? 0,
+                Min = n.Min ?? 0,
+                Max = n.Max ?? 0,
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+            };
+
+            node.RestoreSelections();
+
+            return node;
         }
 
         private static ForEachSlaveNodeViewModel CreateForEachSlaveNode(NodeDto n, Point location)
@@ -259,13 +265,9 @@ namespace TestBuilder.Services
             };
 
             if (n.Body != null)
-            {
                 DeserializeGraph(n.Body, node.BodyGraph, isBodyGraph: true);
-            }
             else
-            {
                 node.EnsureDefaultBodyNodes();
-            }
 
             return node;
         }
@@ -276,7 +278,6 @@ namespace TestBuilder.Services
             {
                 var json = File.ReadAllText(filePath);
                 var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions);
-
                 return dto?.Name;
             }
             catch

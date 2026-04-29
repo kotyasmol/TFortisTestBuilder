@@ -38,6 +38,19 @@ public partial class TestView : UserControl
 
         Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
             .Subscribe(_ => UpdateEditorBackground());
+
+        // Запоминаем профиль ДО клика через tunneling (раньше чем ListBox обработает)
+        ProfileListBox.AddHandler(
+            PointerPressedEvent,
+            OnProfileListPointerPressed,
+            Avalonia.Interactivity.RoutingStrategies.Tunnel,
+            handledEventsToo: false);
+
+        ProfileListBox.AddHandler(
+            PointerReleasedEvent,
+            OnProfileListPointerReleased,
+            Avalonia.Interactivity.RoutingStrategies.Bubble,
+            handledEventsToo: false);
     }
 
     private void UpdateEditorBackground()
@@ -140,6 +153,57 @@ public partial class TestView : UserControl
         if (connectionControl.DataContext is not ConnectionViewModel connection) return;
         vm.DeleteConnection(connection);
         e.Handled = true;
+    }
+
+    // Профиль который был выбран ДО нажатия кнопки мыши
+    private TestBuilder.Services.GraphProfile? _profileBeforeClick;
+
+    private void OnProfileSelectionChanged(object? sender, SelectionChangedEventArgs e) { }
+
+    // Срабатывает РАНЬШЕ чем ListBox обновит SelectedItem (tunneling)
+    private void OnProfileListPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not TestViewModel vm)
+            return;
+
+        // Запоминаем что было выбрано ДО клика
+        _profileBeforeClick = vm.SelectedProfile;
+    }
+
+    private void OnProfileListPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (DataContext is not TestViewModel vm)
+            return;
+
+        if (_profileBeforeClick == null)
+            return;
+
+        // Определяем на какой профиль кликнули
+        var visual = ProfileListBox.InputHitTest(e.GetPosition(ProfileListBox));
+        var element = visual as Avalonia.Controls.Control;
+        TestBuilder.Services.GraphProfile? clicked = null;
+
+        while (element != null)
+        {
+            if (element.DataContext is TestBuilder.Services.GraphProfile p)
+            {
+                clicked = p;
+                break;
+            }
+            element = element.Parent as Avalonia.Controls.Control;
+        }
+
+        if (clicked == null) return;
+
+        // Закрываем только если кликнули на тот же профиль что был до клика
+        if (ReferenceEquals(clicked, _profileBeforeClick))
+        {
+            var name = clicked.Name;
+            _profileBeforeClick = null;
+            ProfileListBox.SelectedItem = null;
+            vm.ClearGraph();
+            vm.StatusMessage = $"Профиль закрыт: {name}";
+        }
     }
 
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
