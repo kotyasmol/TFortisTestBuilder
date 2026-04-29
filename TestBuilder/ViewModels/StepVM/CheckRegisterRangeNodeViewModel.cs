@@ -69,6 +69,20 @@ namespace TestBuilder.ViewModels.StepVM
             OnPropertyChanged(nameof(SelectedRegister));
         }
 
+        /// <summary>Вызывается при подключении — восстанавливает выбранные слейв и регистр</summary>
+        protected override void OnSlavesLoaded()
+        {
+            RestoreSelections();
+        }
+
+        /// <summary>Восстанавливает SelectedSlave и SelectedRegister по сохранённым SlaveId/Address</summary>
+        public void RestoreSelections()
+        {
+            _selectedSlave = AvailableSlaves.FirstOrDefault(s => s.SlaveId == SlaveId);
+            OnPropertyChanged(nameof(SelectedSlave));
+            RefreshRegisters();
+        }
+
         public ITestStep CreateStep(ILogger logger)
         {
             return new CheckRegisterRangeStep(SlaveId, Address, Min, Max, logger, UseCurrentSlaveId);

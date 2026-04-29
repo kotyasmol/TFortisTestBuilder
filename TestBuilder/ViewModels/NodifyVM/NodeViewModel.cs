@@ -60,7 +60,13 @@ namespace TestBuilder.ViewModels.NodifyVM
             AvailableSlaves.Clear();
             foreach (var s in SlaveRegistry.Instance.Slaves)
                 AvailableSlaves.Add(s);
+
+            // Даём подклассам возможность восстановить выбранные элементы
+            OnSlavesLoaded();
         }
+
+        /// <summary>Вызывается после загрузки слейвов — подклассы переопределяют для восстановления выборок</summary>
+        protected virtual void OnSlavesLoaded() { }
 
         public void AddInput(ConnectorViewModel connector)
         {
