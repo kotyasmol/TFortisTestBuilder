@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             x:Class="TestBuilder.Views.TestViews.ControlPanelView"
+             x:DataType="vm:TestViewModel">
+
+    <StackPanel Spacing="6">
+        <Button Content="{Binding ConnectionButtonText}"
+                Command="{Binding ToggleConnectionCommand}"
+                Height="40"
+                FontSize="16"
+                FontWeight="SemiBold" />
+
+        <Button Content="RUN GRAPH"
+                Command="{Binding RunGraphCommand}"
+                Height="35" />
+
+        <Button Content="Очистить"
+                Command="{Binding ClearGraphCommand}"
+                Height="35" />
+
+        <Button Content="Сохранить профиль"
+                Command="{Binding SaveGraphCommand}"
+                Height="35" />
+
+        <TextBlock Text="{Binding StatusMessage}"
+                   Margin="0,4,0,0"
+                   TextWrapping="Wrap"
+                   FontSize="13" />
+    </StackPanel>
+
+</UserControl>
