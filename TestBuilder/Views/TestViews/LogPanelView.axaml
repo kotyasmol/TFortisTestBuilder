@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:logging="using:TestBuilder.Services.Logging"
+             x:Class="TestBuilder.Views.TestViews.LogPanelView"
+             x:DataType="vm:TestViewModel">
+
+    <Border BorderThickness="1,0,0,0"
+            BorderBrush="#2A2A2E"
+            Padding="8,6"
+            Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}">
+        <Grid RowDefinitions="Auto,*">
+            <TextBlock Grid.Row="0"
+                       Text="Логи"
+                       FontSize="11"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       Margin="0,0,0,4" />
+
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="logging:LogEntry">
+                            <TextBlock Text="{Binding}"
+                                       Margin="2"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                       FontSize="11" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+
+</UserControl>

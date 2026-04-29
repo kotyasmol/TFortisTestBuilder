@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:nodify="using:Nodify"
+             xmlns:nodifyvm="using:TestBuilder.ViewModels.NodifyVM"
+             x:Class="TestBuilder.Views.TestViews.NodePaletteView"
+             x:DataType="vm:TestViewModel">
+
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="NodeBorderBrush"
+                             StartPoint="0%,0%"
+                             EndPoint="100%,100%">
+            <GradientStop Color="#6366f1" Offset="0" />
+            <GradientStop Color="#a855f7" Offset="0.5" />
+            <GradientStop Color="#ec4899" Offset="1" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
+    <Border CornerRadius="4"
+            BorderThickness="1"
+            BorderBrush="#2A2A2E">
+        <Border.Background>
+            <SolidColorBrush Color="#252526" Opacity="0.9" />
+        </Border.Background>
+
+        <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    Padding="10,8"
+                    CornerRadius="4,4,0,0">
+                <TextBlock Text="Ноды"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            </Border>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding AvailableNodes}" Margin="8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="nodifyvm:NodeViewModel">
+                            <nodify:Node Header="{Binding Title}"
+                                         Input="{Binding Input}"
+                                         Output="{Binding Output}"
+                                         BorderBrush="{StaticResource NodeBorderBrush}"
+                                         BorderThickness="2"
+                                         Margin="0,4"
+                                         PointerPressed="OnNodePressed"
+                                         PointerMoved="OnNodeDrag"
+                                         PointerExited="OnNodeExited">
+                                <nodify:Node.InputConnectorTemplate>
+                                    <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                        <nodify:NodeInput Header="{Binding Title}"
+                                                          IsConnected="{Binding IsConnected, Mode=TwoWay}"
+                                                          Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                    </DataTemplate>
+                                </nodify:Node.InputConnectorTemplate>
+                                <nodify:Node.OutputConnectorTemplate>
+                                    <DataTemplate x:DataType="vm:ConnectorViewModel">
+                                        <nodify:NodeOutput Header="{Binding Title}"
+                                                           IsConnected="{Binding IsConnected, Mode=TwoWay}"
+                                                           Anchor="{Binding Anchor, Mode=OneWayToSource}" />
+                                    </DataTemplate>
+                                </nodify:Node.OutputConnectorTemplate>
+                            </nodify:Node>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+
+</UserControl>

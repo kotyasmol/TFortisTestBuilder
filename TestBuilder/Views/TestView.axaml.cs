@@ -1,64 +1,22 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
-using Avalonia.Media.Immutable;
-using Avalonia.Styling;
 using Avalonia.Threading;
-using Nodify;
 using System;
 using System.Collections.Specialized;
 using TestBuilder.ViewModels;
-using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.Views;
 
 public partial class TestView : UserControl
 {
-    private bool _leftButtonPressed;
     private TestViewModel? _currentVm;
 
     public TestView()
     {
         InitializeComponent();
 
-        Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
-
-        Editor.AddHandler(
-            PointerPressedEvent,
-            OnEditorPointerPressed,
-            Avalonia.Interactivity.RoutingStrategies.Tunnel,
-            handledEventsToo: false);
-
-        this.GetObservable(IsVisibleProperty).Subscribe(isVisible =>
-        {
-            if (isVisible)
-                Editor.PopAllStates();
-        });
-
-        Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
-            .Subscribe(_ => UpdateEditorBackground());
-
-        // Запоминаем профиль ДО клика через tunneling (раньше чем ListBox обработает)
-        ProfileListBox.AddHandler(
-            PointerPressedEvent,
-            OnProfileListPointerPressed,
-            Avalonia.Interactivity.RoutingStrategies.Tunnel,
-            handledEventsToo: false);
-
-        ProfileListBox.AddHandler(
-            PointerReleasedEvent,
-            OnProfileListPointerReleased,
-            Avalonia.Interactivity.RoutingStrategies.Bubble,
-            handledEventsToo: false);
-    }
-
-    private void UpdateEditorBackground()
-    {
-        var isDark = Application.Current?.RequestedThemeVariant == ThemeVariant.Dark;
-        var brushKey = isDark ? "SmallGridBrush" : "SmallGridBrushLight";
-        if (this.Resources.TryGetResource(brushKey, ActualThemeVariant, out var brush) && brush is Avalonia.Media.IBrush b)
-            Editor.Background = b;
+        var topLevel = TopLevel.GetTopLevel(this);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -111,132 +69,5 @@ public partial class TestView : UserControl
     {
         if (e.Action == NotifyCollectionChangedAction.Add)
             Dispatcher.UIThread.Post(() => { });
-    }
-
-    public void OnNodePressed(object? sender, PointerPressedEventArgs e)
-    {
-        _leftButtonPressed =
-            e.GetCurrentPoint(this).Properties.PointerUpdateKind ==
-            PointerUpdateKind.LeftButtonPressed;
-    }
-
-    public void OnNodeDrag(object? sender, PointerEventArgs e)
-    {
-        if (_leftButtonPressed && sender is Nodify.Node node && node.DataContext is NodeViewModel vm)
-        {
-            var data = new DataObject();
-            data.Set("NodeType", vm.Title);
-            DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
-        }
-    }
-
-    public void OnNodeExited(object? sender, PointerEventArgs e)
-    {
-        _leftButtonPressed = false;
-    }
-
-    public void OnConnectionPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm) return;
-        if (sender is not BaseConnection connectionControl) return;
-        if (connectionControl.DataContext is not ConnectionViewModel connection) return;
-        var point = e.GetCurrentPoint(connectionControl);
-        if (point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed) return;
-        vm.SelectConnection(connection);
-        e.Handled = true;
-    }
-
-    public void OnConnectionDisconnect(object? sender, ConnectionEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm) return;
-        if (sender is not BaseConnection connectionControl) return;
-        if (connectionControl.DataContext is not ConnectionViewModel connection) return;
-        vm.DeleteConnection(connection);
-        e.Handled = true;
-    }
-
-    // Профиль который был выбран ДО нажатия кнопки мыши
-    private TestBuilder.Services.GraphProfile? _profileBeforeClick;
-
-    private void OnProfileSelectionChanged(object? sender, SelectionChangedEventArgs e) { }
-
-    // Срабатывает РАНЬШЕ чем ListBox обновит SelectedItem (tunneling)
-    private void OnProfileListPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm)
-            return;
-
-        // Запоминаем что было выбрано ДО клика
-        _profileBeforeClick = vm.SelectedProfile;
-    }
-
-    private void OnProfileListPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm)
-            return;
-
-        if (_profileBeforeClick == null)
-            return;
-
-        // Определяем на какой профиль кликнули
-        var visual = ProfileListBox.InputHitTest(e.GetPosition(ProfileListBox));
-        var element = visual as Avalonia.Controls.Control;
-        TestBuilder.Services.GraphProfile? clicked = null;
-
-        while (element != null)
-        {
-            if (element.DataContext is TestBuilder.Services.GraphProfile p)
-            {
-                clicked = p;
-                break;
-            }
-            element = element.Parent as Avalonia.Controls.Control;
-        }
-
-        if (clicked == null) return;
-
-        // Закрываем только если кликнули на тот же профиль что был до клика
-        if (ReferenceEquals(clicked, _profileBeforeClick))
-        {
-            var name = clicked.Name;
-            _profileBeforeClick = null;
-            ProfileListBox.SelectedItem = null;
-            vm.ClearGraph();
-            vm.StatusMessage = $"Профиль закрыт: {name}";
-        }
-    }
-
-    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        var source = e.Source as Control;
-        while (source != null)
-        {
-            if (source is ComboBox)
-            {
-                e.Handled = true;
-                return;
-            }
-            source = source.Parent as Control;
-        }
-    }
-
-    private void OnDropNode(object? sender, DragEventArgs e)
-    {
-        if (e.Data.Get("NodeType") is string nodeType && DataContext is TestViewModel vm)
-        {
-            var location = Editor.GetLocationInsideEditor(e);
-            vm.AddNodeAtLocation(nodeType, location);
-            e.Handled = true;
-        }
-    }
-
-    public void OnClearGraph(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm) return;
-        Editor.SelectAll();
-        Dispatcher.UIThread.Post(() =>
-        {
-            vm.DeleteSelectedNodesCommand.Execute(null);
-        }, DispatcherPriority.Background);
     }
 }
