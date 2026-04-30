@@ -19,6 +19,7 @@ using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.Graphs;
+using TestBuilder.Views;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
 
@@ -398,11 +399,43 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _registerState,
             TestingLogger);
 
+        _registerMonitor.ConnectionLost += OnConnectionLost;
         _registerMonitor.Start();
 
         IsMonitoringActive = true;
         StatusMessage = $"Найдено устройств: {count}";
         TestingLogger.Info($"Найдено устройств: {count}. Можно запускать тест.");
+    }
+
+    private void OnConnectionLost(object? sender, EventArgs e)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        {
+            // Останавливаем тест если запущен
+            IsMonitoringActive = false;
+            TestingLogger.Error("[ОШИБКА] Связь потеряна. Тест остановлен.");
+
+            // Показываем диалог
+            var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
+                is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            var dialog = new ConnectionLostDialog();
+            await dialog.ShowDialog(mainWindow);
+
+            if (dialog.ShouldReconnect)
+            {
+                TestingLogger.Info("Попытка переподключения...");
+                await DisconnectAsync();
+                await ConnectAsync();
+            }
+            else
+            {
+                TestingLogger.Info("[ОШИБКА] Подключение разорвано.");
+                await DisconnectAsync();
+            }
+        });
     }
 
     private async Task DisconnectAsync()

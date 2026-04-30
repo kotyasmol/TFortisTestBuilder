@@ -7,7 +7,7 @@
              x:DataType="vm:TestViewModel">
 
     <UserControl.Resources>
-        <converters:LogLevelToColorConverter x:Key="LogLevelToColor" />
+        <converters:NullableColorConverter x:Key="NullableColor" />
     </UserControl.Resources>
 
     <Border BorderThickness="1,0,0,0"
@@ -24,7 +24,9 @@
             <ScrollViewer Grid.Row="1"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+                <ItemsControl x:Name="LogsList"
+                              ItemsSource="{Binding TestingLogger.Entries}"
+                              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="logging:LogEntry">
                             <TextBlock Margin="2"
@@ -32,7 +34,7 @@
                                        FontFamily="Consolas"
                                        FontSize="11"
                                        Text="{Binding}"
-                                       Foreground="{Binding Message, Converter={StaticResource LogLevelToColor}}" />
+                                       Foreground="{Binding HighlightColor, Converter={StaticResource NullableColor}, TargetNullValue={DynamicResource SystemControlForegroundBaseHighBrush}}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

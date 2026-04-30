@@ -11,36 +11,25 @@ namespace TestBuilder.Converters
     {
         public static readonly LogLevelToColorConverter Instance = new();
 
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var isDark = Avalonia.Application.Current?.RequestedThemeVariant == ThemeVariant.Dark;
 
-            if (value is LogLevel level)
-            {
-                return level switch
-                {
-                    LogLevel.Warning => new SolidColorBrush(Color.Parse("#F59E0B")),
-                    LogLevel.Error => new SolidColorBrush(Color.Parse("#EF4444")),
-                    _ => isDark
-                        ? new SolidColorBrush(Color.Parse("#E5E7EB"))
-                        : new SolidColorBrush(Color.Parse("#111827"))
-                };
-            }
-
-            // Цвет по тексту — [OK] зелёный, [ОШИБКА] красный, [ШАГ] синий
             if (value is string msg)
             {
-                if (msg.Contains("[OK]")) return new SolidColorBrush(Color.Parse("#22C55E"));
-                if (msg.Contains("[ОШИБКА]")) return new SolidColorBrush(Color.Parse("#EF4444"));
-                if (msg.Contains("[ШАГ]")) return new SolidColorBrush(Color.Parse("#60A5FA"));
+                // Яркие цвета — читаются на любом фоне
+                if (msg.Contains("[OK]")) return new SolidColorBrush(Color.Parse("#16A34A")); // зелёный
+                if (msg.Contains("[ОШИБКА]")) return new SolidColorBrush(Color.Parse("#DC2626")); // красный
+                if (msg.Contains("[ШАГ]")) return new SolidColorBrush(Color.Parse("#2563EB")); // синий
             }
 
+            // Обычный текст — адаптируется под тему
             return isDark
-                ? new SolidColorBrush(Color.Parse("#E5E7EB"))
-                : new SolidColorBrush(Color.Parse("#111827"));
+                ? new SolidColorBrush(Color.Parse("#D1D5DB"))
+                : new SolidColorBrush(Color.Parse("#1F2937"));
         }
 
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 }

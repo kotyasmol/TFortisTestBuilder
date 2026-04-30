@@ -27,12 +27,27 @@ namespace TestBuilder.Services.Logging
             Level = level;
             Category = category ?? string.Empty;
             Message = message ?? string.Empty;
+
+            // Определяем цвет по содержимому сообщения — только для цветных меток
+            if (message.Contains("[OK]"))
+                HighlightColor = "#16A34A";
+            else if (message.Contains("[ОШИБКА]"))
+                HighlightColor = "#DC2626";
+            else if (message.Contains("[ШАГ]"))
+                HighlightColor = "#2563EB";
+            else
+                HighlightColor = null; // null = использовать DynamicResource из XAML
         }
 
         public DateTime Timestamp { get; }
         public LogLevel Level { get; }
         public string Category { get; }
         public string Message { get; }
+
+        /// <summary>null = обычный текст (тема-зависимый), иначе фиксированный цвет</summary>
+        public string? HighlightColor { get; }
+
+        public bool IsHighlighted => HighlightColor != null;
 
         public override string ToString()
             => $"[{Timestamp:HH:mm:ss}] {Message}";
