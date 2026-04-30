@@ -19,6 +19,7 @@ using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.Graphs;
+using TestBuilder.Views;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
 
@@ -364,6 +365,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 SelectedPort = port;
                 IsConnected = true;
                 StatusMessage = $"Подключено к {port}";
+                TestingLogger.Info($"Подключено к {port}.");
 
                 await StartMonitoringAsync();
                 SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
@@ -378,6 +380,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         StatusMessage = "Не удалось подключиться.";
+        TestingLogger.Error("Не удалось подключиться. Проверьте кабель и порт.");
     }
 
     private async Task StartMonitoringAsync()
@@ -387,6 +390,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (count == 0)
         {
             StatusMessage = "Слейвы не найдены.";
+            TestingLogger.Warning("Устройства не найдены. Проверьте подключение.");
             return;
         }
 
@@ -395,10 +399,43 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _registerState,
             TestingLogger);
 
+        _registerMonitor.ConnectionLost += OnConnectionLost;
         _registerMonitor.Start();
 
         IsMonitoringActive = true;
         StatusMessage = $"Найдено устройств: {count}";
+        TestingLogger.Info($"Найдено устройств: {count}. Можно запускать тест.");
+    }
+
+    private void OnConnectionLost(object? sender, EventArgs e)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        {
+            // Останавливаем тест если запущен
+            IsMonitoringActive = false;
+            TestingLogger.Error("[ОШИБКА] Связь потеряна. Тест остановлен.");
+
+            // Показываем диалог
+            var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
+                is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            var dialog = new ConnectionLostDialog();
+            await dialog.ShowDialog(mainWindow);
+
+            if (dialog.ShouldReconnect)
+            {
+                TestingLogger.Info("Попытка переподключения...");
+                await DisconnectAsync();
+                await ConnectAsync();
+            }
+            else
+            {
+                TestingLogger.Info("[ОШИБКА] Подключение разорвано.");
+                await DisconnectAsync();
+            }
+        });
     }
 
     private async Task DisconnectAsync()
@@ -412,6 +449,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         IsConnected = false;
         IsMonitoringActive = false;
         StatusMessage = "Отключено.";
+        TestingLogger.Info("Отключено от стенда.");
         SlaveRegistry.Instance.NotifyConnected(false);
 
         OnPropertyChanged(nameof(ConnectionButtonText));
@@ -427,7 +465,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         var profileName = SelectedProfile?.Name ?? "без профиля";
 
-        TestingLogger.Info($"Запуск графа: {profileName}");
+        TestingLogger.Info($"Запуск теста: {profileName}");
 
         try
         {
@@ -451,10 +489,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context,
                 CancellationToken.None);
 
-            if (result == ExecutionStatus.Completed)
-                TestingLogger.Info("Граф выполнен успешно.");
-            else
-                TestingLogger.Warning($"Граф завершен с результатом: {result}.");
+            if (result != ExecutionStatus.Completed)
+                TestingLogger.Warning($"[ОШИБКА] Тест завершён с ошибкой. Результат: {result}.");
         }
         catch (Exception ex)
         {

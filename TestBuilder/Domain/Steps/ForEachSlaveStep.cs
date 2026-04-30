@@ -40,13 +40,13 @@ namespace TestBuilder.Domain.Steps
             if (_fromSlaveId > _toSlaveId)
             {
                 _logger.Warning(
-                    $"ЦИКЛ ПО СЛЕЙВАМ: некорректный диапазон. Начало={_fromSlaveId}, конец={_toSlaveId}.");
+                    $"[ОШИБКА] Цикл For → некорректный диапазон. С {_fromSlaveId} по {_toSlaveId}.");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"ЦИКЛ ПО СЛЕЙВАМ: запуск. Диапазон={_fromSlaveId}..{_toSlaveId}, шаг={_step}.");
+                $"[ШАГ] Цикл For → устройства с {_fromSlaveId} по {_toSlaveId}, шаг {_step}.");
 
             var executor = new TestExecutor();
 
@@ -57,7 +57,7 @@ namespace TestBuilder.Domain.Steps
                 context.CurrentSlaveId = (byte)slaveId;
                 context.SetVariable("slaveId", (byte)slaveId);
 
-                _logger.Info($"ЦИКЛ ПО СЛЕЙВАМ: начало итерации. Текущий slave={slaveId}.");
+                _logger.Info($"[ШАГ] Итерация: устройство {slaveId}.");
 
                 var result = await executor.ExecuteAsync(
                     _bodyGraph.StartNode,
@@ -67,7 +67,7 @@ namespace TestBuilder.Domain.Steps
                 if (result != ExecutionStatus.Completed)
                 {
                     _logger.Warning(
-                        $"ЦИКЛ ПО СЛЕЙВАМ: тело цикла завершилось с ошибкой. Slave={slaveId}, результат={result}.");
+                        $"[ОШИБКА] Итерация устройство {slaveId} — ошибка. Стоп при ошибке: {(_stopOnError ? "да" : "нет")}.");
 
                     if (_stopOnError)
                     {
@@ -80,7 +80,7 @@ namespace TestBuilder.Domain.Steps
             context.CurrentSlaveId = null;
 
             _logger.Info(
-                $"ЦИКЛ ПО СЛЕЙВАМ: успешно завершен диапазон {_fromSlaveId}..{_toSlaveId}.");
+                $"[OK] Цикл For завершён. Диапазон {_fromSlaveId}..{_toSlaveId}.");
 
             return StepResult.Next;
         }

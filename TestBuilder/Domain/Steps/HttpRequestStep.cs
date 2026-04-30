@@ -51,7 +51,7 @@ namespace TestBuilder.Domain.Steps
 
             var timeout = TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs));
 
-            _logger.Info($"HTTP_REQUEST: GET {_url}, timeout={timeout.TotalMilliseconds:0} мс");
+            _logger.Info($"[ШАГ] HTTP запрос → {_url}, таймаут {timeout.TotalMilliseconds:0} мс.");
 
             var result = await _httpRequestService.GetAsync(
                 _url,
@@ -66,7 +66,7 @@ namespace TestBuilder.Domain.Steps
 
             if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
             {
-                _logger.Warning($"HTTP_REQUEST ошибка: {result.ErrorMessage}");
+                _logger.Warning($"[ОШИБКА] HTTP запрос не выполнен: {result.ErrorMessage}");
                 return StepResult.False;
             }
 

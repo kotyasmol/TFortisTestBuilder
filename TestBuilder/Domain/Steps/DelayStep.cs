@@ -20,9 +20,9 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            _logger.Info($"Delay: ожидание {Milliseconds} мс...");
+            _logger.Info($"[ШАГ] Задержка {Milliseconds} мс...");
             await Task.Delay(Milliseconds, cancellationToken);
-            _logger.Info($"Delay: завершено");
+            _logger.Info($"[OK] Задержка завершена.");
             return StepResult.Next;
         }
     }

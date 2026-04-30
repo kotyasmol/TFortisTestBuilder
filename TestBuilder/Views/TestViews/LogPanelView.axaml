@@ -2,8 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:logging="using:TestBuilder.Services.Logging"
+             xmlns:converters="using:TestBuilder.Converters"
              x:Class="TestBuilder.Views.TestViews.LogPanelView"
              x:DataType="vm:TestViewModel">
+
+    <UserControl.Resources>
+        <converters:NullableColorConverter x:Key="NullableColor" />
+    </UserControl.Resources>
 
     <Border BorderThickness="1,0,0,0"
             BorderBrush="#2A2A2E"
@@ -19,15 +24,17 @@
             <ScrollViewer Grid.Row="1"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+                <ItemsControl x:Name="LogsList"
+                              ItemsSource="{Binding TestingLogger.Entries}"
+                              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="logging:LogEntry">
-                            <TextBlock Text="{Binding}"
-                                       Margin="2"
+                            <TextBlock Margin="2"
                                        TextWrapping="Wrap"
                                        FontFamily="Consolas"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                       FontSize="11" />
+                                       FontSize="11"
+                                       Text="{Binding}"
+                                       Foreground="{Binding HighlightColor, Converter={StaticResource NullableColor}, TargetNullValue={DynamicResource SystemControlForegroundBaseHighBrush}}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
