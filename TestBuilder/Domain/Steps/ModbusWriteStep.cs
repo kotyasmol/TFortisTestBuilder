@@ -46,13 +46,13 @@ namespace TestBuilder.Domain.Steps
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"ШАГ ЗАПИСИ: slaveId не задан. Регистр={_address}, значение={_value}.");
+                    $"[ШАГ] Запись регистра → устройство не задано, адрес {_address}, значение {_value}.");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"ШАГ ЗАПИСИ: устройство={actualSlaveId}, регистр={_address}, значение={_value}.");
+                $"[ШАГ] Запись регистра → устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
 
             var writeOk = await _modbusService.WriteRegisterAsync(
                 actualSlaveId.Value,
@@ -64,12 +64,12 @@ namespace TestBuilder.Domain.Steps
             if (!writeOk)
             {
                 _logger.Warning(
-                    $"ШАГ ЗАПИСИ: ошибка записи. Устройство={actualSlaveId}, регистр={_address}, значение={_value}.");
+                    $"[ОШИБКА] Запись не выполнена. Устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
 
                 return StepResult.False;
             }
 
-            _logger.Info("ШАГ ЗАПИСИ: запись выполнена. Ожидание 1 секунда перед проверкой.");
+            _logger.Info("[OK] Запись выполнена. Ожидание подтверждения...");
 
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
@@ -82,7 +82,7 @@ namespace TestBuilder.Domain.Steps
             if (readValues == null || readValues.Length == 0)
             {
                 _logger.Warning(
-                    $"ШАГ ЗАПИСИ: ошибка проверки. Не удалось прочитать регистр. Устройство={actualSlaveId}, регистр={_address}.");
+                    $"[ОШИБКА] Не удалось прочитать регистр для проверки. Устройство {actualSlaveId}, адрес {_address}.");
 
                 return StepResult.False;
             }
@@ -92,13 +92,13 @@ namespace TestBuilder.Domain.Steps
             if (actualValue != _value)
             {
                 _logger.Warning(
-                    $"ШАГ ЗАПИСИ: проверка не пройдена. Устройство={actualSlaveId}, регистр={_address}, ожидалось={_value}, прочитано={actualValue}.");
+                    $"[ОШИБКА] Значение не совпадает. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"ШАГ ЗАПИСИ: проверка пройдена. Устройство={actualSlaveId}, регистр={_address}, значение={actualValue}.");
+                $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
 
             return StepResult.True;
         }

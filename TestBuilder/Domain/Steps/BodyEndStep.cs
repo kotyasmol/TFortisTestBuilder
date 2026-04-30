@@ -22,7 +22,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            _logger.Info($"ТЕЛО ЦИКЛА: итерация завершена. Текущий slave={context.CurrentSlaveId?.ToString() ?? "не задан"}.");
+            _logger.Info($"[OK] Итерация устройство {context.CurrentSlaveId?.ToString() ?? "?"} — выполнена.");
             return Task.FromResult(StepResult.Stop);
         }
     }

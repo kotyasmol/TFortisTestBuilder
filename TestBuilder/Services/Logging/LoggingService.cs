@@ -35,7 +35,7 @@ namespace TestBuilder.Services.Logging
         public string Message { get; }
 
         public override string ToString()
-            => $"[{Timestamp:HH:mm:ss}] {Level} [{Category}] {Message}";
+            => $"[{Timestamp:HH:mm:ss}] {Message}";
     }
 
     /// <summary>
@@ -129,4 +129,3 @@ namespace TestBuilder.Services.Logging
         }
     }
 }
-
