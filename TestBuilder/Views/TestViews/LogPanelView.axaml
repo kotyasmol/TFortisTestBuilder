@@ -5,34 +5,50 @@
              x:Class="TestBuilder.Views.TestViews.LogPanelView"
              x:DataType="vm:TestViewModel">
 
-    <Border BorderThickness="1,0,0,0"
-            BorderBrush="#2A2A2E"
-            Padding="8,6"
-            Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}">
-        <Grid RowDefinitions="Auto,*">
-            <TextBlock Grid.Row="0"
-                       Text="Логи"
-                       FontSize="11"
-                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                       Margin="0,0,0,4" />
+  <Border BorderThickness="0,1,0,0"
+          BorderBrush="{DynamicResource BorderBrush}"
+          Padding="12,8"
+          Background="{DynamicResource SurfaceBrush}">
+    <Grid RowDefinitions="Auto,*">
 
-            <ScrollViewer Grid.Row="1"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="logging:LogEntry">
-                            <TextBlock Text="{Binding}"
-                                       Margin="2"
-                                       TextWrapping="Wrap"
-                                       FontFamily="Consolas"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                       FontSize="11" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
-    </Border>
+      <DockPanel Grid.Row="0"
+                 Margin="0,0,0,6">
+        <TextBlock DockPanel.Dock="Left"
+                   Text="Логи выполнения"
+                   FontSize="12"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock DockPanel.Dock="Right"
+                   Text="Runtime"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   HorizontalAlignment="Right" />
+      </DockPanel>
 
+      <Border Grid.Row="1"
+              Background="#F8FAFC"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="10"
+              Padding="8"
+              ClipToBounds="True">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="logging:LogEntry">
+                <TextBlock Text="{Binding}"
+                           Margin="2"
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="11" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+    </Grid>
+  </Border>
 </UserControl>

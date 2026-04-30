@@ -1,0 +1,253 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:nodify="using:Nodify">
+
+  <Styles.Resources>
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F7FB" />
+    <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#EEF3F9" />
+    <SolidColorBrush x:Key="GridLineBrush" Color="#D8E1EC" />
+
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#EEF2F7" />
+
+    <SolidColorBrush x:Key="BorderBrush" Color="#CBD5E1" />
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="#94A3B8" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8" />
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8" />
+    <SolidColorBrush x:Key="PrimarySoftBrush" Color="#DBEAFE" />
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#10B981" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B" />
+
+    <SolidColorBrush x:Key="SidebarDarkBrush" Color="#1E293B" />
+    <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#273449" />
+    <SolidColorBrush x:Key="SidebarBorderBrush" Color="#334155" />
+    <SolidColorBrush x:Key="SidebarTextBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#CBD5E1" />
+
+    <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="NodeConnectorTextBrush" Color="#334155" />
+
+    <SolidColorBrush x:Key="NodeNeutralBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="NodeStartBrush" Color="#475569" />
+    <SolidColorBrush x:Key="NodeModbusBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="NodeRangeBrush" Color="#7C3AED" />
+    <SolidColorBrush x:Key="NodeDelayBrush" Color="#0F766E" />
+    <SolidColorBrush x:Key="NodeHttpBrush" Color="#EA580C" />
+    <SolidColorBrush x:Key="NodeLoopBrush" Color="#0891B2" />
+
+    <SolidColorBrush x:Key="ConnectorFillBrush" Color="#E0F2FE" />
+    <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#0284C7" />
+
+    <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#334155" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#2563EB" />
+
+    <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="Node.ForegroundBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="Node.BorderBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="NodifyEditor.SelectionRectangleStrokeBrush" Color="#2563EB" />
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="FontFamily" Value="Segoe UI, Arial" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+  </Style>
+
+  <Style Selector="Button:pressed">
+    <Setter Property="Background" Value="#E2E8F0" />
+  </Style>
+
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+  </Style>
+
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="#FEE2E2" />
+    <Setter Property="Foreground" Value="#991B1B" />
+    <Setter Property="BorderBrush" Value="#FECACA" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Margin" Value="4,2" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="ListBoxItem:pointerover">
+    <Setter Property="Background" Value="#EFF6FF" />
+  </Style>
+
+  <Style Selector="ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+    <Setter Property="Foreground" Value="#1D4ED8" />
+  </Style>
+
+  <Style Selector="TabControl">
+    <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+  </Style>
+
+  <Style Selector="TabItem">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Padding" Value="14,9" />
+  </Style>
+
+  <Style Selector="TabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="DataGrid">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="GridLinesVisibility" Value="Horizontal" />
+  </Style>
+
+  <Style Selector="nodify|NodifyEditor">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node">
+    <Setter Property="Background" Value="{DynamicResource NodeBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeNeutralBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="nodify|NodeInput">
+    <Setter Property="Foreground" Value="{DynamicResource NodeConnectorTextBrush}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="3,2" />
+  </Style>
+
+  <Style Selector="nodify|NodeOutput">
+    <Setter Property="Foreground" Value="{DynamicResource NodeConnectorTextBrush}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="3,2" />
+  </Style>
+
+  <Style Selector="nodify|NodeInput:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+
+  <Style Selector="nodify|NodeOutput:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.ModbusNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeModbusBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.RangeNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeRangeBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.DelayNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeDelayBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.HttpNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeHttpBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.LabelNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeNeutralBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.LoopNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeLoopBrush}" />
+  </Style>
+
+</Styles>

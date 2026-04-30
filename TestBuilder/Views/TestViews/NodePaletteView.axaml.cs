@@ -16,18 +16,26 @@ public partial class NodePaletteView : UserControl
     public void OnNodePressed(object? sender, PointerPressedEventArgs e)
     {
         _leftButtonPressed =
-            e.GetCurrentPoint(this).Properties.PointerUpdateKind ==
-            PointerUpdateKind.LeftButtonPressed;
+            e.GetCurrentPoint(this).Properties.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed;
     }
 
     public void OnNodeDrag(object? sender, PointerEventArgs e)
     {
-        if (_leftButtonPressed && sender is Nodify.Node node && node.DataContext is NodeViewModel vm)
-        {
-            var data = new DataObject();
-            data.Set("NodeType", vm.Title);
-            DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
-        }
+        if (!_leftButtonPressed)
+            return;
+
+        if (sender is not Control control)
+            return;
+
+        if (control.DataContext is not NodeViewModel vm)
+            return;
+
+        var data = new DataObject();
+        data.Set("NodeType", vm.Title);
+
+        DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
+
+        _leftButtonPressed = false;
     }
 
     public void OnNodeExited(object? sender, PointerEventArgs e)
