@@ -93,6 +93,8 @@ namespace TestBuilder.Services
                 LabelNodeViewModel label => label.CreateStep(_logger),
                 ModbusWriteNodeViewModel write => write.CreateStep(_modbusService, _logger),
                 CheckRegisterRangeNodeViewModel check => check.CreateStep(_logger),
+                CheckRegisterEqualityNodeViewModel equality => equality.CreateStep(_logger),
+                OperatorActionNodeViewModel operatorAction => operatorAction.CreateStep(_logger),
                 HttpRequestNodeViewModel http => http.CreateStep(_httpRequestService, _logger),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
@@ -138,6 +140,30 @@ namespace TestBuilder.Services
                         source.OnTrue = target;
                     }
                     else if (sourceConnector == checkVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case CheckRegisterEqualityNodeViewModel equalityVm:
+                    if (sourceConnector == equalityVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == equalityVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case OperatorActionNodeViewModel operatorVm:
+                    if (sourceConnector == operatorVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == operatorVm.FalseOut)
                     {
                         source.OnFalse = target;
                     }

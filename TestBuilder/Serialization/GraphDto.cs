@@ -66,6 +66,11 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Max { get; set; }
 
+        // --- Check Register Equality ---
+        [JsonPropertyName("expectedValue")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ExpectedValue { get; set; }
+
         // --- HTTP Request ---
         [JsonPropertyName("url")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
