@@ -4,36 +4,49 @@
              x:Class="TestBuilder.Views.TestViews.ProfileListView"
              x:DataType="vm:TestViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*">
-        <TextBlock Grid.Row="0"
-                   Text="Профили тестирования"
-                   FontSize="12"
-                   Opacity="0.7"
-                   Margin="0,0,0,4" />
+  <Grid RowDefinitions="Auto,Auto,*">
 
-        <TextBox Grid.Row="1"
-                 Text="{Binding ProfileSearch}"
-                 Watermark="Поиск по названию..."
-                 Margin="0,0,0,4" />
-
-        <Border Grid.Row="2"
-                BorderThickness="1"
-                BorderBrush="#2A2A2E"
-                CornerRadius="4">
-            <ListBox x:Name="ProfileListBox"
-                     ItemsSource="{Binding Profiles}"
-                     SelectedItem="{Binding SelectedProfile}"
-                     Background="Transparent"
-                     SelectionChanged="OnProfileSelectionChanged">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}"
-                                   Padding="4,2"
-                                   TextWrapping="Wrap" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
+    <Grid Grid.Row="0"
+          ColumnDefinitions="*,Auto"
+          Margin="0,0,0,8">
+      <StackPanel Grid.Column="0">
+        <TextBlock Text="Профили тестирования"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock Text="{Binding StatusMessage}"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   IsVisible="False" />
+      </StackPanel>
     </Grid>
 
+    <TextBox Grid.Row="1"
+             Text="{Binding ProfileSearch}"
+             Watermark="Поиск по названию..."
+             Margin="0,0,0,10" />
+
+    <Border Grid.Row="2"
+            BorderThickness="1"
+            BorderBrush="{DynamicResource BorderBrush}"
+            CornerRadius="12"
+            Background="{DynamicResource SurfaceAltBrush}"
+            ClipToBounds="True">
+      <ListBox x:Name="ProfileListBox"
+               ItemsSource="{Binding Profiles}"
+               SelectedItem="{Binding SelectedProfile}"
+               Background="Transparent"
+               SelectionChanged="OnProfileSelectionChanged">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Name}"
+                       TextWrapping="Wrap"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+  </Grid>
 </UserControl>

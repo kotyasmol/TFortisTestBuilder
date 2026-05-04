@@ -4,25 +4,31 @@
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1366"
-        Height="800"
-        Title="TestBuilder">
+        Width="1440"
+        Height="860"
+        MinWidth="1180"
+        MinHeight="720"
+        Title="TestBuilder"
+        RequestedThemeVariant="Light"
+        Background="{DynamicResource AppBackgroundBrush}">
 
-    <Window.DataContext>
-        <vm:MainWindowViewModel />
-    </Window.DataContext>
+  <Window.DataContext>
+    <vm:MainWindowViewModel />
+  </Window.DataContext>
 
-    <DockPanel>
-        <TabControl DockPanel.Dock="Top">
-            <TabItem Header="Тест">
-                <views:TestView x:Name="TestViewControl" />
-            </TabItem>
-            <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
-                <views:ModbusMonitoringView x:Name="ModbusViewControl" />
-            </TabItem>
-            <TabItem Header="Настройки">
-                <views:SettingsView x:Name="SettingsViewControl" />
-            </TabItem>
-        </TabControl>
-    </DockPanel>
+  <Border Background="{DynamicResource AppBackgroundBrush}">
+    <TabControl>
+      <TabItem Header="Тест">
+        <views:TestView x:Name="TestViewControl" />
+      </TabItem>
+
+      <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
+        <views:ModbusMonitoringView x:Name="ModbusViewControl" />
+      </TabItem>
+
+      <TabItem Header="Настройки">
+        <views:SettingsView x:Name="SettingsViewControl" />
+      </TabItem>
+    </TabControl>
+  </Border>
 </Window>

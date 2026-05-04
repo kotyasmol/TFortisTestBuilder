@@ -6,134 +6,195 @@
              x:Class="TestBuilder.Views.ModbusMonitoringView"
              x:DataType="vm:ModbusMonitoringViewModel">
 
-    <DockPanel>
+  <DockPanel Background="{DynamicResource AppBackgroundBrush}">
 
-        <!-- Панель управления сверху -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5" Spacing="10">
-            <Button Content="Сканировать"
-                    Command="{Binding ScanCommand}"
-                    IsEnabled="{Binding !IsScanning}" />
-            <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
-                       IsVisible="{Binding !IsConnected}"
-                       Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"
-                       VerticalAlignment="Center" />
-            <TextBlock Text="Сканирование..."
-                       IsVisible="{Binding IsScanning}"
-                       VerticalAlignment="Center" />
-            <TextBlock Text="Мониторинг запущен"
-                       IsVisible="{Binding IsMonitoring}"
-                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
-                       VerticalAlignment="Center" />
-        </StackPanel>
+    <Border DockPanel.Dock="Top"
+            Margin="14"
+            Padding="14"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14"
+            BoxShadow="0 8 24 0 #100F172A">
 
-        <!-- Пустое состояние -->
-        <TextBlock DockPanel.Dock="Top"
-                   Text="Устройства не найдены. Подключите железо и нажмите Сканировать."
-                   IsVisible="{Binding !Slaves.Count}"
-                   Margin="10"
-                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Content="Сканировать"
+                Classes="primary"
+                Command="{Binding ScanCommand}"
+                IsEnabled="{Binding !IsScanning}" />
 
-        <!-- Основной контент -->
-        <Grid ColumnDefinitions="*,300">
+        <Border Background="#FEF2F2"
+                BorderBrush="#FECACA"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="10,7"
+                IsVisible="{Binding !IsConnected}">
+          <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
+                     Foreground="#991B1B"
+                     VerticalAlignment="Center" />
+        </Border>
 
-            <!-- Левая часть -->
-            <ScrollViewer Grid.Column="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" x:Name="MainScrollViewer"
-                          BringIntoViewOnFocusChange="False">
-                <ItemsControl ItemsSource="{Binding Slaves}"
-                              HorizontalAlignment="Stretch">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:SlaveModelBase">
-                            <Border Margin="5" Padding="5" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" Width="600">
-                                <Grid RowDefinitions="Auto,Auto">
-                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock FontWeight="Bold" Text="{Binding DeviceType}" />
-                                            <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}" />
-                                        </StackPanel>
-                                        <Button Grid.Column="1"
-                                                Content="{Binding ToggleIcon}"
-                                                Command="{Binding ToggleExpandedCommand}"
-                                                VerticalAlignment="Center"
-                                                Padding="8,4" />
-                                    </Grid>
-                                    <DataGrid Grid.Row="1"
-                                              IsVisible="{Binding IsExpanded}"
-                                              ItemsSource="{Binding RegisterItems}"
-                                              DoubleTapped="OnDataGridDoubleTapped"
-                             
-                                              AutoGenerateColumns="False"
-                                              IsReadOnly="True"
-                                              GridLinesVisibility="All"
-                                              BorderThickness="1"
-                                              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                                              CanUserResizeColumns="True"
-                                              CanUserSortColumns="True"
-                                              Height="{Binding GridHeight}">
-                                        <DataGrid.Resources>
-                                            <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
-                                        </DataGrid.Resources>
-                                        <DataGrid.Styles>
-                                            <!-- Цвет строки по IsReadOnly -->
-                                            <Style Selector="DataGridRow">
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <Binding Path="IsReadOnly"
-                                                                 Converter="{StaticResource BoolToBackground}"
-                                                                 x:DataType="models:RegisterItem" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                            <!-- Убираем подсветку выделения -->
-                                            <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
-                                                <Setter Property="Fill" Value="Transparent" />
-                                            </Style>
-                                        </DataGrid.Styles>
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" />
-                                            <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="*" />
-                                            <DataGridTextColumn Header="Значение" Binding="{Binding Value, Mode=OneWay}" Width="80" />
-                                            <DataGridTextColumn Header="Категория" Binding="{Binding Category}" Width="120" />
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+        <Border Background="#EFF6FF"
+                BorderBrush="#BFDBFE"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="10,7"
+                IsVisible="{Binding IsScanning}">
+          <TextBlock Text="Сканирование..."
+                     Foreground="#1D4ED8"
+                     VerticalAlignment="Center" />
+        </Border>
 
-            <!-- Правая панель — логи -->
-            <DockPanel Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                <TextBlock DockPanel.Dock="Top"
-                           Text="Логи"
-                           FontWeight="Bold"
-                           Margin="8,8,8,4" />
-                <Border DockPanel.Dock="Top"
-                        Height="1"
-                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                        Margin="0,0,0,4" />
-                <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           FontFamily="Consolas"
-                                           FontSize="11"
-                                           Margin="5,1"
-                                           TextWrapping="Wrap" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </DockPanel>
+        <Border Background="#ECFDF5"
+                BorderBrush="#A7F3D0"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="10,7"
+                IsVisible="{Binding IsMonitoring}">
+          <TextBlock Text="Мониторинг запущен"
+                     Foreground="#047857"
+                     VerticalAlignment="Center" />
+        </Border>
+      </StackPanel>
+    </Border>
 
+    <TextBlock DockPanel.Dock="Top"
+               Text="Устройства не найдены. Подключите железо и нажмите Сканировать."
+               IsVisible="{Binding !Slaves.Count}"
+               Margin="18,0,18,12"
+               Foreground="{DynamicResource TextSecondaryBrush}" />
+
+    <Grid ColumnDefinitions="*,330"
+          Margin="14,0,14,14">
+
+      <ScrollViewer Grid.Column="0"
+                    Background="Transparent"
+                    x:Name="MainScrollViewer"
+                    BringIntoViewOnFocusChange="False">
+
+        <ItemsControl ItemsSource="{Binding Slaves}"
+                      HorizontalAlignment="Stretch">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:SlaveModelBase">
+              <Border Margin="0,0,12,12"
+                      Padding="12"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      CornerRadius="14"
+                      Background="{DynamicResource SurfaceBrush}"
+                      Width="620"
+                      BoxShadow="0 6 18 0 #0D0F172A">
+
+                <Grid RowDefinitions="Auto,Auto">
+
+                  <Grid Grid.Row="0"
+                        ColumnDefinitions="*,Auto"
+                        Margin="0,0,0,10">
+
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock FontWeight="Bold"
+                                 FontSize="15"
+                                 Text="{Binding DeviceType}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                      <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="{Binding ToggleIcon}"
+                            Command="{Binding ToggleExpandedCommand}"
+                            VerticalAlignment="Center"
+                            Classes="ghost"
+                            Padding="10,6" />
+                  </Grid>
+
+                  <DataGrid Grid.Row="1"
+                            IsVisible="{Binding IsExpanded}"
+                            ItemsSource="{Binding RegisterItems}"
+                            DoubleTapped="OnDataGridDoubleTapped"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="Horizontal"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            CanUserResizeColumns="True"
+                            CanUserSortColumns="True"
+                            Height="{Binding GridHeight}">
+                    <DataGrid.Resources>
+                      <converters:BoolToBackgroundConverter x:Key="BoolToBackground" />
+                    </DataGrid.Resources>
+
+                    <DataGrid.Styles>
+                      <Style Selector="DataGridRow">
+                        <Setter Property="Background">
+                          <Setter.Value>
+                            <Binding Path="IsReadOnly"
+                                     Converter="{StaticResource BoolToBackground}"
+                                     x:DataType="models:RegisterItem" />
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
+
+                      <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+                        <Setter Property="Fill" Value="Transparent" />
+                      </Style>
+                    </DataGrid.Styles>
+
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" />
+                      <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="*" />
+                      <DataGridTextColumn Header="Значение" Binding="{Binding Value, Mode=OneWay}" Width="90" />
+                      <DataGridTextColumn Header="Категория" Binding="{Binding Category}" Width="130" />
+                    </DataGrid.Columns>
+                  </DataGrid>
+
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Border Grid.Column="1"
+              Background="{DynamicResource SidebarDarkBrush}"
+              BorderBrush="{DynamicResource SidebarBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="14"
+              Padding="12"
+              ClipToBounds="True">
+
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0"
+                     Text="Логи Modbus"
+                     FontWeight="SemiBold"
+                     FontSize="14"
+                     Foreground="{DynamicResource SidebarTextBrush}"
+                     Margin="0,0,0,8" />
+
+          <ScrollViewer Grid.Row="1">
+            <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}"
+                             FontFamily="Consolas"
+                             FontSize="11"
+                             Foreground="{DynamicResource SidebarTextMutedBrush}"
+                             Margin="2,2"
+                             TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
         </Grid>
 
-    </DockPanel>
+      </Border>
 
+    </Grid>
+  </DockPanel>
 </UserControl>

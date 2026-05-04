@@ -1,32 +1,64 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:TestBuilder.ViewModels"
-             x:Class="TestBuilder.Views.TestViews.ControlPanelView"
-             x:DataType="vm:TestViewModel">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:TestBuilder.ViewModels"
+			 x:Class="TestBuilder.Views.TestViews.ControlPanelView"
+			 x:DataType="vm:TestViewModel">
 
-    <StackPanel Spacing="6">
-        <Button Content="{Binding ConnectionButtonText}"
-                Command="{Binding ToggleConnectionCommand}"
-                Height="40"
-                FontSize="16"
-                FontWeight="SemiBold" />
+	<StackPanel Spacing="10">
 
-        <Button Content="RUN GRAPH"
-                Command="{Binding RunGraphCommand}"
-                Height="35" />
+		<StackPanel Spacing="2">
+			<TextBlock Text="TestBuilder"
+					   FontSize="20"
+					   FontWeight="Bold"
+					   Foreground="{DynamicResource TextPrimaryBrush}" />
+			<TextBlock Text="Графовый редактор тестовых сценариев"
+					   FontSize="12"
+					   Foreground="{DynamicResource TextSecondaryBrush}" />
+		</StackPanel>
 
-        <Button Content="Очистить"
-                Command="{Binding ClearGraphCommand}"
-                Height="35" />
+		<Border Height="1"
+				Background="{DynamicResource BorderBrush}"
+				Margin="0,6,0,4" />
 
-        <Button Content="Сохранить профиль"
-                Command="{Binding SaveGraphCommand}"
-                Height="35" />
+		<Button Content="{Binding ConnectionButtonText}"
+				Command="{Binding ToggleConnectionCommand}"
+				Classes="danger"
+				Height="40"
+				FontSize="14"
+				FontWeight="SemiBold" />
 
-        <TextBlock Text="{Binding StatusMessage}"
-                   Margin="0,4,0,0"
-                   TextWrapping="Wrap"
-                   FontSize="13" />
-    </StackPanel>
+		<Button Content="RUN GRAPH"
+				Command="{Binding RunGraphCommand}"
+				Classes="primary"
+				Height="38" />
 
+		<Grid ColumnDefinitions="*,*">
+			<Button Grid.Column="0"
+					Content="Очистить"
+					Command="{Binding ClearGraphCommand}"
+					Classes="ghost"
+					Height="36"
+					Margin="0,0,4,0" />
+
+			<Button Grid.Column="1"
+					Content="Сохранить"
+					Command="{Binding SaveGraphCommand}"
+					Classes="ghost"
+					Height="36"
+					Margin="4,0,0,0" />
+		</Grid>
+
+		<Border Background="{DynamicResource SurfaceAltBrush}"
+				BorderBrush="{DynamicResource BorderBrush}"
+				BorderThickness="1"
+				CornerRadius="10"
+				Padding="10"
+				Margin="0,4,0,0">
+			<TextBlock Text="{Binding StatusMessage}"
+					   TextWrapping="Wrap"
+					   FontSize="13"
+					   Foreground="{DynamicResource TextSecondaryBrush}" />
+		</Border>
+
+	</StackPanel>
 </UserControl>
