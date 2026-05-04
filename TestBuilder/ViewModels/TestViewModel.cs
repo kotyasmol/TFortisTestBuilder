@@ -653,10 +653,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         foreach (var file in files)
         {
+            var destPath = Path.Combine(folder, file.Name);
+
+            if (File.Exists(destPath))
+            {
+                errors.Add($"{file.Name}: файл уже существует");
+                continue;
+            }
+
             try
             {
-                var destPath = Path.Combine(folder, file.Name);
-
                 await using var source = await file.OpenReadAsync();
                 await using var dest = File.Create(destPath);
                 await source.CopyToAsync(dest);
@@ -672,11 +678,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RefreshProfiles();
 
         if (errors.Count == 0)
+        {
             StatusMessage = imported == 1
                 ? "Профиль импортирован."
                 : $"Импортировано профилей: {imported}.";
+        }
+        else if (imported == 0)
+        {
+            StatusMessage = string.Join(" | ", errors);
+        }
         else
-            StatusMessage = $"Импортировано: {imported}, ошибок: {errors.Count}. Проверьте файлы.";
+        {
+            StatusMessage = $"Импортировано: {imported}. " + string.Join(" | ", errors);
+        }
     }
 
     private async Task SaveGraphAsync()
