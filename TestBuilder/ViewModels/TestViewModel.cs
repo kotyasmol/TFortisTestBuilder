@@ -89,6 +89,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public IAsyncRelayCommand LoadProfileCommand { get; }
 
+    public IAsyncRelayCommand ImportProfilesCommand { get; }
+
     public ObservableCollection<NodeViewModel> AvailableNodes { get; } = new()
     {
         new StartNodeViewModel(),
@@ -177,6 +179,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
+        ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync);
 
         RefreshProfiles();
 
@@ -612,6 +615,68 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             StatusMessage = $"Ошибка загрузки: {ex.Message}";
         }
+    }
+
+    private async Task ImportProfilesAsync()
+    {
+        var folder = AppSettings.Instance.GraphsFolder;
+
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            StatusMessage = "Укажите папку для профилей в настройках.";
+            return;
+        }
+
+        var topLevel = Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+        if (topLevel == null)
+            return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Импорт профилей",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("JSON профиль") { Patterns = new[] { "*.json" } }
+            }
+        });
+
+        if (files.Count == 0)
+            return;
+
+        int imported = 0;
+        var errors = new List<string>();
+
+        foreach (var file in files)
+        {
+            try
+            {
+                var destPath = Path.Combine(folder, file.Name);
+
+                await using var source = await file.OpenReadAsync();
+                await using var dest = File.Create(destPath);
+                await source.CopyToAsync(dest);
+
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{file.Name}: {ex.Message}");
+            }
+        }
+
+        RefreshProfiles();
+
+        if (errors.Count == 0)
+            StatusMessage = imported == 1
+                ? "Профиль импортирован."
+                : $"Импортировано профилей: {imported}.";
+        else
+            StatusMessage = $"Импортировано: {imported}, ошибок: {errors.Count}. Проверьте файлы.";
     }
 
     private async Task SaveGraphAsync()
