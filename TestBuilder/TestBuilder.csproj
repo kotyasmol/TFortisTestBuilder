@@ -31,4 +31,10 @@
 	<ItemGroup>
 		<Folder Include="Models\" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Views\Connectionlostdialog.axaml.cs">
+	    <DependentUpon>Connectionlostdialog.axaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
 </Project>

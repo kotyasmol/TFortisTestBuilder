@@ -18,7 +18,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            _logger.Info("Тест начат");
+            _logger.Info("[ШАГ] Тест начат.");
             return Task.FromResult(StepResult.Next);
         }
     }

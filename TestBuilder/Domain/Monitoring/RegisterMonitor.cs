@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using TestBuilder.Domain.Modbus; 
+using TestBuilder.Domain.Modbus;
 using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Monitoring
@@ -13,15 +13,18 @@ namespace TestBuilder.Domain.Monitoring
     /// </summary>
     public class RegisterMonitor : IDisposable
     {
-        private readonly SlaveManager _slaveManager;       // Менеджер устройств/слейвов
-        private readonly RegisterState _registerState;     // Общий state для теста
-        private readonly ILogger _logger;                  // Логгер для мониторинга
+        private readonly SlaveManager _slaveManager;
+        private readonly RegisterState _registerState;
+        private readonly ILogger _logger;
         private CancellationTokenSource _cts;
         private Task _monitorTask;
 
-        /// <summary>
-        /// Интервал опроса в миллисекундах.
-        /// </summary>
+        private int _consecutiveErrors = 0;
+        private const int MaxConsecutiveErrors = 5;
+
+        /// <summary>Событие обрыва связи — подписывается TestViewModel</summary>
+        public event EventHandler? ConnectionLost;
+
         public int PollInterval { get; set; } = 1000;
         public bool VerboseLogging { get; set; } = false;
 
@@ -127,6 +130,7 @@ namespace TestBuilder.Domain.Monitoring
                     if (VerboseLogging)
                         _logger.Debug($"Slave {slave.SlaveId} | {reg.Name} ({reg.Address}) = {reg.Value}");
                 }
+                _consecutiveErrors = 0; // Успешный опрос — сбрасываем счётчик
             }
             catch (TaskCanceledException)
             {
@@ -135,13 +139,25 @@ namespace TestBuilder.Domain.Monitoring
             }
             catch (TimeoutException ex)
             {
-                // Таймаут чтения – отдельный тип ошибки.
                 _logger.Warning($"Timeout при опросе слейва {slave.SlaveId}: {ex.Message}");
+                IncrementErrorCount();
             }
             catch (Exception ex)
             {
-                // Ошибка связи с конкретным устройством не должна падать весь мониторинг.
-                _logger.Error($"Ошибка опроса слейва {slave.SlaveId}: {ex.Message}");
+                _logger.Warning($"Ошибка опроса слейва {slave.SlaveId}: {ex.Message}");
+                IncrementErrorCount();
+            }
+        }
+
+        private void IncrementErrorCount()
+        {
+            _consecutiveErrors++;
+            if (_consecutiveErrors >= MaxConsecutiveErrors)
+            {
+                _consecutiveErrors = 0;
+                _logger.Error("[ОШИБКА] Связь с устройствами потеряна. 5 ошибок подряд.");
+                ConnectionLost?.Invoke(this, EventArgs.Empty);
+                Stop();
             }
         }
 

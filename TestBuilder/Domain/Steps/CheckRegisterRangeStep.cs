@@ -43,7 +43,7 @@ namespace TestBuilder.Domain.Steps
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"ПРОВЕРКА ДИАПАЗОНА: slaveId не задан. Регистр={_address}, диапазон=[{_min}..{_max}].");
+                    $"[ШАГ] Проверка диапазона → устройство не задано, адрес {_address}, диапазон [{_min}..{_max}].");
 
                 return Task.FromResult(StepResult.False);
             }
@@ -51,7 +51,7 @@ namespace TestBuilder.Domain.Steps
             if (!context.RegisterState.TryGet(actualSlaveId.Value, _address, out var value))
             {
                 _logger.Warning(
-                    $"ПРОВЕРКА ДИАПАЗОНА: регистр не найден. Устройство={actualSlaveId}, регистр={_address}.");
+                    $"[ОШИБКА] Регистр не найден. Устройство {actualSlaveId}, адрес {_address}.");
 
                 return Task.FromResult(StepResult.False);
             }
@@ -59,14 +59,15 @@ namespace TestBuilder.Domain.Steps
             var inRange = value >= _min && value <= _max;
 
             _logger.Info(
-                $"ПРОВЕРКА ДИАПАЗОНА: устройство={actualSlaveId}, регистр={_address}, значение={value}, диапазон=[{_min}..{_max}], результат={(inRange ? "успех" : "ошибка")}.");
+                $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {value}, диапазон [{_min}..{_max}].");
 
             if (!inRange)
             {
                 _logger.Warning(
-                    $"ПРОВЕРКА ДИАПАЗОНА: значение вне диапазона. Устройство={actualSlaveId}, регистр={_address}, значение={value}, диапазон=[{_min}..{_max}].");
+                    $"[ОШИБКА] Значение {value} вне диапазона [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {_address}.");
             }
 
+            if (inRange) _logger.Info($"[OK] Значение {value} в диапазоне [{_min}..{_max}].");
             return Task.FromResult(inRange ? StepResult.True : StepResult.False);
         }
 

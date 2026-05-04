@@ -20,7 +20,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            _logger.Info($"=== {_text} ===");
+            _logger.Info($"[ШАГ] Метка: {_text}");
             return Task.FromResult(StepResult.Next);
         }
     }
