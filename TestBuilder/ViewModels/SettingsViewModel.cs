@@ -25,7 +25,6 @@ namespace TestBuilder.ViewModels
 
             SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
 
-            // Применяем сохранённую тему при старте
             ApplyTheme(IsDarkTheme);
         }
 
