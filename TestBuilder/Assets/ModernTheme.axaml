@@ -42,6 +42,8 @@
     <SolidColorBrush x:Key="NodeDelayBrush" Color="#0F766E" />
     <SolidColorBrush x:Key="NodeHttpBrush" Color="#EA580C" />
     <SolidColorBrush x:Key="NodeLoopBrush" Color="#0891B2" />
+    <SolidColorBrush x:Key="NodeEqualityBrush" Color="#059669" />
+    <SolidColorBrush x:Key="NodeOperatorBrush" Color="#D97706" />
 
     <SolidColorBrush x:Key="ConnectorFillBrush" Color="#E0F2FE" />
     <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#0284C7" />
@@ -248,6 +250,14 @@
 
   <Style Selector="nodify|Node.LoopNode">
     <Setter Property="BorderBrush" Value="{DynamicResource NodeLoopBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.EqualityNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeEqualityBrush}" />
+  </Style>
+
+  <Style Selector="nodify|Node.OperatorNode">
+    <Setter Property="BorderBrush" Value="{DynamicResource NodeOperatorBrush}" />
   </Style>
 
 </Styles>

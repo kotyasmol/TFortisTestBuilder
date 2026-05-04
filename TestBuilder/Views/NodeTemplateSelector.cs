@@ -20,16 +20,22 @@ namespace TestBuilder.Views
 
         public IDataTemplate? HttpRequestTemplate { get; set; }
 
+        public IDataTemplate? CheckRegisterEqualityTemplate { get; set; }
+
+        public IDataTemplate? OperatorActionTemplate { get; set; }
+
         public Control? Build(object? param)
         {
             return param switch
             {
                 ModbusWriteNodeViewModel => ModbusWriteTemplate?.Build(param),
                 CheckRegisterRangeNodeViewModel => CheckRegisterRangeTemplate?.Build(param),
+                CheckRegisterEqualityNodeViewModel => CheckRegisterEqualityTemplate?.Build(param),
                 DelayNodeViewModel => DelayTemplate?.Build(param),
                 LabelNodeViewModel => LabelTemplate?.Build(param),
                 ForEachSlaveNodeViewModel => ForEachSlaveTemplate?.Build(param),
                 HttpRequestNodeViewModel => HttpRequestTemplate?.Build(param),
+                OperatorActionNodeViewModel => OperatorActionTemplate?.Build(param),
                 _ => DefaultTemplate?.Build(param)
             };
         }

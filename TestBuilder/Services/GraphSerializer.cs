@@ -31,6 +31,8 @@ namespace TestBuilder.Services
             LabelNodeViewModel => "Label",
             ModbusWriteNodeViewModel => "Write Register",
             CheckRegisterRangeNodeViewModel => "Check Register Range",
+            CheckRegisterEqualityNodeViewModel => "Check Register Equality",
+            OperatorActionNodeViewModel => "Operator Action",
             HttpRequestNodeViewModel => "HTTP Request",
             ForEachSlaveNodeViewModel => "For Slaves",
             _ => node.Title
@@ -83,6 +85,17 @@ namespace TestBuilder.Services
                         n.Min = c.Min;
                         n.Max = c.Max;
                         n.UseCurrentSlaveId = c.UseCurrentSlaveId;
+                        break;
+
+                    case CheckRegisterEqualityNodeViewModel eq:
+                        n.SlaveId = eq.SlaveId;
+                        n.Address = eq.Address;
+                        n.ExpectedValue = eq.ExpectedValue;
+                        n.UseCurrentSlaveId = eq.UseCurrentSlaveId;
+                        break;
+
+                    case OperatorActionNodeViewModel op:
+                        n.Text = op.Message;
                         break;
 
                     case HttpRequestNodeViewModel h:
@@ -191,6 +204,14 @@ namespace TestBuilder.Services
 
                     "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
+                    "Check Register Equality" or "Проверка равенства" => CreateCheckEqualityNode(n, location),
+
+                    "Operator Action" or "Действие оператора" => new OperatorActionNodeViewModel
+                    {
+                        Location = location,
+                        Message = n.Text ?? string.Empty
+                    },
+
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {n.Type}")
                 };
 
@@ -245,6 +266,22 @@ namespace TestBuilder.Services
                 Address = n.Address ?? 0,
                 Min = n.Min ?? 0,
                 Max = n.Max ?? 0,
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+            };
+
+            node.RestoreSelections();
+
+            return node;
+        }
+
+        private static CheckRegisterEqualityNodeViewModel CreateCheckEqualityNode(NodeDto n, Point location)
+        {
+            var node = new CheckRegisterEqualityNodeViewModel
+            {
+                Location = location,
+                SlaveId = n.SlaveId ?? 0,
+                Address = n.Address ?? 0,
+                ExpectedValue = n.ExpectedValue ?? 0,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
             };
 

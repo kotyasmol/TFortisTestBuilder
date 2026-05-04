@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using TestBuilder.Domain.Monitoring;
 
 namespace TestBuilder.Domain.Execution
@@ -21,6 +23,8 @@ namespace TestBuilder.Domain.Execution
         public byte? CurrentSlaveId { get; set; }
 
         public IExecutionObserver? ExecutionObserver { get; set; }
+
+        public Func<string, Task<bool>>? OperatorPrompt { get; set; }
 
         public Dictionary<string, object> Variables { get; } = new();
 

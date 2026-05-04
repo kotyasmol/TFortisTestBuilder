@@ -100,7 +100,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new DelayNodeViewModel(),
         new HttpRequestNodeViewModel(),
         new LabelNodeViewModel(),
-        new ForEachSlaveNodeViewModel()
+        new ForEachSlaveNodeViewModel(),
+        new CheckRegisterEqualityNodeViewModel(),
+        new OperatorActionNodeViewModel()
     };
 
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
@@ -479,12 +481,26 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var compiler = new GraphCompiler(_modbusService, TestingLogger);
             var graph = compiler.Compile(RootGraph);
 
+            var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
+                is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktopLife
+                    ? desktopLife.MainWindow
+                    : null;
+
             var context = new TestContext(_registerState)
             {
                 CancellationToken = CancellationToken.None,
                 IsConnected = IsConnected,
                 ProfileName = profileName,
-                ExecutionObserver = this
+                ExecutionObserver = this,
+                OperatorPrompt = async message =>
+                {
+                    return await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        var dialog = new Views.OperatorActionDialog(message);
+                        await dialog.ShowDialog(mainWindow);
+                        return dialog.Confirmed;
+                    });
+                }
             };
 
             var result = await new TestExecutor().ExecuteAsync(
@@ -772,6 +788,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "HTTP Request" => new HttpRequestNodeViewModel { Location = location },
             "Метка" => new LabelNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
+            "Проверка равенства" => new CheckRegisterEqualityNodeViewModel { Location = location },
+            "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null
         };
 
