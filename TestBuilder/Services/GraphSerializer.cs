@@ -109,7 +109,7 @@ namespace TestBuilder.Services
                         n.Address = p.Address;
                         n.Min = p.Min;
                         n.Max = p.Max;
-                        n.DurationMs = p.DurationMs;
+                        n.SampleCount = p.SampleCount;
                         n.UseCurrentSlaveId = p.UseCurrentSlaveId;
                         break;
 
@@ -339,7 +339,7 @@ namespace TestBuilder.Services
                 Address = n.Address ?? 0,
                 Min = n.Min ?? 0,
                 Max = n.Max ?? 0,
-                DurationMs = n.DurationMs ?? 5000,
+                SampleCount = n.SampleCount ?? 10,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
             };
 

@@ -15,7 +15,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private ushort address;
         [ObservableProperty] private int min;
         [ObservableProperty] private int max;
-        [ObservableProperty] private int durationMs = 5000;
+        [ObservableProperty] private int sampleCount = 10;
         [ObservableProperty] private bool useCurrentSlaveId;
 
         public ConnectorViewModel In { get; }
@@ -84,7 +84,7 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(ILogger logger)
         {
-            return new PollRegisterStep(SlaveId, Address, Min, Max, DurationMs, logger, UseCurrentSlaveId);
+            return new PollRegisterStep(SlaveId, Address, Min, Max, SampleCount, logger, UseCurrentSlaveId);
         }
     }
 }

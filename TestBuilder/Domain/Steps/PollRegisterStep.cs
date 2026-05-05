@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -12,18 +11,18 @@ namespace TestBuilder.Domain.Steps
         private readonly int _address;
         private readonly int _min;
         private readonly int _max;
-        private readonly int _durationMs;
+        private readonly int _sampleCount;
         private readonly bool _useCurrentSlaveId;
         private readonly ILogger _logger;
 
-        private const int PollIntervalMs = 200;
+        private const int SampleIntervalMs = 1000;
 
         public PollRegisterStep(
             byte slaveId,
             int address,
             int min,
             int max,
-            int durationMs,
+            int sampleCount,
             ILogger logger,
             bool useCurrentSlaveId = false)
         {
@@ -31,7 +30,7 @@ namespace TestBuilder.Domain.Steps
             _address = address;
             _min = min;
             _max = max;
-            _durationMs = durationMs;
+            _sampleCount = sampleCount;
             _logger = logger;
             _useCurrentSlaveId = useCurrentSlaveId;
         }
@@ -51,26 +50,28 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info(
-                $"[ШАГ] Опрос регистра → устройство {actualSlaveId}, адрес {_address}, диапазон [{_min}..{_max}], длительность {_durationMs}мс.");
+                $"[ШАГ] Опрос регистра → устройство {actualSlaveId}, адрес {_address}, диапазон [{_min}..{_max}], замеров {_sampleCount}.");
 
             int successes = 0;
             int failures = 0;
 
-            var deadline = DateTime.UtcNow.AddMilliseconds(_durationMs);
-
-            while (DateTime.UtcNow < deadline)
+            for (int i = 0; i < _sampleCount; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (context.RegisterState.TryGet(actualSlaveId.Value, _address, out var value))
                 {
-                    if (value >= _min && value <= _max)
-                        successes++;
-                    else
-                        failures++;
+                    var inRange = value >= _min && value <= _max;
+
+                    _logger.Info(
+                        $"[ШАГ] Замер {i + 1}/{_sampleCount} → значение {value} {(inRange ? "в диапазоне" : "вне диапазона")}.");
+
+                    if (inRange) successes++;
+                    else failures++;
                 }
 
-                await Task.Delay(PollIntervalMs, cancellationToken);
+                if (i < _sampleCount - 1)
+                    await Task.Delay(SampleIntervalMs, cancellationToken);
             }
 
             _logger.Info(

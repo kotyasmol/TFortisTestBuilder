@@ -71,10 +71,15 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? ExpectedValue { get; set; }
 
-        // --- Wait Until / Poll Register ---
+        // --- Wait Until ---
         [JsonPropertyName("durationMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? DurationMs { get; set; }
+
+        // --- Poll Register ---
+        [JsonPropertyName("sampleCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SampleCount { get; set; }
 
         // --- HTTP Request ---
         [JsonPropertyName("url")]
