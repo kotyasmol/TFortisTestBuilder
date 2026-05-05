@@ -102,6 +102,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new LabelNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
         new CheckRegisterEqualityNodeViewModel(),
+        new WaitUntilNodeViewModel(),
+        new PollRegisterNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
 
@@ -789,6 +791,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Метка" => new LabelNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
             "Проверка равенства" => new CheckRegisterEqualityNodeViewModel { Location = location },
+            "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
+            "Опрос регистра" => new PollRegisterNodeViewModel { Location = location },
             "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null
         };

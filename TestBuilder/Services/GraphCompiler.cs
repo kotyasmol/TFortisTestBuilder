@@ -94,6 +94,8 @@ namespace TestBuilder.Services
                 ModbusWriteNodeViewModel write => write.CreateStep(_modbusService, _logger),
                 CheckRegisterRangeNodeViewModel check => check.CreateStep(_logger),
                 CheckRegisterEqualityNodeViewModel equality => equality.CreateStep(_logger),
+                WaitUntilNodeViewModel waitUntil => waitUntil.CreateStep(_logger),
+                PollRegisterNodeViewModel pollRegister => pollRegister.CreateStep(_logger),
                 OperatorActionNodeViewModel operatorAction => operatorAction.CreateStep(_logger),
                 HttpRequestNodeViewModel http => http.CreateStep(_httpRequestService, _logger),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
@@ -156,6 +158,20 @@ namespace TestBuilder.Services
                         source.OnFalse = target;
                     }
 
+                    break;
+
+                case WaitUntilNodeViewModel waitVm:
+                    if (sourceConnector == waitVm.TrueOut)
+                        source.OnTrue = target;
+                    else if (sourceConnector == waitVm.FalseOut)
+                        source.OnFalse = target;
+                    break;
+
+                case PollRegisterNodeViewModel pollVm:
+                    if (sourceConnector == pollVm.TrueOut)
+                        source.OnTrue = target;
+                    else if (sourceConnector == pollVm.FalseOut)
+                        source.OnFalse = target;
                     break;
 
                 case OperatorActionNodeViewModel operatorVm:
