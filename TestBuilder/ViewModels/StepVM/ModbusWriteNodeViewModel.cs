@@ -87,5 +87,13 @@ namespace TestBuilder.ViewModels.StepVM
         {
             return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId);
         }
+
+        public override NodeViewModel Clone() => new ModbusWriteNodeViewModel
+        {
+            SlaveId = SlaveId,
+            Address = Address,
+            Value = Value,
+            UseCurrentSlaveId = UseCurrentSlaveId
+        };
     }
 }

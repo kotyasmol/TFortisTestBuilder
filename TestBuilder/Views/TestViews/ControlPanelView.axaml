@@ -32,23 +32,7 @@
 				Classes="primary"
 				Height="38" />
 
-		<Grid ColumnDefinitions="*,*">
-			<Button Grid.Column="0"
-					Content="Очистить"
-					Command="{Binding ClearGraphCommand}"
-					Classes="ghost"
-					Height="36"
-					Margin="0,0,4,0" />
-
-			<Button Grid.Column="1"
-					Content="Сохранить"
-					Command="{Binding SaveGraphCommand}"
-					Classes="ghost"
-					Height="36"
-					Margin="4,0,0,0" />
-		</Grid>
-
-		<Border Background="{DynamicResource SurfaceAltBrush}"
+<Border Background="{DynamicResource SurfaceAltBrush}"
 				BorderBrush="{DynamicResource BorderBrush}"
 				BorderThickness="1"
 				CornerRadius="10"

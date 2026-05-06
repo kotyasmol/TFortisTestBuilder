@@ -18,6 +18,8 @@ public partial class GraphEditorView : UserControl
 
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
 
+        this.AddHandler(KeyDownEvent, OnKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+
         Editor.AddHandler(
             PointerPressedEvent,
             OnEditorPointerPressed,
@@ -42,6 +44,32 @@ public partial class GraphEditorView : UserControl
         var brushKey = isDark ? "SmallGridBrush" : "SmallGridBrushLight";
         if (this.Resources.TryGetResource(brushKey, ActualThemeVariant, out var brush) && brush is IBrush b)
             Editor.Background = b;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not TestViewModel vm) return;
+
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Z)
+        {
+            if (vm.CanUndo) vm.UndoCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Y)
+        {
+            if (vm.CanRedo) vm.RedoCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.C)
+        {
+            vm.CopyNodes();
+            e.Handled = true;
+        }
+        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.V)
+        {
+            vm.PasteNodes();
+            e.Handled = true;
+        }
     }
 
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)

@@ -84,5 +84,13 @@ namespace TestBuilder.ViewModels.StepVM
         {
             return new CheckRegisterEqualityStep(SlaveId, Address, ExpectedValue, logger, UseCurrentSlaveId);
         }
+
+        public override NodeViewModel Clone() => new CheckRegisterEqualityNodeViewModel
+        {
+            SlaveId = SlaveId,
+            Address = Address,
+            ExpectedValue = ExpectedValue,
+            UseCurrentSlaveId = UseCurrentSlaveId
+        };
     }
 }

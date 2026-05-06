@@ -18,9 +18,8 @@ namespace TestBuilder.ViewModels.StepVM
             AddOutput(new ConnectorViewModel { Title = "Выход" });
         }
 
-        public ITestStep CreateStep(ILogger logger)
-        {
-            return new StartStep(logger);
-        }
+        public ITestStep CreateStep(ILogger logger) => new StartStep(logger);
+
+        public override NodeViewModel Clone() => new StartNodeViewModel();
     }
 }

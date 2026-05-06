@@ -69,5 +69,13 @@ namespace TestBuilder.ViewModels.StepVM
                 OutputVariableName,
                 RequireSuccessStatusCode);
         }
+
+        public override NodeViewModel Clone() => new HttpRequestNodeViewModel
+        {
+            Url = Url,
+            TimeoutMs = TimeoutMs,
+            OutputVariableName = OutputVariableName,
+            RequireSuccessStatusCode = RequireSuccessStatusCode
+        };
     }
 }

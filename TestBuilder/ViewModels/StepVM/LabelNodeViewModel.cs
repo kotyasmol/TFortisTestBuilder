@@ -24,5 +24,7 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) => new LabelStep(Text, logger);
+
+        public override NodeViewModel Clone() => new LabelNodeViewModel { Text = Text };
     }
 }
