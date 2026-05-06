@@ -22,6 +22,10 @@ namespace TestBuilder.Views
 
         public IDataTemplate? CheckRegisterEqualityTemplate { get; set; }
 
+        public IDataTemplate? WaitUntilTemplate { get; set; }
+
+        public IDataTemplate? PollRegisterTemplate { get; set; }
+
         public IDataTemplate? OperatorActionTemplate { get; set; }
 
         public Control? Build(object? param)
@@ -31,6 +35,8 @@ namespace TestBuilder.Views
                 ModbusWriteNodeViewModel => ModbusWriteTemplate?.Build(param),
                 CheckRegisterRangeNodeViewModel => CheckRegisterRangeTemplate?.Build(param),
                 CheckRegisterEqualityNodeViewModel => CheckRegisterEqualityTemplate?.Build(param),
+                WaitUntilNodeViewModel => WaitUntilTemplate?.Build(param),
+                PollRegisterNodeViewModel => PollRegisterTemplate?.Build(param),
                 DelayNodeViewModel => DelayTemplate?.Build(param),
                 LabelNodeViewModel => LabelTemplate?.Build(param),
                 ForEachSlaveNodeViewModel => ForEachSlaveTemplate?.Build(param),

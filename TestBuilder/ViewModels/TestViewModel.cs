@@ -55,6 +55,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     [ObservableProperty]
     private bool canGoBackGraph;
 
+    [ObservableProperty]
+    private bool isPaletteCollapsed;
+
+    public string PaletteToggleIcon => IsPaletteCollapsed ? "‹" : "›";
+    public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
+
+    public ICommand TogglePaletteCommand { get; }
+
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
         Title = "Основной граф",
@@ -102,6 +110,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new LabelNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
         new CheckRegisterEqualityNodeViewModel(),
+        new WaitUntilNodeViewModel(),
+        new PollRegisterNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
 
@@ -182,10 +192,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync);
+        TogglePaletteCommand = new RelayCommand(() => IsPaletteCollapsed = !IsPaletteCollapsed);
 
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
+    }
+
+    partial void OnIsPaletteCollapsedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PaletteToggleIcon));
+        OnPropertyChanged(nameof(PaletteToggleTip));
     }
 
     partial void OnCurrentGraphChanged(GraphWorkspaceViewModel value)
@@ -789,6 +806,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Метка" => new LabelNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
             "Проверка равенства" => new CheckRegisterEqualityNodeViewModel { Location = location },
+            "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
+            "Опрос регистра" => new PollRegisterNodeViewModel { Location = location },
             "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null
         };

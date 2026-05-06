@@ -32,6 +32,8 @@ namespace TestBuilder.Services
             ModbusWriteNodeViewModel => "Write Register",
             CheckRegisterRangeNodeViewModel => "Check Register Range",
             CheckRegisterEqualityNodeViewModel => "Check Register Equality",
+            WaitUntilNodeViewModel => "Wait Until",
+            PollRegisterNodeViewModel => "Poll Register",
             OperatorActionNodeViewModel => "Operator Action",
             HttpRequestNodeViewModel => "HTTP Request",
             ForEachSlaveNodeViewModel => "For Slaves",
@@ -92,6 +94,23 @@ namespace TestBuilder.Services
                         n.Address = eq.Address;
                         n.ExpectedValue = eq.ExpectedValue;
                         n.UseCurrentSlaveId = eq.UseCurrentSlaveId;
+                        break;
+
+                    case WaitUntilNodeViewModel w:
+                        n.SlaveId = w.SlaveId;
+                        n.Address = w.Address;
+                        n.ExpectedValue = w.ExpectedValue;
+                        n.DurationMs = w.TimeoutMs;
+                        n.UseCurrentSlaveId = w.UseCurrentSlaveId;
+                        break;
+
+                    case PollRegisterNodeViewModel p:
+                        n.SlaveId = p.SlaveId;
+                        n.Address = p.Address;
+                        n.Min = p.Min;
+                        n.Max = p.Max;
+                        n.SampleCount = p.SampleCount;
+                        n.UseCurrentSlaveId = p.UseCurrentSlaveId;
                         break;
 
                     case OperatorActionNodeViewModel op:
@@ -206,6 +225,10 @@ namespace TestBuilder.Services
 
                     "Check Register Equality" or "Проверка равенства" => CreateCheckEqualityNode(n, location),
 
+                    "Wait Until" or "Ожидание значения" => CreateWaitUntilNode(n, location),
+
+                    "Poll Register" or "Опрос регистра" => CreatePollRegisterNode(n, location),
+
                     "Operator Action" or "Действие оператора" => new OperatorActionNodeViewModel
                     {
                         Location = location,
@@ -282,6 +305,41 @@ namespace TestBuilder.Services
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
                 ExpectedValue = n.ExpectedValue ?? 0,
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+            };
+
+            node.RestoreSelections();
+
+            return node;
+        }
+
+        private static WaitUntilNodeViewModel CreateWaitUntilNode(NodeDto n, Point location)
+        {
+            var node = new WaitUntilNodeViewModel
+            {
+                Location = location,
+                SlaveId = n.SlaveId ?? 0,
+                Address = n.Address ?? 0,
+                ExpectedValue = n.ExpectedValue ?? 0,
+                TimeoutMs = n.DurationMs ?? 5000,
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+            };
+
+            node.RestoreSelections();
+
+            return node;
+        }
+
+        private static PollRegisterNodeViewModel CreatePollRegisterNode(NodeDto n, Point location)
+        {
+            var node = new PollRegisterNodeViewModel
+            {
+                Location = location,
+                SlaveId = n.SlaveId ?? 0,
+                Address = n.Address ?? 0,
+                Min = n.Min ?? 0,
+                Max = n.Max ?? 0,
+                SampleCount = n.SampleCount ?? 10,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
             };
 
