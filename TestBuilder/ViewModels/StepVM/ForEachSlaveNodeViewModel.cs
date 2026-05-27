@@ -65,5 +65,13 @@ namespace TestBuilder.ViewModels.StepVM
                 Location = new Point(560, 120)
             });
         }
+
+        public override NodeViewModel Clone() => new ForEachSlaveNodeViewModel
+        {
+            FromSlaveId = FromSlaveId,
+            ToSlaveId = ToSlaveId,
+            Step = Step,
+            StopOnError = StopOnError
+        };
     }
 }

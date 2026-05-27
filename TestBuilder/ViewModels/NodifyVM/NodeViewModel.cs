@@ -79,5 +79,7 @@ namespace TestBuilder.ViewModels.NodifyVM
             connector.Parent = this;
             Output.Add(connector);
         }
+
+        public virtual NodeViewModel Clone() => throw new System.NotImplementedException($"Clone() not implemented for {GetType().Name}");
     }
 }

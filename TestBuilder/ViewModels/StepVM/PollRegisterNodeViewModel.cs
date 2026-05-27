@@ -86,5 +86,15 @@ namespace TestBuilder.ViewModels.StepVM
         {
             return new PollRegisterStep(SlaveId, Address, Min, Max, SampleCount, logger, UseCurrentSlaveId);
         }
+
+        public override NodeViewModel Clone() => new PollRegisterNodeViewModel
+        {
+            SlaveId = SlaveId,
+            Address = Address,
+            Min = Min,
+            Max = Max,
+            SampleCount = SampleCount,
+            UseCurrentSlaveId = UseCurrentSlaveId
+        };
     }
 }

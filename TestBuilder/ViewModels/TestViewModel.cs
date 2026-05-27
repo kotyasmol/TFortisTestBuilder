@@ -22,6 +22,8 @@ using TestBuilder.ViewModels.Graphs;
 using TestBuilder.Views;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Services.Graph;
+using TestBuilder.Services.Graph.Commands;
 
 namespace TestBuilder.ViewModels;
 
@@ -34,6 +36,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private RegisterMonitor? _registerMonitor;
     private CancellationTokenSource? _monitorCts;
+    private readonly UndoRedoManager _undoRedo = new();
 
     public ILogger TestingLogger { get; }
 
@@ -62,6 +65,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
 
     public ICommand TogglePaletteCommand { get; }
+
+    public ICommand UndoCommand { get; }
+    public ICommand RedoCommand { get; }
+
+    public bool CanUndo => _undoRedo.CanUndo;
+    public bool CanRedo => _undoRedo.CanRedo;
+
+    private List<NodeViewModel>? _clipboardNodes;
+    private List<ConnectionViewModel>? _clipboardConnections;
+
+    public bool CanPaste => _clipboardNodes?.Count > 0;
 
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
@@ -193,10 +207,97 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync);
         TogglePaletteCommand = new RelayCommand(() => IsPaletteCollapsed = !IsPaletteCollapsed);
+        UndoCommand = new RelayCommand(UndoAction, () => _undoRedo.CanUndo);
+        RedoCommand = new RelayCommand(RedoAction, () => _undoRedo.CanRedo);
+
+        _undoRedo.StateChanged += () =>
+        {
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+            ((RelayCommand)UndoCommand).NotifyCanExecuteChanged();
+            ((RelayCommand)RedoCommand).NotifyCanExecuteChanged();
+        };
 
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
+    }
+
+    private void UndoAction()
+    {
+        _undoRedo.Undo();
+        ResetConnectorsState();
+    }
+
+    private void RedoAction()
+    {
+        _undoRedo.Redo();
+        ResetConnectorsState();
+    }
+
+    public void CopyNodes()
+    {
+        var selected = SelectedNodes
+            .Where(n => n is not BodyStartNodeViewModel && n is not BodyEndNodeViewModel)
+            .ToList();
+
+        if (selected.Count == 0) return;
+
+        var selectedSet = new HashSet<NodeViewModel>(selected);
+
+        _clipboardNodes = selected;
+        _clipboardConnections = Connections
+            .Where(c => selectedSet.Contains(c.Source.Parent!) && selectedSet.Contains(c.Target.Parent!))
+            .ToList();
+
+        OnPropertyChanged(nameof(CanPaste));
+    }
+
+    public void PasteNodes()
+    {
+        if (_clipboardNodes == null || _clipboardNodes.Count == 0) return;
+
+        const double offset = 30;
+
+        // Map original node → clone
+        var nodeMap = new Dictionary<NodeViewModel, NodeViewModel>();
+        foreach (var original in _clipboardNodes)
+        {
+            var clone = original.Clone();
+            clone.Location = new Avalonia.Point(original.Location.X + offset, original.Location.Y + offset);
+            nodeMap[original] = clone;
+        }
+
+        // Rebuild connections between cloned nodes
+        var newConnections = new List<ConnectionViewModel>();
+        if (_clipboardConnections != null)
+        {
+            foreach (var conn in _clipboardConnections)
+            {
+                if (!nodeMap.TryGetValue(conn.Source.Parent!, out var srcNode)) continue;
+                if (!nodeMap.TryGetValue(conn.Target.Parent!, out var tgtNode)) continue;
+
+                var srcConnector = srcNode.Output.ElementAtOrDefault(conn.Source.Parent!.Output.IndexOf(conn.Source));
+                var tgtConnector = tgtNode.Input.ElementAtOrDefault(conn.Target.Parent!.Input.IndexOf(conn.Target));
+
+                if (srcConnector != null && tgtConnector != null)
+                    newConnections.Add(new ConnectionViewModel(srcConnector, tgtConnector));
+            }
+        }
+
+        var pastedNodes = nodeMap.Values.ToList();
+
+        _undoRedo.Execute(new PasteNodesCommand(Nodes, Connections, pastedNodes, newConnections));
+
+        // Select only pasted nodes
+        SelectedNodes.Clear();
+        foreach (var node in pastedNodes)
+        {
+            node.IsSelected = true;
+            SelectedNodes.Add(node);
+        }
+
+        ResetConnectorsState();
     }
 
     partial void OnIsPaletteCollapsedChanged(bool value)
@@ -229,16 +330,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void DeleteConnection(ConnectionViewModel? connection)
     {
-        if (connection == null)
-            return;
+        if (connection == null) return;
+        if (!Connections.Contains(connection)) return;
 
-        if (!Connections.Contains(connection))
-            return;
+        if (ReferenceEquals(SelectedConnection, connection))
+            SelectedConnection = null;
 
-        RemoveConnection(connection);
+        _undoRedo.Execute(new DeleteConnectionCommand(Connections, connection));
 
         ResetConnectorsState();
-
         StatusMessage = "Соединение удалено.";
     }
 
@@ -308,24 +408,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .Where(node => node is not BodyStartNodeViewModel && node is not BodyEndNodeViewModel)
             .ToList();
 
-        foreach (var node in selected)
-        {
-            var toRemove = Connections
-                .Where(c => c.Source.Parent == node || c.Target.Parent == node)
-                .ToList();
+        if (selected.Count == 0) return;
 
-            foreach (var conn in toRemove)
-            {
-                RemoveConnection(conn);
-            }
+        var removedConnections = selected
+            .SelectMany(node => Connections
+                .Where(c => c.Source.Parent == node || c.Target.Parent == node))
+            .Distinct()
+            .ToList();
 
-            Nodes.Remove(node);
-        }
+        _undoRedo.Execute(new DeleteNodesCommand(Nodes, Connections, selected, removedConnections));
 
         SelectedNodes.Clear();
-
         ResetConnectorsState();
-
         EnsureBodyBoundaryNodesIfNeeded();
     }
 
@@ -333,7 +427,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         SelectedConnection = null;
 
-        Connections.Add(new ConnectionViewModel(source, target));
+        _undoRedo.Execute(new AddConnectionCommand(Connections, new ConnectionViewModel(source, target)));
     }
 
     private void DisconnectConnector(ConnectorViewModel? connector)
@@ -641,6 +735,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             ResetToRootGraph();
             ClearExecutionHighlightsRecursive(RootGraph);
             ResetConnectorsStateRecursive(RootGraph);
+            _undoRedo.Clear();
 
             StatusMessage = $"Загружен профиль: {name}";
         }
@@ -813,7 +908,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         };
 
         if (node != null)
-            Nodes.Add(node);
+            _undoRedo.Execute(new AddNodeCommand(Nodes, node));
     }
 
     private void EnsureBodyBoundaryNodesIfNeeded()

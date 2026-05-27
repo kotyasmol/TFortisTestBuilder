@@ -87,5 +87,14 @@ namespace TestBuilder.ViewModels.StepVM
         {
             return new CheckRegisterRangeStep(SlaveId, Address, Min, Max, logger, UseCurrentSlaveId);
         }
+
+        public override NodeViewModel Clone() => new CheckRegisterRangeNodeViewModel
+        {
+            SlaveId = SlaveId,
+            Address = Address,
+            Min = Min,
+            Max = Max,
+            UseCurrentSlaveId = UseCurrentSlaveId
+        };
     }
 }

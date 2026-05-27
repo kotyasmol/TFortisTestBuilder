@@ -85,5 +85,14 @@ namespace TestBuilder.ViewModels.StepVM
         {
             return new WaitUntilStep(SlaveId, Address, ExpectedValue, TimeoutMs, logger, UseCurrentSlaveId);
         }
+
+        public override NodeViewModel Clone() => new WaitUntilNodeViewModel
+        {
+            SlaveId = SlaveId,
+            Address = Address,
+            ExpectedValue = ExpectedValue,
+            TimeoutMs = TimeoutMs,
+            UseCurrentSlaveId = UseCurrentSlaveId
+        };
     }
 }

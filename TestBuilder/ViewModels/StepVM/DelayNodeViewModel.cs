@@ -26,5 +26,7 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) => new DelayStep(Milliseconds, logger);
+
+        public override NodeViewModel Clone() => new DelayNodeViewModel { Milliseconds = Milliseconds };
     }
 }

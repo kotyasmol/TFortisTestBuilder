@@ -25,9 +25,8 @@ namespace TestBuilder.ViewModels.StepVM
             AddOutput(FalseOut);
         }
 
-        public ITestStep CreateStep(ILogger logger)
-        {
-            return new OperatorActionStep(Message, logger);
-        }
+        public ITestStep CreateStep(ILogger logger) => new OperatorActionStep(Message, logger);
+
+        public override NodeViewModel Clone() => new OperatorActionNodeViewModel { Message = Message };
     }
 }
