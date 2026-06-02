@@ -10,26 +10,26 @@ namespace TestBuilder.Converters
     {
         public static readonly BoolToBackgroundConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            var isDark = Avalonia.Application.Current?.RequestedThemeVariant == ThemeVariant.Dark;
+            var isDark = Avalonia.Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
 
             if (value is bool isReadOnly)
             {
                 if (isDark)
                     return isReadOnly
-                        ? new SolidColorBrush(Color.Parse("#1E1E1E"))   // тёмный фон — ReadOnly
-                        : new SolidColorBrush(Color.Parse("#1A2A3A"));  // тёмно-синий — RW
+                        ? new SolidColorBrush(Color.Parse("#182235"))   // тёмный фон — ReadOnly
+                        : new SolidColorBrush(Color.Parse("#1E3A5F"));  // тёмно-синий — RW
                 else
                     return isReadOnly
                         ? Brushes.White                                  // белый — ReadOnly
                         : new SolidColorBrush(Color.Parse("#E8F4FF"));  // голубой — RW
             }
 
-            return isDark ? new SolidColorBrush(Color.Parse("#1E1E1E")) : Brushes.White;
+            return isDark ? new SolidColorBrush(Color.Parse("#182235")) : Brushes.White;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 }

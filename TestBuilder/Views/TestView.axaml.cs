@@ -8,7 +8,7 @@ using TestBuilder.ViewModels;
 
 namespace TestBuilder.Views;
 
-public partial class TestView : UserControl
+public partial class TestView : UserControl, IDisposable
 {
     private TestViewModel? _currentVm;
 
@@ -69,5 +69,13 @@ public partial class TestView : UserControl
     {
         if (e.Action == NotifyCollectionChangedAction.Add)
             Dispatcher.UIThread.Post(() => { });
+    }
+
+    public void Dispose()
+    {
+        if (_currentVm != null)
+            _currentVm.TestingLogger.Entries.CollectionChanged -= Entries_CollectionChanged;
+
+        GraphEditor.Dispose();
     }
 }

@@ -1,6 +1,8 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Media;
+using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Modbus.Models;
@@ -8,7 +10,7 @@ using TestBuilder.Services;
 
 namespace TestBuilder.ViewModels.NodifyVM
 {
-    public partial class NodeViewModel : ObservableObject
+    public partial class NodeViewModel : ObservableObject, IDisposable
     {
         private static readonly IBrush DefaultBorderBrush =
             new SolidColorBrush(Color.FromRgb(99, 102, 241));
@@ -42,17 +44,19 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         protected NodeViewModel()
         {
-            SlaveRegistry.Instance.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(SlaveRegistry.IsConnected))
-                {
-                    OnPropertyChanged(nameof(IsConnected));
-                    SyncSlaves();
-                }
-            };
+            SlaveRegistry.Instance.PropertyChanged += OnSlaveRegistryPropertyChanged;
 
             if (SlaveRegistry.Instance.Slaves.Count > 0)
                 SyncSlaves();
+        }
+
+        private void OnSlaveRegistryPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SlaveRegistry.IsConnected))
+            {
+                OnPropertyChanged(nameof(IsConnected));
+                SyncSlaves();
+            }
         }
 
         public void SyncSlaves()
@@ -81,5 +85,10 @@ namespace TestBuilder.ViewModels.NodifyVM
         }
 
         public virtual NodeViewModel Clone() => throw new System.NotImplementedException($"Clone() not implemented for {GetType().Name}");
+
+        public void Dispose()
+        {
+            SlaveRegistry.Instance.PropertyChanged -= OnSlaveRegistryPropertyChanged;
+        }
     }
 }

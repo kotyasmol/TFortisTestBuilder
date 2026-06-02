@@ -1,8 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:converters="using:TestBuilder.Converters"
              x:Class="TestBuilder.Views.TestViews.ProfileListView"
              x:DataType="vm:TestViewModel">
+
+  <UserControl.Resources>
+    <converters:CollectionEmptyConverter x:Key="CollectionEmptyConverter" />
+  </UserControl.Resources>
 
   <Grid RowDefinitions="Auto,Auto,*">
 
@@ -11,7 +16,7 @@
           Margin="0,0,0,8">
       <StackPanel Grid.Column="0">
         <TextBlock Text="Профили тестирования"
-                   FontSize="13"
+                   FontSize="16"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding StatusMessage}"
@@ -22,15 +27,16 @@
       <Button Grid.Column="1"
               Command="{Binding ImportProfilesCommand}"
               ToolTip.Tip="Импортировать профили с компьютера"
-              Width="28"
-              Height="28"
+              Width="32"
+              Height="32"
               Padding="4"
-              Background="Transparent"
-              VerticalAlignment="Center">
+              Classes="ghost"
+              VerticalAlignment="Center"
+              CornerRadius="7">
         <PathIcon Width="16"
                   Height="16"
-                  Data="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"
-                  Foreground="{DynamicResource TextPrimaryBrush}" />
+                  Data="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"
+                  Foreground="{DynamicResource TextSecondaryBrush}" />
       </Button>
     </Grid>
 
@@ -42,23 +48,56 @@
     <Border Grid.Row="2"
             BorderThickness="1"
             BorderBrush="{DynamicResource BorderBrush}"
-            CornerRadius="12"
-            Background="{DynamicResource SurfaceAltBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource SurfaceBrush}"
             ClipToBounds="True">
-      <ListBox x:Name="ProfileListBox"
-               ItemsSource="{Binding Profiles}"
-               SelectedItem="{Binding SelectedProfile}"
-               Background="Transparent"
-               SelectionChanged="OnProfileSelectionChanged">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding Name}"
-                       TextWrapping="Wrap"
-                       FontSize="13"
-                       Foreground="{DynamicResource TextPrimaryBrush}" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <Grid>
+        <ListBox x:Name="ProfileListBox"
+                 ItemsSource="{Binding Profiles}"
+                 SelectedItem="{Binding SelectedProfile}"
+                 Background="Transparent"
+                 SelectionChanged="OnProfileSelectionChanged">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Name}"
+                         TextWrapping="Wrap"
+                         FontSize="13"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8"
+                    IsHitTestVisible="False"
+                    IsVisible="{Binding Profiles.Count, Converter={StaticResource CollectionEmptyConverter}}">
+          <Border Width="32"
+                  Height="26"
+                  CornerRadius="5"
+                  BorderBrush="{DynamicResource TextMutedBrush}"
+                  BorderThickness="1"
+                  Opacity="0.65">
+            <PathIcon Width="18"
+                      Height="18"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Data="M4 6h6l2 2h8v10H4z M6 10v6h12v-6z"
+                      Foreground="{DynamicResource TextMutedBrush}" />
+          </Border>
+          <TextBlock Text="Нет профилей"
+                     FontSize="14"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="Создайте профиль&#x0a;тестирования"
+                     FontSize="12"
+                     LineHeight="18"
+                     TextAlignment="Center"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+      </Grid>
     </Border>
 
   </Grid>

@@ -6,48 +6,89 @@
              x:Class="TestBuilder.Views.TestViews.LogPanelView"
              x:DataType="vm:TestViewModel">
 
-  <Border BorderThickness="0,1,0,0"
-          BorderBrush="{DynamicResource BorderBrush}"
-          Padding="12,8"
+  <UserControl.Resources>
+    <converters:CollectionEmptyConverter x:Key="CollectionEmptyConverter" />
+  </UserControl.Resources>
+
+  <Border Padding="12,10"
           Background="{DynamicResource SurfaceBrush}">
     <Grid RowDefinitions="Auto,*">
 
-      <DockPanel Grid.Row="0"
-                 Margin="0,0,0,6">
-        <TextBlock DockPanel.Dock="Left"
+      <Grid Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            Margin="0,0,0,8">
+        <TextBlock Grid.Column="0"
                    Text="Логи выполнения"
-                   FontSize="12"
+                   FontSize="14"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock DockPanel.Dock="Right"
-                   Text="Runtime"
-                   FontSize="11"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   HorizontalAlignment="Right" />
-      </DockPanel>
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="1"
+                Click="OnClearLogs"
+                Classes="ghost"
+                Height="28"
+                MinHeight="28"
+                Padding="8,0"
+                FontSize="12"
+                ToolTip.Tip="Очистить логи">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="6">
+            <PathIcon Width="13"
+                      Height="13"
+                      Data="M7 4V2h10v2h5v2H2V4h5z M5 8h14l-1 14H6z M9 10v9h2v-9H9z M13 10v9h2v-9h-2z"
+                      Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="Очистить"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="12" />
+          </StackPanel>
+        </Button>
+      </Grid>
 
       <Border Grid.Row="1"
-              Background="#F8FAFC"
+              Background="{DynamicResource SurfaceBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="1"
-              CornerRadius="10"
+              CornerRadius="8"
               Padding="8"
               ClipToBounds="True">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
-          <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="logging:LogEntry">
-                <TextBlock Text="{Binding}"
-                           Margin="2"
-                           TextWrapping="Wrap"
-                           FontFamily="Consolas"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="11" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+        <Grid>
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="logging:LogEntry">
+                  <TextBlock Text="{Binding}"
+                             Margin="2"
+                             TextWrapping="Wrap"
+                             FontFamily="Consolas"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="11" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="6"
+                      IsHitTestVisible="False"
+                      IsVisible="{Binding TestingLogger.Entries.Count, Converter={StaticResource CollectionEmptyConverter}}">
+            <PathIcon Width="28"
+                      Height="28"
+                      Data="M6 3h12v18H6z M8 7h8v2H8z M8 11h8v2H8z M8 15h5v2H8z"
+                      Foreground="{DynamicResource TextMutedBrush}"
+                      Opacity="0.7"
+                      HorizontalAlignment="Center" />
+            <TextBlock Text="Логи будут отображаться здесь"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Запустите граф для просмотра логов выполнения"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Grid>
       </Border>
 
     </Grid>

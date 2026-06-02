@@ -4,44 +4,65 @@
 			 x:Class="TestBuilder.Views.TestViews.ControlPanelView"
 			 x:DataType="vm:TestViewModel">
 
-	<StackPanel Spacing="10">
+	<StackPanel Spacing="12">
 
-		<StackPanel Spacing="2">
+		<StackPanel Spacing="8">
 			<TextBlock Text="TestBuilder"
-					   FontSize="20"
+					   FontSize="18"
 					   FontWeight="Bold"
 					   Foreground="{DynamicResource TextPrimaryBrush}" />
 			<TextBlock Text="Графовый редактор тестовых сценариев"
-					   FontSize="12"
+					   FontSize="13"
 					   Foreground="{DynamicResource TextSecondaryBrush}" />
 		</StackPanel>
 
 		<Border Height="1"
 				Background="{DynamicResource BorderBrush}"
-				Margin="0,6,0,4" />
+				Margin="0,2,0,2" />
 
-		<Button Content="{Binding ConnectionButtonText}"
-				Command="{Binding ToggleConnectionCommand}"
-				Classes="danger"
-				Height="40"
-				FontSize="14"
-				FontWeight="SemiBold" />
-
-		<Button Content="RUN GRAPH"
-				Command="{Binding RunGraphCommand}"
+		<Button Command="{Binding ToggleConnectionCommand}"
 				Classes="primary"
-				Height="38" />
+				Height="42"
+				FontSize="14"
+				FontWeight="SemiBold">
+			<StackPanel Orientation="Horizontal"
+						Spacing="8"
+						HorizontalAlignment="Center">
+				<PathIcon Width="15"
+						  Height="15"
+						  Data="M3.9 12.1a5 5 0 0 1 0-7.07l1.4-1.4a5 5 0 0 1 7.07 0 1 1 0 0 1-1.41 1.41 3 3 0 0 0-4.25 0l-1.4 1.4a3 3 0 0 0 4.24 4.25 1 1 0 1 1 1.42 1.41 5 5 0 0 1-7.07 0z M8.46 10.95a1 1 0 0 1 0-1.41l1.08-1.08a1 1 0 1 1 1.41 1.41l-1.08 1.08a1 1 0 0 1-1.41 0z M10.95 8.46a1 1 0 0 1 0-1.41 3 3 0 0 0-4.24-4.25 1 1 0 1 1-1.42-1.41 5 5 0 0 1 7.07 7.07 1 1 0 0 1-1.41 0z"
+						  Foreground="{DynamicResource OnPrimaryBrush}" />
+				<TextBlock Text="{Binding ConnectionButtonText}"
+						   Foreground="{DynamicResource OnPrimaryBrush}"
+						   FontWeight="SemiBold" />
+			</StackPanel>
+		</Button>
 
-<Border Background="{DynamicResource SurfaceAltBrush}"
+		<Button Content="▷  Запустить граф"
+				Command="{Binding RunGraphCommand}"
+				Classes="ghost"
+				Height="40" />
+
+		<Border Background="{DynamicResource SurfaceAltBrush}"
 				BorderBrush="{DynamicResource BorderBrush}"
 				BorderThickness="1"
-				CornerRadius="10"
-				Padding="10"
+				CornerRadius="8"
+				Padding="10,9"
 				Margin="0,4,0,0">
-			<TextBlock Text="{Binding StatusMessage}"
-					   TextWrapping="Wrap"
-					   FontSize="13"
-					   Foreground="{DynamicResource TextSecondaryBrush}" />
+			<Grid ColumnDefinitions="Auto,*">
+				<Border Grid.Column="0"
+						Width="8"
+						Height="8"
+						CornerRadius="5"
+						Background="{DynamicResource SuccessBrush}"
+						VerticalAlignment="Top"
+						Margin="2,5,8,0" />
+				<TextBlock Grid.Column="1"
+						   Text="{Binding StatusMessage}"
+						   TextWrapping="Wrap"
+						   FontSize="13"
+						   Foreground="{DynamicResource TextSecondaryBrush}" />
+			</Grid>
 		</Border>
 
 	</StackPanel>

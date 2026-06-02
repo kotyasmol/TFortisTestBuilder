@@ -50,7 +50,7 @@ namespace TestBuilder.Domain.Steps
 
             var executor = new TestExecutor();
 
-            for (var slaveId = _fromSlaveId; slaveId <= _toSlaveId; slaveId += _step)
+            for (var slaveId = (int)_fromSlaveId; slaveId <= _toSlaveId; slaveId += _step)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

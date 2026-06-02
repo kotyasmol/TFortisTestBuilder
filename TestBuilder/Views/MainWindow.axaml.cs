@@ -25,5 +25,16 @@ namespace TestBuilder.Views
             ModbusViewControl.DataContext = vm.ModbusVM;
             SettingsViewControl.DataContext = vm.SettingsVM;
         }
+
+        protected override void OnClosed(System.EventArgs e)
+        {
+            if (TestViewControl is System.IDisposable testView)
+                testView.Dispose();
+
+            if (DataContext is System.IDisposable disposable)
+                disposable.Dispose();
+
+            base.OnClosed(e);
+        }
     }
 }

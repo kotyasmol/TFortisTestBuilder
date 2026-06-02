@@ -27,7 +27,7 @@ using TestBuilder.Services.Graph.Commands;
 
 namespace TestBuilder.ViewModels;
 
-public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObserver
+public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObserver, IDisposable
 {
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
@@ -35,12 +35,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
 
     private RegisterMonitor? _registerMonitor;
-    private CancellationTokenSource? _monitorCts;
     private readonly UndoRedoManager _undoRedo = new();
 
     public ILogger TestingLogger { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConnectionButtonText))]
     private bool isConnected;
 
     [ObservableProperty]
@@ -186,8 +186,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public TestViewModel(ModbusService modbusService, SlaveManager slaveManager)
     {
-        _modbusService = modbusService;
-        _slaveManager = slaveManager;
+        _modbusService = modbusService ?? throw new ArgumentNullException(nameof(modbusService));
+        _slaveManager = slaveManager ?? throw new ArgumentNullException(nameof(slaveManager));
 
         CurrentGraph = RootGraph;
 
@@ -210,17 +210,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         UndoCommand = new RelayCommand(UndoAction, () => _undoRedo.CanUndo);
         RedoCommand = new RelayCommand(RedoAction, () => _undoRedo.CanRedo);
 
-        _undoRedo.StateChanged += () =>
-        {
-            OnPropertyChanged(nameof(CanUndo));
-            OnPropertyChanged(nameof(CanRedo));
-            ((RelayCommand)UndoCommand).NotifyCanExecuteChanged();
-            ((RelayCommand)RedoCommand).NotifyCanExecuteChanged();
-        };
+        _undoRedo.StateChanged += OnUndoRedoStateChanged;
 
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
+    }
+
+    private void OnUndoRedoStateChanged()
+    {
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(CanRedo));
+        ((RelayCommand)UndoCommand).NotifyCanExecuteChanged();
+        ((RelayCommand)RedoCommand).NotifyCanExecuteChanged();
     }
 
     private void UndoAction()
@@ -449,7 +451,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         else
             await ConnectAsync();
 
-        OnPropertyChanged(nameof(ConnectionButtonText));
     }
 
     private async Task ConnectAsync()
@@ -510,6 +511,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
+        DisposeRegisterMonitor();
+
         _registerMonitor = new RegisterMonitor(
             _slaveManager,
             _registerState,
@@ -556,9 +559,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task DisconnectAsync()
     {
-        _monitorCts?.Cancel();
-
-        _registerMonitor?.Stop();
+        DisposeRegisterMonitor();
 
         await _modbusService.DisconnectAsync();
 
@@ -568,7 +569,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         TestingLogger.Info("Отключено от стенда.");
         SlaveRegistry.Instance.NotifyConnected(false);
 
-        OnPropertyChanged(nameof(ConnectionButtonText));
     }
 
     private async Task RunGraphAsync()
@@ -930,6 +930,38 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             {
                 Location = new Point(560, 120)
             });
+        }
+    }
+
+    private void DisposeRegisterMonitor()
+    {
+        if (_registerMonitor == null)
+            return;
+
+        _registerMonitor.ConnectionLost -= OnConnectionLost;
+        _registerMonitor.Dispose();
+        _registerMonitor = null;
+    }
+
+    public void Dispose()
+    {
+        _undoRedo.StateChanged -= OnUndoRedoStateChanged;
+        DisposeRegisterMonitor();
+
+        foreach (var node in AvailableNodes)
+            node.Dispose();
+
+        DisposeGraphNodes(RootGraph);
+    }
+
+    private static void DisposeGraphNodes(GraphWorkspaceViewModel graph)
+    {
+        foreach (var node in graph.Nodes)
+        {
+            if (node is ICompositeNodeViewModel composite)
+                DisposeGraphNodes(composite.BodyGraph);
+
+            node.Dispose();
         }
     }
 }

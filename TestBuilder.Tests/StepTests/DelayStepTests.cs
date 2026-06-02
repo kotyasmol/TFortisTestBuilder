@@ -1,34 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Tests.Support;
 
-namespace TestBuilder.Tests.StepTests
+namespace TestBuilder.Tests.StepTests;
+
+public class DelayStepTests
 {
-    public class DelayStepTests
+    [Fact]
+    public async Task DelayStep_WaitsAtLeastSpecifiedTime()
     {
-        [Fact]
-        public async Task DelayStep_WaitsAtLeastSpecifiedTime()
-        {
-            // Arrange
-            var step = new DelayStep(100); // 100 ms
-            var context = new TestContext();
-            var cancellationToken = CancellationToken.None;
+        var step = new DelayStep(100, NullLogger.Instance);
+        var context = new TestContext(new RegisterState());
 
-            var sw = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
 
-            // Act
-            var result = await step.ExecuteAsync(context, cancellationToken);
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            sw.Stop();
+        sw.Stop();
 
-            // Assert
-            Assert.Equal(StepResult.Next, result);
-            Assert.True(sw.ElapsedMilliseconds >= 100, "Step did not wait long enough");
-        }
+        Assert.Equal(StepResult.Next, result);
+        Assert.True(sw.ElapsedMilliseconds >= 100, "Step did not wait long enough");
     }
 }

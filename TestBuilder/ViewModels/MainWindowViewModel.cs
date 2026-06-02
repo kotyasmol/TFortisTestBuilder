@@ -1,19 +1,21 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
+using System.ComponentModel;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.ViewModels
 {
-    public partial class MainWindowViewModel : ViewModelBase
+    public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
-        // Ñåðâèñ Modbus è ìåíåäæåð ñëåéâîâ — åäèíûå äëÿ âñåõ VM
+        // Ð¡ÐµÑ€Ð²Ð¸Ñ Modbus Ð¸ Ð¼ÐµÐ½ÐµÐ´Ð¶ÐµÑ€ ÑÐ»ÐµÐ¹Ð²Ð¾Ð² â€” ÐµÐ´Ð¸Ð½Ñ‹Ðµ Ð´Ð»Ñ Ð²ÑÐµÑ… VM
         public ModbusService ModbusService { get; }
         public SlaveManager SlaveManager { get; }
 
         [ObservableProperty]
         private bool _isSlavesFound = false;
 
-        // Âëîæåííûå VM äëÿ âêëàäîê
+        // Ð’Ð»Ð¾Ð¶ÐµÐ½Ð½Ñ‹Ðµ VM Ð´Ð»Ñ Ð²ÐºÐ»Ð°Ð´Ð¾Ðº
         public TestViewModel TestVM { get; }
         public ModbusMonitoringViewModel ModbusVM { get; }
         public SettingsViewModel SettingsVM { get; }
@@ -27,12 +29,20 @@ namespace TestBuilder.ViewModels
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
             SettingsVM = new SettingsViewModel();
 
-            TestVM.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
-                    IsSlavesFound = TestVM.IsMonitoringActive;
-            };
+            TestVM.PropertyChanged += OnTestVmPropertyChanged;
         }
 
+        private void OnTestVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
+                IsSlavesFound = TestVM.IsMonitoringActive;
+        }
+
+        public void Dispose()
+        {
+            TestVM.PropertyChanged -= OnTestVmPropertyChanged;
+            TestVM.Dispose();
+            ModbusVM.Dispose();
+        }
     }
 }

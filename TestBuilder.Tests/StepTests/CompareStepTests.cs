@@ -1,55 +1,46 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
-using Xunit;
+using TestBuilder.Tests.Support;
 
-namespace TestBuilder.Tests.StepTests
+namespace TestBuilder.Tests.StepTests;
+
+public class CompareStepTests
 {
-    public class CompareStepTests
+    [Fact]
+    public async Task CheckRegisterRangeStep_ReturnsTrue_WhenValueInRange()
     {
-        [Fact]
-        public async Task CompareStep_ReturnsTrue_WhenValueInRange()
-        {
-            // Arrange
-            var context = new TestContext();
-            context.RegisterState.Update("CR2032", 3200); // <- пишем в RegisterState
-            var step = new CompareStep("CR2032", 3000, 3300);
+        var registerState = new RegisterState();
+        var context = new TestContext(registerState);
+        registerState.Update(slaveId: 1, address: 100, value: 3200);
+        var step = new CheckRegisterRangeStep(1, 100, 3000, 3300, NullLogger.Instance);
 
-            // Act
-            var result = await step.ExecuteAsync(context, CancellationToken.None);
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            // Assert
-            Assert.Equal(StepResult.True, result);
-        }
+        Assert.Equal(StepResult.True, result);
+    }
 
-        [Fact]
-        public async Task CompareStep_ReturnsFalse_WhenValueOutOfRange()
-        {
-            // Arrange
-            var context = new TestContext();
-            context.RegisterState.Update("CR2032", 3400); // <- пишем в RegisterState
-            var step = new CompareStep("CR2032", 3000, 3300);
+    [Fact]
+    public async Task CheckRegisterRangeStep_ReturnsFalse_WhenValueOutOfRange()
+    {
+        var registerState = new RegisterState();
+        var context = new TestContext(registerState);
+        registerState.Update(slaveId: 1, address: 100, value: 3400);
+        var step = new CheckRegisterRangeStep(1, 100, 3000, 3300, NullLogger.Instance);
 
-            // Act
-            var result = await step.ExecuteAsync(context, CancellationToken.None);
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            // Assert
-            Assert.Equal(StepResult.False, result);
-        }
+        Assert.Equal(StepResult.False, result);
+    }
 
-        [Fact]
-        public async Task CompareStep_ReturnsFalse_WhenRegisterMissing()
-        {
-            // Arrange
-            var context = new TestContext();
-            var step = new CompareStep("CR2032", 3000, 3300);
+    [Fact]
+    public async Task CheckRegisterRangeStep_ReturnsFalse_WhenRegisterMissing()
+    {
+        var context = new TestContext(new RegisterState());
+        var step = new CheckRegisterRangeStep(1, 100, 3000, 3300, NullLogger.Instance);
 
-            // Act
-            var result = await step.ExecuteAsync(context, CancellationToken.None);
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            // Assert
-            Assert.Equal(StepResult.False, result);
-        }
+        Assert.Equal(StepResult.False, result);
     }
 }

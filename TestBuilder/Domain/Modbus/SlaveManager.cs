@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Avalonia.Threading;
@@ -12,6 +14,7 @@ namespace TestBuilder.Domain.Modbus
     public class SlaveManager
     {
         private readonly IModbusService _modbus;
+        private readonly object _slavesLock = new();
 
         public ObservableCollection<SlaveModelBase> Slaves { get; } = new();
 
@@ -22,9 +25,7 @@ namespace TestBuilder.Domain.Modbus
 
         public async Task<int> ScanAsync()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Slaves.Clear());
-
-            int found = 0;
+            var foundModels = new List<SlaveModelBase>();
 
             for (byte slaveId = 1; slaveId <= 35; slaveId += 2)
             {
@@ -49,8 +50,7 @@ namespace TestBuilder.Domain.Modbus
 
                     if (model != null)
                     {
-                        await Dispatcher.UIThread.InvokeAsync(() => Slaves.Add(model));
-                        found++;
+                        foundModels.Add(model);
                     }
                     else
                     {
@@ -65,7 +65,25 @@ namespace TestBuilder.Domain.Modbus
                 await Task.Delay(150);
             }
 
-            return found;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                lock (_slavesLock)
+                {
+                    Slaves.Clear();
+                    foreach (var model in foundModels)
+                        Slaves.Add(model);
+                }
+            });
+
+            return foundModels.Count;
+        }
+
+        public IReadOnlyList<SlaveModelBase> GetSlavesSnapshot()
+        {
+            lock (_slavesLock)
+            {
+                return Slaves.ToList();
+            }
         }
     }
 }

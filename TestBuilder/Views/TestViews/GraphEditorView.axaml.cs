@@ -10,8 +10,12 @@ using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.Views.TestViews;
 
-public partial class GraphEditorView : UserControl
+public partial class GraphEditorView : UserControl, IDisposable
 {
+    private readonly IDisposable _visibilitySubscription;
+    private readonly IDisposable _themeSubscription;
+    private bool _isDisposed;
+
     public GraphEditorView()
     {
         InitializeComponent();
@@ -26,24 +30,36 @@ public partial class GraphEditorView : UserControl
             Avalonia.Interactivity.RoutingStrategies.Tunnel,
             handledEventsToo: false);
 
-        this.GetObservable(IsVisibleProperty).Subscribe(new AnonymousObserver<bool>(isVisible =>
+        _visibilitySubscription = this.GetObservable(IsVisibleProperty).Subscribe(new AnonymousObserver<bool>(isVisible =>
         {
             if (isVisible)
                 Editor.PopAllStates();
         }));
 
-        Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
-            .Subscribe(new AnonymousObserver<ThemeVariant>(_ => UpdateEditorBackground()));
+        _themeSubscription = Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
+            .Subscribe(new AnonymousObserver<ThemeVariant?>(_ => UpdateEditorBackground()));
     }
 
     public void SelectAllNodes() => Editor.SelectAll();
 
     private void UpdateEditorBackground()
     {
-        var isDark = Application.Current?.RequestedThemeVariant == ThemeVariant.Dark;
-        var brushKey = isDark ? "SmallGridBrush" : "SmallGridBrushLight";
-        if (this.Resources.TryGetResource(brushKey, ActualThemeVariant, out var brush) && brush is IBrush b)
+        if (this.Resources.TryGetResource("SmallGridBrush", ActualThemeVariant, out var brush) && brush is IBrush b)
             Editor.Background = b;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+
+        _visibilitySubscription.Dispose();
+        _themeSubscription.Dispose();
+        Editor.RemoveHandler(DragDrop.DropEvent, OnDropNode);
+        RemoveHandler(KeyDownEvent, OnKeyDown);
+        Editor.RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

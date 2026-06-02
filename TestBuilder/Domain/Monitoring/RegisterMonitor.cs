@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Modbus;
@@ -16,8 +15,8 @@ namespace TestBuilder.Domain.Monitoring
         private readonly SlaveManager _slaveManager;
         private readonly RegisterState _registerState;
         private readonly ILogger _logger;
-        private CancellationTokenSource _cts;
-        private Task _monitorTask;
+        private CancellationTokenSource? _cts;
+        private Task? _monitorTask;
 
         private int _consecutiveErrors = 0;
         private const int MaxConsecutiveErrors = 5;
@@ -47,8 +46,9 @@ namespace TestBuilder.Domain.Monitoring
                 ? CancellationTokenSource.CreateLinkedTokenSource(externalToken)
                 : new CancellationTokenSource();
 
+            var token = _cts.Token;
             _logger.Info($"Запуск мониторинга регистров (PollInterval={PollInterval} мс)");
-            _monitorTask = Task.Run(() => MonitorLoop(_cts.Token));
+            _monitorTask = Task.Run(() => MonitorLoop(token), token);
         }
 
         /// <summary>
@@ -64,6 +64,7 @@ namespace TestBuilder.Domain.Monitoring
             // Отмена без блокирующего ожидания завершения задачи,
             // чтобы не блокировать UI‑поток.
             _cts.Cancel();
+            _cts.Dispose();
             _cts = null;
         }
 
@@ -77,7 +78,7 @@ namespace TestBuilder.Domain.Monitoring
                 try
                 {
                     // Делаем снимок списка слейвов, чтобы не зависеть от изменений коллекции.
-                    var slavesSnapshot = new System.Collections.Generic.List<TestBuilder.Domain.Modbus.Models.SlaveModelBase>(_slaveManager.Slaves);
+                    var slavesSnapshot = _slaveManager.GetSlavesSnapshot();
 
                     // Последовательный опрос — один COM-порт не может работать параллельно
                     foreach (var slave in slavesSnapshot)

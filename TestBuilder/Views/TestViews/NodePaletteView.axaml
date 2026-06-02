@@ -5,29 +5,27 @@
              x:Class="TestBuilder.Views.TestViews.NodePaletteView"
              x:DataType="vm:TestViewModel">
 
-  <Border CornerRadius="14"
+  <Border CornerRadius="10"
           BorderThickness="1"
           BorderBrush="{DynamicResource SidebarBorderBrush}"
           Background="{DynamicResource SidebarDarkBrush}"
           ClipToBounds="True"
-          BoxShadow="0 12 28 0 #33000000">
+          BoxShadow="0 10 22 0 #0F0F172A">
 
     <Grid RowDefinitions="Auto,*">
 
       <Border Grid.Row="0"
               Background="{DynamicResource SidebarDarkAltBrush}"
-              Padding="14,12"
-              BorderBrush="{DynamicResource SidebarBorderBrush}"
-              BorderThickness="0,0,0,1">
+              Padding="16,14,16,8">
 
-        <StackPanel Spacing="2">
+        <StackPanel Spacing="5">
           <TextBlock Text="Ноды"
-                     FontSize="14"
-                     FontWeight="SemiBold"
+                     FontSize="16"
+                     FontWeight="Bold"
                      Foreground="{DynamicResource SidebarTextBrush}" />
 
           <TextBlock Text="Перетащи элемент на граф"
-                     FontSize="11"
+                     FontSize="13"
                      Foreground="{DynamicResource SidebarTextMutedBrush}" />
         </StackPanel>
       </Border>
@@ -37,17 +35,18 @@
                     HorizontalScrollBarVisibility="Disabled">
 
         <ItemsControl ItemsSource="{Binding AvailableNodes}"
-                      Margin="10">
+                      Margin="12,6,12,12">
 
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="nodifyvm:NodeViewModel">
 
-              <Border Margin="0,5"
-                      Padding="10,8"
-                      CornerRadius="9"
-                      Background="#F8FAFC"
-                      BorderBrush="#3B82F6"
-                      BorderThickness="1.5"
+              <Border Margin="0,4"
+                      Padding="12,9"
+                      CornerRadius="7"
+                      Background="{DynamicResource SurfaceBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      BoxShadow="0 4 10 0 #080F172A"
                       PointerPressed="OnNodePressed"
                       PointerMoved="OnNodeDrag"
                       PointerExited="OnNodeExited">
@@ -58,15 +57,15 @@
                           Width="9"
                           Height="9"
                           CornerRadius="5"
-                          Background="#3B82F6"
+                          Background="{DynamicResource PrimaryBrush}"
                           VerticalAlignment="Center"
-                          Margin="0,0,8,0" />
+                          Margin="0,0,10,0" />
 
                   <TextBlock Grid.Column="1"
                              Text="{Binding Title}"
                              FontSize="13"
                              FontWeight="SemiBold"
-                             Foreground="#0F172A"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
                              TextWrapping="Wrap"
                              VerticalAlignment="Center" />
 

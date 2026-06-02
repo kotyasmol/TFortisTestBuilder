@@ -23,36 +23,36 @@
                 Command="{Binding ScanCommand}"
                 IsEnabled="{Binding !IsScanning}" />
 
-        <Border Background="#FEF2F2"
-                BorderBrush="#FECACA"
+        <Border Background="{DynamicResource DangerSoftBrush}"
+                BorderBrush="{DynamicResource DangerBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="10,7"
                 IsVisible="{Binding !IsConnected}">
           <TextBlock Text="Нет подключения. Подключитесь на вкладке Тест."
-                     Foreground="#991B1B"
+                     Foreground="{DynamicResource DangerTextBrush}"
                      VerticalAlignment="Center" />
         </Border>
 
-        <Border Background="#EFF6FF"
-                BorderBrush="#BFDBFE"
+        <Border Background="{DynamicResource PrimarySoftBrush}"
+                BorderBrush="{DynamicResource NodeModbusBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="10,7"
                 IsVisible="{Binding IsScanning}">
           <TextBlock Text="Сканирование..."
-                     Foreground="#1D4ED8"
+                     Foreground="{DynamicResource PrimaryTextBrush}"
                      VerticalAlignment="Center" />
         </Border>
 
-        <Border Background="#ECFDF5"
-                BorderBrush="#A7F3D0"
+        <Border Background="{DynamicResource SuccessSoftBrush}"
+                BorderBrush="{DynamicResource SuccessBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="10,7"
                 IsVisible="{Binding IsMonitoring}">
           <TextBlock Text="Мониторинг запущен"
-                     Foreground="#047857"
+                     Foreground="{DynamicResource SuccessTextBrush}"
                      VerticalAlignment="Center" />
         </Border>
       </StackPanel>

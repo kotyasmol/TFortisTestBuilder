@@ -9,7 +9,6 @@
         MinWidth="1180"
         MinHeight="720"
         Title="TestBuilder"
-        RequestedThemeVariant="Light"
         Background="{DynamicResource AppBackgroundBrush}">
 
   <Window.DataContext>
