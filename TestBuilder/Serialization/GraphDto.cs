@@ -23,6 +23,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("type")]
         public string Type { get; set; } = "";
 
+        [JsonPropertyName("NodeType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? NodeType { get; set; }
+
         [JsonPropertyName("x")]
         public double X { get; set; }
 
@@ -60,16 +64,16 @@ namespace TestBuilder.Serialization
         // --- Check Register Range ---
         [JsonPropertyName("min")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? Min { get; set; }
+        public double? Min { get; set; }
 
         [JsonPropertyName("max")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? Max { get; set; }
+        public double? Max { get; set; }
 
         // --- Check Register Equality / Wait Until ---
         [JsonPropertyName("expectedValue")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? ExpectedValue { get; set; }
+        public object? ExpectedValue { get; set; }
 
         // --- Wait Until ---
         [JsonPropertyName("durationMs")]
@@ -98,6 +102,223 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? RequireSuccessStatusCode { get; set; }
 
+        // --- Request Test Page ---
+        [JsonPropertyName("baseUrl")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? BaseUrl { get; set; }
+
+        [JsonPropertyName("path")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Path { get; set; }
+
+        [JsonPropertyName("retryCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? RetryCount { get; set; }
+
+        [JsonPropertyName("retryDelayMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? RetryDelayMs { get; set; }
+
+        [JsonPropertyName("failOnError")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? FailOnError { get; set; }
+
+        [JsonPropertyName("expectedContentContains")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ExpectedContentContains { get; set; }
+
+        [JsonPropertyName("saveStatusCodeTo")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SaveStatusCodeTo { get; set; }
+
+        [JsonPropertyName("saveErrorTo")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SaveErrorTo { get; set; }
+
+        [JsonPropertyName("saveElapsedMsTo")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SaveElapsedMsTo { get; set; }
+
+        // --- Parse Test Page ---
+        [JsonPropertyName("inputVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? InputVariableName { get; set; }
+
+        [JsonPropertyName("outputPrefix")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? OutputPrefix { get; set; }
+
+        [JsonPropertyName("failOnInvalidXml")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? FailOnInvalidXml { get; set; }
+
+        [JsonPropertyName("applyPsw2gAdc25Fix")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? ApplyPsw2gAdc25Fix { get; set; }
+
+        [JsonPropertyName("fieldNames")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? FieldNames { get; set; }
+
+        [JsonPropertyName("requiredFieldNames")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RequiredFieldNames { get; set; }
+
+        // --- Check Variable Equality / Range ---
+        [JsonPropertyName("variableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VariableName { get; set; }
+
+        [JsonPropertyName("comparisonType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ComparisonType { get; set; }
+
+        [JsonPropertyName("failMessage")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? FailMessage { get; set; }
+
+        [JsonPropertyName("inclusive")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? Inclusive { get; set; }
+
+        // --- Clear ARP Cache ---
+        [JsonPropertyName("runArpdBat")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? RunArpdBat { get; set; }
+
+        [JsonPropertyName("arpdBatPath")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ArpdBatPath { get; set; }
+
+        [JsonPropertyName("command")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Command { get; set; }
+
+        [JsonPropertyName("arguments")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Arguments { get; set; }
+
+        // --- Server / API ---
+        [JsonPropertyName("serverBaseUrl")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ServerBaseUrl { get; set; }
+
+        [JsonPropertyName("deviceType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public object? DeviceType { get; set; }
+
+        [JsonPropertyName("cpuIdVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? CpuIdVariableName { get; set; }
+
+        // --- UDP set MAC ---
+        [JsonPropertyName("targetIp")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TargetIp { get; set; }
+
+        [JsonPropertyName("targetPort")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TargetPort { get; set; }
+
+        [JsonPropertyName("macVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? MacVariableName { get; set; }
+
+        [JsonPropertyName("repeatCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? RepeatCount { get; set; }
+
+        [JsonPropertyName("delayBetweenRepeatsMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? DelayBetweenRepeatsMs { get; set; }
+
+        [JsonPropertyName("failOnSendError")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? FailOnSendError { get; set; }
+
+        // --- Data Test ---
+        [JsonPropertyName("mode")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Mode { get; set; }
+
+        [JsonPropertyName("expectedPackets")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ExpectedPackets { get; set; }
+
+        [JsonPropertyName("packetSizeBytes")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? PacketSizeBytes { get; set; }
+
+        [JsonPropertyName("udpPort")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? UdpPort { get; set; }
+
+        [JsonPropertyName("maxPortTestTimeMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? MaxPortTestTimeMs { get; set; }
+
+        [JsonPropertyName("portsText")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? PortsText { get; set; }
+
+        [JsonPropertyName("ports")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<DataTestPortDto>? Ports { get; set; }
+
+        // --- Print Label ---
+        [JsonPropertyName("printerName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? PrinterName { get; set; }
+
+        [JsonPropertyName("deviceName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? DeviceName { get; set; }
+
+        [JsonPropertyName("serialVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SerialVariableName { get; set; }
+
+        [JsonPropertyName("copies")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? Copies { get; set; }
+
+        [JsonPropertyName("includeMac")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? IncludeMac { get; set; }
+
+        [JsonPropertyName("equipmentFieldUse")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? EquipmentFieldUse { get; set; }
+
+        [JsonPropertyName("equipmentType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? EquipmentType { get; set; }
+
+        [JsonPropertyName("equipmentText")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? EquipmentText { get; set; }
+
+        [JsonPropertyName("failOnPrinterError")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? FailOnPrinterError { get; set; }
+
+        // --- Send Report ---
+        [JsonPropertyName("reportVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ReportVariableName { get; set; }
+
+        [JsonPropertyName("endpoint")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Endpoint { get; set; }
+
+        [JsonPropertyName("saveLocalCopy")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? SaveLocalCopy { get; set; }
+
+        [JsonPropertyName("localReportsDirectory")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? LocalReportsDirectory { get; set; }
+
         // --- For Slaves ---
         [JsonPropertyName("fromSlaveId")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -118,6 +339,18 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("body")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public GraphDto? Body { get; set; }
+    }
+
+    public class DataTestPortDto
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+
+        [JsonPropertyName("inIp")]
+        public string InIp { get; set; } = "";
+
+        [JsonPropertyName("outIp")]
+        public string OutIp { get; set; } = "";
     }
 
     public class ConnectionDto

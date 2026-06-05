@@ -98,6 +98,18 @@ namespace TestBuilder.Services
                 PollRegisterNodeViewModel pollRegister => pollRegister.CreateStep(_logger),
                 OperatorActionNodeViewModel operatorAction => operatorAction.CreateStep(_logger),
                 HttpRequestNodeViewModel http => http.CreateStep(_httpRequestService, _logger),
+                RequestTestPageNodeViewModel requestTestPage => requestTestPage.CreateStep(_httpRequestService, _logger),
+                ParseTestPageNodeViewModel parseTestPage => parseTestPage.CreateStep(_logger),
+                CheckVariableEqualityNodeViewModel variableEquality => variableEquality.CreateStep(_logger),
+                CheckVariableRangeNodeViewModel variableRange => variableRange.CreateStep(_logger),
+                ClearArpCacheNodeViewModel clearArp => clearArp.CreateStep(_logger),
+                GetSerialNumberFromServerNodeViewModel serial => serial.CreateStep(_httpRequestService, _logger),
+                SendUdpSetMacPacketNodeViewModel setMac => setMac.CreateStep(_logger),
+                RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
+                GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
+                GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
+                PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
+                SendTestReportNodeViewModel report => report.CreateStep(_logger),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
             };
@@ -198,6 +210,86 @@ namespace TestBuilder.Services
 
                     break;
 
+                case RequestTestPageNodeViewModel requestVm:
+                    if (sourceConnector == requestVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == requestVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case ParseTestPageNodeViewModel parseVm:
+                    if (sourceConnector == parseVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == parseVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case CheckVariableEqualityNodeViewModel variableEqualityVm:
+                    if (sourceConnector == variableEqualityVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == variableEqualityVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case CheckVariableRangeNodeViewModel variableRangeVm:
+                    if (sourceConnector == variableRangeVm.TrueOut)
+                    {
+                        source.OnTrue = target;
+                    }
+                    else if (sourceConnector == variableRangeVm.FalseOut)
+                    {
+                        source.OnFalse = target;
+                    }
+
+                    break;
+
+                case ClearArpCacheNodeViewModel clearArpVm:
+                    BindTrueFalse(sourceConnector, source, target, clearArpVm.TrueOut, clearArpVm.FalseOut);
+                    break;
+
+                case GetSerialNumberFromServerNodeViewModel serialVm:
+                    BindTrueFalse(sourceConnector, source, target, serialVm.TrueOut, serialVm.FalseOut);
+                    break;
+
+                case SendUdpSetMacPacketNodeViewModel setMacVm:
+                    BindTrueFalse(sourceConnector, source, target, setMacVm.TrueOut, setMacVm.FalseOut);
+                    break;
+
+                case RunDataTestNodeViewModel dataTestVm:
+                    BindTrueFalse(sourceConnector, source, target, dataTestVm.TrueOut, dataTestVm.FalseOut);
+                    break;
+
+                case GetUpsStatusNodeViewModel upsStatusVm:
+                    BindTrueFalse(sourceConnector, source, target, upsStatusVm.TrueOut, upsStatusVm.FalseOut);
+                    break;
+
+                case GetUpsVoltageNodeViewModel upsVoltageVm:
+                    BindTrueFalse(sourceConnector, source, target, upsVoltageVm.TrueOut, upsVoltageVm.FalseOut);
+                    break;
+
+                case PrintLabelNodeViewModel printLabelVm:
+                    BindTrueFalse(sourceConnector, source, target, printLabelVm.TrueOut, printLabelVm.FalseOut);
+                    break;
+
+                case SendTestReportNodeViewModel reportVm:
+                    BindTrueFalse(sourceConnector, source, target, reportVm.TrueOut, reportVm.FalseOut);
+                    break;
+
                 case ForEachSlaveNodeViewModel forVm:
                     if (sourceConnector == forVm.SuccessOut)
                     {
@@ -213,6 +305,23 @@ namespace TestBuilder.Services
                 default:
                     source.Next = target;
                     break;
+            }
+        }
+
+        private static void BindTrueFalse(
+            ConnectorViewModel sourceConnector,
+            TestNode source,
+            TestNode target,
+            ConnectorViewModel trueOut,
+            ConnectorViewModel falseOut)
+        {
+            if (sourceConnector == trueOut)
+            {
+                source.OnTrue = target;
+            }
+            else if (sourceConnector == falseOut)
+            {
+                source.OnFalse = target;
             }
         }
     }
