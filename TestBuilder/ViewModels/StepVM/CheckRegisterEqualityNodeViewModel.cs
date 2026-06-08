@@ -21,6 +21,9 @@ namespace TestBuilder.ViewModels.StepVM
         public ConnectorViewModel FalseOut { get; }
 
         public ObservableCollection<RegisterItem> AvailableRegisters { get; } = new();
+        public bool HasSelectedRegister => SelectedRegister != null;
+        public bool ShowRegisterSelector => IsConnected && HasSelectedRegister;
+        public bool ShowAddressTextBox => !IsConnected || !HasSelectedRegister;
 
         private SlaveModelBase? _selectedSlave;
         public SlaveModelBase? SelectedSlave
@@ -43,6 +46,7 @@ namespace TestBuilder.ViewModels.StepVM
             {
                 _selectedRegister = value;
                 OnPropertyChanged();
+                OnRegisterSelectionChanged();
                 if (value != null) Address = (ushort)value.Address;
             }
         }
@@ -66,6 +70,21 @@ namespace TestBuilder.ViewModels.StepVM
                 AvailableRegisters.Add(reg);
             _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address);
             OnPropertyChanged(nameof(SelectedRegister));
+            OnRegisterSelectionChanged();
+        }
+
+        partial void OnAddressChanged(ushort value)
+        {
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value);
+            OnPropertyChanged(nameof(SelectedRegister));
+            OnRegisterSelectionChanged();
+        }
+
+        private void OnRegisterSelectionChanged()
+        {
+            OnPropertyChanged(nameof(HasSelectedRegister));
+            OnPropertyChanged(nameof(ShowRegisterSelector));
+            OnPropertyChanged(nameof(ShowAddressTextBox));
         }
 
         protected override void OnSlavesLoaded()
