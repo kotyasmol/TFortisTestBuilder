@@ -14,7 +14,7 @@ public class RequestTestPageStepTests
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(
                 200,
-                "<!DOCTYPE settings><settings></settings>",
+                "<html><body><selftest><default_mac>AA:BB:CC:DD:EE:FF</default_mac></selftest></body></html>",
                 TimeSpan.FromMilliseconds(10)));
 
         var step = CreateStep(service);
@@ -23,9 +23,9 @@ public class RequestTestPageStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(StepResult.True, result);
-        Assert.Equal("<!DOCTYPE settings><settings></settings>", context.GetVariable<string>("TestPageRaw"));
+        Assert.Equal("<selftest><default_mac>AA:BB:CC:DD:EE:FF</default_mac></selftest>", context.GetVariable<string>("TestPageRaw"));
         Assert.True(context.GetVariable<bool>("TestPageRequestOk"));
-        Assert.Equal("http://192.168.0.1/test.shtml", context.GetVariable<string>("TestPageUrl"));
+        Assert.Equal("http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin", context.GetVariable<string>("TestPageUrl"));
         Assert.Equal(200, context.GetVariable<int>("TestPageStatusCode"));
         Assert.Equal("Success", context.GetVariable<string>("TestPageRequestStatus"));
         Assert.Equal(1, service.Calls);
@@ -36,7 +36,7 @@ public class RequestTestPageStepTests
     {
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(200, string.Empty, TimeSpan.FromMilliseconds(10)),
-            HttpRequestResult.Success(200, "<!DOCTYPE settings><settings></settings>", TimeSpan.FromMilliseconds(10)));
+            HttpRequestResult.Success(200, "<selftest><default_mac>AA:BB:CC:DD:EE:FF</default_mac></selftest>", TimeSpan.FromMilliseconds(10)));
 
         var step = CreateStep(service, retryCount: 1, retryDelayMs: 1);
         var context = new TestContext(new RegisterState());
@@ -62,7 +62,7 @@ public class RequestTestPageStepTests
         Assert.Equal(StepResult.False, result);
         Assert.False(context.GetVariable<bool>("TestPageRequestOk"));
         Assert.Equal("InvalidContent", context.GetVariable<string>("TestPageRequestStatus"));
-        Assert.Contains("ожидаемую строку", context.GetVariable<string>("TestPageError"));
+        Assert.Contains("<selftest>", context.GetVariable<string>("TestPageError"));
         Assert.True(context.HasCriticalError);
     }
 
@@ -104,7 +104,8 @@ public class RequestTestPageStepTests
             RequestTestPageStep.DefaultExpectedContentContains,
             RequestTestPageStep.DefaultStatusCodeVariableName,
             RequestTestPageStep.DefaultErrorVariableName,
-            RequestTestPageStep.DefaultElapsedMsVariableName);
+            RequestTestPageStep.DefaultElapsedMsVariableName,
+            useBrowser: false);
     }
 
     private sealed class QueueHttpRequestService : IHttpRequestService

@@ -1,17 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Threading;
 using System;
-using System.Collections.Specialized;
 using TestBuilder.ViewModels;
 
 namespace TestBuilder.Views;
 
 public partial class TestView : UserControl, IDisposable
 {
-    private TestViewModel? _currentVm;
-
     public TestView()
     {
         InitializeComponent();
@@ -33,7 +29,8 @@ public partial class TestView : UserControl, IDisposable
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel != null)
             topLevel.KeyDown -= OnWindowKeyDown;
-        _currentVm?.PendingConnection.Reset();
+        if (DataContext is TestViewModel vm)
+            vm.PendingConnection.Reset();
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
@@ -55,27 +52,9 @@ public partial class TestView : UserControl, IDisposable
         }
     }
 
-    protected override void OnDataContextChanged(EventArgs e)
-    {
-        base.OnDataContextChanged(e);
-        if (_currentVm != null)
-            _currentVm.TestingLogger.Entries.CollectionChanged -= Entries_CollectionChanged;
-        _currentVm = DataContext as TestViewModel;
-        if (_currentVm != null)
-            _currentVm.TestingLogger.Entries.CollectionChanged += Entries_CollectionChanged;
-    }
-
-    private void Entries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (e.Action == NotifyCollectionChangedAction.Add)
-            Dispatcher.UIThread.Post(() => { });
-    }
-
     public void Dispose()
     {
-        if (_currentVm != null)
-            _currentVm.TestingLogger.Entries.CollectionChanged -= Entries_CollectionChanged;
-
+        LogPanel.Dispose();
         GraphEditor.Dispose();
     }
 }
