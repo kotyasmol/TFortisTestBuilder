@@ -41,8 +41,16 @@ namespace TestBuilder.Domain.Execution
                             cancellationToken);
                     }
 
+                    if (result == StepResult.False)
+                        await NotifyNodeFailedAsync(current, context, cancellationToken);
+
                     if (result == StepResult.Stop)
                         return ExecutionStatus.Completed;
+                }
+                catch
+                {
+                    await NotifyNodeFailedAsync(current, context, cancellationToken);
+                    throw;
                 }
                 finally
                 {
@@ -89,6 +97,20 @@ namespace TestBuilder.Domain.Execution
             if (context.ExecutionObserver != null)
             {
                 await context.ExecutionObserver.NodeFinishedAsync(
+                    node,
+                    context,
+                    cancellationToken);
+            }
+        }
+
+        private static async Task NotifyNodeFailedAsync(
+            TestNode node,
+            TestContext context,
+            CancellationToken cancellationToken)
+        {
+            if (context.ExecutionObserver != null)
+            {
+                await context.ExecutionObserver.NodeFailedAsync(
                     node,
                     context,
                     cancellationToken);

@@ -18,10 +18,14 @@ namespace TestBuilder.ViewModels.NodifyVM
         private static readonly IBrush ExecutingBorderBrush =
             new SolidColorBrush(Color.FromRgb(255, 214, 10));
 
+        private static readonly IBrush ErrorBorderBrush =
+            new SolidColorBrush(Color.FromRgb(239, 68, 68));
+
         [ObservableProperty] private string title = string.Empty;
         [ObservableProperty] private Point location;
         [ObservableProperty] private bool isSelected;
         [ObservableProperty] private bool isExecuting;
+        [ObservableProperty] private bool hasExecutionError;
 
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
@@ -31,12 +35,20 @@ namespace TestBuilder.ViewModels.NodifyVM
         public bool IsConnected => SlaveRegistry.Instance.IsConnected;
 
         public IBrush ExecutionBorderBrush =>
-            IsExecuting ? ExecutingBorderBrush : DefaultBorderBrush;
+            HasExecutionError ? ErrorBorderBrush :
+            IsExecuting ? ExecutingBorderBrush :
+            DefaultBorderBrush;
 
         public Thickness ExecutionBorderThickness =>
-            IsExecuting ? new Thickness(5) : new Thickness(2);
+            HasExecutionError || IsExecuting ? new Thickness(5) : new Thickness(2);
 
         partial void OnIsExecutingChanged(bool value)
+        {
+            OnPropertyChanged(nameof(ExecutionBorderBrush));
+            OnPropertyChanged(nameof(ExecutionBorderThickness));
+        }
+
+        partial void OnHasExecutionErrorChanged(bool value)
         {
             OnPropertyChanged(nameof(ExecutionBorderBrush));
             OnPropertyChanged(nameof(ExecutionBorderThickness));

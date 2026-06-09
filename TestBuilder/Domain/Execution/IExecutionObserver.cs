@@ -18,5 +18,10 @@ namespace TestBuilder.Domain.Execution
             TestNode node,
             TestContext context,
             CancellationToken cancellationToken);
+
+        Task NodeFailedAsync(
+            TestNode node,
+            TestContext context,
+            CancellationToken cancellationToken);
     }
 }

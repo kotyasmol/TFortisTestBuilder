@@ -597,7 +597,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             ResetToRootGraph();
 
-            ClearExecutionHighlightsRecursive(RootGraph);
+            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
 
             var compiler = new GraphCompiler(_modbusService, TestingLogger);
             var graph = compiler.Compile(RootGraph);
@@ -638,7 +638,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
         finally
         {
-            ClearExecutionHighlightsRecursive(RootGraph);
+            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
             ResetConnectorsStateRecursive(RootGraph);
         }
     }
@@ -671,15 +671,32 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         });
     }
 
-    private static void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph)
+    public async Task NodeFailedAsync(
+        TestNode node,
+        TestContext context,
+        CancellationToken cancellationToken)
+    {
+        if (node.Source is not NodeViewModel nodeViewModel)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            nodeViewModel.HasExecutionError = true;
+        });
+    }
+
+    private static void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph, bool clearErrors)
     {
         foreach (var node in graph.Nodes)
         {
             node.IsExecuting = false;
 
+            if (clearErrors)
+                node.HasExecutionError = false;
+
             if (node is ICompositeNodeViewModel composite)
             {
-                ClearExecutionHighlightsRecursive(composite.BodyGraph);
+                ClearExecutionHighlightsRecursive(composite.BodyGraph, clearErrors);
             }
         }
     }
@@ -743,7 +760,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var name = GraphSerializer.Deserialize(json, this);
 
             ResetToRootGraph();
-            ClearExecutionHighlightsRecursive(RootGraph);
+            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
             ResetConnectorsStateRecursive(RootGraph);
             _undoRedo.Clear();
 
