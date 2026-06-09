@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -118,6 +119,11 @@ namespace TestBuilder.Domain.Steps
             foreach (var item in values)
             {
                 context.SetVariable(BuildContextName(item.Key), item.Value);
+
+                foreach (var alias in GetLegacyAliases(item.Key))
+                {
+                    context.SetVariable(BuildContextName(alias), item.Value);
+                }
             }
 
             context.SetVariable("SelfTest.ParsedFieldCount", values.Count);
@@ -420,6 +426,64 @@ namespace TestBuilder.Domain.Steps
                     group => group.Key,
                     group => group.Last().Value.Trim(),
                     StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static IEnumerable<string> GetLegacyAliases(string fieldName)
+        {
+            var link = Regex.Match(fieldName, @"^link_(\d+)$", RegexOptions.IgnoreCase);
+            if (link.Success && int.TryParse(link.Groups[1].Value, out var linkNumber))
+            {
+                yield return $"link[{Math.Max(0, linkNumber - 1)}]";
+            }
+
+            foreach (var alias in GetIndexedAliases(fieldName, @"^poe_([ab])_(\d+)_(state|st|v|c)$"))
+            {
+                yield return alias;
+            }
+
+            foreach (var alias in GetIndexedAliases(fieldName, @"^poe_([ab])_(state|st|v|c)_(\d+)$", swapped: true))
+            {
+                yield return alias;
+            }
+
+            var sfp = Regex.Match(fieldName, @"^sfp_(\d+)_(pres|sd|id)$", RegexOptions.IgnoreCase);
+            if (sfp.Success && int.TryParse(sfp.Groups[1].Value, out var sfpIndex))
+            {
+                yield return $"sfp_{sfp.Groups[2].Value.ToLowerInvariant()}[{sfpIndex}]";
+            }
+
+            var sfpSwapped = Regex.Match(fieldName, @"^sfp_(pres|sd|id)_(\d+)$", RegexOptions.IgnoreCase);
+            if (sfpSwapped.Success && int.TryParse(sfpSwapped.Groups[2].Value, out var swappedSfpIndex))
+            {
+                yield return $"sfp_{sfpSwapped.Groups[1].Value.ToLowerInvariant()}[{swappedSfpIndex}]";
+            }
+        }
+
+        private static IEnumerable<string> GetIndexedAliases(
+            string fieldName,
+            string pattern,
+            bool swapped = false)
+        {
+            var match = Regex.Match(fieldName, pattern, RegexOptions.IgnoreCase);
+            if (!match.Success)
+            {
+                yield break;
+            }
+
+            var side = match.Groups[1].Value.ToLowerInvariant();
+            var numberText = swapped ? match.Groups[3].Value : match.Groups[2].Value;
+            var kind = swapped ? match.Groups[2].Value : match.Groups[3].Value;
+
+            if (!int.TryParse(numberText, out var number))
+            {
+                yield break;
+            }
+
+            kind = kind.Equals("state", StringComparison.OrdinalIgnoreCase)
+                ? "st"
+                : kind.ToLowerInvariant();
+
+            yield return $"poe_{side}_{kind}[{Math.Max(0, number - 1)}]";
         }
 
         private static void SaveSelfTestFile(string content)
