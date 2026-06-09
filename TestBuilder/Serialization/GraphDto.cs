@@ -85,7 +85,7 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? SampleCount { get; set; }
 
-        // --- HTTP Request ---
+        // --- Selftest / HTTP-backed steps ---
         [JsonPropertyName("url")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Url { get; set; }
@@ -98,18 +98,13 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? OutputVariableName { get; set; }
 
-        [JsonPropertyName("requireSuccessStatusCode")]
+        [JsonPropertyName("validationRules")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? RequireSuccessStatusCode { get; set; }
+        public string? ValidationRules { get; set; }
 
-        // --- Request Test Page ---
         [JsonPropertyName("baseUrl")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? BaseUrl { get; set; }
-
-        [JsonPropertyName("path")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? Path { get; set; }
 
         [JsonPropertyName("retryCount")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -123,46 +118,9 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? FailOnError { get; set; }
 
-        [JsonPropertyName("expectedContentContains")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? ExpectedContentContains { get; set; }
-
-        [JsonPropertyName("saveStatusCodeTo")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? SaveStatusCodeTo { get; set; }
-
-        [JsonPropertyName("saveErrorTo")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? SaveErrorTo { get; set; }
-
-        [JsonPropertyName("saveElapsedMsTo")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? SaveElapsedMsTo { get; set; }
-
-        // --- Parse Test Page ---
-        [JsonPropertyName("inputVariableName")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? InputVariableName { get; set; }
-
         [JsonPropertyName("outputPrefix")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? OutputPrefix { get; set; }
-
-        [JsonPropertyName("failOnInvalidXml")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? FailOnInvalidXml { get; set; }
-
-        [JsonPropertyName("applyPsw2gAdc25Fix")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? ApplyPsw2gAdc25Fix { get; set; }
-
-        [JsonPropertyName("fieldNames")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? FieldNames { get; set; }
-
-        [JsonPropertyName("requiredFieldNames")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? RequiredFieldNames { get; set; }
 
         // --- Check Variable Equality / Range ---
         [JsonPropertyName("variableName")]

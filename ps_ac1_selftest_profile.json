@@ -1,0 +1,83 @@
+{
+  "name": "PS AC1 + Selftest",
+  "nodes": [
+    {
+      "id": "0",
+      "type": "Start",
+      "x": 80,
+      "y": 140
+    },
+    {
+      "id": "1",
+      "type": "Write Register",
+      "x": 300,
+      "y": 140,
+      "slaveId": 1,
+      "address": 1200,
+      "value": 1,
+      "useCurrentSlaveId": false
+    },
+    {
+      "id": "2",
+      "type": "Delay",
+      "x": 560,
+      "y": 140,
+      "milliseconds": 120000
+    },
+    {
+      "id": "3",
+      "type": "Selftest Check",
+      "x": 780,
+      "y": 140,
+      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "timeoutMs": 10000,
+      "outputPrefix": "Dut",
+      "validationRules": "init_ok=1..1\nlink_1=0..1\nlink_2=0..1\nlink_3=0..1\nlink_4=0..1\nlink_5=0..1\nlink_6=0..1\nlink_7=0..1\nlink_8=0..1\nlink_9=0..1\nlink_10=0..1\npoe_a_1_state=0..1\npoe_a_2_state=0..1\npoe_a_3_state=0..1\npoe_a_4_state=0..1\npoe_a_5_state=0..1\npoe_a_6_state=0..1",
+      "failOnError": true
+    },
+    {
+      "id": "4",
+      "type": "End",
+      "x": 1100,
+      "y": 140
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "\u0412\u044b\u0445\u043e\u0434",
+      "targetNodeId": "1",
+      "targetConnector": "\u0412\u0445\u043e\u0434"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "True",
+      "targetNodeId": "2",
+      "targetConnector": "\u0412\u0445\u043e\u0434"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "False",
+      "targetNodeId": "4",
+      "targetConnector": "\u0412\u0445\u043e\u0434"
+    },
+    {
+      "sourceNodeId": "2",
+      "sourceConnector": "\u0412\u044b\u0445\u043e\u0434",
+      "targetNodeId": "3",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "True",
+      "targetNodeId": "4",
+      "targetConnector": "\u0412\u0445\u043e\u0434"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "False",
+      "targetNodeId": "4",
+      "targetConnector": "\u0412\u0445\u043e\u0434"
+    }
+  ]
+}

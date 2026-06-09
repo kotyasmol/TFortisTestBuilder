@@ -97,9 +97,7 @@ namespace TestBuilder.Services
                 WaitUntilNodeViewModel waitUntil => waitUntil.CreateStep(_logger),
                 PollRegisterNodeViewModel pollRegister => pollRegister.CreateStep(_logger),
                 OperatorActionNodeViewModel operatorAction => operatorAction.CreateStep(_logger),
-                HttpRequestNodeViewModel http => http.CreateStep(_httpRequestService, _logger),
-                RequestTestPageNodeViewModel requestTestPage => requestTestPage.CreateStep(_httpRequestService, _logger),
-                ParseTestPageNodeViewModel parseTestPage => parseTestPage.CreateStep(_logger),
+                SelfTestCheckNodeViewModel selfTest => selfTest.CreateStep(_httpRequestService, _logger),
                 CheckVariableEqualityNodeViewModel variableEquality => variableEquality.CreateStep(_logger),
                 CheckVariableRangeNodeViewModel variableRange => variableRange.CreateStep(_logger),
                 ClearArpCacheNodeViewModel clearArp => clearArp.CreateStep(_logger),
@@ -198,40 +196,8 @@ namespace TestBuilder.Services
 
                     break;
 
-                case HttpRequestNodeViewModel httpVm:
-                    if (sourceConnector == httpVm.TrueOut)
-                    {
-                        source.OnTrue = target;
-                    }
-                    else if (sourceConnector == httpVm.FalseOut)
-                    {
-                        source.OnFalse = target;
-                    }
-
-                    break;
-
-                case RequestTestPageNodeViewModel requestVm:
-                    if (sourceConnector == requestVm.TrueOut)
-                    {
-                        source.OnTrue = target;
-                    }
-                    else if (sourceConnector == requestVm.FalseOut)
-                    {
-                        source.OnFalse = target;
-                    }
-
-                    break;
-
-                case ParseTestPageNodeViewModel parseVm:
-                    if (sourceConnector == parseVm.TrueOut)
-                    {
-                        source.OnTrue = target;
-                    }
-                    else if (sourceConnector == parseVm.FalseOut)
-                    {
-                        source.OnFalse = target;
-                    }
-
+                case SelfTestCheckNodeViewModel selfTestVm:
+                    BindTrueFalse(sourceConnector, source, target, selfTestVm.TrueOut, selfTestVm.FalseOut);
                     break;
 
                 case CheckVariableEqualityNodeViewModel variableEqualityVm:

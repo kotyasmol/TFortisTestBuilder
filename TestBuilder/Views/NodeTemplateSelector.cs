@@ -18,12 +18,6 @@ namespace TestBuilder.Views
 
         public IDataTemplate? ForEachSlaveTemplate { get; set; }
 
-        public IDataTemplate? HttpRequestTemplate { get; set; }
-
-        public IDataTemplate? RequestTestPageTemplate { get; set; }
-
-        public IDataTemplate? ParseTestPageTemplate { get; set; }
-
         public IDataTemplate? CheckVariableEqualityTemplate { get; set; }
 
         public IDataTemplate? CheckVariableRangeTemplate { get; set; }
@@ -52,6 +46,8 @@ namespace TestBuilder.Views
 
         public IDataTemplate? OperatorActionTemplate { get; set; }
 
+        public IDataTemplate? SelfTestCheckTemplate { get; set; }
+
         public Control? Build(object? param)
         {
             return param switch
@@ -64,9 +60,7 @@ namespace TestBuilder.Views
                 DelayNodeViewModel => DelayTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 LabelNodeViewModel => LabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ForEachSlaveNodeViewModel => ForEachSlaveTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                HttpRequestNodeViewModel => HttpRequestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                RequestTestPageNodeViewModel => RequestTestPageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                ParseTestPageNodeViewModel => ParseTestPageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                SelfTestCheckNodeViewModel => SelfTestCheckTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableEqualityNodeViewModel => CheckVariableEqualityTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableRangeNodeViewModel => CheckVariableRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ClearArpCacheNodeViewModel => ClearArpCacheTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

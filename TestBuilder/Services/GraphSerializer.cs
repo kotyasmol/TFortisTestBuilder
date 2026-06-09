@@ -38,9 +38,7 @@ namespace TestBuilder.Services
             WaitUntilNodeViewModel => "Wait Until",
             PollRegisterNodeViewModel => "Poll Register",
             OperatorActionNodeViewModel => "Operator Action",
-            HttpRequestNodeViewModel => "HTTP Request",
-            RequestTestPageNodeViewModel => "Request Test Page",
-            ParseTestPageNodeViewModel => "Parse Test Page",
+            SelfTestCheckNodeViewModel => "Selftest Check",
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
@@ -132,35 +130,12 @@ namespace TestBuilder.Services
                         n.Text = op.Message;
                         break;
 
-                    case HttpRequestNodeViewModel h:
-                        n.Url = h.Url;
-                        n.TimeoutMs = h.TimeoutMs;
-                        n.OutputVariableName = h.OutputVariableName;
-                        n.RequireSuccessStatusCode = h.RequireSuccessStatusCode;
-                        break;
-
-                    case RequestTestPageNodeViewModel r:
-                        n.BaseUrl = r.BaseUrl;
-                        n.Path = r.Path;
-                        n.TimeoutMs = r.TimeoutMs;
-                        n.RetryCount = r.RetryCount;
-                        n.RetryDelayMs = r.RetryDelayMs;
-                        n.OutputVariableName = r.OutputVariableName;
-                        n.FailOnError = r.FailOnError;
-                        n.RequireSuccessStatusCode = r.RequireSuccessStatusCode;
-                        n.ExpectedContentContains = r.ExpectedContentContains;
-                        n.SaveStatusCodeTo = r.SaveStatusCodeTo;
-                        n.SaveErrorTo = r.SaveErrorTo;
-                        n.SaveElapsedMsTo = r.SaveElapsedMsTo;
-                        break;
-
-                    case ParseTestPageNodeViewModel p:
-                        n.InputVariableName = p.InputVariableName;
-                        n.OutputPrefix = p.OutputPrefix;
-                        n.FailOnInvalidXml = p.FailOnInvalidXml;
-                        n.ApplyPsw2gAdc25Fix = p.ApplyPsw2gAdc25Fix;
-                        n.FieldNames = p.FieldNames;
-                        n.RequiredFieldNames = p.RequiredFieldNames;
+                    case SelfTestCheckNodeViewModel s:
+                        n.Url = s.Url;
+                        n.TimeoutMs = s.TimeoutMs;
+                        n.OutputPrefix = s.OutputPrefix;
+                        n.ValidationRules = s.ValidationRules;
+                        n.FailOnError = s.FailOnError;
                         break;
 
                     case CheckVariableEqualityNodeViewModel v:
@@ -350,41 +325,14 @@ namespace TestBuilder.Services
 
                     "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
-                    "HTTP Request" => new HttpRequestNodeViewModel
+                    "Selftest Check" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
                     {
                         Location = location,
-                        Url = n.Url ?? HttpRequestStep.DefaultUrl,
-                        TimeoutMs = n.TimeoutMs ?? HttpRequestStep.DefaultTimeoutMs,
-                        OutputVariableName = n.OutputVariableName ?? HttpRequestStep.DefaultOutputVariableName,
-                        RequireSuccessStatusCode = n.RequireSuccessStatusCode ?? true
-                    },
-
-                    "Request Test Page" or "REQUEST_TEST_PAGE" or "Запрос тестовой страницы" => new RequestTestPageNodeViewModel
-                    {
-                        Location = location,
-                        BaseUrl = n.BaseUrl ?? RequestTestPageStep.DefaultBaseUrl,
-                        Path = n.Path ?? RequestTestPageStep.DefaultPath,
-                        TimeoutMs = n.TimeoutMs ?? RequestTestPageStep.DefaultTimeoutMs,
-                        RetryCount = n.RetryCount ?? RequestTestPageStep.DefaultRetryCount,
-                        RetryDelayMs = n.RetryDelayMs ?? RequestTestPageStep.DefaultRetryDelayMs,
-                        OutputVariableName = n.OutputVariableName ?? RequestTestPageStep.DefaultOutputVariableName,
-                        FailOnError = n.FailOnError ?? true,
-                        RequireSuccessStatusCode = n.RequireSuccessStatusCode ?? true,
-                        ExpectedContentContains = n.ExpectedContentContains ?? RequestTestPageStep.DefaultExpectedContentContains,
-                        SaveStatusCodeTo = n.SaveStatusCodeTo ?? RequestTestPageStep.DefaultStatusCodeVariableName,
-                        SaveErrorTo = n.SaveErrorTo ?? RequestTestPageStep.DefaultErrorVariableName,
-                        SaveElapsedMsTo = n.SaveElapsedMsTo ?? RequestTestPageStep.DefaultElapsedMsVariableName
-                    },
-
-                    "Parse Test Page" or "PARSE_TEST_PAGE" or "Парсинг тестовой страницы" => new ParseTestPageNodeViewModel
-                    {
-                        Location = location,
-                        InputVariableName = n.InputVariableName ?? ParseTestPageStep.DefaultInputVariableName,
-                        OutputPrefix = n.OutputPrefix ?? ParseTestPageStep.DefaultOutputPrefix,
-                        FailOnInvalidXml = n.FailOnInvalidXml ?? true,
-                        ApplyPsw2gAdc25Fix = n.ApplyPsw2gAdc25Fix ?? true,
-                        FieldNames = n.FieldNames ?? ParseTestPageStep.DefaultFieldNames,
-                        RequiredFieldNames = n.RequiredFieldNames ?? ParseTestPageStep.DefaultRequiredFieldNames
+                        Url = n.Url ?? SelfTestCheckStep.DefaultUrl,
+                        TimeoutMs = n.TimeoutMs ?? SelfTestCheckStep.DefaultTimeoutMs,
+                        OutputPrefix = n.OutputPrefix ?? SelfTestCheckStep.DefaultOutputPrefix,
+                        ValidationRules = n.ValidationRules ?? SelfTestCheckStep.DefaultValidationRules,
+                        FailOnError = n.FailOnError ?? true
                     },
 
                     "Check Variable Equality" or "CHECK_VARIABLE_EQUALITY" or "Проверка переменной" => new CheckVariableEqualityNodeViewModel
