@@ -12,7 +12,7 @@ namespace TestBuilder.Domain.Steps
 {
     /// <summary>
     /// Доменный шаг PARSE_TEST_PAGE.
-    /// Извлекает XML-блок settings из сырой test.shtml и сохраняет настроенные поля в контекст.
+    /// Извлекает XML-блок settings из сырой тестовой страницы и сохраняет настроенные поля в контекст.
     /// </summary>
     public sealed class ParseTestPageStep : ITestStep
     {
@@ -127,12 +127,12 @@ namespace TestBuilder.Domain.Steps
             }
             catch (XmlException ex)
             {
-                return Task.FromResult(Fail(context, $"Некорректный XML test.shtml: {ex.Message}"));
+                return Task.FromResult(Fail(context, $"Некорректный XML тестовой страницы: {ex.Message}"));
             }
 
             if (!string.Equals(document.Root?.Name.LocalName, "settings", StringComparison.OrdinalIgnoreCase))
             {
-                return Task.FromResult(Fail(context, "XML test.shtml не содержит корневой тег <settings>."));
+                return Task.FromResult(Fail(context, "XML тестовой страницы не содержит корневой тег <settings>."));
             }
 
             var extracted = ExtractConfiguredFields(context, document);

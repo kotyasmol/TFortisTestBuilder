@@ -21,7 +21,7 @@ namespace TestBuilder.Domain.Steps
     }
 
     /// <summary>
-    /// Доменный шаг запроса test.shtml с DUT.
+    /// Доменный шаг запроса selftest с DUT.
     /// Получает сырую тестовую страницу и сохраняет ее в контекст для последующего парсинга.
     /// </summary>
     public sealed class RequestTestPageStep : ITestStep
@@ -37,9 +37,6 @@ namespace TestBuilder.Domain.Steps
         public const string DefaultErrorVariableName = "TestPageError";
         public const string DefaultElapsedMsVariableName = "TestPageElapsedMs";
         public const string DefaultOutputFileName = "selftest.txt";
-        private const string LegacyDefaultPath = "/test.shtml";
-        private const string LegacyDefaultExpectedContentContains = "<!DOCTYPE settings>";
-
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
         private readonly string _baseUrl;
@@ -522,10 +519,7 @@ namespace TestBuilder.Domain.Steps
                 return DefaultPath;
             }
 
-            var trimmed = path.Trim();
-            return string.Equals(trimmed, LegacyDefaultPath, StringComparison.OrdinalIgnoreCase)
-                ? DefaultPath
-                : trimmed;
+            return path.Trim();
         }
 
         private static string NormalizeExpectedContent(string? expectedContentContains)
@@ -535,10 +529,7 @@ namespace TestBuilder.Domain.Steps
                 return DefaultExpectedContentContains;
             }
 
-            var trimmed = expectedContentContains.Trim();
-            return string.Equals(trimmed, LegacyDefaultExpectedContentContains, StringComparison.OrdinalIgnoreCase)
-                ? DefaultExpectedContentContains
-                : trimmed;
+            return expectedContentContains.Trim();
         }
 
         private static string NormalizeVariableName(string value, string fallback)

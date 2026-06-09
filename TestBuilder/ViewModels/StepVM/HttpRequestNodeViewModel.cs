@@ -15,13 +15,13 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class HttpRequestNodeViewModel : NodeViewModel
     {
         [ObservableProperty]
-        private string url = "http://192.168.0.1/test.shtml";
+        private string url = HttpRequestStep.DefaultUrl;
 
         [ObservableProperty]
-        private int timeoutMs = 30000;
+        private int timeoutMs = HttpRequestStep.DefaultTimeoutMs;
 
         [ObservableProperty]
-        private string outputVariableName = HttpRequestStep.DefaultOutputVariableName;
+        private string outputVariableName = RequestTestPageStep.DefaultOutputVariableName;
 
         [ObservableProperty]
         private bool requireSuccessStatusCode = true;

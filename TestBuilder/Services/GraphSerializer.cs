@@ -353,9 +353,9 @@ namespace TestBuilder.Services
                     "HTTP Request" => new HttpRequestNodeViewModel
                     {
                         Location = location,
-                        Url = n.Url ?? "http://192.168.0.1/test.shtml",
-                        TimeoutMs = n.TimeoutMs ?? 30000,
-                        OutputVariableName = n.OutputVariableName ?? "testPageHtml",
+                        Url = n.Url ?? HttpRequestStep.DefaultUrl,
+                        TimeoutMs = n.TimeoutMs ?? HttpRequestStep.DefaultTimeoutMs,
+                        OutputVariableName = n.OutputVariableName ?? HttpRequestStep.DefaultOutputVariableName,
                         RequireSuccessStatusCode = n.RequireSuccessStatusCode ?? true
                     },
 

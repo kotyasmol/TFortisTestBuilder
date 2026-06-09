@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -8,12 +8,16 @@ using TestBuilder.Services.Logging;
 namespace TestBuilder.Domain.Steps
 {
     /// <summary>
-    /// Шаг HTTP_REQUEST.
-    /// Выполняет GET-запрос к тестируемому устройству и сохраняет тело ответа в переменную контекста.
+    /// Step HTTP_REQUEST.
+    /// Loads DUT selftest page through a headless browser, extracts XML and writes selftest.txt.
     /// </summary>
     public sealed class HttpRequestStep : ITestStep
     {
-        public const string DefaultOutputVariableName = "testPageHtml";
+        public const string DefaultUrl =
+            "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
+
+        public const int DefaultTimeoutMs = 10000;
+        public const string DefaultOutputVariableName = RequestTestPageStep.DefaultOutputVariableName;
 
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
@@ -32,8 +36,8 @@ namespace TestBuilder.Domain.Steps
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _url = url ?? string.Empty;
-            _timeoutMs = timeoutMs;
+            _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
+            _timeoutMs = timeoutMs <= 0 ? DefaultTimeoutMs : timeoutMs;
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName)
                 ? DefaultOutputVariableName
                 : outputVariableName.Trim();
@@ -49,43 +53,42 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var timeout = TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs));
+            var (baseUrl, path) = SplitUrl(_url);
 
-            _logger.Info($"[ШАГ] HTTP запрос → {_url}, таймаут {timeout.TotalMilliseconds:0} мс.");
+            var step = new RequestTestPageStep(
+                _httpRequestService,
+                _logger,
+                baseUrl,
+                path,
+                _timeoutMs,
+                retryCount: 0,
+                retryDelayMs: 0,
+                outputVariableName: _outputVariableName,
+                failOnError: true,
+                requireSuccessStatusCode: _requireSuccessStatusCode,
+                expectedContentContains: RequestTestPageStep.DefaultExpectedContentContains,
+                saveStatusCodeTo: RequestTestPageStep.DefaultStatusCodeVariableName,
+                saveErrorTo: RequestTestPageStep.DefaultErrorVariableName,
+                saveElapsedMsTo: RequestTestPageStep.DefaultElapsedMsVariableName,
+                useBrowser: true);
 
-            var result = await _httpRequestService.GetAsync(
-                _url,
-                timeout,
-                cancellationToken);
+            return await step.ExecuteAsync(context, cancellationToken);
+        }
 
-            context.SetVariable(_outputVariableName, result.Body);
-            context.SetVariable($"{_outputVariableName}.statusCode", result.StatusCode ?? 0);
-            context.SetVariable($"{_outputVariableName}.isSuccess", result.IsSuccessStatusCode);
-            context.SetVariable($"{_outputVariableName}.error", result.ErrorMessage);
-            context.SetVariable($"{_outputVariableName}.elapsedMs", (int)result.Elapsed.TotalMilliseconds);
-
-            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        private static (string BaseUrl, string Path) SplitUrl(string url)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                _logger.Warning($"[ОШИБКА] HTTP запрос не выполнен: {result.ErrorMessage}");
-                return StepResult.False;
+                var baseUrl = uri.GetLeftPart(UriPartial.Authority);
+                var path = string.IsNullOrWhiteSpace(uri.PathAndQuery)
+                    ? RequestTestPageStep.DefaultPath
+                    : uri.PathAndQuery;
+
+                return (baseUrl, path);
             }
 
-            if (_requireSuccessStatusCode && !result.IsSuccessStatusCode)
-            {
-                _logger.Warning(
-                    $"HTTP_REQUEST вернул HTTP {(result.StatusCode?.ToString() ?? "unknown")}. " +
-                    $"Ответ сохранен в переменную '{_outputVariableName}'.");
-
-                return StepResult.False;
-            }
-
-            _logger.Info(
-                $"HTTP_REQUEST OK: HTTP {result.StatusCode}, " +
-                $"{result.Body.Length} символов, " +
-                $"{result.Elapsed.TotalMilliseconds:0} мс. " +
-                $"Ответ сохранен в '{_outputVariableName}'.");
-
-            return StepResult.True;
+            return (RequestTestPageStep.DefaultBaseUrl, RequestTestPageStep.DefaultPath);
         }
     }
 }
