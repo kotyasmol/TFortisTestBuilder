@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Linq;
 using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -9,7 +10,7 @@ namespace TestBuilder.ViewModels.StepVM
     /// Составная нода цикла по диапазону Modbus slave-устройств.
     /// Снаружи выглядит как один блок, внутри содержит отдельный редактируемый граф действий.
     /// </summary>
-    public partial class ForEachSlaveNodeViewModel : NodeViewModel, ICompositeNodeViewModel
+    public partial class ForEachSlaveNodeViewModel : CompositeNodeViewModel
     {
         [ObservableProperty]
         private byte fromSlaveId = 1;
@@ -29,19 +30,15 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ConnectorViewModel ErrorOut { get; }
 
-        public GraphWorkspaceViewModel BodyGraph { get; } = new()
-        {
-            Title = "Тело цикла For Slaves",
-            IsBodyGraph = true
-        };
-
         public ForEachSlaveNodeViewModel()
         {
             Title = "Цикл For";
+            BodyGraph.Title = "Тело цикла For Slaves";
+            BodyGraph.UsesBodyBoundaryNodes = true;
 
             In = new ConnectorViewModel { Title = "In" };
-            SuccessOut = new ConnectorViewModel { Title = "Success" };
-            ErrorOut = new ConnectorViewModel { Title = "Error" };
+            SuccessOut = new ConnectorViewModel { Title = "True" };
+            ErrorOut = new ConnectorViewModel { Title = "False" };
 
             AddInput(In);
             AddOutput(SuccessOut);
@@ -50,20 +47,23 @@ namespace TestBuilder.ViewModels.StepVM
             EnsureDefaultBodyNodes();
         }
 
-        public void EnsureDefaultBodyNodes()
+        public override void EnsureDefaultBodyNodes()
         {
-            if (BodyGraph.Nodes.Count > 0)
-                return;
-
-            BodyGraph.Nodes.Add(new BodyStartNodeViewModel
+            if (!BodyGraph.Nodes.Any(n => n is BodyStartNodeViewModel))
             {
-                Location = new Point(100, 120)
-            });
+                BodyGraph.Nodes.Add(new BodyStartNodeViewModel
+                {
+                    Location = new Point(100, 120)
+                });
+            }
 
-            BodyGraph.Nodes.Add(new BodyEndNodeViewModel
+            if (!BodyGraph.Nodes.Any(n => n is BodyEndNodeViewModel))
             {
-                Location = new Point(560, 120)
-            });
+                BodyGraph.Nodes.Add(new BodyEndNodeViewModel
+                {
+                    Location = new Point(560, 120)
+                });
+            }
         }
 
         public override NodeViewModel Clone() => new ForEachSlaveNodeViewModel

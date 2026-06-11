@@ -18,6 +18,8 @@ namespace TestBuilder.Views
 
         public IDataTemplate? ForEachSlaveTemplate { get; set; }
 
+        public IDataTemplate? SubtestTemplate { get; set; }
+
         public IDataTemplate? CheckVariableEqualityTemplate { get; set; }
 
         public IDataTemplate? CheckVariableRangeTemplate { get; set; }
@@ -59,6 +61,7 @@ namespace TestBuilder.Views
                 PollRegisterNodeViewModel => PollRegisterTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 DelayNodeViewModel => DelayTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 LabelNodeViewModel => LabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                SubtestNodeViewModel => SubtestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ForEachSlaveNodeViewModel => ForEachSlaveTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SelfTestCheckNodeViewModel => SelfTestCheckTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableEqualityNodeViewModel => CheckVariableEqualityTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

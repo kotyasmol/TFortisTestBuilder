@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using TestBuilder.Services.Graph;
 using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels.Graphs
@@ -12,6 +13,10 @@ namespace TestBuilder.ViewModels.Graphs
         public string Title { get; set; } = "Граф";
 
         public bool IsBodyGraph { get; set; }
+
+        public bool UsesBodyBoundaryNodes { get; set; }
+
+        public UndoRedoManager UndoRedo { get; } = new();
 
         public ObservableCollection<NodeViewModel> Nodes { get; } = new();
 

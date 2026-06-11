@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Nodify;
 using System;
 using TestBuilder.ViewModels;
@@ -14,6 +15,8 @@ public partial class GraphEditorView : UserControl, IDisposable
 {
     private readonly IDisposable _visibilitySubscription;
     private readonly IDisposable _themeSubscription;
+    private readonly IDisposable _dataContextSubscription;
+    private TestViewModel? _viewModel;
     private bool _isDisposed;
 
     public GraphEditorView()
@@ -38,6 +41,9 @@ public partial class GraphEditorView : UserControl, IDisposable
 
         _themeSubscription = Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
             .Subscribe(new AnonymousObserver<ThemeVariant?>(_ => UpdateEditorBackground()));
+
+        _dataContextSubscription = this.GetObservable(DataContextProperty)
+            .Subscribe(new AnonymousObserver<object?>(OnDataContextChanged));
     }
 
     public void SelectAllNodes() => Editor.SelectAll();
@@ -57,6 +63,8 @@ public partial class GraphEditorView : UserControl, IDisposable
 
         _visibilitySubscription.Dispose();
         _themeSubscription.Dispose();
+        _dataContextSubscription.Dispose();
+        DetachViewModel();
         Editor.RemoveHandler(DragDrop.DropEvent, OnDropNode);
         RemoveHandler(KeyDownEvent, OnKeyDown);
         Editor.RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
@@ -106,6 +114,33 @@ public partial class GraphEditorView : UserControl, IDisposable
             vm.AddNodeAtLocation(nodeType, location);
             e.Handled = true;
         }
+    }
+
+    private void OnDataContextChanged(object? dataContext)
+    {
+        DetachViewModel();
+
+        _viewModel = dataContext as TestViewModel;
+
+        if (_viewModel != null)
+            _viewModel.CurrentGraphOpened += FitCurrentGraph;
+    }
+
+    private void DetachViewModel()
+    {
+        if (_viewModel != null)
+            _viewModel.CurrentGraphOpened -= FitCurrentGraph;
+
+        _viewModel = null;
+    }
+
+    private void FitCurrentGraph()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            Editor.PopAllStates();
+            Editor.FitToScreen();
+        });
     }
 
     public void OnConnectionPressed(object? sender, PointerPressedEventArgs e)

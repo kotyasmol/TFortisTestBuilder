@@ -29,13 +29,27 @@ namespace TestBuilder.ViewModels;
 
 public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObserver, IDisposable
 {
+    private sealed record ClipboardNode(NodeViewModel Node, Point Location);
+
+    private sealed record ClipboardConnection(
+        int SourceNodeIndex,
+        int SourceConnectorIndex,
+        int TargetNodeIndex,
+        int TargetConnectorIndex);
+
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
     private readonly RegisterState _registerState = new();
     private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
+    private readonly List<string> _graphPath = new();
 
     private RegisterMonitor? _registerMonitor;
-    private readonly UndoRedoManager _undoRedo = new();
+    private UndoRedoManager? _currentUndoRedo;
+    private CancellationTokenSource? _testRunCts;
+    private TaskCompletionSource<bool> _pauseCompletion =
+        CreateCompletedPauseCompletion();
+
+    public event Action? CurrentGraphOpened;
 
     public ILogger TestingLogger { get; }
 
@@ -61,25 +75,32 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     [ObservableProperty]
     private bool isPaletteCollapsed;
 
+    [ObservableProperty]
+    private bool isTestRunning;
+
+    [ObservableProperty]
+    private bool isTestPaused;
+
     public string PaletteToggleIcon => IsPaletteCollapsed ? "‹" : "›";
     public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
+    public string CurrentGraphPath => string.Join(" / ", _graphPath);
 
     public ICommand TogglePaletteCommand { get; }
 
     public ICommand UndoCommand { get; }
     public ICommand RedoCommand { get; }
 
-    public bool CanUndo => _undoRedo.CanUndo;
-    public bool CanRedo => _undoRedo.CanRedo;
+    public bool CanUndo => CurrentGraph.UndoRedo.CanUndo;
+    public bool CanRedo => CurrentGraph.UndoRedo.CanRedo;
 
-    private List<NodeViewModel>? _clipboardNodes;
-    private List<ConnectionViewModel>? _clipboardConnections;
+    private List<ClipboardNode>? _clipboardNodes;
+    private List<ClipboardConnection>? _clipboardConnections;
 
     public bool CanPaste => _clipboardNodes?.Count > 0;
 
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
-        Title = "Основной граф",
+        Title = "Полный тест",
         IsBodyGraph = false
     };
 
@@ -88,6 +109,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public IAsyncRelayCommand ToggleConnectionCommand { get; }
 
     public IAsyncRelayCommand RunGraphCommand { get; }
+
+    public ICommand PauseTestCommand { get; }
+
+    public ICommand ResumeTestCommand { get; }
+
+    public ICommand StopTestCommand { get; }
 
     public ObservableCollection<NodeViewModel> Nodes => CurrentGraph.Nodes;
 
@@ -132,12 +159,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new PrintLabelNodeViewModel(),
         new SendTestReportNodeViewModel(),
         new LabelNodeViewModel(),
+        new SubtestNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
         new CheckRegisterEqualityNodeViewModel(),
         new WaitUntilNodeViewModel(),
         new PollRegisterNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
+
+    public ObservableCollection<NodePaletteCategoryViewModel> AvailableNodeCategories { get; } = new();
 
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
 
@@ -199,12 +229,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _modbusService = modbusService ?? throw new ArgumentNullException(nameof(modbusService));
         _slaveManager = slaveManager ?? throw new ArgumentNullException(nameof(slaveManager));
 
+        _graphPath.Add(RootGraph.Title);
         CurrentGraph = RootGraph;
 
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
+        PauseTestCommand = new RelayCommand(PauseTest);
+        ResumeTestCommand = new RelayCommand(ResumeTest);
+        StopTestCommand = new RelayCommand(StopTest);
 
         PendingConnection = new PendingConnectionViewModel(this);
 
@@ -217,49 +251,113 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync);
         TogglePaletteCommand = new RelayCommand(() => IsPaletteCollapsed = !IsPaletteCollapsed);
-        UndoCommand = new RelayCommand(UndoAction, () => _undoRedo.CanUndo);
-        RedoCommand = new RelayCommand(RedoAction, () => _undoRedo.CanRedo);
+        UndoCommand = new RelayCommand(UndoAction, () => CurrentGraph.UndoRedo.CanUndo);
+        RedoCommand = new RelayCommand(RedoAction, () => CurrentGraph.UndoRedo.CanRedo);
 
-        _undoRedo.StateChanged += OnUndoRedoStateChanged;
+        AttachUndoRedo(CurrentGraph.UndoRedo);
 
+        BuildNodePaletteCategories();
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
+    }
+
+    private void BuildNodePaletteCategories()
+    {
+        NodeViewModel Find(string title) => AvailableNodes.First(n => n.Title == title);
+
+        AvailableNodeCategories.Clear();
+
+        AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
+            "Структура",
+            Find("Старт"),
+            Find("Конец"),
+            Find("Подтест"),
+            Find("Цикл For"),
+            Find("Метка"),
+            Find("Задержка")));
+
+        AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
+            "Modbus",
+            Find("Запись регистра"),
+            Find("Проверка диапазона"),
+            Find("Проверка равенства"),
+            Find("Ожидание значения"),
+            Find("Опрос регистра")));
+
+        AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
+            "Проверки",
+            Find("Selftest Check"),
+            Find("Check Variable Equality"),
+            Find("Check Variable Range")));
+
+        AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
+            "HTTP и сеть",
+            Find("Clear ARP Cache"),
+            Find("Get Serial Number"),
+            Find("Send UDP Set MAC"),
+            Find("Run Data Test"),
+            Find("Get UPS Status"),
+            Find("Get UPS Voltage")));
+
+        AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
+            "Оператор и отчеты",
+            Find("Действие оператора"),
+            Find("Print Label"),
+            Find("Send Test Report")));
     }
 
     private void OnUndoRedoStateChanged()
     {
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
-        ((RelayCommand)UndoCommand).NotifyCanExecuteChanged();
-        ((RelayCommand)RedoCommand).NotifyCanExecuteChanged();
+
+        if (UndoCommand is RelayCommand undoCommand)
+            undoCommand.NotifyCanExecuteChanged();
+
+        if (RedoCommand is RelayCommand redoCommand)
+            redoCommand.NotifyCanExecuteChanged();
     }
 
     private void UndoAction()
     {
-        _undoRedo.Undo();
+        CurrentGraph.UndoRedo.Undo();
         ResetConnectorsState();
     }
 
     private void RedoAction()
     {
-        _undoRedo.Redo();
+        CurrentGraph.UndoRedo.Redo();
         ResetConnectorsState();
     }
 
     public void CopyNodes()
     {
         var selected = SelectedNodes
-            .Where(n => n is not BodyStartNodeViewModel && n is not BodyEndNodeViewModel)
+            .Where(n => !IsProtectedBoundaryNode(n))
             .ToList();
 
         if (selected.Count == 0) return;
 
-        var selectedSet = new HashSet<NodeViewModel>(selected);
+        var selectedIndexes = selected
+            .Select((node, index) => new { node, index })
+            .ToDictionary(x => x.node, x => x.index);
 
-        _clipboardNodes = selected;
+        _clipboardNodes = selected
+            .Select(node => new ClipboardNode(CloneNodeDeep(node), node.Location))
+            .ToList();
+
         _clipboardConnections = Connections
-            .Where(c => selectedSet.Contains(c.Source.Parent!) && selectedSet.Contains(c.Target.Parent!))
+            .Where(c => c.Source.Parent != null
+                        && c.Target.Parent != null
+                        && selectedIndexes.ContainsKey(c.Source.Parent)
+                        && selectedIndexes.ContainsKey(c.Target.Parent))
+            .Select(c => new ClipboardConnection(
+                selectedIndexes[c.Source.Parent!],
+                GetConnectorIndex(c.Source),
+                selectedIndexes[c.Target.Parent!],
+                GetConnectorIndex(c.Target)))
+            .Where(c => c.SourceConnectorIndex >= 0 && c.TargetConnectorIndex >= 0)
             .ToList();
 
         OnPropertyChanged(nameof(CanPaste));
@@ -271,35 +369,35 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         const double offset = 30;
 
-        // Map original node → clone
-        var nodeMap = new Dictionary<NodeViewModel, NodeViewModel>();
-        foreach (var original in _clipboardNodes)
+        var pastedNodes = new List<NodeViewModel>();
+
+        foreach (var entry in _clipboardNodes)
         {
-            var clone = original.Clone();
-            clone.Location = new Avalonia.Point(original.Location.X + offset, original.Location.Y + offset);
-            nodeMap[original] = clone;
+            var clone = CloneNodeDeep(entry.Node);
+            clone.Location = new Point(entry.Location.X + offset, entry.Location.Y + offset);
+            pastedNodes.Add(clone);
         }
 
-        // Rebuild connections between cloned nodes
         var newConnections = new List<ConnectionViewModel>();
         if (_clipboardConnections != null)
         {
             foreach (var conn in _clipboardConnections)
             {
-                if (!nodeMap.TryGetValue(conn.Source.Parent!, out var srcNode)) continue;
-                if (!nodeMap.TryGetValue(conn.Target.Parent!, out var tgtNode)) continue;
+                var srcNode = pastedNodes.ElementAtOrDefault(conn.SourceNodeIndex);
+                var tgtNode = pastedNodes.ElementAtOrDefault(conn.TargetNodeIndex);
 
-                var srcConnector = srcNode.Output.ElementAtOrDefault(conn.Source.Parent!.Output.IndexOf(conn.Source));
-                var tgtConnector = tgtNode.Input.ElementAtOrDefault(conn.Target.Parent!.Input.IndexOf(conn.Target));
+                if (srcNode == null || tgtNode == null)
+                    continue;
+
+                var srcConnector = srcNode.Output.ElementAtOrDefault(conn.SourceConnectorIndex);
+                var tgtConnector = tgtNode.Input.ElementAtOrDefault(conn.TargetConnectorIndex);
 
                 if (srcConnector != null && tgtConnector != null)
                     newConnections.Add(new ConnectionViewModel(srcConnector, tgtConnector));
             }
         }
 
-        var pastedNodes = nodeMap.Values.ToList();
-
-        _undoRedo.Execute(new PasteNodesCommand(Nodes, Connections, pastedNodes, newConnections));
+        CurrentGraph.UndoRedo.Execute(new PasteNodesCommand(Nodes, Connections, pastedNodes, newConnections));
 
         // Select only pasted nodes
         SelectedNodes.Clear();
@@ -310,6 +408,67 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         ResetConnectorsState();
+    }
+
+    private static int GetConnectorIndex(ConnectorViewModel connector)
+    {
+        if (connector.Parent == null)
+            return -1;
+
+        var outputIndex = connector.Parent.Output.IndexOf(connector);
+        if (outputIndex >= 0)
+            return outputIndex;
+
+        return connector.Parent.Input.IndexOf(connector);
+    }
+
+    private static NodeViewModel CloneNodeDeep(NodeViewModel source)
+    {
+        var clone = source.Clone();
+
+        if (source is ICompositeNodeViewModel sourceComposite
+            && clone is ICompositeNodeViewModel cloneComposite)
+        {
+            CopyGraph(sourceComposite.BodyGraph, cloneComposite.BodyGraph);
+        }
+
+        return clone;
+    }
+
+    private static void CopyGraph(GraphWorkspaceViewModel source, GraphWorkspaceViewModel target)
+    {
+        target.Clear();
+        target.Title = source.Title;
+        target.IsBodyGraph = source.IsBodyGraph;
+        target.UsesBodyBoundaryNodes = source.UsesBodyBoundaryNodes;
+
+        var nodeMap = new Dictionary<NodeViewModel, NodeViewModel>();
+
+        foreach (var sourceNode in source.Nodes)
+        {
+            var clone = CloneNodeDeep(sourceNode);
+            clone.Location = sourceNode.Location;
+            nodeMap[sourceNode] = clone;
+            target.Nodes.Add(clone);
+        }
+
+        foreach (var connection in source.Connections)
+        {
+            if (connection.Source.Parent == null || connection.Target.Parent == null)
+                continue;
+
+            if (!nodeMap.TryGetValue(connection.Source.Parent, out var sourceNode))
+                continue;
+
+            if (!nodeMap.TryGetValue(connection.Target.Parent, out var targetNode))
+                continue;
+
+            var sourceConnector = sourceNode.Output.ElementAtOrDefault(GetConnectorIndex(connection.Source));
+            var targetConnector = targetNode.Input.ElementAtOrDefault(GetConnectorIndex(connection.Target));
+
+            if (sourceConnector != null && targetConnector != null)
+                target.Connections.Add(new ConnectionViewModel(sourceConnector, targetConnector));
+        }
     }
 
     partial void OnIsPaletteCollapsedChanged(bool value)
@@ -325,10 +484,28 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         OnPropertyChanged(nameof(Nodes));
         OnPropertyChanged(nameof(Connections));
         OnPropertyChanged(nameof(SelectedNodes));
+        OnPropertyChanged(nameof(CurrentGraphPath));
 
         CanGoBackGraph = _graphStack.Count > 0;
 
+        AttachUndoRedo(value.UndoRedo);
         PendingConnection?.Reset();
+    }
+
+    private void AttachUndoRedo(UndoRedoManager undoRedo)
+    {
+        if (ReferenceEquals(_currentUndoRedo, undoRedo))
+        {
+            OnUndoRedoStateChanged();
+            return;
+        }
+
+        if (_currentUndoRedo != null)
+            _currentUndoRedo.StateChanged -= OnUndoRedoStateChanged;
+
+        _currentUndoRedo = undoRedo;
+        _currentUndoRedo.StateChanged += OnUndoRedoStateChanged;
+        OnUndoRedoStateChanged();
     }
     public void SelectConnection(ConnectionViewModel? connection)
     {
@@ -348,7 +525,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (ReferenceEquals(SelectedConnection, connection))
             SelectedConnection = null;
 
-        _undoRedo.Execute(new DeleteConnectionCommand(Connections, connection));
+        CurrentGraph.UndoRedo.Execute(new DeleteConnectionCommand(Connections, connection));
 
         ResetConnectorsState();
         StatusMessage = "Соединение удалено.";
@@ -368,9 +545,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public void ResetToRootGraph()
     {
         _graphStack.Clear();
+        _graphPath.Clear();
+        _graphPath.Add(RootGraph.Title);
         CurrentGraph = RootGraph;
         CanGoBackGraph = false;
         PendingConnection.Reset();
+        OnPropertyChanged(nameof(CurrentGraphPath));
     }
 
     [RelayCommand]
@@ -379,11 +559,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (node is not ICompositeNodeViewModel composite)
             return;
 
+        if (node is CompositeNodeViewModel compositeNode)
+            compositeNode.EnsureDefaultBodyNodes();
+
         _graphStack.Push(CurrentGraph);
         CurrentGraph = composite.BodyGraph;
+        _graphPath.Add(node.Title);
         CanGoBackGraph = true;
 
         StatusMessage = $"Открыто тело ноды: {node.Title}.";
+        OnPropertyChanged(nameof(CurrentGraphPath));
+        CurrentGraphOpened?.Invoke();
     }
 
     private void GoBackGraph()
@@ -392,9 +578,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
 
         CurrentGraph = _graphStack.Pop();
+        if (_graphPath.Count > 1)
+            _graphPath.RemoveAt(_graphPath.Count - 1);
+
         CanGoBackGraph = _graphStack.Count > 0;
 
         StatusMessage = $"Открыт граф: {CurrentGraph.Title}.";
+        OnPropertyChanged(nameof(CurrentGraphPath));
+        CurrentGraphOpened?.Invoke();
     }
 
     public void ClearGraph()
@@ -417,7 +608,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         SelectedConnection = null;
 
         var selected = SelectedNodes
-            .Where(node => node is not BodyStartNodeViewModel && node is not BodyEndNodeViewModel)
+            .Where(node => !IsProtectedBoundaryNode(node))
             .ToList();
 
         if (selected.Count == 0) return;
@@ -428,18 +619,28 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .Distinct()
             .ToList();
 
-        _undoRedo.Execute(new DeleteNodesCommand(Nodes, Connections, selected, removedConnections));
+        CurrentGraph.UndoRedo.Execute(new DeleteNodesCommand(Nodes, Connections, selected, removedConnections));
 
         SelectedNodes.Clear();
         ResetConnectorsState();
         EnsureBodyBoundaryNodesIfNeeded();
     }
 
+    private bool IsProtectedBoundaryNode(NodeViewModel node)
+    {
+        if (node is BodyStartNodeViewModel or BodyEndNodeViewModel)
+            return true;
+
+        return CurrentGraph.IsBodyGraph
+               && !CurrentGraph.UsesBodyBoundaryNodes
+               && node is StartNodeViewModel or EndNodeViewModel;
+    }
+
     public void Connect(ConnectorViewModel source, ConnectorViewModel target)
     {
         SelectedConnection = null;
 
-        _undoRedo.Execute(new AddConnectionCommand(Connections, new ConnectionViewModel(source, target)));
+        CurrentGraph.UndoRedo.Execute(new AddConnectionCommand(Connections, new ConnectionViewModel(source, target)));
     }
 
     private void DisconnectConnector(ConnectorViewModel? connector)
@@ -583,6 +784,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task RunGraphAsync()
     {
+        if (IsTestRunning)
+        {
+            StatusMessage = "Тест уже выполняется.";
+            return;
+        }
+
         if (!IsConnected)
         {
             StatusMessage = "Перед запуском графа необходимо подключиться к стенду.";
@@ -592,6 +799,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var profileName = SelectedProfile?.Name ?? "без профиля";
 
         TestingLogger.Info($"Запуск теста: {profileName}");
+
+        _testRunCts?.Dispose();
+        _testRunCts = new CancellationTokenSource();
+        _pauseCompletion = CreateCompletedPauseCompletion();
+        IsTestRunning = true;
+        IsTestPaused = false;
 
         try
         {
@@ -609,10 +822,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             var context = new TestContext(_registerState)
             {
-                CancellationToken = CancellationToken.None,
+                CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
                 ProfileName = profileName,
                 ExecutionObserver = this,
+                WaitIfPausedAsync = WaitIfPausedAsync,
                 OperatorPrompt = async message =>
                 {
                     return await Dispatcher.UIThread.InvokeAsync(async () =>
@@ -627,10 +841,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var result = await new TestExecutor().ExecuteAsync(
                 graph.StartNode,
                 context,
-                CancellationToken.None);
+                _testRunCts.Token);
 
             if (result != ExecutionStatus.Completed)
                 TestingLogger.Warning($"[ОШИБКА] Тест завершён с ошибкой. Результат: {result}.");
+        }
+        catch (OperationCanceledException)
+        {
+            TestingLogger.Warning("[ОСТАНОВ] Выполнение теста остановлено пользователем.");
+            StatusMessage = "Выполнение теста остановлено.";
         }
         catch (Exception ex)
         {
@@ -638,9 +857,62 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
         finally
         {
+            IsTestRunning = false;
+            IsTestPaused = false;
+            _pauseCompletion.TrySetResult(true);
+            _testRunCts?.Dispose();
+            _testRunCts = null;
             ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
             ResetConnectorsStateRecursive(RootGraph);
         }
+    }
+
+    private static TaskCompletionSource<bool> CreateCompletedPauseCompletion()
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        completion.SetResult(true);
+        return completion;
+    }
+
+    private Task WaitIfPausedAsync(CancellationToken cancellationToken)
+    {
+        return _pauseCompletion.Task.WaitAsync(cancellationToken);
+    }
+
+    private void PauseTest()
+    {
+        if (!IsTestRunning || IsTestPaused)
+            return;
+
+        _pauseCompletion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        IsTestPaused = true;
+        StatusMessage = "Выполнение теста на паузе.";
+        TestingLogger.Info("[ПАУЗА] Выполнение теста поставлено на паузу.");
+    }
+
+    private void ResumeTest()
+    {
+        if (!IsTestRunning || !IsTestPaused)
+            return;
+
+        IsTestPaused = false;
+        _pauseCompletion.TrySetResult(true);
+        StatusMessage = "Выполнение теста продолжено.";
+        TestingLogger.Info("[ПАУЗА] Выполнение теста продолжено.");
+    }
+
+    private void StopTest()
+    {
+        if (!IsTestRunning)
+            return;
+
+        _testRunCts?.Cancel();
+        _pauseCompletion.TrySetResult(true);
+        IsTestPaused = false;
+        StatusMessage = "Остановка теста...";
+        TestingLogger.Warning("[ОСТАНОВ] Запрошена остановка выполнения теста.");
     }
 
     public async Task NodeStartedAsync(
@@ -762,7 +1034,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             ResetToRootGraph();
             ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
             ResetConnectorsStateRecursive(RootGraph);
-            _undoRedo.Clear();
+            ClearUndoRedoRecursive(RootGraph);
 
             StatusMessage = $"Загружен профиль: {name}";
         }
@@ -911,7 +1183,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void AddNodeAtLocation(string? nodeType, Point location)
     {
-        if (CurrentGraph.IsBodyGraph && (nodeType == "Старт" || nodeType == "Конец"))
+        if (CurrentGraph.UsesBodyBoundaryNodes && (nodeType == "Старт" || nodeType == "Конец"))
         {
             StatusMessage = "Внутри тела цикла используются Body Start и Body End. Обычные Start/End сюда добавлять не нужно.";
             return;
@@ -936,6 +1208,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Print Label" => new PrintLabelNodeViewModel { Location = location },
             "Send Test Report" => new SendTestReportNodeViewModel { Location = location },
             "Метка" => new LabelNodeViewModel { Location = location },
+            "Подтест" => new SubtestNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
             "Проверка равенства" => new CheckRegisterEqualityNodeViewModel { Location = location },
             "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
@@ -945,12 +1218,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         };
 
         if (node != null)
-            _undoRedo.Execute(new AddNodeCommand(Nodes, node));
+            CurrentGraph.UndoRedo.Execute(new AddNodeCommand(Nodes, node));
     }
 
     private void EnsureBodyBoundaryNodesIfNeeded()
     {
-        if (!CurrentGraph.IsBodyGraph)
+        if (!CurrentGraph.UsesBodyBoundaryNodes)
             return;
 
         if (!Nodes.Any(n => n is BodyStartNodeViewModel))
@@ -982,7 +1255,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
-        _undoRedo.StateChanged -= OnUndoRedoStateChanged;
+        if (_currentUndoRedo != null)
+            _currentUndoRedo.StateChanged -= OnUndoRedoStateChanged;
         DisposeRegisterMonitor();
 
         foreach (var node in AvailableNodes)
@@ -1000,5 +1274,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             node.Dispose();
         }
+    }
+
+    private static void ClearUndoRedoRecursive(GraphWorkspaceViewModel graph)
+    {
+        graph.UndoRedo.Clear();
+
+        foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
+            ClearUndoRedoRecursive(composite.BodyGraph);
     }
 }

@@ -26,6 +26,8 @@ namespace TestBuilder.Domain.Execution
 
         public Func<string, Task<bool>>? OperatorPrompt { get; set; }
 
+        public Func<CancellationToken, Task>? WaitIfPausedAsync { get; set; }
+
         public Dictionary<string, object> Variables { get; } = new();
 
         public TestContext(RegisterState registerState)
@@ -44,6 +46,11 @@ namespace TestBuilder.Domain.Execution
         public void SetVariable(string name, object value)
         {
             Variables[name] = value;
+        }
+
+        public Task WaitWhilePausedAsync(CancellationToken cancellationToken)
+        {
+            return WaitIfPausedAsync?.Invoke(cancellationToken) ?? Task.CompletedTask;
         }
     }
 }

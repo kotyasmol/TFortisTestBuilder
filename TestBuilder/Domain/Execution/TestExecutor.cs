@@ -23,6 +23,7 @@ namespace TestBuilder.Domain.Execution
             while (current != null)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                await context.WaitWhilePausedAsync(cancellationToken);
 
                 await NotifyNodeStartedAsync(current, context, cancellationToken);
 

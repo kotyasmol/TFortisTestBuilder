@@ -49,6 +49,7 @@ namespace TestBuilder.Services
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
+            SubtestNodeViewModel => "Subtest",
             ForEachSlaveNodeViewModel => "For Slaves",
             _ => node.Title
         };
@@ -235,6 +236,14 @@ namespace TestBuilder.Services
                         n.FailOnError = sr.FailOnError;
                         break;
 
+                    case SubtestNodeViewModel s:
+                        n.Name = s.Name;
+                        n.Description = s.Description;
+                        n.IsEnabled = s.IsEnabled;
+                        n.StopOnError = s.StopOnError;
+                        n.BodyGraph = SerializeGraph(s.BodyGraph, s.BodyGraph.Title);
+                        break;
+
                     case ForEachSlaveNodeViewModel f:
                         n.FromSlaveId = f.FromSlaveId;
                         n.ToSlaveId = f.ToSlaveId;
@@ -322,7 +331,7 @@ namespace TestBuilder.Services
                         Text = n.Text ?? "Этап"
                     },
 
-                    "Write Register" or "Запись регистра" => CreateModbusWriteNode(n, location),
+                    "Write Register" or "WriteRegister" or "Запись регистра" => CreateModbusWriteNode(n, location),
 
                     "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
@@ -336,7 +345,7 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
-                    "Check Variable Equality" or "CHECK_VARIABLE_EQUALITY" or "Проверка переменной" => new CheckVariableEqualityNodeViewModel
+                    "Check Variable Equality" or "CheckVariableEquality" or "CHECK_VARIABLE_EQUALITY" or "Проверка переменной" => new CheckVariableEqualityNodeViewModel
                     {
                         Location = location,
                         VariableName = n.VariableName ?? "Dut.init_ok",
@@ -452,6 +461,8 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? false
                     },
 
+                    "Subtest" or "SUBTEST" or "Подтест" => CreateSubtestNode(n, location),
+
                     "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
                     "Check Register Equality" or "Проверка равенства" => CreateCheckEqualityNode(n, location),
@@ -481,11 +492,15 @@ namespace TestBuilder.Services
                 if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode))
                     continue;
 
-                var srcConn = srcNode.Output.Concat(srcNode.Input)
-                    .FirstOrDefault(x => x.Title == c.SourceConnector);
+                var srcConn = FindConnector(
+                    srcNode,
+                    srcNode.Output.Concat(srcNode.Input),
+                    c.SourceConnector);
 
-                var tgtConn = tgtNode.Input.Concat(tgtNode.Output)
-                    .FirstOrDefault(x => x.Title == c.TargetConnector);
+                var tgtConn = FindConnector(
+                    tgtNode,
+                    tgtNode.Input.Concat(tgtNode.Output),
+                    c.TargetConnector);
 
                 if (srcConn == null || tgtConn == null)
                     continue;
@@ -597,6 +612,52 @@ namespace TestBuilder.Services
                 node.EnsureDefaultBodyNodes();
 
             return node;
+        }
+
+        private static SubtestNodeViewModel CreateSubtestNode(NodeDto n, Point location)
+        {
+            var node = new SubtestNodeViewModel
+            {
+                Location = location,
+                Name = n.Name ?? "Подтест",
+                Description = n.Description ?? string.Empty,
+                IsEnabled = n.IsEnabled ?? true,
+                StopOnError = n.StopOnError ?? true
+            };
+
+            var body = n.BodyGraph ?? n.Body;
+
+            if (body != null)
+                DeserializeGraph(body, node.BodyGraph, isBodyGraph: true);
+            else
+                node.EnsureDefaultBodyNodes();
+
+            node.BodyGraph.UsesBodyBoundaryNodes = false;
+
+            return node;
+        }
+
+        private static ConnectorViewModel? FindConnector(
+            NodeViewModel node,
+            IEnumerable<ConnectorViewModel> connectors,
+            string title)
+        {
+            var connector = connectors.FirstOrDefault(x => x.Title == title);
+
+            if (connector != null)
+                return connector;
+
+            if (node is ForEachSlaveNodeViewModel)
+            {
+                return title switch
+                {
+                    "Success" => connectors.FirstOrDefault(x => x.Title == "True"),
+                    "Error" => connectors.FirstOrDefault(x => x.Title == "False"),
+                    _ => null
+                };
+            }
+
+            return null;
         }
 
         private static int ToInt(double? value)

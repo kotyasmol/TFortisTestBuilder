@@ -34,43 +34,67 @@
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled">
 
-        <ItemsControl ItemsSource="{Binding AvailableNodes}"
+        <ItemsControl ItemsSource="{Binding AvailableNodeCategories}"
                       Margin="12,6,12,12">
 
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="nodifyvm:NodeViewModel">
+            <DataTemplate x:DataType="vm:NodePaletteCategoryViewModel">
 
-              <Border Margin="0,4"
-                      Padding="12,9"
-                      CornerRadius="7"
-                      Background="{DynamicResource SurfaceBrush}"
-                      BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="1"
-                      BoxShadow="0 4 10 0 #080F172A"
-                      PointerPressed="OnNodePressed"
-                      PointerMoved="OnNodeDrag"
-                      PointerExited="OnNodeExited">
+              <StackPanel Margin="0,8,0,10"
+                          Spacing="6">
 
-                <Grid ColumnDefinitions="Auto,*">
-
-                  <Border Grid.Column="0"
-                          Width="9"
-                          Height="9"
-                          CornerRadius="5"
-                          Background="{DynamicResource PrimaryBrush}"
-                          VerticalAlignment="Center"
-                          Margin="0,0,10,0" />
-
-                  <TextBlock Grid.Column="1"
-                             Text="{Binding Title}"
-                             FontSize="13"
+                <Button Command="{Binding ToggleCommand}"
+                        Classes="ghost"
+                        Padding="2,2"
+                        HorizontalAlignment="Stretch">
+                  <TextBlock Text="{Binding Title}"
+                             FontSize="12"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center" />
+                             Foreground="{DynamicResource SidebarTextMutedBrush}" />
+                </Button>
 
-                </Grid>
-              </Border>
+                <ItemsControl ItemsSource="{Binding Nodes}"
+                              IsVisible="{Binding IsExpanded}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="nodifyvm:NodeViewModel">
+
+                      <Border Margin="0,3"
+                              Padding="12,9"
+                              CornerRadius="7"
+                              Background="{DynamicResource SurfaceBrush}"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              BoxShadow="0 4 10 0 #080F172A"
+                              PointerPressed="OnNodePressed"
+                              PointerMoved="OnNodeDrag"
+                              PointerExited="OnNodeExited">
+
+                        <Grid ColumnDefinitions="Auto,*">
+
+                          <Border Grid.Column="0"
+                                  Width="9"
+                                  Height="9"
+                                  CornerRadius="5"
+                                  Background="{DynamicResource PrimaryBrush}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0" />
+
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding Title}"
+                                     FontSize="13"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextWrapping="Wrap"
+                                     VerticalAlignment="Center" />
+
+                        </Grid>
+                      </Border>
+
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+              </StackPanel>
 
             </DataTemplate>
           </ItemsControl.ItemTemplate>

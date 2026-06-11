@@ -108,9 +108,22 @@ namespace TestBuilder.Services
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger),
+                SubtestNodeViewModel subtest => CreateSubtestStep(subtest),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
             };
+        }
+
+        private ITestStep CreateSubtestStep(SubtestNodeViewModel node)
+        {
+            var bodyGraph = Compile(node.BodyGraph);
+
+            return new SubtestStep(
+                node.Name,
+                node.IsEnabled,
+                node.StopOnError,
+                bodyGraph,
+                _logger);
         }
 
         private ITestStep CreateForEachSlaveStep(ForEachSlaveNodeViewModel node)
@@ -254,6 +267,10 @@ namespace TestBuilder.Services
 
                 case SendTestReportNodeViewModel reportVm:
                     BindTrueFalse(sourceConnector, source, target, reportVm.TrueOut, reportVm.FalseOut);
+                    break;
+
+                case SubtestNodeViewModel subtestVm:
+                    BindTrueFalse(sourceConnector, source, target, subtestVm.SuccessOut, subtestVm.ErrorOut);
                     break;
 
                 case ForEachSlaveNodeViewModel forVm:

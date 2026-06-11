@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus.Models;
@@ -17,6 +18,16 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private ushort value;
         [ObservableProperty] private bool useCurrentSlaveId;
         [ObservableProperty] private bool verifyWrite;
+        [ObservableProperty] private string slaveIdText = "0";
+        [ObservableProperty] private string addressText = "0";
+        [ObservableProperty] private string valueText = "0";
+        [ObservableProperty] private bool hasIntegerInputError;
+
+        private bool _slaveIdInputInvalid;
+        private bool _addressInputInvalid;
+        private bool _valueInputInvalid;
+
+        public string IntegerInputError => "Вводите только целочисленные значения.";
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -77,9 +88,76 @@ namespace TestBuilder.ViewModels.StepVM
 
         partial void OnAddressChanged(ushort value)
         {
+            _addressInputInvalid = false;
+            UpdateIntegerInputError();
+            AddressText = value.ToString(CultureInfo.InvariantCulture);
             _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
+        }
+
+        partial void OnSlaveIdChanged(byte value)
+        {
+            _slaveIdInputInvalid = false;
+            UpdateIntegerInputError();
+            SlaveIdText = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        partial void OnValueChanged(ushort value)
+        {
+            _valueInputInvalid = false;
+            UpdateIntegerInputError();
+            ValueText = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        partial void OnSlaveIdTextChanged(string value)
+        {
+            if (byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            {
+                _slaveIdInputInvalid = false;
+                SlaveId = parsed;
+            }
+            else
+            {
+                _slaveIdInputInvalid = true;
+            }
+
+            UpdateIntegerInputError();
+        }
+
+        partial void OnAddressTextChanged(string value)
+        {
+            if (ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            {
+                _addressInputInvalid = false;
+                Address = parsed;
+            }
+            else
+            {
+                _addressInputInvalid = true;
+            }
+
+            UpdateIntegerInputError();
+        }
+
+        partial void OnValueTextChanged(string value)
+        {
+            if (ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            {
+                _valueInputInvalid = false;
+                Value = parsed;
+            }
+            else
+            {
+                _valueInputInvalid = true;
+            }
+
+            UpdateIntegerInputError();
+        }
+
+        private void UpdateIntegerInputError()
+        {
+            HasIntegerInputError = _slaveIdInputInvalid || _addressInputInvalid || _valueInputInvalid;
         }
 
         private void OnRegisterSelectionChanged()

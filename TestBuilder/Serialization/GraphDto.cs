@@ -43,6 +43,19 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Text { get; set; }
 
+        // --- Subtest ---
+        [JsonPropertyName("name")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("description")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("isEnabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? IsEnabled { get; set; }
+
         // --- Write Register / Check Register Range ---
         [JsonPropertyName("slaveId")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -301,6 +314,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("body")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public GraphDto? Body { get; set; }
+
+        [JsonPropertyName("bodyGraph")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public GraphDto? BodyGraph { get; set; }
     }
 
     public class DataTestPortDto
