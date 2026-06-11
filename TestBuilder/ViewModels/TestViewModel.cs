@@ -47,6 +47,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private RegisterMonitor? _registerMonitor;
     private UndoRedoManager? _currentUndoRedo;
     private CancellationTokenSource? _testRunCts;
+    private Views.ModbusReconnectDialog? _modbusReconnectDialog;
     private TaskCompletionSource<bool> _pauseCompletion =
         CreateCompletedPauseCompletion();
 
@@ -234,6 +235,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         CurrentGraph = RootGraph;
 
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
+        _modbusService.ReconnectStatusChanged += OnReconnectStatusChanged;
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync);
@@ -740,33 +742,65 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void OnConnectionLost(object? sender, EventArgs e)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            // Останавливаем тест если запущен
             IsMonitoringActive = false;
-            TestingLogger.Error("[ОШИБКА] Связь потеряна. Тест остановлен.");
+            StatusMessage = "Связь Modbus потеряна. Выполняется автоматическое восстановление.";
+            TestingLogger.Warning("[MODBUS] Мониторинг обнаружил потерю связи. Автоматическое восстановление выполнится при следующей Modbus-операции.");
+        });
+    }
 
-            // Показываем диалог
-            var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
-                is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow
-                : null;
+    private void OnReconnectStatusChanged(object? sender, string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            StatusMessage = message;
 
-            var dialog = new ConnectionLostDialog();
-            await dialog.ShowDialog(mainWindow);
-
-            if (dialog.ShouldReconnect)
+            if (message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase))
             {
-                TestingLogger.Info("Попытка переподключения...");
-                await DisconnectAsync();
-                await ConnectAsync();
+                IsConnected = true;
+                TestingLogger.Info(message);
+                CloseReconnectDialog();
+            }
+            else if (message.Contains("60 секунд", StringComparison.OrdinalIgnoreCase))
+            {
+                IsConnected = false;
+                TestingLogger.Error(message);
+                ShowReconnectDialog(message, canClose: true);
             }
             else
             {
-                TestingLogger.Info("[ОШИБКА] Подключение разорвано.");
-                await DisconnectAsync();
+                TestingLogger.Warning(message);
+                ShowReconnectDialog(message, canClose: false);
             }
         });
+    }
+
+    private void ShowReconnectDialog(string message, bool canClose)
+    {
+        if (_modbusReconnectDialog == null)
+        {
+            _modbusReconnectDialog = new Views.ModbusReconnectDialog();
+            _modbusReconnectDialog.Closed += (_, _) => _modbusReconnectDialog = null;
+
+            var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
+                is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                    ? desktop.MainWindow
+                    : null;
+
+            if (mainWindow != null)
+                _modbusReconnectDialog.Show(mainWindow);
+            else
+                _modbusReconnectDialog.Show();
+        }
+
+        _modbusReconnectDialog.SetMessage(message, canClose);
+    }
+
+    private void CloseReconnectDialog()
+    {
+        _modbusReconnectDialog?.Close();
+        _modbusReconnectDialog = null;
     }
 
     private async Task DisconnectAsync()
@@ -778,6 +812,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         IsConnected = false;
         IsMonitoringActive = false;
         StatusMessage = "Отключено.";
+        CloseReconnectDialog();
         TestingLogger.Info("Отключено от стенда.");
         SlaveRegistry.Instance.NotifyConnected(false);
 
@@ -1286,6 +1321,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
+        _modbusService.ReconnectStatusChanged -= OnReconnectStatusChanged;
+        CloseReconnectDialog();
+
         if (_currentUndoRedo != null)
             _currentUndoRedo.StateChanged -= OnUndoRedoStateChanged;
         DisposeRegisterMonitor();
