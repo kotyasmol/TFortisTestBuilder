@@ -42,6 +42,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly RegisterState _registerState = new();
     private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
     private readonly List<string> _graphPath = new();
+    private readonly Stack<SubtestNodeViewModel> _activeSubtests = new();
 
     private RegisterMonitor? _registerMonitor;
     private UndoRedoManager? _currentUndoRedo;
@@ -925,6 +926,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (_activeSubtests.TryPeek(out var activeSubtest) &&
+                !ReferenceEquals(activeSubtest, nodeViewModel))
+            {
+                activeSubtest.UpdateProgress(nodeViewModel);
+            }
+
+            if (nodeViewModel is SubtestNodeViewModel subtest)
+            {
+                subtest.BeginProgress();
+                _activeSubtests.Push(subtest);
+            }
+
             nodeViewModel.IsExecuting = true;
         });
     }
@@ -940,6 +953,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             nodeViewModel.IsExecuting = false;
+
+            if (nodeViewModel is SubtestNodeViewModel subtest)
+            {
+                if (_activeSubtests.TryPeek(out var activeSubtest) &&
+                    ReferenceEquals(activeSubtest, subtest))
+                {
+                    _activeSubtests.Pop();
+                }
+
+                subtest.EndProgress();
+            }
         });
     }
 
@@ -957,8 +981,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         });
     }
 
-    private static void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph, bool clearErrors)
+    private void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph, bool clearErrors)
     {
+        _activeSubtests.Clear();
+
         foreach (var node in graph.Nodes)
         {
             node.IsExecuting = false;
@@ -969,6 +995,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (node is ICompositeNodeViewModel composite)
             {
                 ClearExecutionHighlightsRecursive(composite.BodyGraph, clearErrors);
+            }
+
+            if (node is SubtestNodeViewModel subtest)
+            {
+                subtest.EndProgress();
             }
         }
     }
