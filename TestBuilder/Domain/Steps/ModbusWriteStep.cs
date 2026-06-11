@@ -120,6 +120,8 @@ namespace TestBuilder.Domain.Steps
 
                 if (actualValue == _value)
                 {
+                    context.RegisterState.Update(actualSlaveId.Value, _address, actualValue);
+
                     _logger.Info(
                         $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
 

@@ -42,6 +42,25 @@ public class ModbusWriteStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenVerificationConfirmsValue_UpdatesRegisterState()
+    {
+        var modbus = new FakeModbusService();
+        modbus.EnqueueRead(42);
+        var context = CreateContext();
+        context.RegisterState.Update(1, 100, 0);
+        var writeStep = new ModbusWriteStep(modbus, NullLogger.Instance, 1, 100, 42, verifyWrite: true);
+        var checkStep = new CheckRegisterEqualityStep(1, 100, 42, NullLogger.Instance);
+
+        var writeResult = await writeStep.ExecuteAsync(context, CancellationToken.None);
+        var checkResult = await checkStep.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, writeResult);
+        Assert.Equal(StepResult.True, checkResult);
+        Assert.True(context.RegisterState.TryGet(1, 100, out var value));
+        Assert.Equal(42, value);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenVerificationReadThrows_RetriesUntilValueMatches()
     {
         var modbus = new FakeModbusService();
