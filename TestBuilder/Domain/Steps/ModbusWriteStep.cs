@@ -10,15 +10,19 @@ namespace TestBuilder.Domain.Steps
     /// <summary>
     /// Шаг теста, который записывает указанное значение в Modbus-регистр.
     /// Может использовать фиксированный slaveId или текущий slaveId из цикла.
-    /// После записи ждет 1 секунду и проверяет, что значение действительно записалось.
+    /// Может проверить запись повторным чтением регистра.
     /// </summary>
     public class ModbusWriteStep : ITestStep
     {
+        private const int VerifyAttempts = 3;
+        private static readonly TimeSpan VerifyRetryDelay = TimeSpan.FromMilliseconds(300);
+
         private readonly IModbusService _modbusService;
         private readonly byte _slaveId;
         private readonly ushort _address;
         private readonly ushort _value;
         private readonly bool _useCurrentSlaveId;
+        private readonly bool _verifyWrite;
         private readonly ILogger _logger;
 
         public ModbusWriteStep(
@@ -27,7 +31,8 @@ namespace TestBuilder.Domain.Steps
             byte slaveId,
             ushort address,
             ushort value,
-            bool useCurrentSlaveId = false)
+            bool useCurrentSlaveId = false,
+            bool verifyWrite = false)
         {
             _modbusService = modbusService;
             _logger = logger;
@@ -35,6 +40,7 @@ namespace TestBuilder.Domain.Steps
             _address = address;
             _value = value;
             _useCurrentSlaveId = useCurrentSlaveId;
+            _verifyWrite = verifyWrite;
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -69,38 +75,65 @@ namespace TestBuilder.Domain.Steps
                 return StepResult.False;
             }
 
-            _logger.Info("[OK] Запись выполнена. Ожидание подтверждения...");
-
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-
-            var readValues = await _modbusService.ReadRegistersAsync(
-                actualSlaveId.Value,
-                _address,
-                1,
-                cancellationToken);
-
-            if (readValues == null || readValues.Length == 0)
+            if (!_verifyWrite)
             {
-                _logger.Warning(
-                    $"[ОШИБКА] Не удалось прочитать регистр для проверки. Устройство {actualSlaveId}, адрес {_address}.");
-
-                return StepResult.False;
+                _logger.Info("[OK] Запись выполнена.");
+                return StepResult.True;
             }
 
-            var actualValue = readValues[0];
+            _logger.Info("[OK] Запись выполнена. Проверка значения...");
 
-            if (actualValue != _value)
+            for (var attempt = 1; attempt <= VerifyAttempts; attempt++)
             {
-                _logger.Warning(
-                    $"[ОШИБКА] Значение не совпадает. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
+                if (attempt > 1)
+                {
+                    await Task.Delay(VerifyRetryDelay, cancellationToken);
+                }
 
-                return StepResult.False;
+                ushort[] readValues;
+
+                try
+                {
+                    readValues = await _modbusService.ReadRegistersAsync(
+                        actualSlaveId.Value,
+                        _address,
+                        1,
+                        cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.Warning(
+                        $"[ОШИБКА] Ошибка чтения регистра для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {_address}: {ex.Message}");
+
+                    continue;
+                }
+
+                if (readValues == null || readValues.Length == 0)
+                {
+                    _logger.Warning(
+                        $"[ОШИБКА] Не удалось прочитать регистр для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {_address}.");
+
+                    continue;
+                }
+
+                var actualValue = readValues[0];
+
+                if (actualValue == _value)
+                {
+                    _logger.Info(
+                        $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
+
+                    return StepResult.True;
+                }
+
+                _logger.Warning(
+                    $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
             }
 
-            _logger.Info(
-                $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
+            _logger.Warning(
+                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
 
-            return StepResult.True;
+            return StepResult.False;
         }
 
         private byte? ResolveSlaveId(TestContext context)

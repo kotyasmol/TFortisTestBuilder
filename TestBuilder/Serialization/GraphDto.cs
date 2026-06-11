@@ -61,6 +61,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ushort? Value { get; set; }
 
+        [JsonPropertyName("verifyWrite")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? VerifyWrite { get; set; }
+
         // --- Check Register Range ---
         [JsonPropertyName("min")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

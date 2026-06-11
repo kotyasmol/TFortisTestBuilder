@@ -16,6 +16,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private ushort address;
         [ObservableProperty] private ushort value;
         [ObservableProperty] private bool useCurrentSlaveId;
+        [ObservableProperty] private bool verifyWrite;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -104,7 +105,7 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId);
+            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId, VerifyWrite);
         }
 
         public override NodeViewModel Clone() => new ModbusWriteNodeViewModel
@@ -112,7 +113,8 @@ namespace TestBuilder.ViewModels.StepVM
             SlaveId = SlaveId,
             Address = Address,
             Value = Value,
-            UseCurrentSlaveId = UseCurrentSlaveId
+            UseCurrentSlaveId = UseCurrentSlaveId,
+            VerifyWrite = VerifyWrite
         };
     }
 }

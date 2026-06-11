@@ -92,6 +92,7 @@ namespace TestBuilder.Services
                         n.Address = w.Address;
                         n.Value = w.Value;
                         n.UseCurrentSlaveId = w.UseCurrentSlaveId;
+                        n.VerifyWrite = w.VerifyWrite;
                         break;
 
                     case CheckRegisterRangeNodeViewModel c:
@@ -501,7 +502,8 @@ namespace TestBuilder.Services
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
                 Value = n.Value ?? 0,
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
+                VerifyWrite = n.VerifyWrite ?? false
             };
 
             // Восстанавливаем SelectedSlave и SelectedRegister из SlaveRegistry
