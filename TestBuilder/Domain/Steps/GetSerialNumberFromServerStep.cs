@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -58,25 +59,19 @@ namespace TestBuilder.Domain.Steps
             string lastError = string.Empty;
             string raw = string.Empty;
 
-            _logger.Info($"[ШАГ] Запрос серийного номера: {url}");
+            _logger.Info($"[STEP] Serial number request: {url}");
 
             for (var attempt = 1; attempt <= attempts; attempt++)
             {
                 var result = await _httpRequestService.GetAsync(url, timeout, cancellationToken);
                 raw = result.Body.Trim();
 
-                if (string.IsNullOrWhiteSpace(result.ErrorMessage) &&
-                    result.IsSuccessStatusCode &&
-                    int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var serial) &&
-                    serial > 0)
+                if (TryParseSerial(raw, out var serial) &&
+                    string.IsNullOrWhiteSpace(result.ErrorMessage) &&
+                    result.IsSuccessStatusCode)
                 {
-                    context.SetVariable(_outputVariableName, serial);
-                    context.SetVariable("SerialNumberReceived", true);
-                    context.SetVariable("SerialNumberRawResponse", raw);
-                    context.SetVariable("SerialNumberRequestUrl", url);
-                    context.SetVariable("SerialNumberError", string.Empty);
-
-                    _logger.Info($"[OK] Получен серийный номер: {serial}.");
+                    SaveSerial(context, serial, raw, url);
+                    _logger.Info($"[OK] Serial number received: {serial}.");
                     return StepResult.True;
                 }
 
@@ -84,7 +79,7 @@ namespace TestBuilder.Domain.Steps
 
                 if (attempt < attempts && _retryDelayMs > 0)
                 {
-                    _logger.Warning($"Серийный номер не получен: {lastError}. Повтор через {_retryDelayMs} мс.");
+                    _logger.Warning($"Serial number was not received: {lastError}. Retry in {_retryDelayMs} ms.");
                     await Task.Delay(_retryDelayMs, cancellationToken);
                 }
             }
@@ -94,26 +89,126 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberRequestUrl", url);
             context.SetVariable("SerialNumberError", lastError);
 
-            _logger.Warning($"[ОШИБКА] Серийный номер не получен: {lastError}");
+            _logger.Warning($"[ERROR] Serial number was not received: {lastError}");
             return _failOnError ? StepResult.False : StepResult.True;
+        }
+
+        private void SaveSerial(TestContext context, int serial, string raw, string url)
+        {
+            context.SetVariable(_outputVariableName, serial);
+
+            if (!string.Equals(_outputVariableName, "SerialNumber", StringComparison.Ordinal))
+            {
+                context.SetVariable("SerialNumber", serial);
+            }
+
+            context.SetVariable("NetTest.SerialNumber", serial);
+            context.SetVariable("SerialNumberText", serial.ToString(CultureInfo.InvariantCulture));
+            context.SetVariable("SerialNumberReceived", true);
+            context.SetVariable("SerialNumberRawResponse", raw);
+            context.SetVariable("SerialNumberRequestUrl", url);
+            context.SetVariable("SerialNumberError", string.Empty);
         }
 
         private string BuildUrl(TestContext context)
         {
-            var query = $"devType={Uri.EscapeDataString(_deviceType)}";
+            var baseUrl = NormalizeServerBaseUrl(_serverBaseUrl);
 
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                return string.Empty;
+            }
+
+            var cpuId = ResolveCpuId(context);
+
+            if (LooksLikeGetSerialEndpoint(baseUrl))
+            {
+                var endpointBuilder = new UriBuilder(baseUrl)
+                {
+                    Query = BuildQuery(cpuId)
+                };
+
+                return endpointBuilder.Uri.AbsoluteUri;
+            }
+
+            var baseUri = new Uri(baseUrl, UriKind.Absolute);
+            var builder = new UriBuilder(baseUri)
+            {
+                Path = CombinePath(baseUri.AbsolutePath, "api/api.svc/getSerialNum"),
+                Query = BuildQuery(cpuId)
+            };
+
+            return builder.Uri.AbsoluteUri;
+        }
+
+        private string ResolveCpuId(TestContext context)
+        {
             if (!string.IsNullOrWhiteSpace(_cpuIdVariableName) &&
                 context.Variables.TryGetValue(_cpuIdVariableName, out var cpuIdValue))
             {
-                var cpuId = cpuIdValue?.ToString()?.Trim();
-
-                if (!string.IsNullOrWhiteSpace(cpuId))
-                {
-                    query += $"&cpuId={Uri.EscapeDataString(cpuId)}";
-                }
+                return cpuIdValue?.ToString()?.Trim() ?? string.Empty;
             }
 
-            return _serverBaseUrl.TrimEnd('/') + "/api/api.svc/getSerialNum?" + query;
+            return string.Empty;
+        }
+
+        private string BuildQuery(string cpuId)
+        {
+            var query = $"devType={Uri.EscapeDataString(_deviceType)}";
+
+            if (!string.IsNullOrWhiteSpace(cpuId))
+            {
+                query += $"&cpuId={Uri.EscapeDataString(cpuId)}";
+            }
+
+            return query;
+        }
+
+        private static string NormalizeServerBaseUrl(string serverBaseUrl)
+        {
+            var trimmed = serverBaseUrl?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                return string.Empty;
+            }
+
+            if (!trimmed.Contains("://", StringComparison.Ordinal))
+            {
+                trimmed = "http://" + trimmed;
+            }
+
+            return trimmed;
+        }
+
+        private static bool LooksLikeGetSerialEndpoint(string baseUrl)
+        {
+            return Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) &&
+                   uri.AbsolutePath.EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string CombinePath(string basePath, string relativePath)
+        {
+            var normalizedBase = string.IsNullOrWhiteSpace(basePath) || basePath == "/"
+                ? string.Empty
+                : basePath.TrimEnd('/');
+
+            return $"{normalizedBase}/{relativePath.TrimStart('/')}";
+        }
+
+        private static bool TryParseSerial(string raw, out int serial)
+        {
+            serial = 0;
+
+            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
+                serial > 0)
+            {
+                return true;
+            }
+
+            var digits = new string(raw.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
+            return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
+                   serial > 0;
         }
 
         private static string BuildError(HttpRequestResult result, string raw)
@@ -128,7 +223,7 @@ namespace TestBuilder.Domain.Steps
                 return $"HTTP {(result.StatusCode?.ToString() ?? "unknown")}.";
             }
 
-            return $"Ответ сервера не является положительным серийным номером: '{raw}'.";
+            return $"Server response is not a positive serial number: '{raw}'.";
         }
     }
 }

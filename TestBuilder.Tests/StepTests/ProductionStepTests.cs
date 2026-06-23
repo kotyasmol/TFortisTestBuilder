@@ -31,9 +31,63 @@ public class ProductionStepTests
 
         Assert.Equal(StepResult.True, result);
         Assert.Equal(12345, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal(12345, context.GetVariable<int>("NetTest.SerialNumber"));
+        Assert.Equal("12345", context.GetVariable<string>("SerialNumberText"));
         Assert.True(context.GetVariable<bool>("SerialNumberReceived"));
         Assert.Contains("devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
         Assert.Contains("cpuId=CPU%201", service.LastUrl);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_AcceptsBareHostLikeLegacyQtCode()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "321", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            "stand-server.local",
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            0,
+            0,
+            "SerialNumber",
+            failOnError: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(321, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal("http://stand-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_ReusesFullEndpointUrl()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "\uFEFF654\r\n", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "ABC+123");
+
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            "https://server/api/api.svc/getSerialNum",
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            0,
+            0,
+            "ServerSerial",
+            failOnError: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(654, context.GetVariable<int>("ServerSerial"));
+        Assert.Equal(654, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal("https://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=ABC%2B123", service.LastUrl);
     }
 
     [Fact]
