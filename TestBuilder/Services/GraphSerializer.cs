@@ -378,7 +378,7 @@ namespace TestBuilder.Services
                     "Get Serial Number" or "GET_SERIAL_NUMBER_FROM_SERVER" or "Получить серийный номер" => new GetSerialNumberFromServerNodeViewModel
                     {
                         Location = location,
-                        ServerBaseUrl = n.ServerBaseUrl ?? "http://server-address",
+                        ServerBaseUrl = n.ServerBaseUrl ?? string.Empty,
                         DeviceType = GetObjectAsString(n.DeviceType, "PSW+UPS-Box 8x2Pro"),
                         CpuIdVariableName = n.CpuIdVariableName ?? "Dut.cpu_id",
                         TimeoutMs = n.TimeoutMs ?? 30000,

@@ -9,7 +9,7 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class GetSerialNumberFromServerNodeViewModel : NodeViewModel
     {
-        [ObservableProperty] private string serverBaseUrl = "http://server-address";
+        [ObservableProperty] private string serverBaseUrl = string.Empty;
         [ObservableProperty] private string deviceType = "PSW+UPS-Box 8x2Pro";
         [ObservableProperty] private string cpuIdVariableName = "Dut.cpu_id";
         [ObservableProperty] private int timeoutMs = 30000;
