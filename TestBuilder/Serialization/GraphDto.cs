@@ -279,6 +279,18 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? MaxPortTestTimeMs { get; set; }
 
+        [JsonPropertyName("targetBandwidthMbps")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TargetBandwidthMbps { get; set; }
+
+        [JsonPropertyName("warmupMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? WarmupMs { get; set; }
+
+        [JsonPropertyName("allowedLossPercent")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? AllowedLossPercent { get; set; }
+
         [JsonPropertyName("portsText")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PortsText { get; set; }
@@ -382,6 +394,10 @@ namespace TestBuilder.Serialization
 
         [JsonPropertyName("outIp")]
         public string OutIp { get; set; } = "";
+
+        [JsonPropertyName("bandwidthMbps")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? BandwidthMbps { get; set; }
     }
 
     public class ConnectionDto

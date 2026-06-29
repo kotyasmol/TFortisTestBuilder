@@ -198,6 +198,10 @@ namespace TestBuilder.Services
                         n.PacketSizeBytes = d.PacketSizeBytes;
                         n.UdpPort = d.UdpPort;
                         n.MaxPortTestTimeMs = d.MaxPortTestTimeMs;
+                        n.TargetBandwidthMbps = d.TargetBandwidthMbps;
+                        n.DurationMs = d.DurationMs;
+                        n.WarmupMs = d.WarmupMs;
+                        n.AllowedLossPercent = d.AllowedLossPercent;
                         n.PortsText = d.PortsText;
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
@@ -461,6 +465,10 @@ namespace TestBuilder.Services
                         PacketSizeBytes = n.PacketSizeBytes ?? 1514,
                         UdpPort = n.UdpPort ?? 43962,
                         MaxPortTestTimeMs = n.MaxPortTestTimeMs ?? 15000,
+                        TargetBandwidthMbps = n.TargetBandwidthMbps ?? 100,
+                        DurationMs = n.DurationMs ?? 5000,
+                        WarmupMs = n.WarmupMs ?? 500,
+                        AllowedLossPercent = n.AllowedLossPercent ?? 1.0,
                         PortsText = n.PortsText ?? PortsToText(n.Ports),
                         OutputVariableName = n.OutputVariableName ?? "DataTest",
                         FailOnError = n.FailOnError ?? true
@@ -866,7 +874,9 @@ namespace TestBuilder.Services
 
             return string.Join(
                 Environment.NewLine,
-                ports.Select(port => $"{port.Name},{port.InIp},{port.OutIp}"));
+                ports.Select(port => port.BandwidthMbps.HasValue
+                    ? $"{port.Name},{port.InIp},{port.OutIp},{port.BandwidthMbps.Value}"
+                    : $"{port.Name},{port.InIp},{port.OutIp}"));
         }
 
         public static string? ReadProfileName(string filePath)

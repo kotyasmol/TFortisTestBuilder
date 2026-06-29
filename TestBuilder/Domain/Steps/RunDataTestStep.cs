@@ -26,6 +26,10 @@ namespace TestBuilder.Domain.Steps
         private readonly int _packetSizeBytes;
         private readonly int _udpPort;
         private readonly int _maxPortTestTimeMs;
+        private readonly int _targetBandwidthMbps;
+        private readonly int _durationMs;
+        private readonly int _warmupMs;
+        private readonly double _allowedLossPercent;
         private readonly IReadOnlyList<DataTestPortConfig> _ports;
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
@@ -37,6 +41,10 @@ namespace TestBuilder.Domain.Steps
             int packetSizeBytes,
             int udpPort,
             int maxPortTestTimeMs,
+            int targetBandwidthMbps,
+            int durationMs,
+            int warmupMs,
+            double allowedLossPercent,
             IEnumerable<DataTestPortConfig> ports,
             string outputVariableName,
             bool failOnError)
@@ -47,6 +55,10 @@ namespace TestBuilder.Domain.Steps
             _packetSizeBytes = Math.Max(MinEthernetFrameLength, packetSizeBytes);
             _udpPort = udpPort <= 0 ? 43962 : udpPort;
             _maxPortTestTimeMs = Math.Max(1, maxPortTestTimeMs);
+            _targetBandwidthMbps = Math.Clamp(targetBandwidthMbps, 1, 1000);
+            _durationMs = Math.Max(100, durationMs);
+            _warmupMs = Math.Max(0, warmupMs);
+            _allowedLossPercent = Math.Clamp(allowedLossPercent, 0.0, 100.0);
             _ports = ports.ToList();
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "DataTest" : outputVariableName.Trim();
             _failOnError = failOnError;
@@ -61,6 +73,10 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{_outputVariableName}.PacketSizeBytes", _packetSizeBytes);
             context.SetVariable($"{_outputVariableName}.UdpPort", _udpPort);
             context.SetVariable($"{_outputVariableName}.MaxPortTestTimeMs", _maxPortTestTimeMs);
+            context.SetVariable($"{_outputVariableName}.TargetBandwidthMbps", _targetBandwidthMbps);
+            context.SetVariable($"{_outputVariableName}.DurationMs", _durationMs);
+            context.SetVariable($"{_outputVariableName}.WarmupMs", _warmupMs);
+            context.SetVariable($"{_outputVariableName}.AllowedLossPercent", _allowedLossPercent);
 
             if (_ports.Count == 0)
             {
@@ -93,7 +109,7 @@ namespace TestBuilder.Domain.Steps
                 return Finish(context, false, "Npcap/WinPcap не вернул ни одного сетевого адаптера.");
             }
 
-            _logger.Info($"[ШАГ] DataTest: mode {_mode}, pairs {_ports.Count}, expected {_expectedPackets}, packet {_packetSizeBytes} bytes.");
+            _logger.Info($"[ШАГ] DataTest: mode {_mode}, pairs {_ports.Count}, target {_targetBandwidthMbps} Mbps, duration {_durationMs} ms, packet {_packetSizeBytes} bytes.");
 
             var allPassed = true;
             var errors = new List<string>();
@@ -156,16 +172,22 @@ namespace TestBuilder.Domain.Steps
                 return DataTestPortResult.Fail($"У карты {outIp} не найден MAC адрес.");
             }
 
+            var targetBandwidthMbps = Math.Clamp(port.TargetBandwidthMbps ?? _targetBandwidthMbps, 1, 1000);
             var packet = BuildPacket(sendMac, receiveMac, outIp, inIp, _packetSizeBytes, _udpPort);
-            var payloadBytes = Math.Max(0, packet.Length - EthernetHeaderLength - IpHeaderLength - UdpHeaderLength);
+            var expectedPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _durationMs);
             var receivedPackets = 0;
-            var transmittedPackets = 0;
             var firstPacketAt = Stopwatch.GetTimestamp();
             var lastPacketAt = firstPacketAt;
             var sawFirstPacket = false;
+            var countingEnabled = 0;
 
             void OnPacketArrival(object sender, PacketCapture capture)
             {
+                if (Volatile.Read(ref countingEnabled) == 0)
+                {
+                    return;
+                }
+
                 var now = Stopwatch.GetTimestamp();
 
                 if (!sawFirstPacket)
@@ -187,40 +209,53 @@ namespace TestBuilder.Domain.Steps
                 receiveDevice.OnPacketArrival += OnPacketArrival;
                 receiveDevice.StartCapture();
 
-                var deadline = Stopwatch.StartNew();
-
-                while (Volatile.Read(ref receivedPackets) < _expectedPackets &&
-                       deadline.ElapsedMilliseconds < _maxPortTestTimeMs)
+                if (_warmupMs > 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    sendDevice.SendPacket(packet);
-                    transmittedPackets++;
-
-                    if ((transmittedPackets & 0x3F) == 0)
-                    {
-                        await Task.Yield();
-                    }
+                    await SendPacedAsync(sendDevice, packet, targetBandwidthMbps, _warmupMs, cancellationToken);
                 }
 
+                Interlocked.Exchange(ref receivedPackets, 0);
+                firstPacketAt = Stopwatch.GetTimestamp();
+                lastPacketAt = firstPacketAt;
+                sawFirstPacket = false;
+                Volatile.Write(ref countingEnabled, 1);
+
+                var transmittedPackets = await SendPacedAsync(
+                    sendDevice,
+                    packet,
+                    targetBandwidthMbps,
+                    _durationMs,
+                    cancellationToken);
+
                 await Task.Delay(100, cancellationToken);
+                Volatile.Write(ref countingEnabled, 0);
 
                 var received = Volatile.Read(ref receivedPackets);
-                var passed = received >= _expectedPackets;
+                var lostPackets = Math.Max(0, transmittedPackets - received);
+                var lossPercent = transmittedPackets > 0
+                    ? lostPackets * 100.0 / transmittedPackets
+                    : 100.0;
+                var passed = lossPercent <= _allowedLossPercent;
                 var elapsedMs = GetElapsedMilliseconds(sawFirstPacket ? firstPacketAt : Stopwatch.GetTimestamp(), lastPacketAt);
-                var speedKbps = elapsedMs > 0 ? received * payloadBytes * 8.0 / elapsedMs : 0.0;
+                var speedKbps = elapsedMs > 0 ? received * packet.Length * 8.0 / elapsedMs : 0.0;
                 var error = passed
                     ? string.Empty
-                    : $"Принято {received} из {_expectedPackets} пакетов за {_maxPortTestTimeMs} мс.";
+                    : $"Loss {lossPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%. RX {received}, TX {transmittedPackets}.";
 
                 _logger.Info(
-                    $"DataTest {port.Name} [{index}]: {outIp} -> {inIp}, TX {transmittedPackets}, RX {received}, " +
-                    $"speed {speedKbps:F1} Kbps, {(passed ? "OK" : "FAIL")}.");
+                    $"DataTest {port.Name} [{index}]: {outIp} -> {inIp}, target {targetBandwidthMbps} Mbps, " +
+                    $"expected {expectedPackets}, TX {transmittedPackets}, RX {received}, loss {lossPercent:F3}%, " +
+                    $"speed {speedKbps / 1000.0:F3} Mbps, {(passed ? "OK" : "FAIL")}.");
 
                 return new DataTestPortResult(
                     passed,
                     transmittedPackets,
                     received,
                     speedKbps,
+                    targetBandwidthMbps,
+                    _durationMs,
+                    expectedPackets,
+                    lossPercent,
                     receiveDevice.Name,
                     sendDevice.Name,
                     error);
@@ -300,6 +335,69 @@ namespace TestBuilder.Domain.Steps
             return packet;
         }
 
+        public static int CalculateExpectedPackets(int targetBandwidthMbps, int packetSizeBytes, int durationMs)
+        {
+            var packets = CalculatePacketsPerSecond(targetBandwidthMbps, packetSizeBytes) * Math.Max(1, durationMs) / 1000.0;
+            return Math.Max(1, (int)Math.Round(Math.Min(int.MaxValue, packets), MidpointRounding.AwayFromZero));
+        }
+
+        private static double CalculatePacketsPerSecond(int targetBandwidthMbps, int packetSizeBytes)
+        {
+            return Math.Max(1, targetBandwidthMbps) * 1_000_000.0 / (Math.Max(MinEthernetFrameLength, packetSizeBytes) * 8.0);
+        }
+
+        private static async Task<int> SendPacedAsync(
+            LibPcapLiveDevice device,
+            byte[] packet,
+            int targetBandwidthMbps,
+            int durationMs,
+            CancellationToken cancellationToken)
+        {
+            var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
+            var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length);
+            var startTimestamp = Stopwatch.GetTimestamp();
+            var sent = 0;
+
+            while (sent < targetPackets)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var elapsedTicks = Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp);
+                var packetsDue = Math.Min(
+                    targetPackets,
+                    Math.Max(1, (int)Math.Floor(elapsedTicks * packetsPerSecond / Stopwatch.Frequency) + 1));
+
+                while (sent < packetsDue)
+                {
+                    device.SendPacket(packet);
+                    sent++;
+                }
+
+                if (sent >= targetPackets)
+                {
+                    break;
+                }
+
+                var nextDueTimestamp = startTimestamp + (long)(sent * Stopwatch.Frequency / packetsPerSecond);
+                var waitTicks = nextDueTimestamp - Stopwatch.GetTimestamp();
+
+                if (waitTicks > Stopwatch.Frequency / 500)
+                {
+                    await Task.Delay(1, cancellationToken);
+                }
+                else if (waitTicks > 0)
+                {
+                    Thread.SpinWait(64);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
+            }
+
+            return sent;
+        }
+
         private StepResult Finish(TestContext context, bool passed, string error)
         {
             context.SetVariable($"{_outputVariableName}.Passed", passed);
@@ -329,6 +427,10 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.TransmittedPackets", result.TransmittedPackets);
             context.SetVariable($"{prefix}.ReceivedPackets", result.ReceivedPackets);
             context.SetVariable($"{prefix}.SpeedKbps", result.SpeedKbps);
+            context.SetVariable($"{prefix}.TargetBandwidthMbps", result.TargetBandwidthMbps);
+            context.SetVariable($"{prefix}.DurationMs", result.DurationMs);
+            context.SetVariable($"{prefix}.ExpectedPackets", result.ExpectedPackets);
+            context.SetVariable($"{prefix}.LossPercent", result.LossPercent);
             context.SetVariable($"{prefix}.ReceiveDevice", result.ReceiveDeviceName);
             context.SetVariable($"{prefix}.SendDevice", result.SendDeviceName);
             context.SetVariable($"{prefix}.Error", result.Error);
@@ -424,13 +526,17 @@ namespace TestBuilder.Domain.Steps
         }
     }
 
-    public sealed record DataTestPortConfig(string Name, string InIp, string OutIp);
+    public sealed record DataTestPortConfig(string Name, string InIp, string OutIp, int? TargetBandwidthMbps = null);
 
     internal sealed record DataTestPortResult(
         bool Passed,
         int TransmittedPackets,
         int ReceivedPackets,
         double SpeedKbps,
+        int TargetBandwidthMbps,
+        int DurationMs,
+        int ExpectedPackets,
+        double LossPercent,
         string ReceiveDeviceName,
         string SendDeviceName,
         string Error)
@@ -440,6 +546,10 @@ namespace TestBuilder.Domain.Steps
             0,
             0,
             0.0,
+            0,
+            0,
+            0,
+            100.0,
             string.Empty,
             string.Empty,
             error);

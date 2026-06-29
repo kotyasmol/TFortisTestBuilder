@@ -16,6 +16,10 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int packetSizeBytes = 1514;
         [ObservableProperty] private int udpPort = 43962;
         [ObservableProperty] private int maxPortTestTimeMs = 15000;
+        [ObservableProperty] private int targetBandwidthMbps = 100;
+        [ObservableProperty] private int durationMs = 5000;
+        [ObservableProperty] private int warmupMs = 500;
+        [ObservableProperty] private double allowedLossPercent = 1.0;
         [ObservableProperty] private string portsText = "Port 0,192.168.10.1,192.168.10.2";
         [ObservableProperty] private string outputVariableName = "DataTest";
         [ObservableProperty] private bool failOnError = true;
@@ -36,7 +40,20 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) =>
-            new RunDataTestStep(logger, Mode, ExpectedPackets, PacketSizeBytes, UdpPort, MaxPortTestTimeMs, ParsePorts(), OutputVariableName, FailOnError);
+            new RunDataTestStep(
+                logger,
+                Mode,
+                ExpectedPackets,
+                PacketSizeBytes,
+                UdpPort,
+                MaxPortTestTimeMs,
+                TargetBandwidthMbps,
+                DurationMs,
+                WarmupMs,
+                AllowedLossPercent,
+                ParsePorts(),
+                OutputVariableName,
+                FailOnError);
 
         public override NodeViewModel Clone() => new RunDataTestNodeViewModel
         {
@@ -45,6 +62,10 @@ namespace TestBuilder.ViewModels.StepVM
             PacketSizeBytes = PacketSizeBytes,
             UdpPort = UdpPort,
             MaxPortTestTimeMs = MaxPortTestTimeMs,
+            TargetBandwidthMbps = TargetBandwidthMbps,
+            DurationMs = DurationMs,
+            WarmupMs = WarmupMs,
+            AllowedLossPercent = AllowedLossPercent,
             PortsText = PortsText,
             OutputVariableName = OutputVariableName,
             FailOnError = FailOnError
@@ -56,7 +77,11 @@ namespace TestBuilder.ViewModels.StepVM
                 .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => line.Split(','))
                 .Where(parts => parts.Length >= 3)
-                .Select(parts => new DataTestPortConfig(parts[0].Trim(), parts[1].Trim(), parts[2].Trim()));
+                .Select(parts => new DataTestPortConfig(
+                    parts[0].Trim(),
+                    parts[1].Trim(),
+                    parts[2].Trim(),
+                    parts.Length >= 4 && int.TryParse(parts[3].Trim(), out var mbps) ? mbps : null));
         }
     }
 }

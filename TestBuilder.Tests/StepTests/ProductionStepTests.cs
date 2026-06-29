@@ -159,6 +159,14 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public void RunDataTestStep_Calculates100MbitPacketCount()
+    {
+        var packets = RunDataTestStep.CalculateExpectedPackets(100, 1514, 5000);
+
+        Assert.Equal(41281, packets);
+    }
+
+    [Fact]
     public async Task RunDataTestStep_RejectsUnsupportedModeBeforeOpeningPcap()
     {
         var context = new TestContext(new RegisterState());
@@ -169,6 +177,10 @@ public class ProductionStepTests
             1514,
             43962,
             15000,
+            100,
+            5000,
+            500,
+            1.0,
             new[] { new DataTestPortConfig("Port 0", "192.168.10.1", "192.168.10.2") },
             "DataTest",
             failOnError: true);

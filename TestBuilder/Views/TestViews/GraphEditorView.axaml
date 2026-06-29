@@ -1141,14 +1141,10 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
+                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="370">
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Mode:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Mode}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Expected packets:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ExpectedPackets}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Packet size:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1159,8 +1155,20 @@
                       <TextBox Grid.Column="1" Text="{Binding UdpPort}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Max time ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding MaxPortTestTimeMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Target Mbps:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Duration ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding DurationMs}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Warmup ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding WarmupMs}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Allowed loss %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
