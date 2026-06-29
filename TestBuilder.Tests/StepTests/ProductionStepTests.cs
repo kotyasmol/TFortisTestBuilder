@@ -1,3 +1,4 @@
+using System.Net;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -131,12 +132,39 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public async Task RunDataTestStep_ReturnsUnsupportedSoftwarePcapResult()
+    public void RunDataTestStep_BuildsLegacyEthernetUdpPacket()
+    {
+        var sourceMac = new byte[] { 0x10, 0xFF, 0xE0, 0x68, 0xFE, 0x24 };
+        var destinationMac = new byte[] { 0x00, 0xFF, 0x03, 0x0A, 0xDC, 0x84 };
+
+        var packet = RunDataTestStep.BuildPacket(
+            sourceMac,
+            destinationMac,
+            IPAddress.Parse("192.168.10.2"),
+            IPAddress.Parse("192.168.10.1"),
+            1514,
+            43962);
+
+        Assert.Equal(1514, packet.Length);
+        Assert.Equal("00FF030ADC84", Convert.ToHexString(packet[0..6]));
+        Assert.Equal("10FFE068FE24", Convert.ToHexString(packet[6..12]));
+        Assert.Equal("0800", Convert.ToHexString(packet[12..14]));
+        Assert.Equal(0x45, packet[14]);
+        Assert.Equal("05DC", Convert.ToHexString(packet[16..18]));
+        Assert.Equal(17, packet[23]);
+        Assert.Equal("C0A80A02", Convert.ToHexString(packet[26..30]));
+        Assert.Equal("C0A80A01", Convert.ToHexString(packet[30..34]));
+        Assert.Equal("ABBAABBA05C80000", Convert.ToHexString(packet[34..42]));
+        Assert.All(packet[42..], value => Assert.Equal(0x41, value));
+    }
+
+    [Fact]
+    public async Task RunDataTestStep_RejectsUnsupportedModeBeforeOpeningPcap()
     {
         var context = new TestContext(new RegisterState());
         var step = new RunDataTestStep(
             NullLogger.Instance,
-            "SoftwarePcap",
+            "Bercut",
             10000,
             1514,
             43962,
@@ -149,8 +177,7 @@ public class ProductionStepTests
 
         Assert.Equal(StepResult.False, result);
         Assert.False(context.GetVariable<bool>("DataTest.Passed"));
-        Assert.Contains("pcap", context.GetVariable<string>("DataTest.Error"));
-        Assert.Equal("Port 0", context.GetVariable<string>("DataTest.Port0.Name"));
+        Assert.Contains("SoftwarePcap", context.GetVariable<string>("DataTest.Error"));
     }
 
     private sealed class CapturingHttpService : IHttpRequestService
