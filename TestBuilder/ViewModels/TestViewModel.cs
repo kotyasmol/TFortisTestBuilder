@@ -158,6 +158,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new RunDataTestNodeViewModel(),
         new GetUpsStatusNodeViewModel(),
         new GetUpsVoltageNodeViewModel(),
+        new GetIrpStatusNodeViewModel(),
+        new WaitVariableUntilNodeViewModel(),
+        new BuildMacFromSerialNodeViewModel(),
+        new CompareVariablesNodeViewModel(),
+        new BuildTestReportNodeViewModel(),
         new PrintLabelNodeViewModel(),
         new SendTestReportNodeViewModel(),
         new LabelNodeViewModel(),
@@ -301,11 +306,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             Find("Send UDP Set MAC"),
             Find("Run Data Test"),
             Find("Get UPS Status"),
-            Find("Get UPS Voltage")));
+            Find("Get UPS Voltage"),
+            Find("Get IRP Status"),
+            Find("Wait Variable Until")));
 
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
             "Оператор и отчеты",
             Find("Действие оператора"),
+            Find("Build MAC From Serial"),
+            Find("Compare Variables"),
+            Find("Build Test Report"),
             Find("Print Label"),
             Find("Send Test Report")));
     }
@@ -1271,6 +1281,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Run Data Test" => new RunDataTestNodeViewModel { Location = location },
             "Get UPS Status" => new GetUpsStatusNodeViewModel { Location = location },
             "Get UPS Voltage" => new GetUpsVoltageNodeViewModel { Location = location },
+            "Get IRP Status" => new GetIrpStatusNodeViewModel { Location = location },
+            "Wait Variable Until" => new WaitVariableUntilNodeViewModel { Location = location },
+            "Build MAC From Serial" => new BuildMacFromSerialNodeViewModel { Location = location },
+            "Compare Variables" => new CompareVariablesNodeViewModel { Location = location },
+            "Build Test Report" => new BuildTestReportNodeViewModel { Location = location },
             "Print Label" => new PrintLabelNodeViewModel { Location = location },
             "Send Test Report" => new SendTestReportNodeViewModel { Location = location },
             "Метка" => new LabelNodeViewModel { Location = location },

@@ -47,7 +47,7 @@
                         Height="14"
                         Data="M11 5l-7 7 7 7v-5h9v-4h-9z"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="ÐÐ°Ð·Ð°Ð´"
+              <TextBlock Text="Íàçàä"
                          Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
           </Button>
@@ -61,7 +61,7 @@
                         Height="13"
                         Data="M8 5v14l11-7z"
                         Foreground="{DynamicResource OnPrimaryBrush}" />
-              <TextBlock Text="Ð—Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚ÑŒ Ð³Ñ€Ð°Ñ„"
+              <TextBlock Text="Çàïóñòèòü ãðàô"
                          Foreground="{DynamicResource OnPrimaryBrush}"
                          FontWeight="SemiBold" />
             </StackPanel>
@@ -78,7 +78,7 @@
                         Height="13"
                         Data="M6 4h4v16H6z M14 4h4v16h-4z"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="ÐŸÐ°ÑƒÐ·Ð°"
+              <TextBlock Text="Ïàóçà"
                          Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
           </Button>
@@ -93,7 +93,7 @@
                         Height="13"
                         Data="M8 5v14l11-7z"
                         Foreground="{DynamicResource OnPrimaryBrush}" />
-              <TextBlock Text="ÐŸÑ€Ð¾Ð´Ð¾Ð»Ð¶Ð¸Ñ‚ÑŒ"
+              <TextBlock Text="Ïðîäîëæèòü"
                          Foreground="{DynamicResource OnPrimaryBrush}"
                          FontWeight="SemiBold" />
             </StackPanel>
@@ -109,14 +109,14 @@
                         Height="12"
                         Data="M6 6h12v12H6z"
                         Foreground="#DC2626" />
-              <TextBlock Text="ÐžÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ"
+              <TextBlock Text="Îñòàíîâèòü"
                          Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
           </Button>
           <Button Command="{Binding UndoCommand}"
                   IsEnabled="{Binding CanUndo}"
                   Classes="ghost icon"
-                  ToolTip.Tip="ÐžÑ‚Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ (Ctrl+Z)"
+                  ToolTip.Tip="Îòìåíèòü (Ctrl+Z)"
                   Width="38"
                   Height="36">
             <Path Fill="{DynamicResource TextPrimaryBrush}"
@@ -127,7 +127,7 @@
           <Button Command="{Binding RedoCommand}"
                   IsEnabled="{Binding CanRedo}"
                   Classes="ghost icon"
-                  ToolTip.Tip="ÐŸÐ¾Ð²Ñ‚Ð¾Ñ€Ð¸Ñ‚ÑŒ (Ctrl+Y)"
+                  ToolTip.Tip="Ïîâòîðèòü (Ctrl+Y)"
                   Width="38"
                   Height="36">
             <Path Fill="{DynamicResource TextPrimaryBrush}"
@@ -145,7 +145,7 @@
                         Height="14"
                         Data="M7 4V2h10v2h5v2H2V4h5z M5 8h14l-1 14H6z"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚ÑŒ"
+              <TextBlock Text="Î÷èñòèòü"
                          Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
           </Button>
@@ -159,7 +159,7 @@
                         Height="14"
                         Data="M5 3h12l2 2v16H5z M7 5v6h10V6.5L15.5 5z M8 15h8v4H8z"
                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ"
+              <TextBlock Text="Ñîõðàíèòü"
                          Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
           </Button>
@@ -281,12 +281,12 @@
                                FontSize="12" />
                     </Grid>
 
-                    <CheckBox Content="Slave Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°"
+                    <CheckBox Content="Slave èç öèêëà"
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="12" />
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ´Ñ€ÐµÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Àäðåñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
@@ -306,7 +306,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Ð—Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Çíà÷åíèå:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding ValueText}" FontSize="12" />
                     </Grid>
 
@@ -316,7 +316,7 @@
                                Foreground="#DC2626"
                                TextWrapping="Wrap" />
 
-                    <CheckBox Content="ÐŸÑ€Ð¾Ð²ÐµÑ€ÐºÐ°"
+                    <CheckBox Content="Ïðîâåðêà"
                               IsChecked="{Binding VerifyWrite}"
                               FontSize="12" />
                   </StackPanel>
@@ -379,7 +379,7 @@
                                Height="118" />
                     </Grid>
 
-                    <CheckBox Content="ÐšÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð¾ÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸ Ð¿Ñ€Ð¾Ð²Ð°Ð»Ðµ"
+                    <CheckBox Content="Êðèòè÷åñêàÿ îøèáêà ïðè ïðîâàëå"
                               IsChecked="{Binding FailOnError}"
                               FontSize="12" />
                   </StackPanel>
@@ -418,7 +418,7 @@
                       <TextBox Grid.Column="1"
                                Text="{Binding ServerBaseUrl}"
                                FontSize="12"
-                               Watermark="192.168.0.10 Ð¸Ð»Ð¸ http://server" />
+                               Watermark="192.168.0.10 èëè http://server" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
@@ -456,7 +456,7 @@
                       <TextBox Grid.Column="3" Text="{Binding RetryDelayMs}" FontSize="12" Watermark="delay ms" />
                     </Grid>
 
-                    <CheckBox Content="ÐšÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð¾ÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸ Ð¿Ñ€Ð¾Ð²Ð°Ð»Ðµ"
+                    <CheckBox Content="Êðèòè÷åñêàÿ îøèáêà ïðè ïðîâàëå"
                               IsChecked="{Binding FailOnError}"
                               FontSize="12" />
                   </StackPanel>
@@ -542,7 +542,7 @@
                       <TextBlock Grid.Column="0" Text="Max:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="12" />
                     </Grid>
-                    <CheckBox Content="Ð’ÐºÐ»ÑŽÑ‡Ð°Ñ Ð³Ñ€Ð°Ð½Ð¸Ñ†Ñ‹" IsChecked="{Binding Inclusive}" FontSize="12" />
+                    <CheckBox Content="Âêëþ÷àÿ ãðàíèöû" IsChecked="{Binding Inclusive}" FontSize="12" />
                     <Grid ColumnDefinitions="96,*">
                       <TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
@@ -599,12 +599,12 @@
                                FontSize="12" />
                     </Grid>
 
-                    <CheckBox Content="Slave Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°"
+                    <CheckBox Content="Slave èç öèêëà"
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="12" />
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ´Ñ€ÐµÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Àäðåñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
@@ -624,12 +624,12 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐœÐ¸Ð½Ð¸Ð¼ÑƒÐ¼:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ìèíèìóì:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="12" />
                     </Grid>
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐœÐ°ÐºÑÐ¸Ð¼ÑƒÐ¼:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ìàêñèìóì:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="12" />
                     </Grid>
                   </StackPanel>
@@ -661,7 +661,7 @@
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="190">
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐœÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ìñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Milliseconds}" FontSize="12" />
                     </Grid>
                   </StackPanel>
@@ -691,34 +691,13 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <Grid Margin="10,6,10,10"
-                        Width="{Binding LabelWidth}"
-                        Height="{Binding LabelHeight}"
-                        MinWidth="190"
-                        MinHeight="88">
+                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="190">
                     <TextBox Text="{Binding Text}"
                              FontSize="14"
                              TextWrapping="Wrap"
                              AcceptsReturn="True"
-                             VerticalAlignment="Stretch"
-                             HorizontalAlignment="Stretch"
-                             Padding="6,4,18,18" />
-                    <Border Width="16"
-                            Height="16"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom"
-                            Background="#00000000"
-                            PointerPressed="OnLabelResizePointerPressed"
-                            PointerMoved="OnLabelResizePointerMoved"
-                            PointerReleased="OnLabelResizePointerReleased">
-                      <Border Width="8"
-                              Height="8"
-                              HorizontalAlignment="Right"
-                              VerticalAlignment="Bottom"
-                              BorderBrush="{DynamicResource TextSecondaryBrush}"
-                              BorderThickness="0,0,2,2" />
-                    </Border>
-                  </Grid>
+                             Height="64" />
+                  </StackPanel>
                 </nodify:Node>
               </DataTemplate>
             </views:NodeTemplateSelector.LabelTemplate>
@@ -747,7 +726,7 @@
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="240">
                     <Grid ColumnDefinitions="78,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ°Ð·Ð²Ð°Ð½Ð¸Ðµ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Íàçâàíèå:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Name}" FontSize="12" />
                     </Grid>
 
@@ -756,24 +735,24 @@
                              TextWrapping="Wrap"
                              AcceptsReturn="True"
                              Height="48"
-                             Watermark="ÐžÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ" />
+                             Watermark="Îïèñàíèå" />
 
                     <Grid ColumnDefinitions="*,*">
-                      <CheckBox Grid.Column="0" Content="Ð’ÐºÐ»ÑŽÑ‡ÐµÐ½" IsChecked="{Binding IsEnabled}" FontSize="12" />
-                      <CheckBox Grid.Column="1" Content="Ð¡Ñ‚Ð¾Ð¿" IsChecked="{Binding StopOnError}" FontSize="12" Margin="8,0,0,0" />
+                      <CheckBox Grid.Column="0" Content="Âêëþ÷åí" IsChecked="{Binding IsEnabled}" FontSize="12" />
+                      <CheckBox Grid.Column="1" Content="Ñòîï" IsChecked="{Binding StopOnError}" FontSize="12" Margin="8,0,0,0" />
                     </Grid>
 
-                    <TextBlock Text="{Binding StepCount, StringFormat='Ð¨Ð°Ð³Ð¾Ð²: {0}'}"
+                    <TextBlock Text="{Binding StepCount, StringFormat='Øàãîâ: {0}'}"
                                FontSize="12"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding ProgressText, StringFormat='Ð¡ÐµÐ¹Ñ‡Ð°Ñ: {0}'}"
+                    <TextBlock Text="{Binding ProgressText, StringFormat='Ñåé÷àñ: {0}'}"
                                IsVisible="{Binding HasProgress}"
                                FontSize="12"
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource NodeWaitBrush}" />
 
-                    <Button Content="ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ"
+                    <Button Content="Îòêðûòü"
                             x:CompileBindings="False"
                             Command="{Binding DataContext.OpenCompositeNodeBodyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
@@ -807,25 +786,25 @@
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="220">
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="Ð¡:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding FromSlaveId}" FontSize="12" />
                     </Grid>
 
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="ÐŸÐ¾:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ïî:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding ToSlaveId}" FontSize="12" />
                     </Grid>
 
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="Ð¨Ð°Ð³:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Øàã:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Step}" FontSize="12" />
                     </Grid>
 
-                    <CheckBox Content="Ð¡Ñ‚Ð¾Ð¿ Ð¿Ñ€Ð¸ Ð¾ÑˆÐ¸Ð±ÐºÐµ"
+                    <CheckBox Content="Ñòîï ïðè îøèáêå"
                               IsChecked="{Binding StopOnError}"
                               FontSize="12" />
 
-                    <Button Content="Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ñ‚ÐµÐ»Ð¾"
+                    <Button Content="Ðåäàêòèðîâàòü òåëî"
                             x:CompileBindings="False"
                             Command="{Binding DataContext.OpenCompositeNodeBodyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
@@ -883,12 +862,12 @@
                                FontSize="12" />
                     </Grid>
 
-                    <CheckBox Content="Slave Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°"
+                    <CheckBox Content="Slave èç öèêëà"
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="12" />
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ´Ñ€ÐµÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Àäðåñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
@@ -908,7 +887,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Ð—Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Çíà÷åíèå:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" />
                     </Grid>
                   </StackPanel>
@@ -945,20 +924,20 @@
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
                     </Grid>
-                    <CheckBox Content="Slave Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
+                    <CheckBox Content="Slave èç öèêëà" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ´Ñ€ÐµÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Àäðåñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="12" HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Ð—Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Çíà÷åíèå:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Ð¢Ð°Ð¹Ð¼Ð°ÑƒÑ‚ Ð¼Ñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Òàéìàóò ìñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
                     </Grid>
                   </StackPanel>
@@ -995,24 +974,24 @@
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
                     </Grid>
-                    <CheckBox Content="Slave Ð¸Ð· Ñ†Ð¸ÐºÐ»Ð°" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
+                    <CheckBox Content="Slave èç öèêëà" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐÐ´Ñ€ÐµÑ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Àäðåñ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="12" HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐœÐ¸Ð½Ð¸Ð¼ÑƒÐ¼:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ìèíèìóì:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐœÐ°ÐºÑÐ¸Ð¼ÑƒÐ¼:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ìàêñèìóì:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="ÐšÐ¾Ð»-Ð²Ð¾ Ð·Ð°Ð¼ÐµÑ€Ð¾Ð²:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Êîë-âî çàìåðîâ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding SampleCount}" FontSize="12" />
                     </Grid>
                   </StackPanel>
@@ -1048,7 +1027,7 @@
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
                     <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Ð¡Ð¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Ñîîáùåíèå:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1"
                                Text="{Binding Message}"
                                FontSize="12"

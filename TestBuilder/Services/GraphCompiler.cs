@@ -106,6 +106,11 @@ namespace TestBuilder.Services
                 RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
                 GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
+                GetIrpStatusNodeViewModel irpStatus => irpStatus.CreateStep(_httpRequestService, _logger),
+                BuildMacFromSerialNodeViewModel buildMac => buildMac.CreateStep(_logger),
+                CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
+                WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
+                BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger),
                 SubtestNodeViewModel subtest => CreateSubtestStep(subtest),
@@ -259,6 +264,26 @@ namespace TestBuilder.Services
 
                 case GetUpsVoltageNodeViewModel upsVoltageVm:
                     BindTrueFalse(sourceConnector, source, target, upsVoltageVm.TrueOut, upsVoltageVm.FalseOut);
+                    break;
+
+                case GetIrpStatusNodeViewModel irpStatusVm:
+                    BindTrueFalse(sourceConnector, source, target, irpStatusVm.TrueOut, irpStatusVm.FalseOut);
+                    break;
+
+                case BuildMacFromSerialNodeViewModel buildMacVm:
+                    BindTrueFalse(sourceConnector, source, target, buildMacVm.TrueOut, buildMacVm.FalseOut);
+                    break;
+
+                case CompareVariablesNodeViewModel compareVariablesVm:
+                    BindTrueFalse(sourceConnector, source, target, compareVariablesVm.TrueOut, compareVariablesVm.FalseOut);
+                    break;
+
+                case WaitVariableUntilNodeViewModel waitVariableVm:
+                    BindTrueFalse(sourceConnector, source, target, waitVariableVm.TrueOut, waitVariableVm.FalseOut);
+                    break;
+
+                case BuildTestReportNodeViewModel buildReportVm:
+                    BindTrueFalse(sourceConnector, source, target, buildReportVm.TrueOut, buildReportVm.FalseOut);
                     break;
 
                 case PrintLabelNodeViewModel printLabelVm:

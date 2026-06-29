@@ -8,6 +8,7 @@ using Nodify;
 using System;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.NodifyVM;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.Views.TestViews;
 
@@ -17,6 +18,11 @@ public partial class GraphEditorView : UserControl, IDisposable
     private readonly IDisposable _themeSubscription;
     private readonly IDisposable _dataContextSubscription;
     private TestViewModel? _viewModel;
+    private LabelNodeViewModel? _resizingLabel;
+    private Control? _labelResizeHandle;
+    private Point _labelResizeStartPoint;
+    private double _labelResizeStartWidth;
+    private double _labelResizeStartHeight;
     private bool _isDisposed;
 
     public GraphEditorView()
@@ -159,6 +165,44 @@ public partial class GraphEditorView : UserControl, IDisposable
         if (sender is not BaseConnection conn) return;
         if (conn.DataContext is not ConnectionViewModel connection) return;
         vm.DeleteConnection(connection);
+        e.Handled = true;
+    }
+
+    public void OnLabelResizePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control handle) return;
+        if (handle.DataContext is not LabelNodeViewModel label) return;
+        if (e.GetCurrentPoint(handle).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed) return;
+
+        _resizingLabel = label;
+        _labelResizeHandle = handle;
+        _labelResizeStartPoint = e.GetPosition(this);
+        _labelResizeStartWidth = label.LabelWidth;
+        _labelResizeStartHeight = label.LabelHeight;
+        e.Pointer.Capture(handle);
+        e.Handled = true;
+    }
+
+    public void OnLabelResizePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_resizingLabel == null || _labelResizeHandle == null) return;
+
+        var point = e.GetPosition(this);
+        var deltaX = point.X - _labelResizeStartPoint.X;
+        var deltaY = point.Y - _labelResizeStartPoint.Y;
+
+        _resizingLabel.LabelWidth = _labelResizeStartWidth + deltaX;
+        _resizingLabel.LabelHeight = _labelResizeStartHeight + deltaY;
+        e.Handled = true;
+    }
+
+    public void OnLabelResizePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_labelResizeHandle != null)
+            e.Pointer.Capture(null);
+
+        _resizingLabel = null;
+        _labelResizeHandle = null;
         e.Handled = true;
     }
 

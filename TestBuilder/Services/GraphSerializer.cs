@@ -47,6 +47,11 @@ namespace TestBuilder.Services
             RunDataTestNodeViewModel => "Run Data Test",
             GetUpsStatusNodeViewModel => "Get UPS Status",
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
+            GetIrpStatusNodeViewModel => "Get IRP Status",
+            BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
+            CompareVariablesNodeViewModel => "Compare Variables",
+            WaitVariableUntilNodeViewModel => "Wait Variable Until",
+            BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
             SubtestNodeViewModel => "Subtest",
@@ -86,6 +91,8 @@ namespace TestBuilder.Services
 
                     case LabelNodeViewModel l:
                         n.Text = l.Text;
+                        n.LabelWidth = l.LabelWidth;
+                        n.LabelHeight = l.LabelHeight;
                         break;
 
                     case ModbusWriteNodeViewModel w:
@@ -210,6 +217,50 @@ namespace TestBuilder.Services
                         n.FailOnError = uv.FailOnError;
                         break;
 
+                    case GetIrpStatusNodeViewModel irp:
+                        n.BaseUrl = irp.BaseUrl;
+                        n.TimeoutMs = irp.TimeoutMs;
+                        n.OutputVariableName = irp.OutputVariableName;
+                        n.FailOnError = irp.FailOnError;
+                        break;
+
+                    case BuildMacFromSerialNodeViewModel bm:
+                        n.SerialVariableName = bm.SerialVariableName;
+                        n.SerialOffset = bm.SerialOffset;
+                        n.MacPrefix = bm.MacPrefix;
+                        n.SerialShortVariableName = bm.SerialShortVariableName;
+                        n.MacVariableName = bm.MacVariableName;
+                        n.FailOnError = bm.FailOnError;
+                        break;
+
+                    case CompareVariablesNodeViewModel cv:
+                        n.LeftVariableName = cv.LeftVariableName;
+                        n.RightVariableName = cv.RightVariableName;
+                        n.ComparisonType = cv.ComparisonType.ToString();
+                        n.FailMessage = cv.FailMessage;
+                        break;
+
+                    case WaitVariableUntilNodeViewModel wait:
+                        n.VariableName = wait.VariableName;
+                        n.ExpectedValue = wait.ExpectedValue;
+                        n.ComparisonType = wait.ComparisonType.ToString();
+                        n.PollAction = wait.PollAction;
+                        n.BaseUrl = wait.BaseUrl;
+                        n.RequestTimeoutMs = wait.RequestTimeoutMs;
+                        n.TimeoutMs = wait.TimeoutMs;
+                        n.IntervalMs = wait.IntervalMs;
+                        n.FailOnTimeout = wait.FailOnTimeout;
+                        break;
+
+                    case BuildTestReportNodeViewModel br:
+                        n.ReportVariableName = br.ReportVariableName;
+                        n.DeviceName = br.DeviceName;
+                        n.DeviceType = br.DeviceType;
+                        n.SerialVariableName = br.SerialVariableName;
+                        n.MacVariableName = br.MacVariableName;
+                        n.IncludeAllVariables = br.IncludeAllVariables;
+                        break;
+
                     case PrintLabelNodeViewModel pl:
                         n.PrinterName = pl.PrinterName;
                         n.DeviceName = pl.DeviceName;
@@ -328,7 +379,9 @@ namespace TestBuilder.Services
                     "Label" or "Метка" => new LabelNodeViewModel
                     {
                         Location = location,
-                        Text = n.Text ?? "Этап"
+                        Text = n.Text ?? "Этап",
+                        LabelWidth = n.LabelWidth ?? 300,
+                        LabelHeight = n.LabelHeight ?? 120
                     },
 
                     "Write Register" or "WriteRegister" or "Запись регистра" => CreateModbusWriteNode(n, location),
@@ -429,6 +482,60 @@ namespace TestBuilder.Services
                         TimeoutMs = n.TimeoutMs ?? 5000,
                         OutputVariableName = n.OutputVariableName ?? "Dut.akb_voltage",
                         FailOnError = n.FailOnError ?? true
+                    },
+
+                    "Get IRP Status" or "GET_IRP_STATUS" or "Получить IRP статус" => new GetIrpStatusNodeViewModel
+                    {
+                        Location = location,
+                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
+                        TimeoutMs = n.TimeoutMs ?? 5000,
+                        OutputVariableName = n.OutputVariableName ?? "Dut.ups_det",
+                        FailOnError = n.FailOnError ?? true
+                    },
+
+                    "Build MAC From Serial" or "BUILD_MAC_FROM_SERIAL" or "Расчет MAC" => new BuildMacFromSerialNodeViewModel
+                    {
+                        Location = location,
+                        SerialVariableName = n.SerialVariableName ?? "SerialNumber",
+                        SerialOffset = n.SerialOffset ?? 3200000,
+                        MacPrefix = n.MacPrefix ?? "C0:11:A6:20",
+                        SerialShortVariableName = n.SerialShortVariableName ?? "SerialShort",
+                        MacVariableName = n.MacVariableName ?? "Dut.NewMac",
+                        FailOnError = n.FailOnError ?? true
+                    },
+
+                    "Compare Variables" or "COMPARE_VARIABLES" or "Сравнить переменные" => new CompareVariablesNodeViewModel
+                    {
+                        Location = location,
+                        LeftVariableName = n.LeftVariableName ?? "Dut.default_mac",
+                        RightVariableName = n.RightVariableName ?? "Dut.NewMac",
+                        ComparisonType = ParseComparisonType(n.ComparisonType),
+                        FailMessage = n.FailMessage ?? string.Empty
+                    },
+
+                    "Wait Variable Until" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной" => new WaitVariableUntilNodeViewModel
+                    {
+                        Location = location,
+                        VariableName = n.VariableName ?? "Dut.ups_rez",
+                        ExpectedValue = GetExpectedValueAsString(n.ExpectedValue, "1"),
+                        ComparisonType = ParseComparisonType(n.ComparisonType),
+                        PollAction = n.PollAction ?? "GetUpsStatus",
+                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
+                        RequestTimeoutMs = n.RequestTimeoutMs ?? 5000,
+                        TimeoutMs = n.TimeoutMs ?? 160000,
+                        IntervalMs = n.IntervalMs ?? 5000,
+                        FailOnTimeout = n.FailOnTimeout ?? true
+                    },
+
+                    "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
+                    {
+                        Location = location,
+                        ReportVariableName = n.ReportVariableName ?? "TestReportJson",
+                        DeviceName = n.DeviceName ?? "PSW+UPS-Box 8x2Pro",
+                        DeviceType = GetObjectAsInt(n.DeviceType, 32),
+                        SerialVariableName = n.SerialVariableName ?? "SerialShort",
+                        MacVariableName = n.MacVariableName ?? "Dut.NewMac",
+                        IncludeAllVariables = n.IncludeAllVariables ?? true
                     },
 
                     "Print Label" or "PRINT_LABEL" or "Печать этикетки" => new PrintLabelNodeViewModel

@@ -1,0 +1,2207 @@
+{
+  "name": "profile_zero",
+  "nodes": [
+    {
+      "id": "0",
+      "type": "Start",
+      "x": 64,
+      "y": 96
+    },
+    {
+      "id": "1",
+      "type": "Label",
+      "x": 256,
+      "y": 96,
+      "text": "ЭТАП\r\nподготовка стенда"
+    },
+    {
+      "id": "2",
+      "type": "Label",
+      "x": 656,
+      "y": 96,
+      "text": "НН - недостающая нода\r\nметадата для сохранения информации о тесте\r\n"
+    },
+    {
+      "id": "3",
+      "type": "Label",
+      "x": 896,
+      "y": 464,
+      "text": "ЭТАП\r\nСброс  poe нагрузок"
+    },
+    {
+      "id": "4",
+      "type": "For Slaves",
+      "x": 1424,
+      "y": 640,
+      "fromSlaveId": 1,
+      "toSlaveId": 15,
+      "step": 2,
+      "stopOnError": true,
+      "body": {
+        "name": "Тело цикла For Slaves",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Body Start",
+            "x": -432,
+            "y": -288
+          },
+          {
+            "id": "1",
+            "type": "Body End",
+            "x": 3728,
+            "y": 32
+          },
+          {
+            "id": "2",
+            "type": "Write Register",
+            "x": 224,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1414,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "3",
+            "type": "Write Register",
+            "x": 656,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1415,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "4",
+            "type": "Write Register",
+            "x": 1088,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1412,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "5",
+            "type": "Write Register",
+            "x": 1520,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1413,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "6",
+            "type": "Write Register",
+            "x": 1968,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1430,
+            "value": 1,
+            "verifyWrite": false
+          },
+          {
+            "id": "7",
+            "type": "Delay",
+            "x": 2416,
+            "y": 16,
+            "milliseconds": 1000
+          },
+          {
+            "id": "8",
+            "type": "Write Register",
+            "x": 2816,
+            "y": 16,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1430,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "9",
+            "type": "Delay",
+            "x": 3264,
+            "y": 16,
+            "milliseconds": 2000
+          },
+          {
+            "id": "10",
+            "type": "Write Register",
+            "x": -208,
+            "y": -272,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1420,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "11",
+            "type": "Write Register",
+            "x": 304,
+            "y": -256,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1421,
+            "value": 0,
+            "verifyWrite": false
+          },
+          {
+            "id": "12",
+            "type": "Delay",
+            "x": 800.855611055275,
+            "y": -208.16369283841934,
+            "milliseconds": 1000
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "Выход",
+            "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "9",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "10",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "10",
+            "sourceConnector": "True",
+            "targetNodeId": "11",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "11",
+            "sourceConnector": "True",
+            "targetNodeId": "12",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "12",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5",
+      "type": "For Slaves",
+      "x": 2752,
+      "y": 640,
+      "fromSlaveId": 1,
+      "toSlaveId": 15,
+      "step": 2,
+      "stopOnError": true,
+      "body": {
+        "name": "Тело цикла For Slaves",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Body Start",
+            "x": 208,
+            "y": 32
+          },
+          {
+            "id": "1",
+            "type": "Body End",
+            "x": 2704,
+            "y": 64
+          },
+          {
+            "id": "2",
+            "type": "Write Register",
+            "x": 380.10043810288374,
+            "y": 58.079415887700264,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1412,
+            "value": 15000,
+            "verifyWrite": true
+          },
+          {
+            "id": "3",
+            "type": "Write Register",
+            "x": 848,
+            "y": 64,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1413,
+            "value": 15000,
+            "verifyWrite": true
+          },
+          {
+            "id": "4",
+            "type": "Write Register",
+            "x": 1312,
+            "y": 64,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1414,
+            "value": 1,
+            "verifyWrite": true
+          },
+          {
+            "id": "5",
+            "type": "Write Register",
+            "x": 1776,
+            "y": 64,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1415,
+            "value": 1,
+            "verifyWrite": true
+          },
+          {
+            "id": "6",
+            "type": "Delay",
+            "x": 2256,
+            "y": 64,
+            "milliseconds": 2000
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6",
+      "type": "Label",
+      "x": 960,
+      "y": 960,
+      "text": "ЭТАП \r\nПодключение АКБ/БП и подача питания dut"
+    },
+    {
+      "id": "7",
+      "type": "Write Register",
+      "x": 1424,
+      "y": 1056,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "8",
+      "type": "Write Register",
+      "x": 1872,
+      "y": 1056,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1201,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "9",
+      "type": "Delay",
+      "x": 2304,
+      "y": 1056,
+      "milliseconds": 1000
+    },
+    {
+      "id": "10",
+      "type": "Label",
+      "x": 2736,
+      "y": 1056,
+      "text": "ожидание запуска коммутатора (в оригинале 160 секунд) "
+    },
+    {
+      "id": "11",
+      "type": "Delay",
+      "x": 3168,
+      "y": 1056,
+      "milliseconds": 160000
+    },
+    {
+      "id": "12",
+      "type": "Clear ARP Cache",
+      "x": 3664,
+      "y": 1072,
+      "timeoutMs": 5000,
+      "failOnError": false,
+      "runArpdBat": true,
+      "arpdBatPath": "arpd.bat",
+      "command": "arp",
+      "arguments": "-d"
+    },
+    {
+      "id": "13",
+      "type": "Label",
+      "x": 976,
+      "y": 1344,
+      "text": "ЭТАП \r\nзагрузка selftest страницы"
+    },
+    {
+      "id": "14",
+      "type": "Selftest Check",
+      "x": 1408,
+      "y": 1440,
+      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "timeoutMs": 10000,
+      "validationRules": "init_ok=1..1\ndev_type=0..65535\nfirmvare_vers=0..65535\nboot_vers=0..65535",
+      "failOnError": true,
+      "outputPrefix": "Dut"
+    },
+    {
+      "id": "15",
+      "type": "Label",
+      "x": 1872,
+      "y": 640,
+      "text": "НН\r\nЗдесь должно быть действие оператора с информацией \"вставьте разъемы\". Заглушка из раннего графа."
+    },
+    {
+      "id": "16",
+      "type": "Label",
+      "x": 2288,
+      "y": 640,
+      "text": "ЭТАП \r\nнастройка пое нагрузок перед включением DUT"
+    },
+    {
+      "id": "17",
+      "type": "Label",
+      "x": 992,
+      "y": 1120,
+      "text": "ВНИМАНИЕ\r\nУТОЧНИТЬ ПРО ПРАВИЛЬНОСТЬ ШАГОВ. ВСЕ ЛИ НА МЕСТЕ ИЛИ ДОЛЖНО БЫТЬ ЧТО-ТО ЕЩЕ"
+    },
+    {
+      "id": "18",
+      "type": "Label",
+      "x": 976,
+      "y": 752,
+      "text": "ВНИМАНИЕ ОТРЫГНУЛИ ПЛАТЫ EL60V5 ПРИ ПОПЫТКЕ ЗАПИСАТЬ 0 В РЕГИСТР 14ХХ НЕ ВЫДАЕТ ОШИБКУ НО ВСЕ РАВНО ТАМ ЕДИНИЦА. ПОСЛЕ ИСПРАВЛЕНИЯ НАЖАТЬ НА ЧЕКБОКС СТОП ПРИ ОШИБКЕ В ЦИКЛЕ FOR"
+    },
+    {
+      "id": "19",
+      "type": "Label",
+      "x": 1936,
+      "y": 1440,
+      "text": "ВНИМАНИЕ. \r\n1. уточнить проверяемые параметры и их допустимые диапазоны\r\n2. есть проверка прошивки, она х>= здесь предусмотрено только == "
+    },
+    {
+      "id": "20",
+      "type": "Label",
+      "x": 2368,
+      "y": 1440,
+      "text": "ВНИМАНИЕ. \r\n1. проверки с помощью нод check variable (8-11 шаг) \r\n"
+    },
+    {
+      "id": "21",
+      "type": "Label",
+      "x": 992,
+      "y": 1808,
+      "text": "Проверка нагревателя 1\r\n(шаг12)"
+    },
+    {
+      "id": "22",
+      "type": "Check Register Range",
+      "x": 1440,
+      "y": 1920,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1216,
+      "min": 0,
+      "max": 50
+    },
+    {
+      "id": "23",
+      "type": "Write Register",
+      "x": 1904,
+      "y": 1920,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1215,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "24",
+      "type": "Write Register",
+      "x": 2384,
+      "y": 1920,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1215,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "25",
+      "type": "Delay",
+      "x": 2864,
+      "y": 1920,
+      "milliseconds": 3000
+    },
+    {
+      "id": "26",
+      "type": "Check Register Range",
+      "x": 3296,
+      "y": 1920,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1216,
+      "min": 150,
+      "max": 1000
+    },
+    {
+      "id": "27",
+      "type": "Write Register",
+      "x": 3744,
+      "y": 1920,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1215,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "28",
+      "type": "Label",
+      "x": 912,
+      "y": 2224,
+      "text": "Проверка нагревателя 2\r\n(шаг13)"
+    },
+    {
+      "id": "29",
+      "type": "Check Register Range",
+      "x": 1440,
+      "y": 2384,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1221,
+      "min": 0,
+      "max": 50
+    },
+    {
+      "id": "30",
+      "type": "Write Register",
+      "x": 1904,
+      "y": 2384,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1220,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "31",
+      "type": "Write Register",
+      "x": 2368,
+      "y": 2384,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1220,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "32",
+      "type": "Delay",
+      "x": 2864,
+      "y": 2384,
+      "milliseconds": 3000
+    },
+    {
+      "id": "33",
+      "type": "Check Register Range",
+      "x": 3344,
+      "y": 2384,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1221,
+      "min": 150,
+      "max": 1000
+    },
+    {
+      "id": "34",
+      "type": "Write Register",
+      "x": 3792,
+      "y": 2384,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1220,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "35",
+      "type": "End",
+      "x": 18000,
+      "y": 4480
+    },
+    {
+      "id": "36",
+      "type": "Delay",
+      "x": 4256,
+      "y": 1936,
+      "milliseconds": 2000
+    },
+    {
+      "id": "37",
+      "type": "Subtest",
+      "x": 1280,
+      "y": 112,
+      "name": "Подготовка стенда 1",
+      "description": "сброс питания, ",
+      "isEnabled": true,
+      "stopOnError": true,
+      "bodyGraph": {
+        "name": "Подготовка стенда 1",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 352,
+            "y": 176
+          },
+          {
+            "id": "1",
+            "type": "End",
+            "x": 4992,
+            "y": 448
+          },
+          {
+            "id": "2",
+            "type": "Label",
+            "x": 686,
+            "y": 126,
+            "text": "НН - недостающая нода\r\nметадата для сохранения информации о тесте\r\n"
+          },
+          {
+            "id": "3",
+            "type": "Label",
+            "x": 910,
+            "y": 270,
+            "text": "ЭТАП\r\nБезопасный сброс стенда перед тестом"
+          },
+          {
+            "id": "4",
+            "type": "Write Register",
+            "x": 1326,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "5",
+            "type": "Write Register",
+            "x": 1758,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "6",
+            "type": "Write Register",
+            "x": 2190,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1204,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "7",
+            "type": "Write Register",
+            "x": 2622,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1210,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "8",
+            "type": "Write Register",
+            "x": 3054,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1215,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "9",
+            "type": "Write Register",
+            "x": 3486,
+            "y": 270,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1220,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "10",
+            "type": "Write Register",
+            "x": 3918,
+            "y": 14,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1219,
+            "value": 1,
+            "verifyWrite": false
+          },
+          {
+            "id": "11",
+            "type": "Write Register",
+            "x": 4350,
+            "y": 270,
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1700,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "12",
+            "type": "Clear ARP Cache",
+            "x": 4798,
+            "y": 270,
+            "timeoutMs": 5000,
+            "failOnError": false,
+            "runArpdBat": true,
+            "arpdBatPath": "arpd.bat",
+            "command": "arp",
+            "arguments": "-d"
+          },
+          {
+            "id": "13",
+            "type": "Label",
+            "x": 3934,
+            "y": 286,
+            "text": "из-за ноды выше падает тестирование. позже изучу. на месте этой метки должна быть очистика статистики "
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "Выход",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Выход",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "11",
+            "sourceConnector": "True",
+            "targetNodeId": "12",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "9",
+            "sourceConnector": "True",
+            "targetNodeId": "13",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "13",
+            "sourceConnector": "Выход",
+            "targetNodeId": "11",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "12",
+            "sourceConnector": "True",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "38",
+      "type": "Label",
+      "x": 4240,
+      "y": 2384,
+      "text": "ЭТАП\r\nпроверка PoE линий 0..15\r\nобернуть в цикл For по EL60v5 slave 1..15 шаг 2"
+    },
+    {
+      "id": "39",
+      "type": "For Slaves",
+      "x": 4720,
+      "y": 2384,
+      "fromSlaveId": 1,
+      "toSlaveId": 15,
+      "step": 2,
+      "stopOnError": true,
+      "body": {
+        "name": "???? ????? ???????? PoE EL60v5",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Body Start",
+            "x": 64,
+            "y": 96
+          },
+          {
+            "id": "1",
+            "type": "Body End",
+            "x": 2500,
+            "y": 96
+          },
+          {
+            "id": "2",
+            "type": "Check Register Range",
+            "x": 320,
+            "y": 96,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1403,
+            "min": 53000,
+            "max": 56000
+          },
+          {
+            "id": "3",
+            "type": "Delay",
+            "x": 760,
+            "y": 96,
+            "milliseconds": 200
+          },
+          {
+            "id": "4",
+            "type": "Check Register Range",
+            "x": 1120,
+            "y": 96,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "address": 1402,
+            "min": 53000,
+            "max": 56000
+          },
+          {
+            "id": "5",
+            "type": "Delay",
+            "x": 1560,
+            "y": 96,
+            "milliseconds": 200
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "?????",
+            "targetNodeId": "2",
+            "targetConnector": "????"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "????"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "?????",
+            "targetNodeId": "4",
+            "targetConnector": "????"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "????"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "?????",
+            "targetNodeId": "1",
+            "targetConnector": "????"
+          }
+        ]
+      }
+    },
+    {
+      "id": "40",
+      "type": "Label",
+      "x": 5200,
+      "y": 2384,
+      "text": "ЭТАП\r\nData test портов 0..9\r\nНН: текущая Run Data Test пока заглушка без pcap/Npcap, но параметры заполнены как в QT-профиле"
+    },
+    {
+      "id": "41",
+      "type": "Run Data Test",
+      "x": 5680,
+      "y": 2384,
+      "mode": "SoftwarePcap",
+      "expectedPackets": 10000,
+      "packetSizeBytes": 1514,
+      "udpPort": 43962,
+      "maxPortTestTimeMs": 15000,
+      "portsText": "port0-1,CARD_IP_0,CARD_IP_1\r\nport2-3,CARD_IP_2,CARD_IP_3\r\nport4-5,CARD_IP_4,CARD_IP_5\r\nport6-7,CARD_IP_6,CARD_IP_7\r\nport8-9,CARD_IP_8,CARD_IP_9",
+      "outputVariableName": "DataTest",
+      "failOnError": true
+    },
+    {
+      "id": "42",
+      "type": "Label",
+      "x": 6160,
+      "y": 2384,
+      "text": "НН\r\nCARD_IP_0..CARD_IP_9 заменить на реальные IP сетевых карт стенда из настроек QT. В JSON старого профиля этих IP нет."
+    },
+    {
+      "id": "43",
+      "type": "Label",
+      "x": 4240,
+      "y": 2800,
+      "text": "ЭТАП\r\nUPS: подготовка, детекция ИБП и АКБ"
+    },
+    {
+      "id": "44",
+      "type": "Write Register",
+      "x": 4720,
+      "y": 2800,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1219,
+      "value": 1,
+      "verifyWrite": false
+    },
+    {
+      "id": "45",
+      "type": "Write Register",
+      "x": 5160,
+      "y": 2800,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1210,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "46",
+      "type": "Delay",
+      "x": 5600,
+      "y": 2800,
+      "milliseconds": 15000
+    },
+    {
+      "id": "47",
+      "type": "Selftest Check",
+      "x": 6040,
+      "y": 2800,
+      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "timeoutMs": 30000,
+      "validationRules": "",
+      "failOnError": true,
+      "outputPrefix": "Dut"
+    },
+    {
+      "id": "48",
+      "type": "Get IRP Status",
+      "x": 6520,
+      "y": 2800,
+      "baseUrl": "http://192.168.0.1",
+      "timeoutMs": 5000,
+      "outputVariableName": "Dut.ups_det",
+      "failOnError": true
+    },
+    {
+      "id": "49",
+      "type": "Check Variable Equality",
+      "x": 7000,
+      "y": 2800,
+      "variableName": "Dut.ups_det",
+      "expectedValue": "1",
+      "comparisonType": "Number",
+      "failMessage": "UPS/IRP должен быть обнаружен"
+    },
+    {
+      "id": "50",
+      "type": "Get UPS Voltage",
+      "x": 7480,
+      "y": 2800,
+      "baseUrl": "http://192.168.0.1",
+      "timeoutMs": 5000,
+      "outputVariableName": "Dut.akb_voltage",
+      "failOnError": true
+    },
+    {
+      "id": "51",
+      "type": "Check Variable Range",
+      "x": 7960,
+      "y": 2800,
+      "variableName": "Dut.akb_voltage",
+      "min": 12,
+      "max": 27,
+      "inclusive": true,
+      "failMessage": "Напряжение АКБ должно быть 12..27 В"
+    },
+    {
+      "id": "52",
+      "type": "Get UPS Status",
+      "x": 8440,
+      "y": 2800,
+      "baseUrl": "http://192.168.0.1",
+      "timeoutMs": 5000,
+      "outputVariableName": "Dut.ups_rez",
+      "failOnError": true
+    },
+    {
+      "id": "53",
+      "type": "Check Variable Equality",
+      "x": 8920,
+      "y": 2800,
+      "variableName": "Dut.ups_rez",
+      "expectedValue": "0",
+      "comparisonType": "Number",
+      "failMessage": "Перед отключением AC устройство должно питаться от сети"
+    },
+    {
+      "id": "54",
+      "type": "Label",
+      "x": 9400,
+      "y": 2800,
+      "text": "charge_CC_test=0 и charge_CV_test=0: зарядные CC/CV проверки по профилю пропущены"
+    },
+    {
+      "id": "55",
+      "type": "Label",
+      "x": 4240,
+      "y": 3220,
+      "text": "ЭТАП\r\nUPS: отключение AC1 и переход на АКБ"
+    },
+    {
+      "id": "56",
+      "type": "Write Register",
+      "x": 4720,
+      "y": 3220,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1204,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "57",
+      "type": "Delay",
+      "x": 5160,
+      "y": 3220,
+      "milliseconds": 500
+    },
+    {
+      "id": "58",
+      "type": "Delay",
+      "x": 5520,
+      "y": 3220,
+      "milliseconds": 300
+    },
+    {
+      "id": "59",
+      "type": "Write Register",
+      "x": 5880,
+      "y": 3220,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "60",
+      "type": "Delay",
+      "x": 6320,
+      "y": 3220,
+      "milliseconds": 500
+    },
+    {
+      "id": "61",
+      "type": "Delay",
+      "x": 6680,
+      "y": 3220,
+      "milliseconds": 200
+    },
+    {
+      "id": "62",
+      "type": "Write Register",
+      "x": 7040,
+      "y": 3220,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1215,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "63",
+      "type": "Write Register",
+      "x": 7480,
+      "y": 3220,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1220,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "64",
+      "type": "Write Register",
+      "x": 7920,
+      "y": 3220,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1204,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "65",
+      "type": "Delay",
+      "x": 8360,
+      "y": 3220,
+      "milliseconds": 500
+    },
+    {
+      "id": "66",
+      "type": "Wait Variable Until",
+      "x": 8800,
+      "y": 3220,
+      "variableName": "Dut.ups_rez",
+      "expectedValue": "1",
+      "comparisonType": "Number",
+      "pollAction": "GetUpsStatus",
+      "baseUrl": "http://192.168.0.1",
+      "requestTimeoutMs": 5000,
+      "timeoutMs": 160000,
+      "intervalMs": 5000,
+      "failOnTimeout": true
+    },
+    {
+      "id": "67",
+      "type": "Delay",
+      "x": 9280,
+      "y": 3220,
+      "milliseconds": 2000
+    },
+    {
+      "id": "68",
+      "type": "Label",
+      "x": 4240,
+      "y": 3640,
+      "text": "ЭТАП\r\nUPS: измерение разряда SIMBAT24"
+    },
+    {
+      "id": "69",
+      "type": "Check Register Range",
+      "x": 4720,
+      "y": 3640,
+      "slaveId": 17,
+      "useCurrentSlaveId": false,
+      "address": 1707,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "id": "70",
+      "type": "Check Register Range",
+      "x": 5200,
+      "y": 3640,
+      "slaveId": 17,
+      "useCurrentSlaveId": false,
+      "address": 1708,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "id": "71",
+      "type": "Write Register",
+      "x": 5680,
+      "y": 3640,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "72",
+      "type": "Delay",
+      "x": 6120,
+      "y": 3640,
+      "milliseconds": 3000
+    },
+    {
+      "id": "73",
+      "type": "Wait Variable Until",
+      "x": 6560,
+      "y": 3640,
+      "variableName": "Dut.ups_rez",
+      "expectedValue": "0",
+      "comparisonType": "Number",
+      "pollAction": "GetUpsStatus",
+      "baseUrl": "http://192.168.0.1",
+      "requestTimeoutMs": 5000,
+      "timeoutMs": 160000,
+      "intervalMs": 5000,
+      "failOnTimeout": true
+    },
+    {
+      "id": "74",
+      "type": "Write Register",
+      "x": 7040,
+      "y": 3640,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1210,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "75",
+      "type": "Write Register",
+      "x": 7480,
+      "y": 3640,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1204,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "76",
+      "type": "Label",
+      "x": 4240,
+      "y": 4060,
+      "text": "ЭТАП\r\nMAC: получить серийник, рассчитать MAC, записать в DUT"
+    },
+    {
+      "id": "77",
+      "type": "Label",
+      "x": 4720,
+      "y": 4060,
+      "text": "НН: SERVER_BASE_URL заменить на адрес базы/сервера из настроек старой QT-программы"
+    },
+    {
+      "id": "78",
+      "type": "Get Serial Number",
+      "x": 5200,
+      "y": 4060,
+      "serverBaseUrl": "http://SERVER_BASE_URL",
+      "deviceType": "PSW+UPS-Box 8x2Pro",
+      "cpuIdVariableName": "Dut.cpu_id",
+      "timeoutMs": 30000,
+      "retryCount": 1,
+      "retryDelayMs": 1000,
+      "outputVariableName": "SerialNumber",
+      "failOnError": true
+    },
+    {
+      "id": "79",
+      "type": "Build MAC From Serial",
+      "x": 5680,
+      "y": 4060,
+      "serialVariableName": "SerialNumber",
+      "serialOffset": 3200000,
+      "macPrefix": "C0:11:A6:20",
+      "serialShortVariableName": "SerialShort",
+      "macVariableName": "Dut.NewMac",
+      "failOnError": true
+    },
+    {
+      "id": "80",
+      "type": "Send UDP Set MAC",
+      "x": 6160,
+      "y": 4060,
+      "targetIp": "192.168.0.1",
+      "targetPort": 43962,
+      "macVariableName": "Dut.NewMac",
+      "timeoutMs": 1000,
+      "repeatCount": 1,
+      "delayBetweenRepeatsMs": 200,
+      "failOnSendError": true
+    },
+    {
+      "id": "81",
+      "type": "Delay",
+      "x": 6640,
+      "y": 4060,
+      "milliseconds": 7000
+    },
+    {
+      "id": "82",
+      "type": "Write Register",
+      "x": 7080,
+      "y": 4060,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "83",
+      "type": "Write Register",
+      "x": 7520,
+      "y": 4060,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1210,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "84",
+      "type": "Delay",
+      "x": 7960,
+      "y": 4060,
+      "milliseconds": 10000
+    },
+    {
+      "id": "85",
+      "type": "Write Register",
+      "x": 8400,
+      "y": 4060,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 1,
+      "verifyWrite": true
+    },
+    {
+      "id": "86",
+      "type": "Delay",
+      "x": 8840,
+      "y": 4060,
+      "milliseconds": 100
+    },
+    {
+      "id": "87",
+      "type": "Clear ARP Cache",
+      "x": 9280,
+      "y": 4060,
+      "timeoutMs": 5000,
+      "failOnError": false,
+      "runArpdBat": true,
+      "arpdBatPath": "arpd.bat",
+      "command": "arp",
+      "arguments": "-d"
+    },
+    {
+      "id": "88",
+      "type": "Delay",
+      "x": 9760,
+      "y": 4060,
+      "milliseconds": 160000
+    },
+    {
+      "id": "89",
+      "type": "Selftest Check",
+      "x": 10200,
+      "y": 4060,
+      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "timeoutMs": 30000,
+      "validationRules": "",
+      "failOnError": true,
+      "outputPrefix": "Dut"
+    },
+    {
+      "id": "90",
+      "type": "Compare Variables",
+      "x": 10680,
+      "y": 4060,
+      "leftVariableName": "Dut.default_mac",
+      "rightVariableName": "Dut.NewMac",
+      "comparisonType": "MacAddress",
+      "failMessage": "MAC после перезапуска должен совпасть с рассчитанным"
+    },
+    {
+      "id": "91",
+      "type": "Label",
+      "x": 4240,
+      "y": 4480,
+      "text": "ЭТАП\r\nпечать 4 этикеток"
+    },
+    {
+      "id": "92",
+      "type": "Label",
+      "x": 4720,
+      "y": 4480,
+      "text": "НН: PrinterName заменить на реальное имя принтера этикеток, если это не Zebra"
+    },
+    {
+      "id": "93",
+      "type": "Print Label",
+      "x": 5200,
+      "y": 4480,
+      "printerName": "Zebra",
+      "deviceName": "PSW+UPS-Box 8x2Pro",
+      "deviceType": 32,
+      "serialVariableName": "SerialShort",
+      "macVariableName": "Dut.NewMac",
+      "copies": 4,
+      "includeMac": true,
+      "equipmentFieldUse": false,
+      "equipmentType": 0,
+      "equipmentText": "",
+      "failOnPrinterError": true
+    },
+    {
+      "id": "94",
+      "type": "Label",
+      "x": 5680,
+      "y": 4480,
+      "text": "ЭТАП\r\nфинальная статистика и отчет"
+    },
+    {
+      "id": "95",
+      "type": "Selftest Check",
+      "x": 6160,
+      "y": 4480,
+      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "timeoutMs": 30000,
+      "validationRules": "",
+      "failOnError": false,
+      "outputPrefix": "DutFinal"
+    },
+    {
+      "id": "96",
+      "type": "Build Test Report",
+      "x": 6640,
+      "y": 4480,
+      "reportVariableName": "TestReportJson",
+      "deviceName": "PSW+UPS-Box 8x2Pro",
+      "deviceType": 32,
+      "serialVariableName": "SerialShort",
+      "macVariableName": "Dut.NewMac",
+      "includeAllVariables": true
+    },
+    {
+      "id": "97",
+      "type": "Send Test Report",
+      "x": 7120,
+      "y": 4480,
+      "serverBaseUrl": "http://SERVER_BASE_URL",
+      "reportVariableName": "TestReportJson",
+      "endpoint": "/api/Api.svc/result.json",
+      "timeoutMs": 10000,
+      "retryCount": 1,
+      "retryDelayMs": 1000,
+      "saveLocalCopy": true,
+      "localReportsDirectory": "reports",
+      "failOnError": false
+    },
+    {
+      "id": "98",
+      "type": "Operator Action",
+      "x": 7600,
+      "y": 4480,
+      "text": "Вставьте разъемы"
+    },
+    {
+      "id": "99",
+      "type": "Label",
+      "x": 8080,
+      "y": 4480,
+      "text": "ЭТАП\r\nфинальный StandOff"
+    },
+    {
+      "id": "100",
+      "type": "Write Register",
+      "x": 8560,
+      "y": 4480,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1200,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "101",
+      "type": "Write Register",
+      "x": 9000,
+      "y": 4480,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1210,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "102",
+      "type": "Write Register",
+      "x": 9440,
+      "y": 4480,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1204,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "103",
+      "type": "Write Register",
+      "x": 9880,
+      "y": 4480,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1215,
+      "value": 0,
+      "verifyWrite": true
+    },
+    {
+      "id": "104",
+      "type": "Write Register",
+      "x": 10320,
+      "y": 4480,
+      "slaveId": 23,
+      "useCurrentSlaveId": false,
+      "address": 1220,
+      "value": 0,
+      "verifyWrite": true
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "Выход",
+      "targetNodeId": "2",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "Выход",
+      "targetNodeId": "4",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "15",
+      "sourceConnector": "Выход",
+      "targetNodeId": "16",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "16",
+      "sourceConnector": "Выход",
+      "targetNodeId": "5",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "5",
+      "sourceConnector": "True",
+      "targetNodeId": "6",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "6",
+      "sourceConnector": "Выход",
+      "targetNodeId": "7",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "7",
+      "sourceConnector": "True",
+      "targetNodeId": "8",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "8",
+      "sourceConnector": "True",
+      "targetNodeId": "9",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "10",
+      "sourceConnector": "Выход",
+      "targetNodeId": "11",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "11",
+      "sourceConnector": "Выход",
+      "targetNodeId": "12",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "12",
+      "sourceConnector": "True",
+      "targetNodeId": "13",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "13",
+      "sourceConnector": "Выход",
+      "targetNodeId": "14",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "4",
+      "sourceConnector": "True",
+      "targetNodeId": "15",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "14",
+      "sourceConnector": "True",
+      "targetNodeId": "19",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "19",
+      "sourceConnector": "Выход",
+      "targetNodeId": "20",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "21",
+      "sourceConnector": "Выход",
+      "targetNodeId": "22",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "20",
+      "sourceConnector": "Выход",
+      "targetNodeId": "21",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "22",
+      "sourceConnector": "True",
+      "targetNodeId": "23",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "25",
+      "sourceConnector": "Выход",
+      "targetNodeId": "26",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "26",
+      "sourceConnector": "True",
+      "targetNodeId": "27",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "28",
+      "sourceConnector": "Выход",
+      "targetNodeId": "29",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "29",
+      "sourceConnector": "True",
+      "targetNodeId": "30",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "32",
+      "sourceConnector": "Выход",
+      "targetNodeId": "33",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "33",
+      "sourceConnector": "True",
+      "targetNodeId": "34",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "27",
+      "sourceConnector": "True",
+      "targetNodeId": "36",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "2",
+      "sourceConnector": "Выход",
+      "targetNodeId": "37",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "37",
+      "sourceConnector": "Success",
+      "targetNodeId": "3",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "9",
+      "sourceConnector": "Выход",
+      "targetNodeId": "10",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "23",
+      "sourceConnector": "True",
+      "targetNodeId": "24",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "24",
+      "sourceConnector": "True",
+      "targetNodeId": "25",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "36",
+      "sourceConnector": "Выход",
+      "targetNodeId": "28",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "31",
+      "sourceConnector": "True",
+      "targetNodeId": "32",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "30",
+      "sourceConnector": "True",
+      "targetNodeId": "31",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "34",
+      "sourceConnector": "True",
+      "targetNodeId": "38",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "38",
+      "sourceConnector": "?????",
+      "targetNodeId": "39",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "39",
+      "sourceConnector": "True",
+      "targetNodeId": "40",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "40",
+      "sourceConnector": "?????",
+      "targetNodeId": "41",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "41",
+      "sourceConnector": "True",
+      "targetNodeId": "42",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "42",
+      "sourceConnector": "?????",
+      "targetNodeId": "43",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "43",
+      "sourceConnector": "?????",
+      "targetNodeId": "44",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "44",
+      "sourceConnector": "True",
+      "targetNodeId": "45",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "45",
+      "sourceConnector": "True",
+      "targetNodeId": "46",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "46",
+      "sourceConnector": "?????",
+      "targetNodeId": "47",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "47",
+      "sourceConnector": "True",
+      "targetNodeId": "48",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "48",
+      "sourceConnector": "True",
+      "targetNodeId": "49",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "49",
+      "sourceConnector": "True",
+      "targetNodeId": "50",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "50",
+      "sourceConnector": "True",
+      "targetNodeId": "51",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "51",
+      "sourceConnector": "True",
+      "targetNodeId": "52",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "52",
+      "sourceConnector": "True",
+      "targetNodeId": "53",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "53",
+      "sourceConnector": "True",
+      "targetNodeId": "54",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "54",
+      "sourceConnector": "?????",
+      "targetNodeId": "55",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "55",
+      "sourceConnector": "?????",
+      "targetNodeId": "56",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "56",
+      "sourceConnector": "True",
+      "targetNodeId": "57",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "57",
+      "sourceConnector": "?????",
+      "targetNodeId": "58",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "58",
+      "sourceConnector": "?????",
+      "targetNodeId": "59",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "59",
+      "sourceConnector": "True",
+      "targetNodeId": "60",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "60",
+      "sourceConnector": "?????",
+      "targetNodeId": "61",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "61",
+      "sourceConnector": "?????",
+      "targetNodeId": "62",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "62",
+      "sourceConnector": "True",
+      "targetNodeId": "63",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "63",
+      "sourceConnector": "True",
+      "targetNodeId": "64",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "64",
+      "sourceConnector": "True",
+      "targetNodeId": "65",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "65",
+      "sourceConnector": "?????",
+      "targetNodeId": "66",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "66",
+      "sourceConnector": "True",
+      "targetNodeId": "67",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "67",
+      "sourceConnector": "?????",
+      "targetNodeId": "68",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "68",
+      "sourceConnector": "?????",
+      "targetNodeId": "69",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "69",
+      "sourceConnector": "True",
+      "targetNodeId": "70",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "70",
+      "sourceConnector": "True",
+      "targetNodeId": "71",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "71",
+      "sourceConnector": "True",
+      "targetNodeId": "72",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "72",
+      "sourceConnector": "?????",
+      "targetNodeId": "73",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "73",
+      "sourceConnector": "True",
+      "targetNodeId": "74",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "74",
+      "sourceConnector": "True",
+      "targetNodeId": "75",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "75",
+      "sourceConnector": "True",
+      "targetNodeId": "76",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "76",
+      "sourceConnector": "?????",
+      "targetNodeId": "77",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "77",
+      "sourceConnector": "?????",
+      "targetNodeId": "78",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "78",
+      "sourceConnector": "True",
+      "targetNodeId": "79",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "79",
+      "sourceConnector": "True",
+      "targetNodeId": "80",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "80",
+      "sourceConnector": "True",
+      "targetNodeId": "81",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "81",
+      "sourceConnector": "?????",
+      "targetNodeId": "82",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "82",
+      "sourceConnector": "True",
+      "targetNodeId": "83",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "83",
+      "sourceConnector": "True",
+      "targetNodeId": "84",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "84",
+      "sourceConnector": "?????",
+      "targetNodeId": "85",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "85",
+      "sourceConnector": "True",
+      "targetNodeId": "86",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "86",
+      "sourceConnector": "?????",
+      "targetNodeId": "87",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "87",
+      "sourceConnector": "True",
+      "targetNodeId": "88",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "88",
+      "sourceConnector": "?????",
+      "targetNodeId": "89",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "89",
+      "sourceConnector": "True",
+      "targetNodeId": "90",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "90",
+      "sourceConnector": "True",
+      "targetNodeId": "91",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "91",
+      "sourceConnector": "?????",
+      "targetNodeId": "92",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "92",
+      "sourceConnector": "?????",
+      "targetNodeId": "93",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "93",
+      "sourceConnector": "True",
+      "targetNodeId": "94",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "94",
+      "sourceConnector": "?????",
+      "targetNodeId": "95",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "95",
+      "sourceConnector": "True",
+      "targetNodeId": "96",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "96",
+      "sourceConnector": "True",
+      "targetNodeId": "97",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "97",
+      "sourceConnector": "True",
+      "targetNodeId": "98",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "98",
+      "sourceConnector": "??????????",
+      "targetNodeId": "99",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "99",
+      "sourceConnector": "?????",
+      "targetNodeId": "100",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "100",
+      "sourceConnector": "True",
+      "targetNodeId": "101",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "101",
+      "sourceConnector": "True",
+      "targetNodeId": "102",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "102",
+      "sourceConnector": "True",
+      "targetNodeId": "103",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "103",
+      "sourceConnector": "True",
+      "targetNodeId": "104",
+      "targetConnector": "????"
+    },
+    {
+      "sourceNodeId": "104",
+      "sourceConnector": "True",
+      "targetNodeId": "35",
+      "targetConnector": "????"
+    }
+  ]
+}

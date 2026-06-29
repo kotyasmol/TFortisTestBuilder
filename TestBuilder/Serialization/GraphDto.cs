@@ -43,6 +43,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Text { get; set; }
 
+        [JsonPropertyName("labelWidth")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? LabelWidth { get; set; }
+
+        [JsonPropertyName("labelHeight")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? LabelHeight { get; set; }
+
         // --- Subtest ---
         [JsonPropertyName("name")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -155,6 +163,45 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("inclusive")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? Inclusive { get; set; }
+
+        // --- Compare Variables ---
+        [JsonPropertyName("leftVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? LeftVariableName { get; set; }
+
+        [JsonPropertyName("rightVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RightVariableName { get; set; }
+
+        // --- Build MAC ---
+        [JsonPropertyName("serialOffset")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SerialOffset { get; set; }
+
+        [JsonPropertyName("macPrefix")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? MacPrefix { get; set; }
+
+        [JsonPropertyName("serialShortVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SerialShortVariableName { get; set; }
+
+        // --- Wait Variable Until ---
+        [JsonPropertyName("pollAction")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? PollAction { get; set; }
+
+        [JsonPropertyName("requestTimeoutMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? RequestTimeoutMs { get; set; }
+
+        [JsonPropertyName("intervalMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? IntervalMs { get; set; }
+
+        [JsonPropertyName("failOnTimeout")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? FailOnTimeout { get; set; }
 
         // --- Clear ARP Cache ---
         [JsonPropertyName("runArpdBat")]
@@ -293,6 +340,11 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("localReportsDirectory")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? LocalReportsDirectory { get; set; }
+
+        // --- Build Report ---
+        [JsonPropertyName("includeAllVariables")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? IncludeAllVariables { get; set; }
 
         // --- For Slaves ---
         [JsonPropertyName("fromSlaveId")]

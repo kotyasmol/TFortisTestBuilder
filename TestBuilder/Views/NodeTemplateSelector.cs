@@ -36,6 +36,16 @@ namespace TestBuilder.Views
 
         public IDataTemplate? GetUpsVoltageTemplate { get; set; }
 
+        public IDataTemplate? GetIrpStatusTemplate { get; set; }
+
+        public IDataTemplate? BuildMacFromSerialTemplate { get; set; }
+
+        public IDataTemplate? CompareVariablesTemplate { get; set; }
+
+        public IDataTemplate? WaitVariableUntilTemplate { get; set; }
+
+        public IDataTemplate? BuildTestReportTemplate { get; set; }
+
         public IDataTemplate? PrintLabelTemplate { get; set; }
 
         public IDataTemplate? SendTestReportTemplate { get; set; }
@@ -72,6 +82,11 @@ namespace TestBuilder.Views
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                GetIrpStatusNodeViewModel => GetIrpStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                BuildMacFromSerialNodeViewModel => BuildMacFromSerialTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                CompareVariablesNodeViewModel => CompareVariablesTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                WaitVariableUntilNodeViewModel => WaitVariableUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                BuildTestReportNodeViewModel => BuildTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 PrintLabelNodeViewModel => PrintLabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SendTestReportNodeViewModel => SendTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 OperatorActionNodeViewModel => OperatorActionTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
