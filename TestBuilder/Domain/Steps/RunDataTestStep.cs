@@ -1,5 +1,4 @@
 using SharpPcap;
-using SharpPcap.LibPcap;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -88,13 +87,11 @@ namespace TestBuilder.Domain.Steps
                 return Finish(context, false, $"Режим DataTest '{_mode}' не поддерживается этой нодой. Используйте SoftwarePcap.");
             }
 
-            IReadOnlyList<LibPcapLiveDevice> devices;
+            IReadOnlyList<ILiveDevice> devices;
 
             try
             {
-                devices = LibPcapLiveDeviceList.Instance
-                    .Where(device => !device.Loopback)
-                    .ToList();
+                devices = CaptureDeviceList.Instance.ToList();
             }
             catch (Exception ex)
             {
@@ -135,7 +132,7 @@ namespace TestBuilder.Domain.Steps
         private async Task<DataTestPortResult> RunPortPairAsync(
             int index,
             DataTestPortConfig port,
-            IReadOnlyList<LibPcapLiveDevice> devices,
+            IReadOnlyList<ILiveDevice> devices,
             CancellationToken cancellationToken)
         {
             if (!IPAddress.TryParse(port.InIp, out var inIp) || inIp.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
@@ -347,7 +344,7 @@ namespace TestBuilder.Domain.Steps
         }
 
         private static async Task<int> SendPacedAsync(
-            LibPcapLiveDevice device,
+            IInjectionDevice device,
             byte[] packet,
             int targetBandwidthMbps,
             int durationMs,
@@ -369,7 +366,7 @@ namespace TestBuilder.Domain.Steps
 
                 while (sent < packetsDue)
                 {
-                    device.SendPacket(packet);
+                    device.SendPacket(packet, packet.Length);
                     sent++;
                 }
 
@@ -444,16 +441,17 @@ namespace TestBuilder.Domain.Steps
                    mode.Equals("TYPE_SOFT_GEN", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static LibPcapLiveDevice? FindDeviceByIp(IEnumerable<LibPcapLiveDevice> devices, IPAddress ip)
+        private static ILiveDevice? FindDeviceByIp(IEnumerable<ILiveDevice> devices, IPAddress ip)
         {
-            var text = ip.ToString();
+            var networkInterface = FindNetworkInterfaceByIp(ip);
 
-            return devices.FirstOrDefault(device =>
-                device.Addresses.Any(address =>
-                    address.Addr != null &&
-                    IPAddress.TryParse(address.Addr.ToString(), out var addressIp) &&
-                    addressIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
-                    string.Equals(addressIp.ToString(), text, StringComparison.OrdinalIgnoreCase)));
+            if (networkInterface == null)
+            {
+                return null;
+            }
+
+            var expectedMac = networkInterface.GetPhysicalAddress();
+            return devices.FirstOrDefault(device => SamePhysicalAddress(device.MacAddress, expectedMac));
         }
 
         private static byte[]? GetMacBytes(PhysicalAddress? address)
@@ -467,7 +465,36 @@ namespace TestBuilder.Domain.Steps
             return bytes.Length == 6 ? bytes : null;
         }
 
-        private static void SafeStopAndClose(LibPcapLiveDevice device)
+        private static NetworkInterface? FindNetworkInterfaceByIp(IPAddress ip)
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(networkInterface => networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .FirstOrDefault(networkInterface =>
+                {
+                    try
+                    {
+                        return networkInterface.GetIPProperties()
+                            .UnicastAddresses
+                            .Any(address => address.Address.Equals(ip));
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                });
+        }
+
+        private static bool SamePhysicalAddress(PhysicalAddress? left, PhysicalAddress? right)
+        {
+            var leftBytes = left?.GetAddressBytes();
+            var rightBytes = right?.GetAddressBytes();
+
+            return leftBytes is { Length: 6 } &&
+                   rightBytes is { Length: 6 } &&
+                   leftBytes.SequenceEqual(rightBytes);
+        }
+
+        private static void SafeStopAndClose(ILiveDevice device)
         {
             try
             {
