@@ -167,6 +167,14 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public void RunDataTestStep_Calculates1GbitPacketCount()
+    {
+        var packets = RunDataTestStep.CalculateExpectedPackets(1000, 1514, 5000);
+
+        Assert.Equal(412814, packets);
+    }
+
+    [Fact]
     public async Task RunDataTestStep_RejectsUnsupportedModeBeforeOpeningPcap()
     {
         var context = new TestContext(new RegisterState());

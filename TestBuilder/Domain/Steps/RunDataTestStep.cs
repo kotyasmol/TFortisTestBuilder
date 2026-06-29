@@ -217,42 +217,58 @@ namespace TestBuilder.Domain.Steps
                 sawFirstPacket = false;
                 Volatile.Write(ref countingEnabled, 1);
 
-                var transmittedPackets = await SendPacedAsync(
+                var sendResult = await SendPacedAsync(
                     sendDevice,
                     packet,
                     targetBandwidthMbps,
                     _durationMs,
                     cancellationToken);
+                var transmittedPackets = sendResult.SentPackets;
 
                 await Task.Delay(100, cancellationToken);
                 Volatile.Write(ref countingEnabled, 0);
 
                 var received = Volatile.Read(ref receivedPackets);
                 var lostPackets = Math.Max(0, transmittedPackets - received);
+                var txDeficitPackets = Math.Max(0, expectedPackets - transmittedPackets);
+                var txDeficitPercent = expectedPackets > 0
+                    ? txDeficitPackets * 100.0 / expectedPackets
+                    : 100.0;
                 var lossPercent = transmittedPackets > 0
                     ? lostPackets * 100.0 / transmittedPackets
                     : 100.0;
-                var passed = lossPercent <= _allowedLossPercent;
+                var passed = lossPercent <= _allowedLossPercent &&
+                             txDeficitPercent <= _allowedLossPercent;
                 var elapsedMs = GetElapsedMilliseconds(sawFirstPacket ? firstPacketAt : Stopwatch.GetTimestamp(), lastPacketAt);
                 var speedKbps = elapsedMs > 0 ? received * packet.Length * 8.0 / elapsedMs : 0.0;
-                var error = passed
-                    ? string.Empty
-                    : $"Loss {lossPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%. RX {received}, TX {transmittedPackets}.";
+                var txMbps = sendResult.ElapsedMs > 0
+                    ? transmittedPackets * packet.Length * 8.0 / sendResult.ElapsedMs / 1000.0
+                    : 0.0;
+                var error = BuildFailureMessage(
+                    passed,
+                    lossPercent,
+                    txDeficitPercent,
+                    received,
+                    transmittedPackets,
+                    expectedPackets);
 
                 _logger.Info(
                     $"DataTest {port.Name} [{index}]: {outIp} -> {inIp}, target {targetBandwidthMbps} Mbps, " +
                     $"expected {expectedPackets}, TX {transmittedPackets}, RX {received}, loss {lossPercent:F3}%, " +
-                    $"speed {speedKbps / 1000.0:F3} Mbps, {(passed ? "OK" : "FAIL")}.");
+                    $"tx deficit {txDeficitPercent:F3}%, tx speed {txMbps:F3} Mbps, rx speed {speedKbps / 1000.0:F3} Mbps, " +
+                    $"{(passed ? "OK" : "FAIL")}.");
 
                 return new DataTestPortResult(
                     passed,
                     transmittedPackets,
                     received,
                     speedKbps,
+                    txMbps,
                     targetBandwidthMbps,
                     _durationMs,
                     expectedPackets,
                     lossPercent,
+                    txDeficitPercent,
                     receiveDevice.Name,
                     sendDevice.Name,
                     error);
@@ -343,7 +359,7 @@ namespace TestBuilder.Domain.Steps
             return Math.Max(1, targetBandwidthMbps) * 1_000_000.0 / (Math.Max(MinEthernetFrameLength, packetSizeBytes) * 8.0);
         }
 
-        private static async Task<int> SendPacedAsync(
+        private static async Task<PacedSendResult> SendPacedAsync(
             IInjectionDevice device,
             byte[] packet,
             int targetBandwidthMbps,
@@ -353,13 +369,21 @@ namespace TestBuilder.Domain.Steps
             var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length);
             var startTimestamp = Stopwatch.GetTimestamp();
+            var deadlineTimestamp = startTimestamp + Math.Max(1, durationMs) * Stopwatch.Frequency / 1000;
             var sent = 0;
 
             while (sent < targetPackets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var elapsedTicks = Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp);
+                var now = Stopwatch.GetTimestamp();
+
+                if (now >= deadlineTimestamp)
+                {
+                    break;
+                }
+
+                var elapsedTicks = Math.Max(0, now - startTimestamp);
                 var packetsDue = Math.Min(
                     targetPackets,
                     Math.Max(1, (int)Math.Floor(elapsedTicks * packetsPerSecond / Stopwatch.Frequency) + 1));
@@ -376,7 +400,7 @@ namespace TestBuilder.Domain.Steps
                 }
 
                 var nextDueTimestamp = startTimestamp + (long)(sent * Stopwatch.Frequency / packetsPerSecond);
-                var waitTicks = nextDueTimestamp - Stopwatch.GetTimestamp();
+                var waitTicks = Math.Min(nextDueTimestamp, deadlineTimestamp) - Stopwatch.GetTimestamp();
 
                 if (waitTicks > Stopwatch.Frequency / 500)
                 {
@@ -392,7 +416,36 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
-            return sent;
+            var elapsedMs = GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
+            return new PacedSendResult(sent, elapsedMs);
+        }
+
+        private string BuildFailureMessage(
+            bool passed,
+            double lossPercent,
+            double txDeficitPercent,
+            int receivedPackets,
+            int transmittedPackets,
+            int expectedPackets)
+        {
+            if (passed)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+
+            if (txDeficitPercent > _allowedLossPercent)
+            {
+                parts.Add($"TX deficit {txDeficitPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%: sent {transmittedPackets} of expected {expectedPackets} packets");
+            }
+
+            if (lossPercent > _allowedLossPercent)
+            {
+                parts.Add($"Loss {lossPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%: RX {receivedPackets}, TX {transmittedPackets}");
+            }
+
+            return string.Join("; ", parts);
         }
 
         private StepResult Finish(TestContext context, bool passed, string error)
@@ -424,10 +477,12 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.TransmittedPackets", result.TransmittedPackets);
             context.SetVariable($"{prefix}.ReceivedPackets", result.ReceivedPackets);
             context.SetVariable($"{prefix}.SpeedKbps", result.SpeedKbps);
+            context.SetVariable($"{prefix}.ActualTxMbps", result.ActualTxMbps);
             context.SetVariable($"{prefix}.TargetBandwidthMbps", result.TargetBandwidthMbps);
             context.SetVariable($"{prefix}.DurationMs", result.DurationMs);
             context.SetVariable($"{prefix}.ExpectedPackets", result.ExpectedPackets);
             context.SetVariable($"{prefix}.LossPercent", result.LossPercent);
+            context.SetVariable($"{prefix}.TxDeficitPercent", result.TxDeficitPercent);
             context.SetVariable($"{prefix}.ReceiveDevice", result.ReceiveDeviceName);
             context.SetVariable($"{prefix}.SendDevice", result.SendDeviceName);
             context.SetVariable($"{prefix}.Error", result.Error);
@@ -555,15 +610,19 @@ namespace TestBuilder.Domain.Steps
 
     public sealed record DataTestPortConfig(string Name, string InIp, string OutIp, int? TargetBandwidthMbps = null);
 
+    internal sealed record PacedSendResult(int SentPackets, long ElapsedMs);
+
     internal sealed record DataTestPortResult(
         bool Passed,
         int TransmittedPackets,
         int ReceivedPackets,
         double SpeedKbps,
+        double ActualTxMbps,
         int TargetBandwidthMbps,
         int DurationMs,
         int ExpectedPackets,
         double LossPercent,
+        double TxDeficitPercent,
         string ReceiveDeviceName,
         string SendDeviceName,
         string Error)
@@ -573,9 +632,11 @@ namespace TestBuilder.Domain.Steps
             0,
             0,
             0.0,
+            0.0,
             0,
             0,
             0,
+            100.0,
             100.0,
             string.Empty,
             string.Empty,

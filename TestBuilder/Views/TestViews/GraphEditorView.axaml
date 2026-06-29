@@ -1167,7 +1167,7 @@
                       <TextBox Grid.Column="1" Text="{Binding WarmupMs}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Allowed loss %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Allowed fail %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
