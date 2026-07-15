@@ -22,6 +22,40 @@
                   Transform="{Binding DpiScaledViewportTransform, ElementName=Editor}"
                   Drawing="{StaticResource SmallGridGeometry}" />
 
+    <DataTemplate x:Key="NodeHeaderHelpTemplate"
+                  x:DataType="nodifyvm:NodeViewModel">
+      <Grid ColumnDefinitions="*,Auto"
+            MinWidth="128">
+        <TextBlock Grid.Column="0"
+                   Text="{Binding Title}"
+                   TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" />
+        <Border Grid.Column="1"
+                Width="18"
+                Height="18"
+                Margin="8,0,0,0"
+                CornerRadius="9"
+                Background="{DynamicResource SurfaceMutedBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                IsVisible="{Binding HasHelpText}"
+                VerticalAlignment="Center">
+          <ToolTip.Tip>
+            <TextBlock Text="{Binding HelpText}"
+                       Width="420"
+                       MaxWidth="420"
+                       TextWrapping="Wrap" />
+          </ToolTip.Tip>
+          <TextBlock Text="?"
+                     FontSize="12"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+        </Border>
+      </Grid>
+    </DataTemplate>
+
   </UserControl.Resources>
 
   <Grid RowDefinitions="Auto,*">
@@ -221,7 +255,7 @@
 
             <views:NodeTemplateSelector.DefaultTemplate>
               <DataTemplate x:DataType="nodifyvm:NodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="LabelNode"
@@ -250,7 +284,7 @@
 
             <views:NodeTemplateSelector.ModbusWriteTemplate>
               <DataTemplate x:DataType="stepvm:ModbusWriteNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="ModbusNode"
@@ -275,7 +309,7 @@
                   </nodify:Node.OutputConnectorTemplate>
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
+                    <Grid ColumnDefinitions="76,*,Auto">
                       <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding IsConnected}"
@@ -293,6 +327,18 @@
                                IsVisible="{Binding !IsConnected}"
                                Text="{Binding SlaveIdText}"
                                FontSize="12" />
+                      <StackPanel Grid.Column="2"
+                                  Orientation="Horizontal"
+                                  Margin="6,0,0,0"
+                                  VerticalAlignment="Center">
+                        <TextBlock Text="ID "
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </StackPanel>
                     </Grid>
 
                     <CheckBox Content="Slave из цикла"
@@ -340,7 +386,7 @@
 
             <views:NodeTemplateSelector.SelfTestCheckTemplate>
               <DataTemplate x:DataType="stepvm:SelfTestCheckNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="HttpNode"
@@ -402,7 +448,7 @@
             </views:NodeTemplateSelector.SelfTestCheckTemplate>
             <views:NodeTemplateSelector.GetSerialNumberTemplate>
               <DataTemplate x:DataType="stepvm:GetSerialNumberFromServerNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="HttpNode"
@@ -479,7 +525,7 @@
             </views:NodeTemplateSelector.GetSerialNumberTemplate>
             <views:NodeTemplateSelector.CheckVariableEqualityTemplate>
               <DataTemplate x:DataType="stepvm:CheckVariableEqualityNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="EqualityNode"
@@ -523,7 +569,7 @@
 
             <views:NodeTemplateSelector.CheckVariableRangeTemplate>
               <DataTemplate x:DataType="stepvm:CheckVariableRangeNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="RangeNode"
@@ -568,7 +614,7 @@
 
             <views:NodeTemplateSelector.CheckRegisterRangeTemplate>
               <DataTemplate x:DataType="stepvm:CheckRegisterRangeNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="RangeNode"
@@ -593,7 +639,7 @@
                   </nodify:Node.OutputConnectorTemplate>
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
+                    <Grid ColumnDefinitions="76,*,Auto">
                       <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding IsConnected}"
@@ -611,6 +657,18 @@
                                IsVisible="{Binding !IsConnected}"
                                Text="{Binding SlaveId}"
                                FontSize="12" />
+                      <StackPanel Grid.Column="2"
+                                  Orientation="Horizontal"
+                                  Margin="6,0,0,0"
+                                  VerticalAlignment="Center">
+                        <TextBlock Text="ID "
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </StackPanel>
                     </Grid>
 
                     <CheckBox Content="Slave из цикла"
@@ -657,7 +715,7 @@
 
             <views:NodeTemplateSelector.DelayTemplate>
               <DataTemplate x:DataType="stepvm:DelayNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="DelayNode"
@@ -689,7 +747,7 @@
 
             <views:NodeTemplateSelector.LabelTemplate>
               <DataTemplate x:DataType="stepvm:LabelNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="LabelNode"
@@ -743,7 +801,7 @@
 
             <views:NodeTemplateSelector.SubtestTemplate>
               <DataTemplate x:DataType="stepvm:SubtestNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="SubtestNode"
@@ -807,7 +865,7 @@
             </views:NodeTemplateSelector.SubtestTemplate>
             <views:NodeTemplateSelector.ForEachSlaveTemplate>
               <DataTemplate x:DataType="stepvm:ForEachSlaveNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="LoopNode"
@@ -860,7 +918,7 @@
 
             <views:NodeTemplateSelector.CheckRegisterEqualityTemplate>
               <DataTemplate x:DataType="stepvm:CheckRegisterEqualityNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="EqualityNode"
@@ -885,7 +943,7 @@
                   </nodify:Node.OutputConnectorTemplate>
 
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
+                    <Grid ColumnDefinitions="76,*,Auto">
                       <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding IsConnected}"
@@ -903,6 +961,18 @@
                                IsVisible="{Binding !IsConnected}"
                                Text="{Binding SlaveId}"
                                FontSize="12" />
+                      <StackPanel Grid.Column="2"
+                                  Orientation="Horizontal"
+                                  Margin="6,0,0,0"
+                                  VerticalAlignment="Center">
+                        <TextBlock Text="ID "
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </StackPanel>
                     </Grid>
 
                     <CheckBox Content="Slave из цикла"
@@ -944,7 +1014,7 @@
 
             <views:NodeTemplateSelector.WaitUntilTemplate>
               <DataTemplate x:DataType="stepvm:WaitUntilNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="WaitNode"
@@ -964,12 +1034,16 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
+                    <Grid ColumnDefinitions="76,*,Auto">
                       <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding IsConnected}" ItemsSource="{Binding AvailableSlaves}" SelectedItem="{Binding SelectedSlave}" FontSize="12" HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="ID " FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </StackPanel>
                     </Grid>
                     <CheckBox Content="Slave из цикла" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
                     <CheckBox Content="Live Modbus read" IsChecked="{Binding LiveRead}" FontSize="12" />
@@ -995,7 +1069,7 @@
 
             <views:NodeTemplateSelector.PollRegisterTemplate>
               <DataTemplate x:DataType="stepvm:PollRegisterNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="PollNode"
@@ -1015,12 +1089,16 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
+                    <Grid ColumnDefinitions="76,*,Auto">
                       <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding IsConnected}" ItemsSource="{Binding AvailableSlaves}" SelectedItem="{Binding SelectedSlave}" FontSize="12" HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="ID " FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                      </StackPanel>
                     </Grid>
                     <CheckBox Content="Slave из цикла" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
                     <CheckBox Content="Live Modbus read" IsChecked="{Binding LiveRead}" FontSize="12" />
@@ -1050,7 +1128,7 @@
 
             <views:NodeTemplateSelector.ClearArpCacheTemplate>
               <DataTemplate x:DataType="stepvm:ClearArpCacheNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="OperatorNode"
@@ -1096,7 +1174,7 @@
 
             <views:NodeTemplateSelector.SendUdpSetMacTemplate>
               <DataTemplate x:DataType="stepvm:SendUdpSetMacPacketNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="HttpNode"
@@ -1149,7 +1227,7 @@
 
             <views:NodeTemplateSelector.RunDataTestTemplate>
               <DataTemplate x:DataType="stepvm:RunDataTestNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="PollNode"
@@ -1214,7 +1292,7 @@
 
             <views:NodeTemplateSelector.GetUpsStatusTemplate>
               <DataTemplate x:DataType="stepvm:GetUpsStatusNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
@@ -1229,7 +1307,7 @@
 
             <views:NodeTemplateSelector.GetUpsVoltageTemplate>
               <DataTemplate x:DataType="stepvm:GetUpsVoltageNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
@@ -1244,7 +1322,7 @@
 
             <views:NodeTemplateSelector.GetIrpStatusTemplate>
               <DataTemplate x:DataType="stepvm:GetIrpStatusNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
@@ -1259,7 +1337,7 @@
 
             <views:NodeTemplateSelector.BuildMacFromSerialTemplate>
               <DataTemplate x:DataType="stepvm:BuildMacFromSerialNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
@@ -1276,7 +1354,7 @@
 
             <views:NodeTemplateSelector.CompareVariablesTemplate>
               <DataTemplate x:DataType="stepvm:CompareVariablesNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="EqualityNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeEqualityBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="EqualityNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeEqualityBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
@@ -1291,7 +1369,7 @@
 
             <views:NodeTemplateSelector.WaitVariableUntilTemplate>
               <DataTemplate x:DataType="stepvm:WaitVariableUntilNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="WaitNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeWaitBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="WaitNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeWaitBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
@@ -1311,7 +1389,7 @@
 
             <views:NodeTemplateSelector.BuildTestReportTemplate>
               <DataTemplate x:DataType="stepvm:BuildTestReportNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
@@ -1328,7 +1406,7 @@
 
             <views:NodeTemplateSelector.PrintLabelTemplate>
               <DataTemplate x:DataType="stepvm:PrintLabelNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeOperatorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
@@ -1350,7 +1428,7 @@
 
             <views:NodeTemplateSelector.SendTestReportTemplate>
               <DataTemplate x:DataType="stepvm:SendTestReportNodeViewModel">
-                <nodify:Node Header="{Binding Title}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource NodeHttpBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="360">
@@ -1370,7 +1448,7 @@
 
             <views:NodeTemplateSelector.OperatorActionTemplate>
               <DataTemplate x:DataType="stepvm:OperatorActionNodeViewModel">
-                <nodify:Node Header="{Binding Title}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="OperatorNode"

@@ -33,6 +33,8 @@ namespace TestBuilder.ViewModels.NodifyVM
         // Список слейвов для ComboBox в нодах
         public ObservableCollection<SlaveModelBase> AvailableSlaves { get; } = new();
         public bool IsConnected => SlaveRegistry.Instance.IsConnected;
+        public string HelpText => NodeHelpTextProvider.GetHelp(GetType());
+        public bool HasHelpText => !string.IsNullOrWhiteSpace(HelpText);
 
         public IBrush ExecutionBorderBrush =>
             HasExecutionError ? ErrorBorderBrush :
