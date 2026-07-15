@@ -12,7 +12,7 @@
   <Grid RowDefinitions="Auto,Auto,*">
 
     <Grid Grid.Row="0"
-          ColumnDefinitions="*,Auto"
+          ColumnDefinitions="*,Auto,Auto"
           Margin="0,0,0,8">
       <StackPanel Grid.Column="0">
         <TextBlock Text="Профили тестирования"
@@ -25,6 +25,21 @@
                    IsVisible="False" />
       </StackPanel>
       <Button Grid.Column="1"
+              Command="{Binding NewProfileCommand}"
+              ToolTip.Tip="Создать новый пустой профиль"
+              Width="32"
+              Height="32"
+              Padding="4"
+              Classes="ghost"
+              VerticalAlignment="Center"
+              CornerRadius="7"
+              Margin="0,0,4,0">
+        <PathIcon Width="16"
+                  Height="16"
+                  Data="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"
+                  Foreground="{DynamicResource TextSecondaryBrush}" />
+      </Button>
+      <Button Grid.Column="2"
               Command="{Binding ImportProfilesCommand}"
               ToolTip.Tip="Импортировать профили с компьютера"
               Width="32"
@@ -35,7 +50,7 @@
               CornerRadius="7">
         <PathIcon Width="16"
                   Height="16"
-                  Data="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"
+                  Data="M12 3v10m0 0l-4-4m4 4l4-4 M5 19h14v2H5z"
                   Foreground="{DynamicResource TextSecondaryBrush}" />
       </Button>
     </Grid>

@@ -136,6 +136,20 @@
                      Stretch="Fill" />
           </Button>
 
+          <Button Command="{Binding NewProfileCommand}"
+                  Classes="ghost"
+                  Height="36">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+              <PathIcon Width="14"
+                        Height="14"
+                        Data="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Text="Новый"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+            </StackPanel>
+          </Button>
+
           <Button Command="{Binding ClearGraphCommand}"
                   Classes="ghost"
                   Height="36">

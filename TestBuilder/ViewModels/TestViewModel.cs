@@ -44,6 +44,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly List<string> _graphPath = new();
     private readonly Stack<SubtestNodeViewModel> _activeSubtests = new();
 
+    private string? _currentProfilePath;
     private RegisterMonitor? _registerMonitor;
     private UndoRedoManager? _currentUndoRedo;
     private CancellationTokenSource? _testRunCts;
@@ -86,6 +87,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public string PaletteToggleIcon => IsPaletteCollapsed ? "‹" : "›";
     public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
     public string CurrentGraphPath => string.Join(" / ", _graphPath);
+    public string CurrentProfileName => string.IsNullOrWhiteSpace(_currentProfilePath)
+        ? "Новый профиль"
+        : Path.GetFileNameWithoutExtension(_currentProfilePath);
 
     public ICommand TogglePaletteCommand { get; }
 
@@ -135,6 +139,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public ICommand AddNodeCommand { get; }
 
     public ICommand GoBackGraphCommand { get; }
+
+    public ICommand NewProfileCommand { get; }
 
     public IAsyncRelayCommand SaveGraphCommand { get; }
 
@@ -198,6 +204,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         get => _selectedProfile;
         set
         {
+            if (ReferenceEquals(_selectedProfile, value))
+                return;
+
             _selectedProfile = value;
             OnPropertyChanged(nameof(SelectedProfile));
 
@@ -255,6 +264,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes);
         ClearGraphCommand = new RelayCommand(ClearGraph);
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
+        NewProfileCommand = new RelayCommand(CreateNewProfile);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync);
@@ -614,6 +624,29 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         PendingConnection.Reset();
 
         EnsureBodyBoundaryNodesIfNeeded();
+    }
+
+    private void CreateNewProfile()
+    {
+        ResetToRootGraph();
+
+        RootGraph.Clear();
+        RootGraph.Title = "Полный тест";
+        RootGraph.IsBodyGraph = false;
+        RootGraph.UsesBodyBoundaryNodes = false;
+        _graphPath.Clear();
+        _graphPath.Add(RootGraph.Title);
+        OnPropertyChanged(nameof(CurrentGraphPath));
+
+        ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
+        ClearUndoRedoRecursive(RootGraph);
+        ResetConnectorsStateRecursive(RootGraph);
+
+        _currentProfilePath = null;
+        OnPropertyChanged(nameof(CurrentProfileName));
+        SetSelectedProfileWithoutLoading(null);
+
+        StatusMessage = "Создан новый пустой профиль. Нажмите «Сохранить», чтобы выбрать имя файла.";
     }
 
     public void DeleteSelectedNodes()
@@ -1112,6 +1145,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             ResetConnectorsStateRecursive(RootGraph);
             ClearUndoRedoRecursive(RootGraph);
 
+            _currentProfilePath = filePath;
+            OnPropertyChanged(nameof(CurrentProfileName));
+
             StatusMessage = $"Загружен профиль: {name}";
         }
         catch (Exception ex)
@@ -1206,6 +1242,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(_currentProfilePath))
+        {
+            await SaveGraphToPathAsync(_currentProfilePath);
+            return;
+        }
+
         var topLevel = Avalonia.Application.Current?.ApplicationLifetime
             is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
                 ? desktop.MainWindow
@@ -1218,7 +1260,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             Title = "Сохранить профиль",
             DefaultExtension = "json",
-            SuggestedFileName = "profile",
+            SuggestedFileName = CurrentProfileName == "Новый профиль" ? "profile" : CurrentProfileName,
             SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(folder),
             FileTypeChoices = new[]
             {
@@ -1232,13 +1274,22 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (file == null)
             return;
 
+        if (file.Path.IsFile)
+        {
+            await SaveGraphToPathAsync(file.Path.LocalPath);
+            return;
+        }
+
         try
         {
             var profileName = Path.GetFileNameWithoutExtension(file.Name);
             var json = GraphSerializer.Serialize(this, profileName);
 
             await using var stream = await file.OpenWriteAsync();
-            await using var writer = new StreamWriter(stream);
+            if (stream.CanSeek)
+                stream.SetLength(0);
+
+            await using var writer = new StreamWriter(stream, System.Text.Encoding.UTF8);
 
             await writer.WriteAsync(json);
 
@@ -1250,6 +1301,43 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             StatusMessage = $"Ошибка сохранения: {ex.Message}";
         }
+    }
+
+    private async Task SaveGraphToPathAsync(string filePath)
+    {
+        try
+        {
+            var profileName = Path.GetFileNameWithoutExtension(filePath);
+            var json = GraphSerializer.Serialize(this, profileName);
+
+            await File.WriteAllTextAsync(filePath, json, System.Text.Encoding.UTF8);
+
+            _currentProfilePath = filePath;
+            OnPropertyChanged(nameof(CurrentProfileName));
+
+            StatusMessage = $"Профиль сохранён: {profileName}";
+
+            RefreshProfiles();
+            SelectProfileByPath(filePath);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка сохранения: {ex.Message}";
+        }
+    }
+
+    private void SelectProfileByPath(string filePath)
+    {
+        var profile = Profiles.FirstOrDefault(item =>
+            string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+
+        SetSelectedProfileWithoutLoading(profile);
+    }
+
+    private void SetSelectedProfileWithoutLoading(GraphProfile? profile)
+    {
+        _selectedProfile = profile;
+        OnPropertyChanged(nameof(SelectedProfile));
     }
 
     private void AddNode(string? nodeType)

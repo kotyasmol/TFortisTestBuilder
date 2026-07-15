@@ -30,6 +30,30 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public async Task SelfTestCheckStep_RetriesUntilSelfTestAppears()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<html>booting</html>",
+                TimeSpan.FromMilliseconds(10)),
+            HttpRequestResult.Success(
+                200,
+                "<html><selftest><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest></html>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1", timeoutMs: 2500);
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Equal(2, context.GetVariable<int>("SelfTest.Attempts"));
+        Assert.Equal(2, service.Calls);
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsFalse_WhenRuleFails()
     {
         var service = new QueueHttpRequestService(
@@ -51,13 +75,14 @@ public class SelfTestCheckStepTests
 
     private static SelfTestCheckStep CreateStep(
         IHttpRequestService service,
-        string rules)
+        string rules,
+        int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs)
     {
         return new SelfTestCheckStep(
             service,
             NullLogger.Instance,
             SelfTestCheckStep.DefaultUrl,
-            SelfTestCheckStep.DefaultTimeoutMs,
+            timeoutMs,
             SelfTestCheckStep.DefaultOutputPrefix,
             rules,
             failOnError: true,

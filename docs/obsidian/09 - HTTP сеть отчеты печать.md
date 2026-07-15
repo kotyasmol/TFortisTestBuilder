@@ -44,10 +44,13 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser с `--dump-dom`;
-- если браузер не найден, делает обычный HTTP GET;
-- из DOM/ответа извлекает `<selftest>...</selftest>`.
+- если браузер не найден или headless browser вернул ошибку/таймаут, делает обычный HTTP GET;
+- в пределах `TimeoutMs` повторяет попытки с паузой, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` с `default_mac`;
+- для Chrome/Edge `--virtual-time-budget` ограничен частью таймаута попытки, чтобы процесс успевал завершиться до внешнего таймаута.
 
 Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
+Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы
+или дополнительных ресурсов.
 
 Файл `selftest.txt` всегда перезаписывается:
 

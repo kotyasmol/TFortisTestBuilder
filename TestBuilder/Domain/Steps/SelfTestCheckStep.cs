@@ -30,6 +30,10 @@ namespace TestBuilder.Domain.Steps
             "firmvare_vers=0..65535\n" +
             "boot_vers=0..65535";
 
+        private const int MaxPageAttemptTimeoutMs = 5000;
+        private const int RetryDelayMs = 1000;
+        private const int MaxBrowserVirtualTimeBudgetMs = 5000;
+
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
         private readonly string _url;
@@ -74,38 +78,24 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms.");
 
-            var result = await GetPageAsync(
+            var fetch = await WaitForSelfTestXmlAsync(
                 _url,
                 TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs)),
                 cancellationToken);
+            var result = fetch.Result;
 
             context.SetVariable("SelfTest.Url", _url);
             context.SetVariable("SelfTest.StatusCode", result.StatusCode ?? 0);
-            context.SetVariable("SelfTest.ElapsedMs", (int)result.Elapsed.TotalMilliseconds);
+            context.SetVariable("SelfTest.ElapsedMs", (int)fetch.Elapsed.TotalMilliseconds);
+            context.SetVariable("SelfTest.Attempts", fetch.Attempts);
 
-            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+            if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
             {
                 SaveSelfTestFile("invalid testpage");
-                return Fail(context, result.ErrorMessage);
+                return Fail(context, fetch.ErrorMessage);
             }
 
-            if (!result.IsSuccessStatusCode && result.StatusCode != 0)
-            {
-                SaveSelfTestFile("invalid testpage");
-                return Fail(context, $"HTTP {result.StatusCode}.");
-            }
-
-            if (!TryExtractSelfTestXml(result.Body, out var raw))
-            {
-                SaveSelfTestFile("invalid testpage");
-                return Fail(context, "Response does not contain <selftest>...</selftest>.");
-            }
-
-            if (!raw.Contains("default_mac", StringComparison.Ordinal))
-            {
-                SaveSelfTestFile("invalid testpage");
-                return Fail(context, "Selftest XML does not contain default_mac.");
-            }
+            var raw = fetch.RawXml;
 
             SaveSelfTestFile(raw);
             context.SetVariable(DefaultOutputVariableName, raw);
@@ -273,6 +263,89 @@ namespace TestBuilder.Domain.Steps
             return true;
         }
 
+        private async Task<SelfTestFetchResult> WaitForSelfTestXmlAsync(
+            string url,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var attempts = 0;
+            var lastError = "Selftest page was not requested.";
+            HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
+
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var remaining = timeout - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                attempts++;
+                var attemptTimeout = GetAttemptTimeout(remaining);
+                lastResult = await GetPageAsync(url, attemptTimeout, cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
+                {
+                    lastError = lastResult.ErrorMessage;
+                }
+                else if (!lastResult.IsSuccessStatusCode && lastResult.StatusCode != 0)
+                {
+                    lastError = $"HTTP {lastResult.StatusCode}.";
+                }
+                else if (!TryExtractSelfTestXml(lastResult.Body, out var raw))
+                {
+                    lastError = "Response does not contain <selftest>...</selftest>.";
+                }
+                else if (!raw.Contains("default_mac", StringComparison.Ordinal))
+                {
+                    lastError = "Selftest XML does not contain default_mac.";
+                }
+                else
+                {
+                    return new SelfTestFetchResult(lastResult, raw, attempts, stopwatch.Elapsed, string.Empty);
+                }
+
+                var delay = GetRetryDelay(timeout - stopwatch.Elapsed);
+                if (delay <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                _logger.Warning($"Selftest page is not ready yet (attempt {attempts}): {lastError}");
+                await Task.Delay(delay, cancellationToken);
+            }
+
+            var totalError = attempts == 0
+                ? $"Selftest timeout: {(int)timeout.TotalMilliseconds} ms."
+                : $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.";
+
+            return new SelfTestFetchResult(lastResult, string.Empty, attempts, stopwatch.Elapsed, totalError);
+        }
+
+        private static TimeSpan GetAttemptTimeout(TimeSpan remaining)
+        {
+            var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
+            var attemptMs = remainingMs < 1000
+                ? remainingMs
+                : Math.Min(remainingMs, MaxPageAttemptTimeoutMs);
+
+            return TimeSpan.FromMilliseconds(attemptMs);
+        }
+
+        private static TimeSpan GetRetryDelay(TimeSpan remaining)
+        {
+            var remainingMs = (int)remaining.TotalMilliseconds;
+            if (remainingMs <= 0)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return TimeSpan.FromMilliseconds(Math.Min(RetryDelayMs, remainingMs));
+        }
+
         private async Task<HttpRequestResult> GetPageAsync(
             string url,
             TimeSpan timeout,
@@ -284,11 +357,33 @@ namespace TestBuilder.Domain.Steps
 
                 if (!string.IsNullOrWhiteSpace(browserPath))
                 {
-                    return await GetPageWithBrowserAsync(
+                    var browserResult = await GetPageWithBrowserAsync(
                         browserPath,
                         url,
                         timeout,
                         cancellationToken);
+
+                    if (string.IsNullOrWhiteSpace(browserResult.ErrorMessage))
+                    {
+                        return browserResult;
+                    }
+
+                    if (TryExtractSelfTestXml(browserResult.Body, out _))
+                    {
+                        return HttpRequestResult.Success(0, browserResult.Body, browserResult.Elapsed);
+                    }
+
+                    _logger.Warning($"Headless browser failed: {browserResult.ErrorMessage}. Falling back to plain HTTP.");
+                    var fallbackTimeout = timeout - browserResult.Elapsed;
+                    if (fallbackTimeout <= TimeSpan.Zero)
+                    {
+                        return browserResult;
+                    }
+
+                    var httpResult = await _httpRequestService.GetAsync(url, fallbackTimeout, cancellationToken);
+                    return string.IsNullOrWhiteSpace(httpResult.ErrorMessage)
+                        ? httpResult
+                        : browserResult;
                 }
 
                 _logger.Warning("Headless Chrome/Edge was not found. Falling back to plain HTTP.");
@@ -326,7 +421,7 @@ namespace TestBuilder.Domain.Steps
                 process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
                 process.StartInfo.ArgumentList.Add("--window-size=1920,1080");
                 process.StartInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-                process.StartInfo.ArgumentList.Add("--virtual-time-budget=" + Math.Max(1000, (int)timeout.TotalMilliseconds));
+                process.StartInfo.ArgumentList.Add("--virtual-time-budget=" + GetBrowserVirtualTimeBudgetMs(timeout));
                 process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
                 process.StartInfo.ArgumentList.Add("--dump-dom");
                 process.StartInfo.ArgumentList.Add(url);
@@ -374,6 +469,13 @@ namespace TestBuilder.Domain.Steps
             {
                 TryDeleteDirectory(userDataDir);
             }
+        }
+
+        private static int GetBrowserVirtualTimeBudgetMs(TimeSpan timeout)
+        {
+            var timeoutMs = Math.Max(1, (int)timeout.TotalMilliseconds);
+            var budgetMs = Math.Max(1000, timeoutMs / 2);
+            return Math.Min(budgetMs, MaxBrowserVirtualTimeBudgetMs);
         }
 
         private static string? FindBrowserExecutable()
@@ -518,6 +620,13 @@ namespace TestBuilder.Domain.Steps
             {
             }
         }
+
+        private sealed record SelfTestFetchResult(
+            HttpRequestResult Result,
+            string RawXml,
+            int Attempts,
+            TimeSpan Elapsed,
+            string ErrorMessage);
 
         private sealed record ValidationRule(string FieldName, double Min, double Max);
     }
