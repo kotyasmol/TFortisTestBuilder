@@ -6,6 +6,7 @@
              xmlns:stepvm="using:TestBuilder.ViewModels.StepVM"
              xmlns:views="using:TestBuilder.Views"
              xmlns:testviews="using:TestBuilder.Views.TestViews"
+             x:Name="Root"
              x:Class="TestBuilder.Views.TestViews.GraphEditorView"
              x:DataType="vm:TestViewModel">
 
@@ -31,96 +32,13 @@
                 Height="22"
                 Margin="8,0,0,0"
                 CornerRadius="11"
-                Background="#00000000"
+                Background="{DynamicResource SurfaceMutedBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
                 IsVisible="{Binding HasHelpText}"
-                ToolTip.Placement="BottomEdgeAlignedRight"
-                ToolTip.VerticalOffset="6"
-                ToolTip.ShowDelay="180"
+                PointerEntered="OnNodeHelpPointerEntered"
+                PointerPressed="OnNodeHelpPointerPressed"
                 VerticalAlignment="Top">
-          <ToolTip.Tip>
-            <Border Width="360"
-                    MaxWidth="360"
-                    MaxHeight="440"
-                    Padding="12"
-                    CornerRadius="8"
-                    Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1">
-              <Grid RowDefinitions="Auto,Auto,*">
-                <Grid ColumnDefinitions="Auto,*">
-                  <Border Grid.Column="0"
-                          Width="28"
-                          Height="28"
-                          CornerRadius="14"
-                          Background="{DynamicResource PrimarySoftBrush}"
-                          VerticalAlignment="Top">
-                    <PathIcon Width="16"
-                              Height="16"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryBrush}"
-                              Data="M11 10h2v7h-2z M11 7h2v2h-2z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" />
-                  </Border>
-                  <StackPanel Grid.Column="1"
-                              Margin="10,0,0,0"
-                              Spacing="2">
-                    <TextBlock Text="{Binding Title}"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding HelpSummary}"
-                               FontSize="12"
-                               LineHeight="16"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </Grid>
-
-                <Border Grid.Row="1"
-                        Height="1"
-                        Margin="0,10,0,10"
-                        Background="{DynamicResource BorderBrush}"
-                        Opacity="0.75"
-                        IsVisible="{Binding HasHelpDetails}" />
-
-                <ScrollViewer Grid.Row="2"
-                              MaxHeight="300"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              IsVisible="{Binding HasHelpDetails}">
-                  <StackPanel Spacing="6">
-                    <TextBlock Text="Параметры и поведение"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <ItemsControl ItemsSource="{Binding HelpDetails}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="Auto,*"
-                                Margin="0,2,0,0">
-                            <Border Grid.Column="0"
-                                    Width="5"
-                                    Height="5"
-                                    Margin="0,6,8,0"
-                                    CornerRadius="2.5"
-                                    Background="{DynamicResource PrimaryBrush}"
-                                    Opacity="0.8" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding}"
-                                       FontSize="12"
-                                       LineHeight="16"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextWrapping="Wrap" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </StackPanel>
-                </ScrollViewer>
-              </Grid>
-            </Border>
-          </ToolTip.Tip>
           <PathIcon Width="16"
                     Height="16"
                     HorizontalAlignment="Center"
@@ -1622,6 +1540,110 @@
                                    Width="230"
                                    VerticalAlignment="Stretch" />
       </Grid>
+
+      <Border HorizontalAlignment="Left"
+              VerticalAlignment="Top"
+              Width="410"
+              MaxHeight="560"
+              Margin="18"
+              Padding="14"
+              CornerRadius="8"
+              Background="{DynamicResource SurfaceBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              BoxShadow="0 12 30 0 #55000000"
+              DataContext="{Binding HelpNode, ElementName=Root}"
+              IsVisible="{Binding IsNodeHelpOpen, ElementName=Root}">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Border Grid.Column="0"
+                    Width="34"
+                    Height="34"
+                    CornerRadius="17"
+                    Background="{DynamicResource PrimarySoftBrush}"
+                    VerticalAlignment="Top">
+              <PathIcon Width="17"
+                        Height="17"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource PrimaryBrush}"
+                        Data="M11 10h2v7h-2z M11 7h2v2h-2z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" />
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Margin="12,0,10,0"
+                        Spacing="3">
+              <TextBlock Text="Справка по ноде"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Text="{Binding Title}"
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextWrapping="Wrap" />
+              <TextBlock Text="{Binding HelpSummary}"
+                         FontSize="12"
+                         LineHeight="17"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    Classes="ghost icon"
+                    Click="OnNodeHelpClosePressed">
+              <PathIcon Width="12"
+                        Height="12"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        Data="M6 6l12 12M18 6L6 18" />
+            </Button>
+          </Grid>
+
+          <Border Grid.Row="1"
+                  Height="1"
+                  Margin="0,12,0,12"
+                  Background="{DynamicResource BorderBrush}"
+                  IsVisible="{Binding HasHelpDetails}" />
+
+          <ScrollViewer Grid.Row="2"
+                        MaxHeight="390"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        IsVisible="{Binding HasHelpDetails}">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Параметры и поведение"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <ItemsControl ItemsSource="{Binding HelpDetails}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*"
+                          Margin="0,2,0,0">
+                      <Border Grid.Column="0"
+                              Width="5"
+                              Height="5"
+                              Margin="0,6,9,0"
+                              CornerRadius="2.5"
+                              Background="{DynamicResource PrimaryBrush}"
+                              Opacity="0.8" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding}"
+                                 FontSize="12"
+                                 LineHeight="17"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 TextWrapping="Wrap" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </Border>
 
     </Grid>
   </Grid>

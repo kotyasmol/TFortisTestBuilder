@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -14,6 +15,12 @@ namespace TestBuilder.Views.TestViews;
 
 public partial class GraphEditorView : UserControl, IDisposable
 {
+    public static readonly StyledProperty<NodeViewModel?> HelpNodeProperty =
+        AvaloniaProperty.Register<GraphEditorView, NodeViewModel?>(nameof(HelpNode));
+
+    public static readonly StyledProperty<bool> IsNodeHelpOpenProperty =
+        AvaloniaProperty.Register<GraphEditorView, bool>(nameof(IsNodeHelpOpen));
+
     private readonly IDisposable _visibilitySubscription;
     private readonly IDisposable _themeSubscription;
     private readonly IDisposable _dataContextSubscription;
@@ -50,6 +57,18 @@ public partial class GraphEditorView : UserControl, IDisposable
 
         _dataContextSubscription = this.GetObservable(DataContextProperty)
             .Subscribe(new AnonymousObserver<object?>(OnDataContextChanged));
+    }
+
+    public NodeViewModel? HelpNode
+    {
+        get => GetValue(HelpNodeProperty);
+        set => SetValue(HelpNodeProperty, value);
+    }
+
+    public bool IsNodeHelpOpen
+    {
+        get => GetValue(IsNodeHelpOpenProperty);
+        set => SetValue(IsNodeHelpOpenProperty, value);
     }
 
     public void SelectAllNodes() => Editor.SelectAll();
@@ -166,6 +185,36 @@ public partial class GraphEditorView : UserControl, IDisposable
         if (conn.DataContext is not ConnectionViewModel connection) return;
         vm.DeleteConnection(connection);
         e.Handled = true;
+    }
+
+    public void OnNodeHelpPointerEntered(object? sender, PointerEventArgs e)
+    {
+        OpenNodeHelp(sender as Control);
+    }
+
+    public void OnNodeHelpPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed)
+            return;
+
+        OpenNodeHelp(sender as Control);
+        e.Handled = true;
+    }
+
+    public void OnNodeHelpClosePressed(object? sender, RoutedEventArgs e)
+    {
+        IsNodeHelpOpen = false;
+        HelpNode = null;
+        e.Handled = true;
+    }
+
+    private void OpenNodeHelp(Control? control)
+    {
+        if (control?.DataContext is not NodeViewModel node || !node.HasHelpText)
+            return;
+
+        HelpNode = node;
+        IsNodeHelpOpen = true;
     }
 
     public void OnLabelResizePointerPressed(object? sender, PointerPressedEventArgs e)
