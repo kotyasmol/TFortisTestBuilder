@@ -617,6 +617,10 @@
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="12" />
 
+                    <CheckBox Content="Live Modbus read"
+                              IsChecked="{Binding LiveRead}"
+                              FontSize="12" />
+
                     <Grid ColumnDefinitions="76,*">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
@@ -777,6 +781,10 @@
                       <CheckBox Grid.Column="1" Content="Стоп" IsChecked="{Binding StopOnError}" FontSize="12" Margin="8,0,0,0" />
                     </Grid>
 
+                    <CheckBox Content="Cleanup on failure/stop"
+                              IsChecked="{Binding RunOnFailure}"
+                              FontSize="12" />
+
                     <TextBlock Text="{Binding StepCount, StringFormat='Шагов: {0}'}"
                                FontSize="12"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -901,6 +909,10 @@
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="12" />
 
+                    <CheckBox Content="Live Modbus read"
+                              IsChecked="{Binding LiveRead}"
+                              FontSize="12" />
+
                     <Grid ColumnDefinitions="76,*">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
@@ -960,6 +972,7 @@
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
                     </Grid>
                     <CheckBox Content="Slave из цикла" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
+                    <CheckBox Content="Live Modbus read" IsChecked="{Binding LiveRead}" FontSize="12" />
                     <Grid ColumnDefinitions="76,*">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="12" HorizontalAlignment="Stretch">
@@ -1010,6 +1023,7 @@
                       <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
                     </Grid>
                     <CheckBox Content="Slave из цикла" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
+                    <CheckBox Content="Live Modbus read" IsChecked="{Binding LiveRead}" FontSize="12" />
                     <Grid ColumnDefinitions="76,*">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="12" HorizontalAlignment="Stretch">

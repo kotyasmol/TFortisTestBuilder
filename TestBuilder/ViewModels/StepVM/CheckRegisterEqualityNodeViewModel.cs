@@ -5,6 +5,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels.StepVM
@@ -15,6 +16,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private ushort address;
         [ObservableProperty] private int expectedValue;
         [ObservableProperty] private bool useCurrentSlaveId;
+        [ObservableProperty] private bool liveRead;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -99,9 +101,16 @@ namespace TestBuilder.ViewModels.StepVM
             RefreshRegisters();
         }
 
-        public ITestStep CreateStep(ILogger logger)
+        public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new CheckRegisterEqualityStep(SlaveId, Address, ExpectedValue, logger, UseCurrentSlaveId);
+            return new CheckRegisterEqualityStep(
+                SlaveId,
+                Address,
+                ExpectedValue,
+                logger,
+                UseCurrentSlaveId,
+                modbusService,
+                LiveRead);
         }
 
         public override NodeViewModel Clone() => new CheckRegisterEqualityNodeViewModel
@@ -109,7 +118,8 @@ namespace TestBuilder.ViewModels.StepVM
             SlaveId = SlaveId,
             Address = Address,
             ExpectedValue = ExpectedValue,
-            UseCurrentSlaveId = UseCurrentSlaveId
+            UseCurrentSlaveId = UseCurrentSlaveId,
+            LiveRead = LiveRead
         };
     }
 }

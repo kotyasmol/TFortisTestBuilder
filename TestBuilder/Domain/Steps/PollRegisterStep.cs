@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Steps
 {
@@ -13,6 +14,8 @@ namespace TestBuilder.Domain.Steps
         private readonly int _max;
         private readonly int _sampleCount;
         private readonly bool _useCurrentSlaveId;
+        private readonly IModbusService? _modbusService;
+        private readonly bool _liveRead;
         private readonly ILogger _logger;
 
         private const int SampleIntervalMs = 1000;
@@ -24,7 +27,9 @@ namespace TestBuilder.Domain.Steps
             int max,
             int sampleCount,
             ILogger logger,
-            bool useCurrentSlaveId = false)
+            bool useCurrentSlaveId = false,
+            IModbusService? modbusService = null,
+            bool liveRead = false)
         {
             _slaveId = slaveId;
             _address = address;
@@ -33,6 +38,8 @@ namespace TestBuilder.Domain.Steps
             _sampleCount = sampleCount;
             _logger = logger;
             _useCurrentSlaveId = useCurrentSlaveId;
+            _modbusService = modbusService;
+            _liveRead = liveRead;
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -44,30 +51,46 @@ namespace TestBuilder.Domain.Steps
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Опрос регистра → устройство не задано, адрес {_address}, диапазон [{_min}..{_max}].");
+                    $"[ШАГ] Опрос регистра -> устройство не задано, адрес {_address}, диапазон [{_min}..{_max}].");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"[ШАГ] Опрос регистра → устройство {actualSlaveId}, адрес {_address}, диапазон [{_min}..{_max}], замеров {_sampleCount}.");
+                $"[ШАГ] Опрос регистра -> устройство {actualSlaveId}, адрес {_address}, диапазон [{_min}..{_max}], замеров {_sampleCount}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
 
-            int successes = 0;
-            int failures = 0;
+            var successes = 0;
+            var failures = 0;
 
-            for (int i = 0; i < _sampleCount; i++)
+            for (var i = 0; i < _sampleCount; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (context.RegisterState.TryGet(actualSlaveId.Value, _address, out var value))
+                var read = await ModbusRegisterReadHelper.ReadAsync(
+                    context,
+                    _modbusService,
+                    actualSlaveId.Value,
+                    _address,
+                    _liveRead,
+                    cancellationToken);
+
+                if (read.Success)
                 {
-                    var inRange = value >= _min && value <= _max;
+                    var inRange = read.Value >= _min && read.Value <= _max;
 
                     _logger.Info(
-                        $"[ШАГ] Замер {i + 1}/{_sampleCount} → значение {value} {(inRange ? "в диапазоне" : "вне диапазона")}.");
+                        $"[ШАГ] Замер {i + 1}/{_sampleCount} -> значение {read.Value} {(inRange ? "в диапазоне" : "вне диапазона")}.");
 
-                    if (inRange) successes++;
-                    else failures++;
+                    if (inRange)
+                        successes++;
+                    else
+                        failures++;
+                }
+                else
+                {
+                    failures++;
+                    _logger.Warning(
+                        $"[ОШИБКА] Замер {i + 1}/{_sampleCount} не выполнен: {read.Error}");
                 }
 
                 if (i < _sampleCount - 1)
@@ -75,7 +98,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info(
-                $"[ШАГ] Опрос завершён → устройство {actualSlaveId}, адрес {_address}: успехов {successes}, провалов {failures}.");
+                $"[ШАГ] Опрос завершён -> устройство {actualSlaveId}, адрес {_address}: успехов {successes}, провалов {failures}.");
 
             if (successes > failures)
             {

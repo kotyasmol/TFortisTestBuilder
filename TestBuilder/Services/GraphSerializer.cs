@@ -109,6 +109,7 @@ namespace TestBuilder.Services
                         n.Min = c.Min;
                         n.Max = c.Max;
                         n.UseCurrentSlaveId = c.UseCurrentSlaveId;
+                        n.LiveRead = c.LiveRead;
                         break;
 
                     case CheckRegisterEqualityNodeViewModel eq:
@@ -116,6 +117,7 @@ namespace TestBuilder.Services
                         n.Address = eq.Address;
                         n.ExpectedValue = eq.ExpectedValue;
                         n.UseCurrentSlaveId = eq.UseCurrentSlaveId;
+                        n.LiveRead = eq.LiveRead;
                         break;
 
                     case WaitUntilNodeViewModel w:
@@ -124,6 +126,7 @@ namespace TestBuilder.Services
                         n.ExpectedValue = w.ExpectedValue;
                         n.DurationMs = w.TimeoutMs;
                         n.UseCurrentSlaveId = w.UseCurrentSlaveId;
+                        n.LiveRead = w.LiveRead;
                         break;
 
                     case PollRegisterNodeViewModel p:
@@ -133,6 +136,7 @@ namespace TestBuilder.Services
                         n.Max = p.Max;
                         n.SampleCount = p.SampleCount;
                         n.UseCurrentSlaveId = p.UseCurrentSlaveId;
+                        n.LiveRead = p.LiveRead;
                         break;
 
                     case OperatorActionNodeViewModel op:
@@ -296,6 +300,7 @@ namespace TestBuilder.Services
                         n.Description = s.Description;
                         n.IsEnabled = s.IsEnabled;
                         n.StopOnError = s.StopOnError;
+                        n.RunOnFailure = s.RunOnFailure;
                         n.BodyGraph = SerializeGraph(s.BodyGraph, s.BodyGraph.Title);
                         break;
 
@@ -651,7 +656,8 @@ namespace TestBuilder.Services
                 Address = n.Address ?? 0,
                 Min = ToInt(n.Min),
                 Max = ToInt(n.Max),
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
+                LiveRead = n.LiveRead ?? false
             };
 
             node.RestoreSelections();
@@ -667,7 +673,8 @@ namespace TestBuilder.Services
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
                 ExpectedValue = GetExpectedValueAsInt(n.ExpectedValue),
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
+                LiveRead = n.LiveRead ?? false
             };
 
             node.RestoreSelections();
@@ -684,7 +691,8 @@ namespace TestBuilder.Services
                 Address = n.Address ?? 0,
                 ExpectedValue = GetExpectedValueAsInt(n.ExpectedValue),
                 TimeoutMs = n.DurationMs ?? 5000,
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
+                LiveRead = n.LiveRead ?? false
             };
 
             node.RestoreSelections();
@@ -702,7 +710,8 @@ namespace TestBuilder.Services
                 Min = ToInt(n.Min),
                 Max = ToInt(n.Max),
                 SampleCount = n.SampleCount ?? 10,
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false
+                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
+                LiveRead = n.LiveRead ?? false
             };
 
             node.RestoreSelections();
@@ -737,7 +746,8 @@ namespace TestBuilder.Services
                 Name = n.Name ?? "Подтест",
                 Description = n.Description ?? string.Empty,
                 IsEnabled = n.IsEnabled ?? true,
-                StopOnError = n.StopOnError ?? true
+                StopOnError = n.StopOnError ?? true,
+                RunOnFailure = n.RunOnFailure ?? false
             };
 
             var body = n.BodyGraph ?? n.Body;

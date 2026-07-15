@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Steps
 {
@@ -16,6 +17,8 @@ namespace TestBuilder.Domain.Steps
         private readonly int _min;
         private readonly int _max;
         private readonly bool _useCurrentSlaveId;
+        private readonly IModbusService? _modbusService;
+        private readonly bool _liveRead;
         private readonly ILogger _logger;
 
         public CheckRegisterRangeStep(
@@ -24,7 +27,9 @@ namespace TestBuilder.Domain.Steps
             int min,
             int max,
             ILogger logger,
-            bool useCurrentSlaveId = false)
+            bool useCurrentSlaveId = false,
+            IModbusService? modbusService = null,
+            bool liveRead = false)
         {
             _slaveId = slaveId;
             _address = address;
@@ -32,9 +37,11 @@ namespace TestBuilder.Domain.Steps
             _max = max;
             _logger = logger;
             _useCurrentSlaveId = useCurrentSlaveId;
+            _modbusService = modbusService;
+            _liveRead = liveRead;
         }
 
-        public Task<StepResult> ExecuteAsync(
+        public async Task<StepResult> ExecuteAsync(
             TestContext context,
             CancellationToken cancellationToken)
         {
@@ -45,21 +52,30 @@ namespace TestBuilder.Domain.Steps
                 _logger.Warning(
                     $"[ШАГ] Проверка диапазона → устройство не задано, адрес {_address}, диапазон [{_min}..{_max}].");
 
-                return Task.FromResult(StepResult.False);
+                return StepResult.False;
             }
 
-            if (!context.RegisterState.TryGet(actualSlaveId.Value, _address, out var value))
+            var read = await ModbusRegisterReadHelper.ReadAsync(
+                context,
+                _modbusService,
+                actualSlaveId.Value,
+                _address,
+                _liveRead,
+                cancellationToken);
+
+            if (!read.Success)
             {
                 _logger.Warning(
-                    $"[ОШИБКА] Регистр не найден. Устройство {actualSlaveId}, адрес {_address}.");
+                    $"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {_address}: {read.Error}");
 
-                return Task.FromResult(StepResult.False);
+                return StepResult.False;
             }
 
+            var value = read.Value;
             var inRange = value >= _min && value <= _max;
 
             _logger.Info(
-                $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {value}, диапазон [{_min}..{_max}].");
+                $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {value}, диапазон [{_min}..{_max}], источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
 
             if (!inRange)
             {
@@ -68,7 +84,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             if (inRange) _logger.Info($"[OK] Значение {value} в диапазоне [{_min}..{_max}].");
-            return Task.FromResult(inRange ? StepResult.True : StepResult.False);
+            return inRange ? StepResult.True : StepResult.False;
         }
 
         private byte? ResolveSlaveId(TestContext context)

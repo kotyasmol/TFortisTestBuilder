@@ -5,6 +5,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels.StepVM
@@ -16,6 +17,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int min;
         [ObservableProperty] private int max;
         [ObservableProperty] private bool useCurrentSlaveId;
+        [ObservableProperty] private bool liveRead;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -102,9 +104,17 @@ namespace TestBuilder.ViewModels.StepVM
             RefreshRegisters();
         }
 
-        public ITestStep CreateStep(ILogger logger)
+        public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new CheckRegisterRangeStep(SlaveId, Address, Min, Max, logger, UseCurrentSlaveId);
+            return new CheckRegisterRangeStep(
+                SlaveId,
+                Address,
+                Min,
+                Max,
+                logger,
+                UseCurrentSlaveId,
+                modbusService,
+                LiveRead);
         }
 
         public override NodeViewModel Clone() => new CheckRegisterRangeNodeViewModel
@@ -113,7 +123,8 @@ namespace TestBuilder.ViewModels.StepVM
             Address = Address,
             Min = Min,
             Max = Max,
-            UseCurrentSlaveId = UseCurrentSlaveId
+            UseCurrentSlaveId = UseCurrentSlaveId,
+            LiveRead = LiveRead
         };
     }
 }

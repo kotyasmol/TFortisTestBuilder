@@ -884,6 +884,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _pauseCompletion = CreateCompletedPauseCompletion();
         IsTestRunning = true;
         IsTestPaused = false;
+        TestContext? context = null;
+        var runCleanup = false;
 
         try
         {
@@ -899,7 +901,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     ? desktopLife.MainWindow
                     : null;
 
-            var context = new TestContext(_registerState)
+            context = new TestContext(_registerState)
             {
                 CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
@@ -923,19 +925,48 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 _testRunCts.Token);
 
             if (result != ExecutionStatus.Completed)
+            {
+                runCleanup = true;
+                context.HasCriticalError = true;
+                context.SetVariable("Execution.Status", result.ToString());
                 TestingLogger.Warning($"[ОШИБКА] Тест завершён с ошибкой. Результат: {result}.");
+            }
+            else
+            {
+                context.SetVariable("Execution.Status", result.ToString());
+            }
         }
         catch (OperationCanceledException)
         {
+            runCleanup = true;
+            if (context != null)
+            {
+                context.HasCriticalError = true;
+                context.SetVariable("Execution.Status", ExecutionStatus.Cancelled.ToString());
+            }
+
             TestingLogger.Warning("[ОСТАНОВ] Выполнение теста остановлено пользователем.");
             StatusMessage = "Выполнение теста остановлено.";
         }
         catch (Exception ex)
         {
+            runCleanup = true;
+            if (context != null)
+            {
+                context.HasCriticalError = true;
+                context.SetVariable("Execution.Status", ExecutionStatus.Failed.ToString());
+                context.SetVariable("Execution.Error", ex.Message);
+            }
+
             TestingLogger.Error(ex.ToString());
         }
         finally
         {
+            if (runCleanup && context != null)
+            {
+                await RunFailureCleanupAsync(context);
+            }
+
             IsTestRunning = false;
             IsTestPaused = false;
             _pauseCompletion.TrySetResult(true);
@@ -943,6 +974,67 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _testRunCts = null;
             ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
             ResetConnectorsStateRecursive(RootGraph);
+        }
+    }
+
+    private async Task RunFailureCleanupAsync(TestContext context)
+    {
+        var cleanupNodes = RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Where(node => node.RunOnFailure && node.IsEnabled)
+            .ToList();
+
+        if (cleanupNodes.Count == 0)
+            return;
+
+        TestingLogger.Warning($"[ШАГ] Запуск cleanup-подтестов: {cleanupNodes.Count}.");
+
+        using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var previousToken = context.CancellationToken;
+        var previousPause = context.WaitIfPausedAsync;
+
+        context.CancellationToken = cleanupCts.Token;
+        context.WaitIfPausedAsync = _ => Task.CompletedTask;
+
+        try
+        {
+            var compiler = new GraphCompiler(_modbusService, TestingLogger);
+
+            foreach (var cleanupNode in cleanupNodes)
+            {
+                try
+                {
+                    TestingLogger.Warning($"[ШАГ] Cleanup '{cleanupNode.Name}' начат.");
+                    var cleanupGraph = compiler.Compile(cleanupNode.BodyGraph);
+                    var result = await new TestExecutor().ExecuteAsync(
+                        cleanupGraph.StartNode,
+                        context,
+                        cleanupCts.Token);
+
+                    if (result == ExecutionStatus.Completed)
+                    {
+                        TestingLogger.Info($"[OK] Cleanup '{cleanupNode.Name}' завершён.");
+                    }
+                    else
+                    {
+                        TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' завершился с результатом {result}.");
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' прерван по таймауту.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    TestingLogger.Error($"Cleanup '{cleanupNode.Name}' не выполнен: {ex}");
+                }
+            }
+        }
+        finally
+        {
+            context.CancellationToken = previousToken;
+            context.WaitIfPausedAsync = previousPause;
         }
     }
 

@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-06-30
+updated: 2026-07-15
 ---
 
 # JSON профили
@@ -117,8 +117,8 @@ Deserializer также принимает часть русских и legacy-�
 |---|---|
 | Delay | `milliseconds` |
 | Label | `text`, `labelWidth`, `labelHeight` |
-| Subtest | `name`, `description`, `isEnabled`, `stopOnError`, `bodyGraph` |
-| Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `sampleCount` |
+| Subtest | `name`, `description`, `isEnabled`, `stopOnError`, `runOnFailure`, `bodyGraph` |
+| Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `sampleCount`, `liveRead` |
 | Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
@@ -155,6 +155,7 @@ Deserializer также принимает часть русских и legacy-�
 {
   "type": "Subtest",
   "name": "Selftest",
+  "runOnFailure": false,
   "bodyGraph": {
     "name": "Selftest",
     "nodes": [],
@@ -181,6 +182,8 @@ Deserializer также принимает часть русских и legacy-�
 | `Print Label` | `copies` | `4` |
 | `For Slaves` | `fromSlaveId`, `toSlaveId`, `step` | `1`, `20`, `1` |
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
+| `Subtest` | `runOnFailure` | `false` |
+| `Check Register Range` / `Check Register Equality` / `Wait Until` / `Poll Register` | `liveRead` | `false` |
 
 Полный список дефолтов описан в [[05 - Справочник нод]].
 
@@ -192,3 +195,4 @@ Deserializer также принимает часть русских и legacy-�
 - `ExpectedValue` и `DeviceType` хранятся как `object?`, поэтому deserializer содержит преобразования из `JsonElement`, строк и чисел.
 - В `For Slaves` старые коннекторы `Success`/`Error` при загрузке сопоставляются с текущими `True`/`False`.
 - `Subtest` при загрузке принимает и `bodyGraph`, и старое поле `body`; при сохранении использует `bodyGraph`.
+- Старые профили без `runOnFailure` и `liveRead` загружаются как раньше: оба флага получают `false`.

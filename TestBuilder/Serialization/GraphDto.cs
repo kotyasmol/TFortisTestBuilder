@@ -73,6 +73,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? UseCurrentSlaveId { get; set; }
 
+        [JsonPropertyName("liveRead")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? LiveRead { get; set; }
+
         [JsonPropertyName("address")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ushort? Address { get; set; }
@@ -374,6 +378,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("stopOnError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? StopOnError { get; set; }
+
+        [JsonPropertyName("runOnFailure")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? RunOnFailure { get; set; }
 
         [JsonPropertyName("body")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

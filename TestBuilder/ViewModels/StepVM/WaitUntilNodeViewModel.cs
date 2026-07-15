@@ -5,6 +5,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 
 namespace TestBuilder.ViewModels.StepVM
@@ -16,6 +17,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int expectedValue;
         [ObservableProperty] private int timeoutMs = 5000;
         [ObservableProperty] private bool useCurrentSlaveId;
+        [ObservableProperty] private bool liveRead;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -100,9 +102,17 @@ namespace TestBuilder.ViewModels.StepVM
             RefreshRegisters();
         }
 
-        public ITestStep CreateStep(ILogger logger)
+        public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new WaitUntilStep(SlaveId, Address, ExpectedValue, TimeoutMs, logger, UseCurrentSlaveId);
+            return new WaitUntilStep(
+                SlaveId,
+                Address,
+                ExpectedValue,
+                TimeoutMs,
+                logger,
+                UseCurrentSlaveId,
+                modbusService,
+                LiveRead);
         }
 
         public override NodeViewModel Clone() => new WaitUntilNodeViewModel
@@ -111,7 +121,8 @@ namespace TestBuilder.ViewModels.StepVM
             Address = Address,
             ExpectedValue = ExpectedValue,
             TimeoutMs = TimeoutMs,
-            UseCurrentSlaveId = UseCurrentSlaveId
+            UseCurrentSlaveId = UseCurrentSlaveId,
+            LiveRead = LiveRead
         };
     }
 }
