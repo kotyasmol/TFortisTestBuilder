@@ -28,15 +28,13 @@
       <DockPanel LastChildFill="True"
                  MinWidth="0">
         <Border DockPanel.Dock="Right"
+                Classes="nodeHelpTrigger"
                 Width="22"
                 Height="22"
                 Margin="8,0,0,0"
                 CornerRadius="11"
-                Background="{DynamicResource SurfaceMutedBrush}"
-                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 IsVisible="{Binding HasHelpText}"
-                PointerEntered="OnNodeHelpPointerEntered"
                 PointerPressed="OnNodeHelpPointerPressed"
                 VerticalAlignment="Top">
           <PathIcon Width="16"
@@ -56,6 +54,42 @@
     </DataTemplate>
 
   </UserControl.Resources>
+
+  <UserControl.Styles>
+    <Style Selector="Border.nodeHelpTrigger">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.14" />
+        </Transitions>
+      </Setter>
+    </Style>
+
+    <Style Selector="Border.nodeHelpTrigger:pointerover">
+      <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Border.nodeHelpClose">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.14" />
+        </Transitions>
+      </Setter>
+    </Style>
+
+    <Style Selector="Border.nodeHelpClose:pointerover">
+      <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
+    </Style>
+  </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
 
@@ -1589,17 +1623,20 @@
                          TextWrapping="Wrap" />
             </StackPanel>
 
-            <Button Grid.Column="2"
+            <Border Grid.Column="2"
+                    Classes="nodeHelpClose"
                     Width="28"
                     Height="28"
-                    Padding="0"
-                    Classes="ghost icon"
-                    Click="OnNodeHelpClosePressed">
+                    CornerRadius="14"
+                    BorderThickness="1"
+                    PointerPressed="OnNodeHelpClosePointerPressed">
               <PathIcon Width="12"
                         Height="12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         Foreground="{DynamicResource TextSecondaryBrush}"
                         Data="M6 6l12 12M18 6L6 18" />
-            </Button>
+            </Border>
           </Grid>
 
           <Border Grid.Row="1"

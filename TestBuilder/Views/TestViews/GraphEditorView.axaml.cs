@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -187,11 +186,6 @@ public partial class GraphEditorView : UserControl, IDisposable
         e.Handled = true;
     }
 
-    public void OnNodeHelpPointerEntered(object? sender, PointerEventArgs e)
-    {
-        OpenNodeHelp(sender as Control);
-    }
-
     public void OnNodeHelpPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed)
@@ -201,8 +195,11 @@ public partial class GraphEditorView : UserControl, IDisposable
         e.Handled = true;
     }
 
-    public void OnNodeHelpClosePressed(object? sender, RoutedEventArgs e)
+    public void OnNodeHelpClosePointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.GetCurrentPoint(this).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed)
+            return;
+
         IsNodeHelpOpen = false;
         HelpNode = null;
         e.Handled = true;
