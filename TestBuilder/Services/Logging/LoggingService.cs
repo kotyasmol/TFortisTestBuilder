@@ -1,8 +1,6 @@
 using Avalonia.Threading;
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Text;
 
 namespace TestBuilder.Services.Logging
 {
@@ -31,11 +29,11 @@ namespace TestBuilder.Services.Logging
             Message = message ?? string.Empty;
 
             // Определяем цвет по содержимому сообщения — только для цветных меток
-            if (Message.Contains("[OK]"))
+            if (message.Contains("[OK]"))
                 HighlightColor = "#16A34A";
-            else if (Message.Contains("[ОШИБКА]"))
+            else if (message.Contains("[ОШИБКА]"))
                 HighlightColor = "#DC2626";
-            else if (Message.Contains("[ШАГ]"))
+            else if (message.Contains("[ШАГ]"))
                 HighlightColor = "#2563EB";
             else
                 HighlightColor = null; // null = использовать DynamicResource из XAML
@@ -91,11 +89,6 @@ namespace TestBuilder.Services.Logging
     /// </summary>
     public sealed class LoggingService : ILoggingService
     {
-        private static readonly object FileLock = new();
-        private static readonly string LogDirectory = GetLogDirectory();
-
-        public static string CurrentLogFilePath => GetLogFilePath(DateTime.Now);
-
         /// <summary>
         /// Глобальный экземпляр сервиса. Можно использовать напрямую,
         /// либо подменить в тестах.
@@ -127,8 +120,6 @@ namespace TestBuilder.Services.Logging
             {
                 var entry = new LogEntry(DateTime.Now, level, Category, message);
 
-                WriteToFile(entry);
-
                 Dispatcher.UIThread.Post(() =>
                 {
                     // Добавляем новую запись
@@ -150,39 +141,6 @@ namespace TestBuilder.Services.Logging
             public void Error(string message) => Log(LogLevel.Error, message);
 
             public void Clear() => Entries.Clear();
-        }
-
-        private static string GetLogDirectory()
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-            return string.IsNullOrWhiteSpace(localAppData)
-                ? Path.Combine(AppContext.BaseDirectory, "logs")
-                : Path.Combine(localAppData, "TFortisTestBuilder", "logs");
-        }
-
-        private static string GetLogFilePath(DateTime timestamp) =>
-            Path.Combine(LogDirectory, $"testbuilder-{timestamp:yyyyMMdd}.log");
-
-        private static void WriteToFile(LogEntry entry)
-        {
-            try
-            {
-                Directory.CreateDirectory(LogDirectory);
-
-                var line =
-                    $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] " +
-                    $"[{entry.Level}] [{entry.Category}] {entry.Message}{Environment.NewLine}";
-
-                lock (FileLock)
-                {
-                    File.AppendAllText(GetLogFilePath(entry.Timestamp), line, Encoding.UTF8);
-                }
-            }
-            catch
-            {
-                // Logging must never break the test runner.
-            }
         }
     }
 }

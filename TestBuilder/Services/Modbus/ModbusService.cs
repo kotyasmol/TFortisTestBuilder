@@ -25,9 +25,6 @@ namespace TestBuilder.Services.Modbus
         private readonly TimeSpan _minRequestGap = TimeSpan.FromMilliseconds(150);
         private readonly TimeSpan _reconnectTimeout = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _reconnectPollInterval = TimeSpan.FromSeconds(1);
-        private const byte FirstProbeSlaveId = 1;
-        private const byte LastProbeSlaveId = 35;
-        private const byte ProbeSlaveStep = 2;
         private DateTime _lastRequestTimeUtc = DateTime.MinValue;
 
         private SerialPort? _serialPort;
@@ -108,7 +105,7 @@ namespace TestBuilder.Services.Modbus
                     }
                     catch (Exception ex)
                     {
-                        LastError = FormatException(ex);
+                        LastError = ex.Message;
                         IsConnected = false;
                         return false;
                     }
@@ -116,7 +113,7 @@ namespace TestBuilder.Services.Modbus
             }
             catch (Exception ex)
             {
-                LastError = FormatException(ex);
+                LastError = ex.Message;
                 IsConnected = false;
                 return false;
             }
@@ -150,41 +147,15 @@ namespace TestBuilder.Services.Modbus
 
         public async Task<bool> CheckPortAsync(CancellationToken cancellationToken = default)
         {
-            string? lastFailure = null;
-
-            for (byte slaveId = FirstProbeSlaveId; slaveId <= LastProbeSlaveId; slaveId += ProbeSlaveStep)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    var result = await ReadRegistersAsync(slaveId, 0, 1, cancellationToken);
-
-                    if (result.Length == 1)
-                    {
-                        LastError = null;
-                        return true;
-                    }
-
-                    lastFailure = $"slave {slaveId}: response length {result.Length}, expected 1";
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    lastFailure = $"slave {slaveId}: {FormatException(ex)}";
-                }
-
-                await Task.Delay(_minRequestGap, cancellationToken);
+                var result = await ReadRegistersAsync(1, 0, 1, cancellationToken);
+                return result.Length == 1;
             }
-
-            LastError = lastFailure == null
-                ? "No Modbus probe responses."
-                : $"No Modbus probe responses. Last failure: {lastFailure}";
-
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         public void SubscribeRegister(byte slaveId, ushort address, Action<ushort[]> callback)
@@ -495,9 +466,6 @@ namespace TestBuilder.Services.Modbus
 
             return false;
         }
-
-        private static string FormatException(Exception exception) =>
-            $"{exception.GetType().Name}: {exception.Message}";
 
         private void NotifyReconnectStatus(string message)
         {

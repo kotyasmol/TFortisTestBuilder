@@ -11,7 +11,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private bool runArpdBat = true;
         [ObservableProperty] private string arpdBatPath = "arpd.bat";
         [ObservableProperty] private string command = "arp";
-        [ObservableProperty] private string arguments = "-d";
+        [ObservableProperty] private string arguments = "-d *";
         [ObservableProperty] private int timeoutMs = 5000;
         [ObservableProperty] private bool failOnError;
 

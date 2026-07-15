@@ -427,7 +427,7 @@ namespace TestBuilder.Services
                         RunArpdBat = n.RunArpdBat ?? true,
                         ArpdBatPath = n.ArpdBatPath ?? "arpd.bat",
                         Command = n.Command ?? "arp",
-                        Arguments = n.Arguments ?? "-d",
+                        Arguments = n.Arguments ?? "-d *",
                         TimeoutMs = n.TimeoutMs ?? 5000,
                         FailOnError = n.FailOnError ?? false
                     },

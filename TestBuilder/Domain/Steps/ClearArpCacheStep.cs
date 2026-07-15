@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -30,7 +31,7 @@ namespace TestBuilder.Domain.Steps
             _runArpdBat = runArpdBat;
             _arpdBatPath = string.IsNullOrWhiteSpace(arpdBatPath) ? "arpd.bat" : arpdBatPath.Trim();
             _command = string.IsNullOrWhiteSpace(command) ? "arp" : command.Trim();
-            _arguments = arguments ?? "-d";
+            _arguments = NormalizeArguments(_command, arguments);
             _timeoutMs = Math.Max(1, timeoutMs);
             _failOnError = failOnError;
         }
@@ -46,7 +47,7 @@ namespace TestBuilder.Domain.Steps
 
             if (_runArpdBat)
             {
-                var bat = await RunProcessAsync(_arpdBatPath, string.Empty, cancellationToken);
+                var bat = await RunProcessAsync(ResolveConfiguredPath(_arpdBatPath), string.Empty, cancellationToken);
                 _logger.Info($"arpd.bat: exit {bat.ExitCode}, stdout: {bat.StdOut}, stderr: {bat.StdErr}");
             }
 
@@ -73,17 +74,11 @@ namespace TestBuilder.Domain.Steps
         {
             try
             {
+                var startInfo = CreateStartInfo(fileName, arguments);
+
                 using var process = new Process
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = fileName,
-                        Arguments = arguments,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
+                    StartInfo = startInfo
                 };
 
                 process.Start();
@@ -124,6 +119,65 @@ namespace TestBuilder.Domain.Steps
             catch
             {
             }
+        }
+
+        private static string NormalizeArguments(string command, string? arguments)
+        {
+            var normalized = string.IsNullOrWhiteSpace(arguments) ? "-d *" : arguments.Trim();
+
+            return IsArpCommand(command) && string.Equals(normalized, "-d", StringComparison.OrdinalIgnoreCase)
+                ? "-d *"
+                : normalized;
+        }
+
+        private static bool IsArpCommand(string command)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(command);
+            return string.Equals(fileName, "arp", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ResolveConfiguredPath(string fileName)
+        {
+            if (Path.IsPathRooted(fileName) || File.Exists(fileName))
+            {
+                return fileName;
+            }
+
+            var appPath = Path.Combine(AppContext.BaseDirectory, fileName);
+            return File.Exists(appPath) ? appPath : fileName;
+        }
+
+        private static ProcessStartInfo CreateStartInfo(string fileName, string arguments)
+        {
+            var extension = Path.GetExtension(fileName);
+
+            if (string.Equals(extension, ".bat", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".cmd", StringComparison.OrdinalIgnoreCase))
+            {
+                var batchCommand = string.IsNullOrWhiteSpace(arguments)
+                    ? $"\"{fileName}\""
+                    : $"\"{fileName}\" {arguments}";
+
+                return new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/d /c \"{batchCommand}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+            }
+
+            return new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
         }
 
         private sealed record ProcessRunResult(int ExitCode, string StdOut, string StdErr);

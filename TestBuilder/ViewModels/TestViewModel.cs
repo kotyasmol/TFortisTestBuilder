@@ -43,10 +43,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
     private readonly List<string> _graphPath = new();
     private readonly Stack<SubtestNodeViewModel> _activeSubtests = new();
-    private const int ModbusBaudRate = 9600;
-    private const byte FirstProbeSlaveId = 1;
-    private const byte LastProbeSlaveId = 35;
-    private const byte ProbeSlaveStep = 2;
 
     private RegisterMonitor? _registerMonitor;
     private UndoRedoManager? _currentUndoRedo;
@@ -244,8 +240,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         CurrentGraph = RootGraph;
 
         TestingLogger = LoggingService.Instance.CreateLogger("Testing");
-        _slaveManager.SetLogger(TestingLogger);
-        TestingLogger.Info($"Лог-файл: {LoggingService.CurrentLogFilePath}");
         _modbusService.ReconnectStatusChanged += OnReconnectStatusChanged;
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync);
@@ -686,57 +680,24 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task ConnectAsync()
     {
         StatusMessage = "Поиск COM-портов...";
-        TestingLogger.Info("[MODBUS] Поиск COM-портов...");
 
-        string[] ports;
-
-        try
-        {
-            ports = SerialPort.GetPortNames()
-                .OrderBy(GetSerialPortSortKey)
-                .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Не удалось получить список COM-портов.";
-            TestingLogger.Error($"[MODBUS] Не удалось получить список COM-портов: {FormatDiagnosticException(ex)}");
-            return;
-        }
-
-        if (ports.Length == 0)
-        {
-            StatusMessage = "COM-порты не найдены.";
-            TestingLogger.Error("[MODBUS] COM-порты не найдены в системе.");
-            return;
-        }
-
-        TestingLogger.Info($"[MODBUS] Найдены COM-порты: {string.Join(", ", ports)}.");
+        var ports = SerialPort.GetPortNames().OrderBy(p => p);
 
         foreach (var port in ports)
         {
             try
             {
-                StatusMessage = $"Проверка {port}...";
-                TestingLogger.Info($"[MODBUS] {port}: открытие {ModbusBaudRate},N,8,1...");
-
                 var connected = await _modbusService.ConnectAsync(
                     port,
-                    ModbusBaudRate,
+                    9600,
                     Parity.None,
                     8,
                     StopBits.One);
 
                 if (!connected)
-                {
-                    TestingLogger.Warning(
-                        $"[MODBUS] {port}: не удалось открыть порт. {_modbusService.LastError ?? "Причина не указана."}");
                     continue;
-                }
 
-                TestingLogger.Info($"[MODBUS] {port}: порт открыт, проверка ответа Modbus...");
-
-                if (!await ProbeModbusPortAsync(port))
+                if (!await _modbusService.CheckPortAsync())
                 {
                     await _modbusService.DisconnectAsync();
                     continue;
@@ -753,9 +714,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
                 return;
             }
-            catch (Exception ex)
+            catch
             {
-                TestingLogger.Error($"[MODBUS] {port}: ошибка подключения: {FormatDiagnosticException(ex)}");
                 await _modbusService.DisconnectAsync();
             }
         }
@@ -763,55 +723,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         StatusMessage = "Не удалось подключиться.";
         TestingLogger.Error("Не удалось подключиться. Проверьте кабель и порт.");
     }
-
-    private async Task<bool> ProbeModbusPortAsync(string port)
-    {
-        string? lastFailure = null;
-
-        for (byte slaveId = FirstProbeSlaveId; slaveId <= LastProbeSlaveId; slaveId += ProbeSlaveStep)
-        {
-            try
-            {
-                var values = await _modbusService.ReadRegistersAsync(slaveId, 0, 1);
-
-                if (values.Length == 1)
-                {
-                    TestingLogger.Info(
-                        $"[MODBUS] {port}: slave {slaveId} ответил, register 0={values[0]}.");
-                    return true;
-                }
-
-                lastFailure = $"slave {slaveId}: получено {values.Length} значений вместо 1";
-                TestingLogger.Warning($"[MODBUS] {port}: {lastFailure}.");
-            }
-            catch (Exception ex)
-            {
-                lastFailure = $"slave {slaveId}: {FormatDiagnosticException(ex)}";
-                TestingLogger.Debug($"[MODBUS] {port}: {lastFailure}");
-            }
-
-            await Task.Delay(150);
-        }
-
-        TestingLogger.Warning(
-            $"[MODBUS] {port}: нет ответа от slave ID {FirstProbeSlaveId},{FirstProbeSlaveId + ProbeSlaveStep}...{LastProbeSlaveId}. Последняя ошибка: {lastFailure ?? "нет данных"}.");
-
-        return false;
-    }
-
-    private static int GetSerialPortSortKey(string port)
-    {
-        if (port.StartsWith("COM", StringComparison.OrdinalIgnoreCase) &&
-            int.TryParse(port[3..], out var number))
-        {
-            return number;
-        }
-
-        return int.MaxValue;
-    }
-
-    private static string FormatDiagnosticException(Exception exception) =>
-        $"{exception.GetType().Name}: {exception.Message}";
 
     private async Task StartMonitoringAsync()
     {

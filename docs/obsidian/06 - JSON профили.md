@@ -130,6 +130,10 @@ Deserializer также принимает часть русских и legacy-�
 | Wait Variable | `pollAction`, `requestTimeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
+Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
+`arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
+`arp`.
+
 ## Вложенные графы
 
 `For Slaves` сохраняет вложенный граф в поле `body`:
