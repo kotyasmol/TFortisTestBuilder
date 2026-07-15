@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -34,7 +35,10 @@ namespace TestBuilder.ViewModels.NodifyVM
         public ObservableCollection<SlaveModelBase> AvailableSlaves { get; } = new();
         public bool IsConnected => SlaveRegistry.Instance.IsConnected;
         public string HelpText => NodeHelpTextProvider.GetHelp(GetType());
+        public string HelpSummary => NodeHelpTextProvider.GetSummary(GetType());
+        public IReadOnlyList<string> HelpDetails => NodeHelpTextProvider.GetDetails(GetType());
         public bool HasHelpText => !string.IsNullOrWhiteSpace(HelpText);
+        public bool HasHelpDetails => HelpDetails.Count > 0;
 
         public IBrush ExecutionBorderBrush =>
             HasExecutionError ? ErrorBorderBrush :

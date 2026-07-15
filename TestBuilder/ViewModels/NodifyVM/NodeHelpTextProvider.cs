@@ -281,5 +281,29 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         public static string GetHelp(Type nodeType) =>
             HelpByType.TryGetValue(nodeType, out var help) ? help.Trim() : string.Empty;
+
+        public static string GetSummary(Type nodeType)
+        {
+            var lines = GetHelpLines(nodeType);
+            return lines.Count > 0 ? lines[0] : string.Empty;
+        }
+
+        public static IReadOnlyList<string> GetDetails(Type nodeType)
+        {
+            var lines = GetHelpLines(nodeType);
+            if (lines.Count <= 1)
+                return Array.Empty<string>();
+
+            var details = new string[lines.Count - 1];
+            for (var i = 1; i < lines.Count; i++)
+                details[i - 1] = lines[i];
+
+            return details;
+        }
+
+        private static IReadOnlyList<string> GetHelpLines(Type nodeType) =>
+            GetHelp(nodeType).Split(
+                new[] { "\r\n", "\n" },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 }
