@@ -3,6 +3,7 @@ tags:
   - testbuilder
   - modbus
   - monitoring
+updated: 2026-06-30
 ---
 
 # Modbus и мониторинг
@@ -33,7 +34,8 @@ Modbus-слой отвечает за связь с тестовым стенд�
 _modbusService.ConnectAsync(port, 9600, Parity.None, 8, StopBits.One)
 ```
 
-4. Проверяет порт через `_modbusService.CheckPortAsync()`.
+4. Проверяет порт probe-чтением регистра `0` у slave ID `1, 3, 5, ..., 35`;
+   достаточно первого корректного ответа.
 5. Если проверка не прошла, отключается и пробует следующий порт.
 6. После успешного порта:
    - сохраняет `SelectedPort`;
@@ -44,13 +46,17 @@ _modbusService.ConnectAsync(port, 9600, Parity.None, 8, StopBits.One)
 
 ## Проверка порта
 
-`ModbusService.CheckPortAsync()` делает пробное чтение:
+Первичная проверка подключения делает пробное чтение регистра `0` по ожидаемым
+адресам стенда. В UI-подключении это выполняет `TestViewModel.ProbeModbusPortAsync()`;
+`ModbusService.CheckPortAsync()` использует ту же стратегию для совместимости:
 
 ```csharp
-ReadRegistersAsync(1, 0, 1)
+ReadRegistersAsync(slaveId, 0, 1)
 ```
 
-Успех - если вернулся массив длиной `1`.
+где `slaveId` перебирается как `1, 3, 5, ..., 35`. Успех - если хотя бы
+один slave вернул массив длиной `1`. Это защищает подключение от ситуации,
+когда COM-порт открыт, но устройство с адресом `1` не отвечает.
 
 ## Сканирование slave
 
@@ -154,6 +160,8 @@ WriteRegisterAsync(byte slaveId, ushort address, ushort value, bool verify = tru
 
 `TestViewModel.OnConnectionLost()` пишет предупреждение и говорит пользователю, что восстановление произойдет при следующей Modbus-операции.
 
+При отключении через UI `DisconnectAsync()` останавливает мониторинг, закрывает Modbus-соединение, сбрасывает `IsConnected`/`IsMonitoringActive` и сообщает `SlaveRegistry`, что стенд больше недоступен.
+
 ## RegisterState
 
 `RegisterState` - тонкая обертка над:
@@ -214,4 +222,3 @@ API:
 - Для регистровых проверок сначала убедиться, что нужный slave виден на вкладке `Modbus`.
 - Для сценариев внутри `For Slaves` включать `UseCurrentSlaveId`.
 - Если требуется гарантированно свежее значение регистра, лучше добавить отдельную ноду прямого чтения или доработать существующие register-check ноды.
-

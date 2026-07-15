@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 
 using TestBuilder.Domain.Modbus.Models;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Modbus
@@ -15,6 +16,7 @@ namespace TestBuilder.Domain.Modbus
     {
         private readonly IModbusService _modbus;
         private readonly object _slavesLock = new();
+        private ILogger? _logger;
 
         public ObservableCollection<SlaveModelBase> Slaves { get; } = new();
 
@@ -23,9 +25,17 @@ namespace TestBuilder.Domain.Modbus
             _modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
         }
 
+        public void SetLogger(ILogger logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         public async Task<int> ScanAsync()
         {
             var foundModels = new List<SlaveModelBase>();
+            var startedAt = DateTime.UtcNow;
+
+            _logger?.Info("[MODBUS] Сканирование slave ID 1,3,5...35 начато.");
 
             for (byte slaveId = 1; slaveId <= 35; slaveId += 2)
             {
@@ -51,15 +61,21 @@ namespace TestBuilder.Domain.Modbus
                     if (model != null)
                     {
                         foundModels.Add(model);
+                        _logger?.Info(
+                            $"[MODBUS] Найден slave {slaveId}: {model.DeviceType}, register 0={typeValue}.");
                     }
                     else
                     {
-                        Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, unknown type={typeValue}");
+                        var message = $"[MODBUS] slave {slaveId}: неизвестный тип устройства register 0={typeValue}.";
+                        _logger?.Warning(message);
+                        Console.WriteLine(message);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, error={ex.GetType().Name}: {ex.Message}");
+                    var message = $"[MODBUS] slave {slaveId}: нет ответа ({ex.GetType().Name}: {ex.Message}).";
+                    _logger?.Debug(message);
+                    Console.WriteLine(message);
                 }
 
                 await Task.Delay(150);
@@ -74,6 +90,9 @@ namespace TestBuilder.Domain.Modbus
                         Slaves.Add(model);
                 }
             });
+
+            var elapsedMs = (DateTime.UtcNow - startedAt).TotalMilliseconds;
+            _logger?.Info($"[MODBUS] Сканирование завершено: найдено {foundModels.Count}, время {elapsedMs:F0} мс.");
 
             return foundModels.Count;
         }

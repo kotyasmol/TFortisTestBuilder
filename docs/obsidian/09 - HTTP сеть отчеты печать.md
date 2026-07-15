@@ -5,6 +5,7 @@ tags:
   - network
   - reports
   - printing
+updated: 2026-06-30
 ---
 
 # HTTP, сеть, отчеты и печать
@@ -52,6 +53,8 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - raw XML при успехе извлечения;
 - `invalid testpage` при невалидной странице.
+
+`FailOnError` в selftest-нode не переключает результат на `True`; при ошибке step возвращает `False` всегда. Разница только в том, выставляется ли `context.HasCriticalError`, который потом влияет на поле `test_result` в отчете.
 
 ## API устройства
 
@@ -131,6 +134,8 @@ MAC принимается в разных форматах, потому что
 - `Software`;
 - `TYPE_SOFT_GEN`.
 
+Все эти значения ведут в одну текущую реализацию software/pcap. Если указать другой режим, step вернет ошибку с рекомендацией использовать `SoftwarePcap`.
+
 Основные этапы:
 
 1. Получить список `CaptureDeviceList.Instance`.
@@ -183,6 +188,8 @@ Port 1,192.168.20.1,192.168.20.2,1000
 `test_result` зависит от `context.HasCriticalError`.
 
 Если `IncludeAllVariables = true`, в отчет попадает отсортированная копия всех переменных контекста. Это удобно для диагностики, но может сделать отчет большим.
+
+`BuildTestReportStep` не отправляет отчет и не пишет файл; он только формирует JSON-строку в переменной. Отправка и локальная копия выполняются отдельной нодой `Send Test Report`.
 
 ## Отправка отчета
 
@@ -262,4 +269,3 @@ Get Serial Number
 Build Test Report
   -> Send Test Report
 ```
-
