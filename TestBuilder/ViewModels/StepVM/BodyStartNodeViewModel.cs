@@ -17,5 +17,7 @@ namespace TestBuilder.ViewModels.StepVM
             Out = new ConnectorViewModel { Title = "Выход" };
             AddOutput(Out);
         }
+
+        public override NodeViewModel Clone() => new BodyStartNodeViewModel();
     }
 }
