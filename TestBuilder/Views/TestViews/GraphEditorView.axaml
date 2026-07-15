@@ -33,21 +33,25 @@
                 CornerRadius="11"
                 Background="#00000000"
                 IsVisible="{Binding HasHelpText}"
+                ToolTip.Placement="BottomEdgeAlignedRight"
+                ToolTip.VerticalOffset="6"
+                ToolTip.ShowDelay="180"
                 VerticalAlignment="Top">
           <ToolTip.Tip>
-            <Border Width="430"
-                    MaxWidth="430"
-                    Padding="14"
+            <Border Width="360"
+                    MaxWidth="360"
+                    MaxHeight="440"
+                    Padding="12"
                     CornerRadius="8"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1">
-              <StackPanel Spacing="10">
+              <Grid RowDefinitions="Auto,Auto,*">
                 <Grid ColumnDefinitions="Auto,*">
                   <Border Grid.Column="0"
-                          Width="30"
-                          Height="30"
-                          CornerRadius="15"
+                          Width="28"
+                          Height="28"
+                          CornerRadius="14"
                           Background="{DynamicResource PrimarySoftBrush}"
                           VerticalAlignment="Top">
                     <PathIcon Width="16"
@@ -59,55 +63,62 @@
                   </Border>
                   <StackPanel Grid.Column="1"
                               Margin="10,0,0,0"
-                              Spacing="3">
+                              Spacing="2">
                     <TextBlock Text="{Binding Title}"
-                               FontSize="15"
+                               FontSize="14"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                TextWrapping="Wrap" />
                     <TextBlock Text="{Binding HelpSummary}"
                                FontSize="12"
-                               LineHeight="17"
+                               LineHeight="16"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                TextWrapping="Wrap" />
                   </StackPanel>
                 </Grid>
 
-                <Border Height="1"
+                <Border Grid.Row="1"
+                        Height="1"
+                        Margin="0,10,0,10"
                         Background="{DynamicResource BorderBrush}"
                         Opacity="0.75"
                         IsVisible="{Binding HasHelpDetails}" />
 
-                <StackPanel Spacing="6"
-                            IsVisible="{Binding HasHelpDetails}">
-                  <TextBlock Text="Параметры и поведение"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <ItemsControl ItemsSource="{Binding HelpDetails}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Grid ColumnDefinitions="Auto,*"
-                              Margin="0,2,0,0">
-                          <Border Grid.Column="0"
-                                  Width="5"
-                                  Height="5"
-                                  Margin="0,6,8,0"
-                                  CornerRadius="2.5"
-                                  Background="{DynamicResource PrimaryBrush}"
-                                  Opacity="0.8" />
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding}"
-                                     FontSize="12"
-                                     LineHeight="17"
-                                     Foreground="{DynamicResource TextPrimaryBrush}"
-                                     TextWrapping="Wrap" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
-              </StackPanel>
+                <ScrollViewer Grid.Row="2"
+                              MaxHeight="300"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              IsVisible="{Binding HasHelpDetails}">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="Параметры и поведение"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{Binding HelpDetails}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="Auto,*"
+                                Margin="0,2,0,0">
+                            <Border Grid.Column="0"
+                                    Width="5"
+                                    Height="5"
+                                    Margin="0,6,8,0"
+                                    CornerRadius="2.5"
+                                    Background="{DynamicResource PrimaryBrush}"
+                                    Opacity="0.8" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding}"
+                                       FontSize="12"
+                                       LineHeight="16"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
             </Border>
           </ToolTip.Tip>
           <PathIcon Width="16"
