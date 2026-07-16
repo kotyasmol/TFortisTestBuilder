@@ -21,7 +21,7 @@ namespace TestBuilder.Domain.Steps
         public const string DefaultUrl =
             "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
 
-        public const int DefaultTimeoutMs = 10000;
+        public const int DefaultTimeoutMs = 160000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
         public const string DefaultOutputFileName = "selftest.txt";
@@ -33,6 +33,8 @@ namespace TestBuilder.Domain.Steps
 
         private const int MaxPageAttemptTimeoutMs = 5000;
         private const int RetryDelayMs = 1000;
+        private const int LegacyShortTimeoutMs = 30000;
+        private const int MinimumDeviceReadyTimeoutMs = 160000;
         private const int MaxBrowserVirtualTimeBudgetMs = 5000;
         private const int MaxBrowserProcessTimeoutMs = 2500;
         private const int MinHttpFallbackTimeoutMs = 1000;
@@ -61,7 +63,7 @@ namespace TestBuilder.Domain.Steps
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
-            _timeoutMs = timeoutMs <= 0 ? DefaultTimeoutMs : timeoutMs;
+            _timeoutMs = NormalizeSelfTestTimeout(_url, timeoutMs);
             _outputPrefix = string.IsNullOrWhiteSpace(outputPrefix)
                 ? DefaultOutputPrefix
                 : outputPrefix.Trim().TrimEnd('.');
@@ -70,6 +72,14 @@ namespace TestBuilder.Domain.Steps
                 : validationRules;
             _failOnError = failOnError;
             _useBrowser = useBrowser;
+        }
+
+        private static int NormalizeSelfTestTimeout(string url, int timeoutMs)
+        {
+            var normalized = timeoutMs <= 0 ? DefaultTimeoutMs : timeoutMs;
+            return normalized <= LegacyShortTimeoutMs && IsDeviceSelfTestUrl(url)
+                ? MinimumDeviceReadyTimeoutMs
+                : normalized;
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -379,6 +389,18 @@ namespace TestBuilder.Domain.Steps
 
             legacyUrl = builder.Uri.ToString();
             return true;
+        }
+
+        private static bool IsDeviceSelfTestUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            return uri.AbsolutePath.EndsWith("/test.shtml", StringComparison.OrdinalIgnoreCase) ||
+                   uri.AbsolutePath.Contains("/cgi-bin/luci", StringComparison.OrdinalIgnoreCase) ||
+                   uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase);
         }
 
         private static TimeSpan GetAttemptTimeout(TimeSpan remaining)

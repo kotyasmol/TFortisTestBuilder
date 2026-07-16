@@ -51,6 +51,8 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 - для Chrome/Edge `--virtual-time-budget` ограничен частью таймаута попытки, чтобы процесс успевал завершиться до внешнего таймаута.
 
 Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
+Старые сохраненные профили с `TimeoutMs` до `30000` для DUT selftest автоматически получают
+эффективный таймаут `160000`, как в старом стенде.
 Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы
 или дополнительных ресурсов.
 Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
