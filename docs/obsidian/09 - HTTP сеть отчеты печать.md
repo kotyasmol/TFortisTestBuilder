@@ -5,7 +5,7 @@ tags:
   - network
   - reports
   - printing
-updated: 2026-06-30
+updated: 2026-07-16
 ---
 
 # HTTP, сеть, отчеты и печать
@@ -44,13 +44,17 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser с `--dump-dom`;
-- если браузер не найден или headless browser вернул ошибку/таймаут, делает обычный HTTP GET;
-- в пределах `TimeoutMs` повторяет попытки с паузой, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` с `default_mac`;
+- если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
+- для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`;
+- в пределах `TimeoutMs` повторяет попытки с паузой, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`;
 - для Chrome/Edge `--virtual-time-budget` ограничен частью таймаута попытки, чтобы процесс успевал завершиться до внешнего таймаута.
 
 Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
 Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы
 или дополнительных ресурсов.
+Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
+Если Chrome/Edge был остановлен по таймауту, уже полученный stdout DOM все равно проверяется на selftest/settings.
+Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 
 Файл `selftest.txt` всегда перезаписывается:
 

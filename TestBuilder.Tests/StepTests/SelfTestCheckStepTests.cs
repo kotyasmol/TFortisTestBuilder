@@ -42,7 +42,11 @@ public class SelfTestCheckStepTests
                 "<html><selftest><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest></html>",
                 TimeSpan.FromMilliseconds(10)));
 
-        var step = CreateStep(service, "init_ok=1..1", timeoutMs: 2500);
+        var step = CreateStep(
+            service,
+            "init_ok=1..1",
+            timeoutMs: 2500,
+            url: "http://192.168.0.1/selftest.xml");
         var context = new TestContext(new RegisterState());
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
@@ -51,6 +55,86 @@ public class SelfTestCheckStepTests
         Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
         Assert.Equal(2, context.GetVariable<int>("SelfTest.Attempts"));
         Assert.Equal(2, service.Calls);
+    }
+
+    [Fact]
+    public async Task SelfTestCheckStep_TriesLegacyTestShtml_WhenLuciPageHasNoXml()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<html>luci page without hidden xml</html>",
+                TimeSpan.FromMilliseconds(10)),
+            HttpRequestResult.Success(
+                200,
+                "<!DOCTYPE settings><settings><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></settings>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal("1", context.GetVariable<string>("Dut.init_ok"));
+        Assert.Equal(2, service.Calls);
+        Assert.Equal(SelfTestCheckStep.DefaultUrl, service.RequestedUrls[0]);
+        Assert.Equal("http://192.168.0.1/test.shtml", service.RequestedUrls[1]);
+    }
+
+    [Fact]
+    public async Task SelfTestCheckStep_ReturnsTrue_WhenSelfTestIsHtmlEscapedInDom()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<html><script>window.hidden = '&lt;selftest source=&quot;luci&quot;&gt;&lt;init_ok&gt;1&lt;/init_ok&gt;&lt;default_mac&gt;AC:CC:11:A6:00:00&lt;/default_mac&gt;&lt;/selftest&gt;';</script></html>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal("1", context.GetVariable<string>("Dut.init_ok"));
+        Assert.Equal("AC:CC:11:A6:00:00", context.GetVariable<string>("Dut.default_mac"));
+    }
+
+    [Fact]
+    public async Task SelfTestCheckStep_ReturnsTrue_WhenLegacySettingsXmlIsReturned()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<!DOCTYPE html><settings><init_ok>1</init_ok><dev_type>32</dev_type><default_mac>AC:CC:11:A6:00:00</default_mac></settings>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1\ndev_type=0..65535");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal("32", context.GetVariable<string>("Dut.dev_type"));
+    }
+
+    [Fact]
+    public async Task SelfTestCheckStep_ReturnsTrue_WhenLegacySettingsXmlIsJsEscaped()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<html><script>window.hidden = \"\\u003Csettings\\u003E\\u003Cinit_ok\\u003E1\\u003C\\/init_ok\\u003E\\u003Cdefault_mac\\u003EAC:CC:11:A6:00:00\\u003C\\/default_mac\\u003E\\u003C\\/settings\\u003E\";</script></html>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal("AC:CC:11:A6:00:00", context.GetVariable<string>("Dut.default_mac"));
     }
 
     [Fact]
@@ -76,12 +160,13 @@ public class SelfTestCheckStepTests
     private static SelfTestCheckStep CreateStep(
         IHttpRequestService service,
         string rules,
-        int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs)
+        int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs,
+        string? url = null)
     {
         return new SelfTestCheckStep(
             service,
             NullLogger.Instance,
-            SelfTestCheckStep.DefaultUrl,
+            url ?? SelfTestCheckStep.DefaultUrl,
             timeoutMs,
             SelfTestCheckStep.DefaultOutputPrefix,
             rules,
@@ -99,6 +184,7 @@ public class SelfTestCheckStepTests
         }
 
         public int Calls { get; private set; }
+        public List<string> RequestedUrls { get; } = new();
 
         public Task<HttpRequestResult> GetAsync(
             string url,
@@ -106,6 +192,7 @@ public class SelfTestCheckStepTests
             CancellationToken cancellationToken)
         {
             Calls++;
+            RequestedUrls.Add(url);
             return Task.FromResult(_results.Dequeue());
         }
     }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace TestBuilder.Domain.Steps
         private const int MaxPageAttemptTimeoutMs = 5000;
         private const int RetryDelayMs = 1000;
         private const int MaxBrowserVirtualTimeBudgetMs = 5000;
+        private const int MaxExtractionCandidates = 64;
 
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
@@ -237,6 +239,7 @@ namespace TestBuilder.Domain.Steps
         {
             document = new XDocument();
             error = string.Empty;
+            raw = RepairLegacySelfTestXml(raw);
 
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -254,9 +257,9 @@ namespace TestBuilder.Domain.Steps
                 return false;
             }
 
-            if (!string.Equals(document.Root?.Name.LocalName, "selftest", StringComparison.OrdinalIgnoreCase))
+            if (!IsSupportedSelfTestRoot(document.Root?.Name.LocalName))
             {
-                error = "XML root is not <selftest>.";
+                error = "XML root is not <selftest> or <settings>.";
                 return false;
             }
 
@@ -271,6 +274,7 @@ namespace TestBuilder.Domain.Steps
             var stopwatch = Stopwatch.StartNew();
             var attempts = 0;
             var lastError = "Selftest page was not requested.";
+            var candidateUrls = BuildSelfTestUrlCandidates(url);
             HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
 
             while (true)
@@ -283,29 +287,40 @@ namespace TestBuilder.Domain.Steps
                     break;
                 }
 
-                attempts++;
-                var attemptTimeout = GetAttemptTimeout(remaining);
-                lastResult = await GetPageAsync(url, attemptTimeout, cancellationToken);
+                foreach (var candidateUrl in candidateUrls)
+                {
+                    remaining = timeout - stopwatch.Elapsed;
+                    if (remaining <= TimeSpan.Zero)
+                    {
+                        break;
+                    }
 
-                if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
-                {
-                    lastError = lastResult.ErrorMessage;
-                }
-                else if (!lastResult.IsSuccessStatusCode && lastResult.StatusCode != 0)
-                {
-                    lastError = $"HTTP {lastResult.StatusCode}.";
-                }
-                else if (!TryExtractSelfTestXml(lastResult.Body, out var raw))
-                {
-                    lastError = "Response does not contain <selftest>...</selftest>.";
-                }
-                else if (!raw.Contains("default_mac", StringComparison.Ordinal))
-                {
-                    lastError = "Selftest XML does not contain default_mac.";
-                }
-                else
-                {
-                    return new SelfTestFetchResult(lastResult, raw, attempts, stopwatch.Elapsed, string.Empty);
+                    attempts++;
+                    var attemptTimeout = GetAttemptTimeout(remaining);
+                    lastResult = await GetPageAsync(candidateUrl, attemptTimeout, cancellationToken);
+
+                    if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
+                    {
+                        lastError = lastResult.ErrorMessage;
+                    }
+                    else if (!lastResult.IsSuccessStatusCode && lastResult.StatusCode != 0)
+                    {
+                        lastError = $"HTTP {lastResult.StatusCode}.";
+                    }
+                    else if (!TryExtractSelfTestXml(lastResult.Body, out var raw))
+                    {
+                        lastError = "Response does not contain <selftest>...</selftest> or <settings>...</settings>.";
+                    }
+                    else if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lastError = "Selftest XML does not contain default_mac.";
+                    }
+                    else
+                    {
+                        return new SelfTestFetchResult(lastResult, raw, attempts, stopwatch.Elapsed, string.Empty);
+                    }
+
+                    _logger.Warning($"Selftest page is not ready yet (attempt {attempts}, url {candidateUrl}): {lastError}");
                 }
 
                 var delay = GetRetryDelay(timeout - stopwatch.Elapsed);
@@ -314,7 +329,6 @@ namespace TestBuilder.Domain.Steps
                     break;
                 }
 
-                _logger.Warning($"Selftest page is not ready yet (attempt {attempts}): {lastError}");
                 await Task.Delay(delay, cancellationToken);
             }
 
@@ -323,6 +337,45 @@ namespace TestBuilder.Domain.Steps
                 : $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.";
 
             return new SelfTestFetchResult(lastResult, string.Empty, attempts, stopwatch.Elapsed, totalError);
+        }
+
+        private static IReadOnlyList<string> BuildSelfTestUrlCandidates(string url)
+        {
+            var urls = new List<string> { url };
+
+            if (TryBuildLegacyTestPageUrl(url, out var legacyUrl) &&
+                !urls.Contains(legacyUrl, StringComparer.OrdinalIgnoreCase))
+            {
+                urls.Add(legacyUrl);
+            }
+
+            return urls;
+        }
+
+        private static bool TryBuildLegacyTestPageUrl(string url, out string legacyUrl)
+        {
+            legacyUrl = string.Empty;
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            if (!uri.AbsolutePath.Contains("/cgi-bin/luci", StringComparison.OrdinalIgnoreCase) &&
+                !uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var builder = new UriBuilder(uri)
+            {
+                Path = "test.shtml",
+                Query = string.Empty,
+                Fragment = string.Empty
+            };
+
+            legacyUrl = builder.Uri.ToString();
+            return true;
         }
 
         private static TimeSpan GetAttemptTimeout(TimeSpan remaining)
@@ -436,9 +489,14 @@ namespace TestBuilder.Domain.Steps
                 if (await Task.WhenAny(waitTask, timeoutTask) != waitTask)
                 {
                     TryKill(process);
+                    var timeoutStdout = await ReadCompletedOrEmptyAsync(stdoutTask);
+                    var timeoutStderr = await ReadCompletedOrEmptyAsync(stderrTask);
                     return HttpRequestResult.Failure(
-                        $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms.",
-                        stopwatch.Elapsed);
+                        string.IsNullOrWhiteSpace(timeoutStderr)
+                            ? $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms."
+                            : $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms. {timeoutStderr.Trim()}",
+                        stopwatch.Elapsed,
+                        body: timeoutStdout);
                 }
 
                 var stdout = await stdoutTask;
@@ -503,19 +561,150 @@ namespace TestBuilder.Domain.Steps
         private static bool TryExtractSelfTestXml(string pageSource, out string xml)
         {
             xml = string.Empty;
-            const string startTag = "<selftest>";
-            const string endTag = "</selftest>";
 
-            var startIndex = pageSource.IndexOf(startTag, StringComparison.OrdinalIgnoreCase);
-            var endIndex = pageSource.IndexOf(endTag, StringComparison.OrdinalIgnoreCase);
+            foreach (var candidate in BuildExtractionCandidates(pageSource))
+            {
+                if (TryExtractXmlElement(candidate, "selftest", out xml) ||
+                    TryExtractXmlElement(candidate, "settings", out xml))
+                {
+                    xml = RepairLegacySelfTestXml(xml.Trim());
+                    return true;
+                }
+            }
 
-            if (startIndex < 0 || endIndex <= startIndex)
+            return false;
+        }
+
+        private static bool TryExtractXmlElement(
+            string source,
+            string rootName,
+            out string xml)
+        {
+            xml = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(source))
             {
                 return false;
             }
 
-            xml = pageSource.Substring(startIndex, endIndex - startIndex + endTag.Length);
+            var rootPattern = Regex.Escape(rootName);
+            var match = Regex.Match(
+                source,
+                $@"<\s*{rootPattern}\b[^>]*>.*?</\s*{rootPattern}\s*>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            xml = match.Value;
             return true;
+        }
+
+        private static IEnumerable<string> BuildExtractionCandidates(string pageSource)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var queue = new Queue<string>();
+
+            AddCandidate(pageSource);
+
+            var count = 0;
+            while (queue.Count > 0 && count < MaxExtractionCandidates)
+            {
+                var current = queue.Dequeue();
+                count++;
+                yield return current;
+
+                AddCandidate(DecodeHtmlRepeated(current));
+                AddCandidate(TryUriDecode(current));
+                AddCandidate(TryRegexUnescape(current));
+                AddCandidate(current.Replace(@"\/", "/", StringComparison.Ordinal));
+            }
+
+            void AddCandidate(string? value)
+            {
+                if (string.IsNullOrWhiteSpace(value) || !seen.Add(value))
+                {
+                    return;
+                }
+
+                queue.Enqueue(value);
+            }
+        }
+
+        private static string DecodeHtmlRepeated(string value)
+        {
+            var current = value;
+
+            for (var i = 0; i < 3; i++)
+            {
+                var decoded = WebUtility.HtmlDecode(current);
+                if (string.Equals(decoded, current, StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                current = decoded;
+            }
+
+            return current;
+        }
+
+        private static string? TryUriDecode(string value)
+        {
+            try
+            {
+                return Uri.UnescapeDataString(value);
+            }
+            catch (UriFormatException)
+            {
+                return null;
+            }
+        }
+
+        private static string? TryRegexUnescape(string value)
+        {
+            try
+            {
+                return Regex.Unescape(value);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        private static bool IsSupportedSelfTestRoot(string? rootName)
+        {
+            return string.Equals(rootName, "selftest", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(rootName, "settings", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string RepairLegacySelfTestXml(string xml)
+        {
+            if (string.IsNullOrWhiteSpace(xml))
+            {
+                return xml;
+            }
+
+            return Regex.Replace(
+                xml,
+                @"(<adc_2_5>[^<]*)<adc_2_5>",
+                "$1</adc_2_5>",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        private static async Task<string> ReadCompletedOrEmptyAsync(Task<string> readTask)
+        {
+            try
+            {
+                return await readTask;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private static Dictionary<string, string> ExtractValues(XDocument document)
