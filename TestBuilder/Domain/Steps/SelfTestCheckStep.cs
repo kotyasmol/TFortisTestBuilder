@@ -984,8 +984,14 @@ namespace TestBuilder.Domain.Steps
                 .GroupBy(x => x.Name.LocalName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
-                    group => group.Last().Value.Trim(),
+                    group => SelectSelfTestValue(document.Root, group).Trim(),
                     StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string SelectSelfTestValue(XElement? root, IEnumerable<XElement> elements)
+        {
+            var lastRootField = elements.LastOrDefault(element => element.Parent == root);
+            return (lastRootField ?? elements.Last()).Value;
         }
 
         private static IEnumerable<string> GetLegacyAliases(string fieldName)

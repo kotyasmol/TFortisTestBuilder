@@ -145,6 +145,24 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public async Task SelfTestCheckStep_PrefersRootField_WhenNestedFieldHasSameName()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<selftest><init_ok>1</init_ok><dev_type>32</dev_type><system><dev_type>0</dev_type></system><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1\ndev_type=32..32");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal("32", context.GetVariable<string>("Dut.dev_type"));
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_WhenLegacySettingsXmlIsJsEscaped()
     {
         var service = new QueueHttpRequestService(

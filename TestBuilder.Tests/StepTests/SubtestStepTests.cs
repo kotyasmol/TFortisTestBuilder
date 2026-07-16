@@ -47,14 +47,16 @@ public class SubtestStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenBodyFailsAndStopOnErrorEnabled_Throws()
+    public async Task ExecuteAsync_WhenBodyFailsAndStopOnErrorEnabled_ReturnsFalseAndMarksCritical()
     {
         var bodyStep = new CountingStep(StepResult.False);
         var step = CreateSubtestStep(isEnabled: true, stopOnError: true, bodyStep);
+        var context = CreateContext();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => step.ExecuteAsync(CreateContext(), CancellationToken.None));
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
+        Assert.Equal(StepResult.False, result);
+        Assert.True(context.HasCriticalError);
         Assert.Equal(1, bodyStep.ExecuteCount);
     }
 

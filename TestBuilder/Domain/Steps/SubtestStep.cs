@@ -56,7 +56,7 @@ namespace TestBuilder.Domain.Steps
                 _logger.Warning(message);
 
                 if (_stopOnError)
-                    throw new InvalidOperationException(message, ex);
+                    context.HasCriticalError = true;
 
                 return StepResult.False;
             }
@@ -71,7 +71,7 @@ namespace TestBuilder.Domain.Steps
             _logger.Warning(failureMessage);
 
             if (_stopOnError)
-                throw new InvalidOperationException(failureMessage);
+                context.HasCriticalError = true;
 
             return StepResult.False;
         }
