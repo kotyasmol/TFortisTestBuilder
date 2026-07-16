@@ -56,13 +56,12 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы
 или дополнительных ресурсов.
 Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
-Если Chrome/Edge был остановлен по таймауту, уже полученный stdout DOM все равно проверяется на selftest/settings.
+Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
+загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 
-Файл `selftest.txt` всегда перезаписывается:
-
-- raw XML при успехе извлечения;
-- `invalid testpage` при невалидной странице.
+Raw XML сохраняется только в `TestContext` текущего запуска как `SelfTestRaw`.
+Файл `selftest.txt` больше не создается: он был legacy-артефактом старой консольной утилиты.
 
 `FailOnError` в selftest-нode не переключает результат на `True`; при ошибке step возвращает `False` всегда. Разница только в том, выставляется ли `context.HasCriticalError`, который потом влияет на поле `test_result` в отчете.
 

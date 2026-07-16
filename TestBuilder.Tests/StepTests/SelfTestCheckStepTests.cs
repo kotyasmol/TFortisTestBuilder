@@ -30,6 +30,31 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public async Task SelfTestCheckStep_StoresRawXmlInContextWithoutWritingSelfTestFile()
+    {
+        var outputFile = Path.Combine(AppContext.BaseDirectory, "selftest.txt");
+        if (File.Exists(outputFile))
+        {
+            File.Delete(outputFile);
+        }
+
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<selftest><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1");
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Contains("<selftest>", context.GetVariable<string>(SelfTestCheckStep.DefaultOutputVariableName));
+        Assert.False(File.Exists(outputFile));
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_RetriesUntilSelfTestAppears()
     {
         var service = new QueueHttpRequestService(

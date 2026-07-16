@@ -5,7 +5,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -24,20 +29,19 @@ namespace TestBuilder.Domain.Steps
         public const int DefaultTimeoutMs = 160000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
-        public const string DefaultOutputFileName = "selftest.txt";
         public const string DefaultValidationRules =
             "init_ok=1..1\n" +
             "dev_type=0..65535\n" +
             "firmvare_vers=0..65535\n" +
             "boot_vers=0..65535";
 
-        private const int MaxPageAttemptTimeoutMs = 5000;
+        private const int MaxPageAttemptTimeoutMs = 20000;
         private const int RetryDelayMs = 1000;
         private const int LegacyShortTimeoutMs = 30000;
         private const int MinimumDeviceReadyTimeoutMs = 160000;
-        private const int MaxBrowserVirtualTimeBudgetMs = 5000;
-        private const int MaxBrowserProcessTimeoutMs = 2500;
-        private const int MinHttpFallbackTimeoutMs = 1000;
+        private const int BrowserDomSettleDelayMs = 10000;
+        private const int MaxBrowserProcessTimeoutMs = 15000;
+        private const int MinHttpFallbackTimeoutMs = 3000;
         private const int MaxLoggedBrowserErrorLength = 300;
         private const int MaxExtractionCandidates = 64;
 
@@ -106,13 +110,12 @@ namespace TestBuilder.Domain.Steps
 
             if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
             {
-                SaveSelfTestFile("invalid testpage");
+                context.SetVariable(DefaultOutputVariableName, string.Empty);
                 return Fail(context, fetch.ErrorMessage);
             }
 
             var raw = fetch.RawXml;
 
-            SaveSelfTestFile(raw);
             context.SetVariable(DefaultOutputVariableName, raw);
 
             if (!TryParseSelfTest(raw, out var document, out var parseError))
@@ -449,16 +452,23 @@ namespace TestBuilder.Domain.Steps
 
                     if (string.IsNullOrWhiteSpace(browserResult.ErrorMessage))
                     {
-                        return browserResult;
-                    }
+                        if (TryExtractSelfTestXml(browserResult.Body, out _))
+                        {
+                            return browserResult;
+                        }
 
-                    if (TryExtractSelfTestXml(browserResult.Body, out _))
+                        _logger.Warning("Headless browser returned DOM without selftest XML. Falling back to plain HTTP.");
+                    }
+                    else if (TryExtractSelfTestXml(browserResult.Body, out _))
                     {
                         return HttpRequestResult.Success(0, browserResult.Body, browserResult.Elapsed);
                     }
+                    else
+                    {
+                        _logger.Warning(
+                            $"Headless browser failed: {TrimForLog(browserResult.ErrorMessage)}. Falling back to plain HTTP.");
+                    }
 
-                    _logger.Warning(
-                        $"Headless browser failed: {TrimForLog(browserResult.ErrorMessage)}. Falling back to plain HTTP.");
                     var fallbackTimeout = timeout - browserResult.Elapsed;
                     if (fallbackTimeout <= TimeSpan.Zero)
                     {
@@ -520,71 +530,64 @@ namespace TestBuilder.Domain.Steps
         {
             var stopwatch = Stopwatch.StartNew();
             var userDataDir = Path.Combine(Path.GetTempPath(), "TestBuilderHeadlessChrome_" + Guid.NewGuid().ToString("N"));
+            var debuggingPort = GetAvailableTcpPort();
+            Process? process = null;
 
             try
             {
                 Directory.CreateDirectory(userDataDir);
 
-                using var process = new Process();
+                process = new Process();
                 process.StartInfo = new ProcessStartInfo
                 {
                     FileName = browserPath,
                     UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
                     CreateNoWindow = true
                 };
 
-                process.StartInfo.ArgumentList.Add("--headless=new");
+                process.StartInfo.ArgumentList.Add("--headless");
                 process.StartInfo.ArgumentList.Add("--disable-gpu");
                 process.StartInfo.ArgumentList.Add("--no-sandbox");
                 process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
                 process.StartInfo.ArgumentList.Add("--window-size=1920,1080");
                 process.StartInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-                process.StartInfo.ArgumentList.Add("--virtual-time-budget=" + GetBrowserVirtualTimeBudgetMs(timeout));
+                process.StartInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
+                process.StartInfo.ArgumentList.Add("--remote-allow-origins=*");
                 process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
-                process.StartInfo.ArgumentList.Add("--dump-dom");
                 process.StartInfo.ArgumentList.Add(url);
 
                 process.Start();
 
-                var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-                var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-                var waitTask = process.WaitForExitAsync(cancellationToken);
-                var timeoutTask = Task.Delay(timeout, cancellationToken);
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(timeout);
 
-                if (await Task.WhenAny(waitTask, timeoutTask) != waitTask)
+                var webSocketUrl = await WaitForPageWebSocketUrlAsync(
+                    debuggingPort,
+                    GetRemainingTimeout(timeout, stopwatch.Elapsed),
+                    timeoutCts.Token);
+
+                var settleDelay = GetBrowserSettleDelay(GetRemainingTimeout(timeout, stopwatch.Elapsed));
+                if (settleDelay > TimeSpan.Zero)
                 {
-                    TryKill(process);
-                    var timeoutStdout = await ReadCompletedOrEmptyAsync(stdoutTask);
-                    var timeoutStderr = await ReadCompletedOrEmptyAsync(stderrTask);
-                    return HttpRequestResult.Failure(
-                        string.IsNullOrWhiteSpace(timeoutStderr)
-                            ? $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms."
-                            : $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms. {timeoutStderr.Trim()}",
-                        stopwatch.Elapsed,
-                        body: timeoutStdout);
+                    await Task.Delay(settleDelay, timeoutCts.Token);
                 }
 
-                var stdout = await stdoutTask;
-                var stderr = await stderrTask;
-
-                if (process.ExitCode != 0)
-                {
-                    return HttpRequestResult.Failure(
-                        string.IsNullOrWhiteSpace(stderr)
-                            ? $"Headless browser exited with code {process.ExitCode}."
-                            : stderr.Trim(),
-                        stopwatch.Elapsed,
-                        process.ExitCode,
-                        stdout);
-                }
-
-                return HttpRequestResult.Success(0, stdout, stopwatch.Elapsed);
+                var pageSource = await ReadPageSourceWithDevToolsAsync(webSocketUrl, timeoutCts.Token);
+                return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (OperationCanceledException)
+            {
+                return HttpRequestResult.Failure(
+                    $"Headless browser timeout: {(int)timeout.TotalMilliseconds} ms.",
+                    stopwatch.Elapsed);
+            }
+            catch (TimeoutException ex)
+            {
+                return HttpRequestResult.Failure(ex.Message, stopwatch.Elapsed);
             }
             catch (Exception ex)
             {
@@ -592,15 +595,226 @@ namespace TestBuilder.Domain.Steps
             }
             finally
             {
+                // Chrome is only a transient DOM reader for this one attempt.
+                // Keep the extracted XML in TestContext, not in browser state or files.
+                if (process != null)
+                {
+                    TryKill(process);
+                    process.Dispose();
+                }
+
                 TryDeleteDirectory(userDataDir);
             }
         }
 
-        private static int GetBrowserVirtualTimeBudgetMs(TimeSpan timeout)
+        private static TimeSpan GetRemainingTimeout(TimeSpan timeout, TimeSpan elapsed)
         {
-            var timeoutMs = Math.Max(1, (int)timeout.TotalMilliseconds);
-            var budgetMs = Math.Max(1000, timeoutMs / 2);
-            return Math.Min(budgetMs, MaxBrowserVirtualTimeBudgetMs);
+            var remaining = timeout - elapsed;
+            return remaining <= TimeSpan.Zero
+                ? TimeSpan.FromMilliseconds(1)
+                : remaining;
+        }
+
+        private static TimeSpan GetBrowserSettleDelay(TimeSpan remaining)
+        {
+            var remainingMs = (int)remaining.TotalMilliseconds;
+            if (remainingMs <= 500)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return TimeSpan.FromMilliseconds(Math.Min(BrowserDomSettleDelayMs, remainingMs - 500));
+        }
+
+        private static int GetAvailableTcpPort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+
+            try
+            {
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        private static async Task<string> WaitForPageWebSocketUrlAsync(
+            int port,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            using var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMilliseconds(1000)
+            };
+
+            while (stopwatch.Elapsed < timeout)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    var json = await client.GetStringAsync(
+                        $"http://127.0.0.1:{port}/json",
+                        cancellationToken);
+
+                    if (TryGetPageWebSocketUrl(json, out var webSocketUrl))
+                    {
+                        return webSocketUrl;
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                }
+
+                await Task.Delay(100, cancellationToken);
+            }
+
+            throw new TimeoutException("Headless browser DevTools endpoint was not ready.");
+        }
+
+        private static bool TryGetPageWebSocketUrl(string json, out string webSocketUrl)
+        {
+            webSocketUrl = string.Empty;
+
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (var target in document.RootElement.EnumerateArray())
+            {
+                var type = target.TryGetProperty("type", out var typeProperty)
+                    ? typeProperty.GetString()
+                    : string.Empty;
+
+                if (!string.Equals(type, "page", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (target.TryGetProperty("webSocketDebuggerUrl", out var urlProperty))
+                {
+                    webSocketUrl = urlProperty.GetString() ?? string.Empty;
+                    return !string.IsNullOrWhiteSpace(webSocketUrl);
+                }
+            }
+
+            return false;
+        }
+
+        private static async Task<string> ReadPageSourceWithDevToolsAsync(
+            string webSocketUrl,
+            CancellationToken cancellationToken)
+        {
+            using var socket = new ClientWebSocket();
+            await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+
+            var commandId = 1;
+            await SendDevToolsCommandAsync(
+                socket,
+                commandId,
+                "Runtime.evaluate",
+                new Dictionary<string, object>
+                {
+                    ["expression"] = "document.documentElement.outerHTML",
+                    ["returnByValue"] = true
+                },
+                cancellationToken);
+
+            var response = await ReceiveDevToolsResponseAsync(socket, commandId, cancellationToken);
+            using var document = JsonDocument.Parse(response);
+            var root = document.RootElement;
+
+            if (root.TryGetProperty("error", out var error))
+            {
+                throw new InvalidOperationException(error.ToString());
+            }
+
+            if (!root.TryGetProperty("result", out var result) ||
+                !result.TryGetProperty("result", out var runtimeResult) ||
+                !runtimeResult.TryGetProperty("value", out var value))
+            {
+                throw new InvalidOperationException("Headless browser did not return page source.");
+            }
+
+            return value.GetString() ?? string.Empty;
+        }
+
+        private static async Task SendDevToolsCommandAsync(
+            ClientWebSocket socket,
+            int commandId,
+            string method,
+            Dictionary<string, object> parameters,
+            CancellationToken cancellationToken)
+        {
+            var payload = JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["id"] = commandId,
+                ["method"] = method,
+                ["params"] = parameters
+            });
+            var bytes = Encoding.UTF8.GetBytes(payload);
+
+            await socket.SendAsync(
+                new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text,
+                endOfMessage: true,
+                cancellationToken);
+        }
+
+        private static async Task<string> ReceiveDevToolsResponseAsync(
+            ClientWebSocket socket,
+            int commandId,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                var message = await ReceiveWebSocketMessageAsync(socket, cancellationToken);
+                using var document = JsonDocument.Parse(message);
+
+                if (document.RootElement.TryGetProperty("id", out var id) &&
+                    id.TryGetInt32(out var value) &&
+                    value == commandId)
+                {
+                    return message;
+                }
+            }
+        }
+
+        private static async Task<string> ReceiveWebSocketMessageAsync(
+            ClientWebSocket socket,
+            CancellationToken cancellationToken)
+        {
+            var buffer = new byte[8192];
+            using var stream = new MemoryStream();
+
+            WebSocketReceiveResult result;
+            do
+            {
+                result = await socket.ReceiveAsync(
+                    new ArraySegment<byte>(buffer),
+                    cancellationToken);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    throw new WebSocketException("Headless browser closed DevTools connection.");
+                }
+
+                stream.Write(buffer, 0, result.Count);
+            }
+            while (!result.EndOfMessage);
+
+            return Encoding.UTF8.GetString(stream.ToArray());
         }
 
         private static string? FindBrowserExecutable()
@@ -762,18 +976,6 @@ namespace TestBuilder.Domain.Steps
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private static async Task<string> ReadCompletedOrEmptyAsync(Task<string> readTask)
-        {
-            try
-            {
-                return await readTask;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
         private static Dictionary<string, string> ExtractValues(XDocument document)
         {
             return document
@@ -842,11 +1044,6 @@ namespace TestBuilder.Domain.Steps
                 : kind.ToLowerInvariant();
 
             yield return $"poe_{side}_{kind}[{Math.Max(0, number - 1)}]";
-        }
-
-        private static void SaveSelfTestFile(string content)
-        {
-            File.WriteAllText(DefaultOutputFileName, content);
         }
 
         private static void TryKill(Process process)
