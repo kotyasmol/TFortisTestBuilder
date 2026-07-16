@@ -34,6 +34,9 @@ namespace TestBuilder.Domain.Steps
         private const int MaxPageAttemptTimeoutMs = 5000;
         private const int RetryDelayMs = 1000;
         private const int MaxBrowserVirtualTimeBudgetMs = 5000;
+        private const int MaxBrowserProcessTimeoutMs = 2500;
+        private const int MinHttpFallbackTimeoutMs = 1000;
+        private const int MaxLoggedBrowserErrorLength = 300;
         private const int MaxExtractionCandidates = 64;
 
         private readonly IHttpRequestService _httpRequestService;
@@ -404,16 +407,22 @@ namespace TestBuilder.Domain.Steps
             TimeSpan timeout,
             CancellationToken cancellationToken)
         {
-            if (_useBrowser)
+            if (_useBrowser && ShouldUseBrowserForUrl(url))
             {
                 var browserPath = FindBrowserExecutable();
 
                 if (!string.IsNullOrWhiteSpace(browserPath))
                 {
+                    var browserTimeout = GetBrowserAttemptTimeout(timeout);
+                    if (browserTimeout <= TimeSpan.Zero)
+                    {
+                        return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
+                    }
+
                     var browserResult = await GetPageWithBrowserAsync(
                         browserPath,
                         url,
-                        timeout,
+                        browserTimeout,
                         cancellationToken);
 
                     if (string.IsNullOrWhiteSpace(browserResult.ErrorMessage))
@@ -426,7 +435,8 @@ namespace TestBuilder.Domain.Steps
                         return HttpRequestResult.Success(0, browserResult.Body, browserResult.Elapsed);
                     }
 
-                    _logger.Warning($"Headless browser failed: {browserResult.ErrorMessage}. Falling back to plain HTTP.");
+                    _logger.Warning(
+                        $"Headless browser failed: {TrimForLog(browserResult.ErrorMessage)}. Falling back to plain HTTP.");
                     var fallbackTimeout = timeout - browserResult.Elapsed;
                     if (fallbackTimeout <= TimeSpan.Zero)
                     {
@@ -443,6 +453,41 @@ namespace TestBuilder.Domain.Steps
             }
 
             return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
+        }
+
+        private static TimeSpan GetBrowserAttemptTimeout(TimeSpan attemptTimeout)
+        {
+            var attemptMs = Math.Max(1, (int)attemptTimeout.TotalMilliseconds);
+            if (attemptMs <= MinHttpFallbackTimeoutMs)
+            {
+                return TimeSpan.Zero;
+            }
+
+            var browserMs = Math.Min(MaxBrowserProcessTimeoutMs, attemptMs - MinHttpFallbackTimeoutMs);
+            return TimeSpan.FromMilliseconds(Math.Max(1, browserMs));
+        }
+
+        private static bool ShouldUseBrowserForUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return true;
+            }
+
+            return !uri.AbsolutePath.EndsWith("/test.shtml", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string TrimForLog(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var singleLine = Regex.Replace(value.Trim(), @"\s+", " ");
+            return singleLine.Length <= MaxLoggedBrowserErrorLength
+                ? singleLine
+                : singleLine.Substring(0, MaxLoggedBrowserErrorLength) + "...";
         }
 
         private static async Task<HttpRequestResult> GetPageWithBrowserAsync(

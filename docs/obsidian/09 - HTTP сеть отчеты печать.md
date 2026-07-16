@@ -45,7 +45,8 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser с `--dump-dom`;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
-- для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`;
+- timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
+- для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
 - в пределах `TimeoutMs` повторяет попытки с паузой, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`;
 - для Chrome/Edge `--virtual-time-budget` ограничен частью таймаута попытки, чтобы процесс успевал завершиться до внешнего таймаута.
 
