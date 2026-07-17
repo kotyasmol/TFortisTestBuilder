@@ -43,12 +43,11 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 `SelfTestCheckStep` имеет особую логику получения страницы:
 
 - сначала пытается найти Chrome/Edge;
-- если браузер найден, запускает headless browser с `--dump-dom`;
+- если браузер найден, запускает headless browser и читает DOM через DevTools Protocol;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
 - timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
 - для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
-- в пределах `TimeoutMs` повторяет попытки с паузой, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`;
-- для Chrome/Edge `--virtual-time-budget` ограничен частью таймаута попытки, чтобы процесс успевал завершиться до внешнего таймаута.
+- в пределах `TimeoutMs` повторяет циклы запросов через `PollIntervalMs`, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`.
 
 Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
 Старые сохраненные профили с `TimeoutMs` до `30000` для DUT selftest автоматически получают
@@ -59,6 +58,8 @@ Fallback на `test.shtml` оставлен для совместимости с
 Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
 загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
+Проверка `ValidationRules` пишет в лог отдельные строки по каждому параметру и сохраняет
+`SelfTest.CheckedRuleCount`, `SelfTest.FailedRuleCount`, `SelfTest.ValidationSummary`.
 
 Raw XML сохраняется только в `TestContext` текущего запуска как `SelfTestRaw`.
 Файл `selftest.txt` больше не создается: он был legacy-артефактом старой консольной утилиты.

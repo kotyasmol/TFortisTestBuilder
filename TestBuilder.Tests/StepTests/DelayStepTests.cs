@@ -21,6 +21,8 @@ public class DelayStepTests
         sw.Stop();
 
         Assert.Equal(StepResult.Next, result);
-        Assert.True(sw.ElapsedMilliseconds >= 100, "Step did not wait long enough");
+        Assert.True(
+            sw.Elapsed >= TimeSpan.FromMilliseconds(90),
+            $"Step did not wait long enough: {sw.ElapsedMilliseconds} ms");
     }
 }

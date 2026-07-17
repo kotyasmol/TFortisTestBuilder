@@ -146,6 +146,7 @@ namespace TestBuilder.Services
                     case SelfTestCheckNodeViewModel s:
                         n.Url = s.Url;
                         n.TimeoutMs = s.TimeoutMs;
+                        n.PollIntervalMs = s.PollIntervalMs;
                         n.OutputPrefix = s.OutputPrefix;
                         n.ValidationRules = s.ValidationRules;
                         n.FailOnError = s.FailOnError;
@@ -402,6 +403,7 @@ namespace TestBuilder.Services
                         Location = location,
                         Url = n.Url ?? SelfTestCheckStep.DefaultUrl,
                         TimeoutMs = n.TimeoutMs ?? SelfTestCheckStep.DefaultTimeoutMs,
+                        PollIntervalMs = n.PollIntervalMs ?? SelfTestCheckStep.DefaultPollIntervalMs,
                         OutputPrefix = n.OutputPrefix ?? SelfTestCheckStep.DefaultOutputPrefix,
                         ValidationRules = n.ValidationRules ?? SelfTestCheckStep.DefaultValidationRules,
                         FailOnError = n.FailOnError ?? true

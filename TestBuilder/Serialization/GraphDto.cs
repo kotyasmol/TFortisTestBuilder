@@ -123,6 +123,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? TimeoutMs { get; set; }
 
+        [JsonPropertyName("pollIntervalMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? PollIntervalMs { get; set; }
+
         [JsonPropertyName("outputVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? OutputVariableName { get; set; }

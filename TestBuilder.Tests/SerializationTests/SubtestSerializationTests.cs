@@ -91,4 +91,37 @@ public class SubtestSerializationTests
         Assert.True(loadedCheck.UseCurrentSlaveId);
         Assert.True(loadedCheck.LiveRead);
     }
+
+    [Fact]
+    public void SerializeAndDeserialize_PreservesSelftestPollInterval()
+    {
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        vm.RootGraph.Clear();
+
+        var selftest = new SelfTestCheckNodeViewModel
+        {
+            TimeoutMs = 180000,
+            PollIntervalMs = 7000
+        };
+
+        vm.RootGraph.Nodes.Add(new StartNodeViewModel());
+        vm.RootGraph.Nodes.Add(selftest);
+        vm.RootGraph.Nodes.Add(new EndNodeViewModel());
+
+        var json = GraphSerializer.Serialize(vm, "Profile");
+
+        Assert.Contains("\"type\": \"Selftest Check\"", json);
+        Assert.Contains("\"pollIntervalMs\": 7000", json);
+
+        using var loadedModbus = new ModbusService();
+        var loadedVm = new TestViewModel(loadedModbus, new SlaveManager(loadedModbus));
+
+        GraphSerializer.Deserialize(json, loadedVm);
+
+        var loadedSelftest = loadedVm.RootGraph.Nodes.OfType<SelfTestCheckNodeViewModel>().Single();
+
+        Assert.Equal(180000, loadedSelftest.TimeoutMs);
+        Assert.Equal(7000, loadedSelftest.PollIntervalMs);
+    }
 }

@@ -458,6 +458,11 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
+                      <TextBlock Grid.Column="0" Text="Poll ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="88,*">
                       <TextBlock Grid.Column="0" Text="Prefix:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding OutputPrefix}" FontSize="12" />
                     </Grid>

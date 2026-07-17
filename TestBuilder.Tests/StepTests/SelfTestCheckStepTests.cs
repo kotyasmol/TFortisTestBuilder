@@ -2,6 +2,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Http;
+using TestBuilder.Services.Logging;
 using TestBuilder.Tests.Support;
 
 namespace TestBuilder.Tests.StepTests;
@@ -71,7 +72,8 @@ public class SelfTestCheckStepTests
             service,
             "init_ok=1..1",
             timeoutMs: 2500,
-            url: "http://192.168.0.1/selftest.xml");
+            url: "http://192.168.0.1/selftest.xml",
+            pollIntervalMs: 10);
         var context = new TestContext(new RegisterState());
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
@@ -200,11 +202,63 @@ public class SelfTestCheckStepTests
         Assert.True(context.HasCriticalError);
     }
 
+    [Fact]
+    public async Task SelfTestCheckStep_SavesPollIntervalAndValidationSummary()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<selftest><init_ok>1</init_ok><dev_type>32</dev_type><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = CreateStep(service, "init_ok=1..1\ndev_type=32..32", pollIntervalMs: 2500);
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2500, context.GetVariable<int>("SelfTest.PollIntervalMs"));
+        Assert.Equal(2, context.GetVariable<int>("SelfTest.CheckedRuleCount"));
+        Assert.Equal(0, context.GetVariable<int>("SelfTest.FailedRuleCount"));
+        Assert.Contains("dev_type=OK", context.GetVariable<string>("SelfTest.ValidationSummary"));
+    }
+
+    [Fact]
+    public async Task SelfTestCheckStep_LogsValidationDetails()
+    {
+        var logger = new RecordingLogger();
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(
+                200,
+                "<selftest><init_ok>0</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>",
+                TimeSpan.FromMilliseconds(10)));
+
+        var step = new SelfTestCheckStep(
+            service,
+            logger,
+            "http://192.168.0.1/selftest.xml",
+            1000,
+            SelfTestCheckStep.DefaultOutputPrefix,
+            "init_ok=1..1",
+            failOnError: true,
+            useBrowser: false,
+            pollIntervalMs: 100);
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Contains(logger.Messages, message => message.Contains("Selftest check init_ok", StringComparison.Ordinal));
+        Assert.Contains(logger.Messages, message => message.Contains("expected 1..1", StringComparison.Ordinal));
+        Assert.Contains(logger.Messages, message => message.Contains("actual 0", StringComparison.Ordinal));
+    }
+
     private static SelfTestCheckStep CreateStep(
         IHttpRequestService service,
         string rules,
         int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs,
-        string? url = null)
+        string? url = null,
+        int pollIntervalMs = SelfTestCheckStep.DefaultPollIntervalMs)
     {
         return new SelfTestCheckStep(
             service,
@@ -214,7 +268,8 @@ public class SelfTestCheckStepTests
             SelfTestCheckStep.DefaultOutputPrefix,
             rules,
             failOnError: true,
-            useBrowser: false);
+            useBrowser: false,
+            pollIntervalMs: pollIntervalMs);
     }
 
     private sealed class QueueHttpRequestService : IHttpRequestService
@@ -237,6 +292,32 @@ public class SelfTestCheckStepTests
             Calls++;
             RequestedUrls.Add(url);
             return Task.FromResult(_results.Dequeue());
+        }
+    }
+
+    private sealed class RecordingLogger : ILogger
+    {
+        public string Category => "Test";
+
+        public System.Collections.ObjectModel.ObservableCollection<LogEntry> Entries { get; } = new();
+
+        public List<string> Messages { get; } = new();
+
+        public void Log(LogLevel level, string message)
+        {
+            Messages.Add(message);
+            Entries.Add(new LogEntry(DateTime.UtcNow, level, Category, message));
+        }
+
+        public void Trace(string message) => Log(LogLevel.Trace, message);
+        public void Debug(string message) => Log(LogLevel.Debug, message);
+        public void Info(string message) => Log(LogLevel.Info, message);
+        public void Warning(string message) => Log(LogLevel.Warning, message);
+        public void Error(string message) => Log(LogLevel.Error, message);
+        public void Clear()
+        {
+            Messages.Clear();
+            Entries.Clear();
         }
     }
 }

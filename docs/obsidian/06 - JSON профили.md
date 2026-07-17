@@ -176,6 +176,7 @@ Deserializer также принимает часть русских и legacy-�
 | `Label` | `text` | `Этап` |
 | `Label` | `labelWidth`, `labelHeight` | `300`, `120` |
 | `Selftest Check` | `url` | `SelfTestCheckStep.DefaultUrl` |
+| `Selftest Check` | `pollIntervalMs` | `SelfTestCheckStep.DefaultPollIntervalMs` |
 | `Get UPS Status` | `baseUrl` | `http://192.168.0.1` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |

@@ -11,6 +11,7 @@ namespace TestBuilder.ViewModels.StepVM
     {
         [ObservableProperty] private string url = SelfTestCheckStep.DefaultUrl;
         [ObservableProperty] private int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs;
+        [ObservableProperty] private int pollIntervalMs = SelfTestCheckStep.DefaultPollIntervalMs;
         [ObservableProperty] private string outputPrefix = SelfTestCheckStep.DefaultOutputPrefix;
         [ObservableProperty] private string validationRules = SelfTestCheckStep.DefaultValidationRules;
         [ObservableProperty] private bool failOnError = true;
@@ -41,13 +42,15 @@ namespace TestBuilder.ViewModels.StepVM
                 TimeoutMs,
                 OutputPrefix,
                 ValidationRules,
-                FailOnError);
+                FailOnError,
+                pollIntervalMs: PollIntervalMs);
         }
 
         public override NodeViewModel Clone() => new SelfTestCheckNodeViewModel
         {
             Url = Url,
             TimeoutMs = TimeoutMs,
+            PollIntervalMs = PollIntervalMs,
             OutputPrefix = OutputPrefix,
             ValidationRules = ValidationRules,
             FailOnError = FailOnError

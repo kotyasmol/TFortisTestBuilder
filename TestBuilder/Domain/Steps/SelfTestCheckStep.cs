@@ -27,6 +27,7 @@ namespace TestBuilder.Domain.Steps
             "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
 
         public const int DefaultTimeoutMs = 160000;
+        public const int DefaultPollIntervalMs = 5000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
         public const string DefaultValidationRules =
@@ -36,7 +37,7 @@ namespace TestBuilder.Domain.Steps
             "boot_vers=0..65535";
 
         private const int MaxPageAttemptTimeoutMs = 20000;
-        private const int RetryDelayMs = 1000;
+        private const int MinimumPollIntervalMs = 100;
         private const int LegacyShortTimeoutMs = 30000;
         private const int MinimumDeviceReadyTimeoutMs = 160000;
         private const int BrowserDomSettleDelayMs = 10000;
@@ -53,6 +54,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _validationRules;
         private readonly bool _failOnError;
         private readonly bool _useBrowser;
+        private readonly int _pollIntervalMs;
 
         public SelfTestCheckStep(
             IHttpRequestService httpRequestService,
@@ -62,7 +64,8 @@ namespace TestBuilder.Domain.Steps
             string outputPrefix,
             string validationRules,
             bool failOnError,
-            bool useBrowser = true)
+            bool useBrowser = true,
+            int pollIntervalMs = DefaultPollIntervalMs)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -76,6 +79,7 @@ namespace TestBuilder.Domain.Steps
                 : validationRules;
             _failOnError = failOnError;
             _useBrowser = useBrowser;
+            _pollIntervalMs = NormalizePollInterval(pollIntervalMs);
         }
 
         private static int NormalizeSelfTestTimeout(string url, int timeoutMs)
@@ -84,6 +88,16 @@ namespace TestBuilder.Domain.Steps
             return normalized <= LegacyShortTimeoutMs && IsDeviceSelfTestUrl(url)
                 ? MinimumDeviceReadyTimeoutMs
                 : normalized;
+        }
+
+        private static int NormalizePollInterval(int pollIntervalMs)
+        {
+            if (pollIntervalMs <= 0)
+            {
+                return DefaultPollIntervalMs;
+            }
+
+            return Math.Max(MinimumPollIntervalMs, pollIntervalMs);
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -95,7 +109,7 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms.");
+            _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
 
             var fetch = await WaitForSelfTestXmlAsync(
                 _url,
@@ -107,6 +121,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.StatusCode", result.StatusCode ?? 0);
             context.SetVariable("SelfTest.ElapsedMs", (int)fetch.Elapsed.TotalMilliseconds);
             context.SetVariable("SelfTest.Attempts", fetch.Attempts);
+            context.SetVariable("SelfTest.PollIntervalMs", _pollIntervalMs);
 
             if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
             {
@@ -135,8 +150,16 @@ namespace TestBuilder.Domain.Steps
             }
 
             context.SetVariable("SelfTest.ParsedFieldCount", values.Count);
+            LogParsedFieldSnapshot(values);
 
-            var errors = Validate(values);
+            var checks = Validate(values);
+            LogValidationChecks(checks);
+            SaveValidationSummary(context, checks);
+
+            var errors = checks
+                .Where(check => !check.Passed)
+                .Select(check => check.Error)
+                .ToList();
             if (errors.Count > 0)
             {
                 return Fail(context, string.Join("; ", errors));
@@ -144,7 +167,7 @@ namespace TestBuilder.Domain.Steps
 
             context.SetVariable("SelfTest.Ok", true);
             context.SetVariable("SelfTest.Error", string.Empty);
-            _logger.Info($"[OK] Selftest passed: {values.Count} fields, {GetRules().Count()} rules.");
+            _logger.Info($"[OK] Selftest passed: {values.Count} fields, {checks.Count} rules.");
             return StepResult.True;
         }
 
@@ -167,34 +190,100 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.Error", error ?? string.Empty);
         }
 
-        private List<string> Validate(Dictionary<string, string> values)
+        private List<ValidationCheckResult> Validate(Dictionary<string, string> values)
         {
-            var errors = new List<string>();
+            var results = new List<ValidationCheckResult>();
 
             foreach (var rule in GetRules())
             {
                 if (!values.TryGetValue(rule.FieldName, out var rawValue))
                 {
-                    errors.Add($"{rule.FieldName}: field not found");
+                    results.Add(ValidationCheckResult.Fail(
+                        rule,
+                        string.Empty,
+                        $"{rule.FieldName}: field not found"));
                     continue;
                 }
 
                 if (!double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual) &&
                     !double.TryParse(rawValue, NumberStyles.Float, CultureInfo.CurrentCulture, out actual))
                 {
-                    errors.Add($"{rule.FieldName}: '{rawValue}' is not a number");
+                    results.Add(ValidationCheckResult.Fail(
+                        rule,
+                        rawValue,
+                        $"{rule.FieldName}: '{rawValue}' is not a number"));
                     continue;
                 }
 
                 if (actual < rule.Min || actual > rule.Max)
                 {
-                    errors.Add(
+                    results.Add(ValidationCheckResult.Fail(
+                        rule,
+                        rawValue,
                         $"{rule.FieldName}: {actual.ToString(CultureInfo.InvariantCulture)} outside " +
-                        $"{rule.Min.ToString(CultureInfo.InvariantCulture)}..{rule.Max.ToString(CultureInfo.InvariantCulture)}");
+                        $"{rule.Min.ToString(CultureInfo.InvariantCulture)}..{rule.Max.ToString(CultureInfo.InvariantCulture)}"));
+                    continue;
                 }
+
+                results.Add(ValidationCheckResult.Pass(rule, actual));
             }
 
-            return errors;
+            return results;
+        }
+
+        private void LogParsedFieldSnapshot(Dictionary<string, string> values)
+        {
+            var keyFields = GetRules()
+                .Select(rule => rule.FieldName)
+                .Concat(new[] { "default_mac", "cpu_id" })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(values.ContainsKey)
+                .Select(field => $"{field}={values[field]}")
+                .ToList();
+
+            var preview = keyFields.Count == 0
+                ? "no validation fields found"
+                : string.Join(", ", keyFields);
+
+            _logger.Info($"[INFO] Selftest fields parsed: {values.Count}. Key values: {preview}.");
+        }
+
+        private void LogValidationChecks(IReadOnlyList<ValidationCheckResult> checks)
+        {
+            foreach (var check in checks)
+            {
+                var expected = check.Rule.FormatRange();
+                if (check.Passed)
+                {
+                    _logger.Info(
+                        $"[OK] Selftest check {check.Rule.FieldName}: actual {check.ActualValue}, expected {expected}.");
+                }
+                else
+                {
+                    var actual = string.IsNullOrWhiteSpace(check.ActualValue)
+                        ? "<missing>"
+                        : check.ActualValue;
+                    _logger.Warning(
+                        $"[ERROR] Selftest check {check.Rule.FieldName}: actual {actual}, expected {expected}. {check.Error}");
+                }
+            }
+        }
+
+        private static void SaveValidationSummary(
+            TestContext context,
+            IReadOnlyList<ValidationCheckResult> checks)
+        {
+            var failed = checks.Where(check => !check.Passed).ToList();
+            context.SetVariable("SelfTest.CheckedRuleCount", checks.Count);
+            context.SetVariable("SelfTest.FailedRuleCount", failed.Count);
+            context.SetVariable(
+                "SelfTest.ValidationSummary",
+                string.Join(
+                    "; ",
+                    checks.Select(check =>
+                        check.Passed
+                            ? $"{check.Rule.FieldName}=OK({check.ActualValue} in {check.Rule.FormatRange()})"
+                            : $"{check.Rule.FieldName}=FAIL({check.Error})")));
         }
 
         private IEnumerable<ValidationRule> GetRules()
@@ -345,6 +434,7 @@ namespace TestBuilder.Domain.Steps
                     break;
                 }
 
+                _logger.Info($"Selftest next poll in {(int)delay.TotalMilliseconds} ms.");
                 await Task.Delay(delay, cancellationToken);
             }
 
@@ -416,7 +506,7 @@ namespace TestBuilder.Domain.Steps
             return TimeSpan.FromMilliseconds(attemptMs);
         }
 
-        private static TimeSpan GetRetryDelay(TimeSpan remaining)
+        private TimeSpan GetRetryDelay(TimeSpan remaining)
         {
             var remainingMs = (int)remaining.TotalMilliseconds;
             if (remainingMs <= 0)
@@ -424,7 +514,7 @@ namespace TestBuilder.Domain.Steps
                 return TimeSpan.Zero;
             }
 
-            return TimeSpan.FromMilliseconds(Math.Min(RetryDelayMs, remainingMs));
+            return TimeSpan.FromMilliseconds(Math.Min(_pollIntervalMs, remainingMs));
         }
 
         private async Task<HttpRequestResult> GetPageAsync(
@@ -1087,6 +1177,42 @@ namespace TestBuilder.Domain.Steps
             TimeSpan Elapsed,
             string ErrorMessage);
 
-        private sealed record ValidationRule(string FieldName, double Min, double Max);
+        private sealed record ValidationRule(string FieldName, double Min, double Max)
+        {
+            public string FormatRange()
+            {
+                return $"{Min.ToString(CultureInfo.InvariantCulture)}..{Max.ToString(CultureInfo.InvariantCulture)}";
+            }
+        }
+
+        private sealed record ValidationCheckResult(
+            ValidationRule Rule,
+            string ActualValue,
+            bool Passed,
+            string Error)
+        {
+            public static ValidationCheckResult Pass(
+                ValidationRule rule,
+                double actual)
+            {
+                return new ValidationCheckResult(
+                    rule,
+                    actual.ToString(CultureInfo.InvariantCulture),
+                    true,
+                    string.Empty);
+            }
+
+            public static ValidationCheckResult Fail(
+                ValidationRule rule,
+                string actualValue,
+                string error)
+            {
+                return new ValidationCheckResult(
+                    rule,
+                    actualValue,
+                    false,
+                    error);
+            }
+        }
     }
 }
