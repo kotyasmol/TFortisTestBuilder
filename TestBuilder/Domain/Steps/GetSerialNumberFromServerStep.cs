@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services;
 using TestBuilder.Services.Http;
 using TestBuilder.Services.Logging;
 
@@ -53,7 +54,16 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var url = BuildUrl(context);
+            string url;
+            try
+            {
+                url = BuildUrl(context);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is UriFormatException)
+            {
+                return Fail(context, ex.Message, string.Empty, string.Empty);
+            }
+
             var timeout = TimeSpan.FromMilliseconds(_timeoutMs);
             var attempts = _retryCount + 1;
             string lastError = string.Empty;
@@ -84,13 +94,7 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
-            context.SetVariable("SerialNumberReceived", false);
-            context.SetVariable("SerialNumberRawResponse", raw);
-            context.SetVariable("SerialNumberRequestUrl", url);
-            context.SetVariable("SerialNumberError", lastError);
-
-            _logger.Warning($"[ERROR] Serial number was not received: {lastError}");
-            return _failOnError ? StepResult.False : StepResult.True;
+            return Fail(context, lastError, raw, url);
         }
 
         private void SaveSerial(TestContext context, int serial, string raw, string url)
@@ -110,13 +114,25 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberError", string.Empty);
         }
 
+        private StepResult Fail(TestContext context, string error, string raw, string url)
+        {
+            context.SetVariable("SerialNumberReceived", false);
+            context.SetVariable("SerialNumberRawResponse", raw);
+            context.SetVariable("SerialNumberRequestUrl", url);
+            context.SetVariable("SerialNumberError", error);
+
+            _logger.Warning($"[ERROR] Serial number was not received: {error}");
+            return _failOnError ? StepResult.False : StepResult.True;
+        }
+
         private string BuildUrl(TestContext context)
         {
             var baseUrl = NormalizeServerBaseUrl(_serverBaseUrl);
 
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
-                return string.Empty;
+                throw new InvalidOperationException(
+                    "ServerBaseUrl не задан. Укажи адрес сервера серийников в ноде или во вкладке Настройки.");
             }
 
             var cpuId = ResolveCpuId(context);
@@ -166,19 +182,7 @@ namespace TestBuilder.Domain.Steps
 
         private static string NormalizeServerBaseUrl(string serverBaseUrl)
         {
-            var trimmed = serverBaseUrl?.Trim() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(trimmed))
-            {
-                return string.Empty;
-            }
-
-            if (!trimmed.Contains("://", StringComparison.Ordinal))
-            {
-                trimmed = "http://" + trimmed;
-            }
-
-            return trimmed;
+            return ServerBaseUrlResolver.NormalizeForHttp(serverBaseUrl);
         }
 
         private static bool LooksLikeGetSerialEndpoint(string baseUrl)

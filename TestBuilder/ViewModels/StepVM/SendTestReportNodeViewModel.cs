@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -34,7 +35,17 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) =>
-            new SendTestReportStep(logger, ServerBaseUrl, ReportVariableName, Endpoint, TimeoutMs, RetryCount, RetryDelayMs, SaveLocalCopy, LocalReportsDirectory, FailOnError);
+            new SendTestReportStep(
+                logger,
+                ServerBaseUrlResolver.ResolveFromSettings(ServerBaseUrl),
+                ReportVariableName,
+                Endpoint,
+                TimeoutMs,
+                RetryCount,
+                RetryDelayMs,
+                SaveLocalCopy,
+                LocalReportsDirectory,
+                FailOnError);
 
         public override NodeViewModel Clone() => new SendTestReportNodeViewModel
         {

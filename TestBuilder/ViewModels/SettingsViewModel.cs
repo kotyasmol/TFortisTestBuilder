@@ -14,6 +14,9 @@ namespace TestBuilder.ViewModels
         private string graphsFolder = string.Empty;
 
         [ObservableProperty]
+        private string serverBaseUrl = string.Empty;
+
+        [ObservableProperty]
         private bool isDarkTheme;
 
         public IAsyncRelayCommand SelectFolderCommand { get; }
@@ -21,6 +24,7 @@ namespace TestBuilder.ViewModels
         public SettingsViewModel()
         {
             GraphsFolder = AppSettings.Instance.GraphsFolder;
+            ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
             IsDarkTheme = AppSettings.Instance.Theme == "Dark";
 
             SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
@@ -68,6 +72,12 @@ namespace TestBuilder.ViewModels
         partial void OnGraphsFolderChanged(string value)
         {
             AppSettings.Instance.GraphsFolder = value;
+            AppSettings.Instance.Save();
+        }
+
+        partial void OnServerBaseUrlChanged(string value)
+        {
+            AppSettings.Instance.ServerBaseUrl = value?.Trim() ?? string.Empty;
             AppSettings.Instance.Save();
         }
     }
