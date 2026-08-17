@@ -36,6 +36,20 @@
         <!-- Тема -->
         <Separator Margin="0,8"/>
 
+        <TextBlock Text="Server base URL:"
+                   FontSize="14"/>
+
+        <TextBox Text="{Binding ServerBaseUrl}"
+                 Watermark="http://server"
+                 VerticalContentAlignment="Center"/>
+
+        <TextBlock Text="Used by profiles with SERVER_BASE_URL for serial number and report requests."
+                   FontSize="12"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"/>
+
+        <Separator Margin="0,8"/>
+
         <TextBlock Text="Тема оформления:"
                    FontSize="14"/>
 

@@ -2,8 +2,10 @@ using System.Net;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Services.Http;
 using TestBuilder.Tests.Support;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.Tests.StepTests;
 
@@ -89,6 +91,62 @@ public class ProductionStepTests
         Assert.Equal(654, context.GetVariable<int>("ServerSerial"));
         Assert.Equal(654, context.GetVariable<int>("SerialNumber"));
         Assert.Equal("https://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=ABC%2B123", service.LastUrl);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_RejectsPlaceholderWithoutDnsRequest()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "123", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            "http://SERVER_BASE_URL",
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            0,
+            0,
+            "SerialNumber",
+            failOnError: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, service.Calls);
+        Assert.False(context.GetVariable<bool>("SerialNumberReceived"));
+        Assert.Contains("ServerBaseUrl", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Fact]
+    public async Task GetSerialNumberNode_UsesSettingsServerForPlaceholder()
+    {
+        var previousServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
+
+        try
+        {
+            AppSettings.Instance.ServerBaseUrl = "serial-server.local";
+            var service = new CapturingHttpService(HttpRequestResult.Success(200, "777", TimeSpan.FromMilliseconds(1)));
+            var context = new TestContext(new RegisterState());
+            var node = new GetSerialNumberFromServerNodeViewModel
+            {
+                ServerBaseUrl = "http://SERVER_BASE_URL",
+                RetryCount = 0
+            };
+
+            var result = await node
+                .CreateStep(service, NullLogger.Instance)
+                .ExecuteAsync(context, CancellationToken.None);
+
+            Assert.Equal(StepResult.True, result);
+            Assert.Equal(777, context.GetVariable<int>("SerialNumber"));
+            Assert.Equal("http://serial-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
+        }
+        finally
+        {
+            AppSettings.Instance.ServerBaseUrl = previousServerBaseUrl;
+        }
     }
 
     [Fact]
@@ -210,9 +268,11 @@ public class ProductionStepTests
         }
 
         public string LastUrl { get; private set; } = string.Empty;
+        public int Calls { get; private set; }
 
         public Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken cancellationToken)
         {
+            Calls++;
             LastUrl = url;
             return Task.FromResult(_result);
         }

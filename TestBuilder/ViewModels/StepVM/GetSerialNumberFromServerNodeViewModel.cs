@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Services.Http;
 using TestBuilder.Services.Logging;
 using TestBuilder.ViewModels.NodifyVM;
@@ -34,7 +35,17 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(IHttpRequestService httpRequestService, ILogger logger) =>
-            new GetSerialNumberFromServerStep(httpRequestService, logger, ServerBaseUrl, DeviceType, CpuIdVariableName, TimeoutMs, RetryCount, RetryDelayMs, OutputVariableName, FailOnError);
+            new GetSerialNumberFromServerStep(
+                httpRequestService,
+                logger,
+                ServerBaseUrlResolver.ResolveFromSettings(ServerBaseUrl),
+                DeviceType,
+                CpuIdVariableName,
+                TimeoutMs,
+                RetryCount,
+                RetryDelayMs,
+                OutputVariableName,
+                FailOnError);
 
         public override NodeViewModel Clone() => new GetSerialNumberFromServerNodeViewModel
         {

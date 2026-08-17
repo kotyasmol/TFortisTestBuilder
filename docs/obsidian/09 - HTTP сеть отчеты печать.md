@@ -110,6 +110,11 @@ http://server
 http://server/api/api.svc/getSerialNum?devType=...&cpuId=...
 ```
 
+Плейсхолдеры `SERVER_BASE_URL`, `http://SERVER_BASE_URL` и `server-address`
+не отправляются в DNS как реальные хосты. При создании step из GUI они заменяются
+общей настройкой `Server base URL`; если настройка пустая, нода завершается
+понятной ошибкой `ServerBaseUrl не задан`.
+
 Серийник считается валидным, если из ответа можно получить положительное целое число.
 
 ## UDP Set MAC

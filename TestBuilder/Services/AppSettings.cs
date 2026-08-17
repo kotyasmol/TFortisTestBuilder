@@ -26,6 +26,9 @@ namespace TestBuilder.Services
         [JsonPropertyName("graphsFolder")]
         public string GraphsFolder { get; set; } = string.Empty;
 
+        [JsonPropertyName("serverBaseUrl")]
+        public string ServerBaseUrl { get; set; } = string.Empty;
+
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Light";
 

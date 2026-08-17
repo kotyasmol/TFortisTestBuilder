@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
@@ -140,12 +141,14 @@ namespace TestBuilder.Domain.Steps
 
         private string BuildUrl()
         {
-            if (string.IsNullOrWhiteSpace(_serverBaseUrl))
+            var serverBaseUrl = ServerBaseUrlResolver.NormalizeForHttp(_serverBaseUrl);
+            if (string.IsNullOrWhiteSpace(serverBaseUrl))
             {
-                throw new InvalidOperationException("ServerBaseUrl не задан.");
+                throw new InvalidOperationException(
+                    "ServerBaseUrl не задан. Укажи адрес сервера отчетов в ноде или во вкладке Настройки.");
             }
 
-            return _serverBaseUrl.TrimEnd('/') + "/" + _endpoint.TrimStart('/');
+            return serverBaseUrl.TrimEnd('/') + "/" + _endpoint.TrimStart('/');
         }
 
         private string SafeBuildUrl()
