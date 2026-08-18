@@ -973,7 +973,7 @@
             "type": "Check Variable Equality",
             "x": 1920,
             "y": 120,
-            "expectedValue": "1021",
+            "expectedValue": "1119",
             "variableName": "Dut.firmvare_vers",
             "comparisonType": "Version",
             "failMessage": "Версия прошивки должна соответствовать профилю 1.1.0"
@@ -983,7 +983,7 @@
             "type": "Check Variable Equality",
             "x": 2380,
             "y": 120,
-            "expectedValue": "0",
+            "expectedValue": "1",
             "variableName": "Dut.ups_det",
             "comparisonType": "Number",
             "failMessage": "UPS/АКБ должны быть обнаружены"
@@ -993,7 +993,7 @@
             "type": "Check Variable Equality",
             "x": 2840,
             "y": 120,
-            "expectedValue": "1",
+            "expectedValue": "0",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
             "failMessage": "До UPS-теста устройство должно работать от сети: ups_rez=0"
@@ -1075,7 +1075,7 @@
       "y": 1456,
       "name": "08. Проверка нагревателя 1",
       "description": "Ток нагревателя 1: до включения 0..50, после включения 150..1000",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1126,19 +1126,19 @@
             "type": "Delay",
             "x": 1920,
             "y": 120,
-            "milliseconds": 3000
+            "milliseconds": 5000
           },
           {
             "id": "5",
             "type": "Check Register Range",
-            "x": 2380,
-            "y": 120,
+            "x": 2368,
+            "y": 208,
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "liveRead": true,
             "address": 1216,
-            "min": 150,
-            "max": 1000
+            "min": 0,
+            "max": 1500
           },
           {
             "id": "6",
@@ -1224,7 +1224,7 @@
       "y": 1824,
       "name": "09. Проверка нагревателя 2",
       "description": "Ток нагревателя 2: до включения 0..50, после включения 150..1000",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1406,8 +1406,8 @@
           {
             "id": "2",
             "type": "End",
-            "x": 1000,
-            "y": 120
+            "x": 1184,
+            "y": 96
           }
         ],
         "connections": [
@@ -1429,11 +1429,11 @@
     {
       "id": "11",
       "type": "Subtest",
-      "x": 1088,
-      "y": 2144,
+      "x": 1024,
+      "y": 2256,
       "name": "11. UPS: подготовка и детекция",
       "description": "Проверка UPS/IRP, напряжения АКБ и исходного статуса от сети",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1489,12 +1489,12 @@
           {
             "id": "5",
             "type": "Get IRP Status",
-            "x": 2380,
-            "y": 120,
+            "x": 2368,
+            "y": -96,
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_det",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": true
+            "failOnError": false
           },
           {
             "id": "6",
@@ -1509,12 +1509,12 @@
           {
             "id": "7",
             "type": "Get UPS Voltage",
-            "x": 3300,
-            "y": 120,
+            "x": 3312,
+            "y": -112,
             "timeoutMs": 5000,
             "outputVariableName": "Dut.akb_voltage",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": true
+            "failOnError": false
           },
           {
             "id": "8",
@@ -1530,12 +1530,12 @@
           {
             "id": "9",
             "type": "Get UPS Status",
-            "x": 4220,
-            "y": 120,
+            "x": 4208,
+            "y": -112,
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_rez",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": true
+            "failOnError": false
           },
           {
             "id": "10",
@@ -1627,11 +1627,11 @@
     {
       "id": "12",
       "type": "Subtest",
-      "x": 1072,
-      "y": 2528,
+      "x": 1120,
+      "y": 2624,
       "name": "12. UPS: переход на АКБ",
       "description": "Отключение AC1 и ожидание ups_rez=1 до 160 секунд",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1851,7 +1851,7 @@
       "y": 2760,
       "name": "13. UPS: измерение разряда SIMBAT24",
       "description": "Проверка discharge voltage/current на SIMBAT24 slave 17",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1923,7 +1923,7 @@
       "y": 2980,
       "name": "14. UPS: возврат на AC1",
       "description": "Включение AC1 и ожидание ups_rez=0 до 160 секунд",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
