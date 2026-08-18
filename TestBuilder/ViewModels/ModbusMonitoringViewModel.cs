@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Modbus;
@@ -20,6 +21,67 @@ namespace TestBuilder.ViewModels
         public bool IsConnected => _modbusService.IsConnected;
 
         public ObservableCollection<SlaveModelBase> Slaves => _slaveManager.Slaves;
+        public ObservableCollection<RegisterItem> FilteredRegisters { get; } = new();
+        public ObservableCollection<string> Categories { get; } = new();
+
+        private const string AllCategories = "Все категории";
+
+        private SlaveModelBase? _selectedSlave;
+        public SlaveModelBase? SelectedSlave
+        {
+            get => _selectedSlave;
+            set
+            {
+                if (!SetProperty(ref _selectedSlave, value))
+                    return;
+
+                RefreshCategories();
+                RefreshRegisters();
+                OnPropertyChanged(nameof(SelectedSlaveTitle));
+                OnPropertyChanged(nameof(SelectedSlaveDetails));
+            }
+        }
+
+        public string SelectedSlaveTitle => SelectedSlave?.DeviceType ?? "Выберите устройство";
+
+        public string SelectedSlaveDetails => SelectedSlave is null
+            ? "После сканирования выберите устройство слева."
+            : $"Slave ID: {SelectedSlave.SlaveId} · {SelectedSlave.RegisterItems.Count} регистров";
+
+        private string _registerSearch = string.Empty;
+        public string RegisterSearch
+        {
+            get => _registerSearch;
+            set
+            {
+                if (SetProperty(ref _registerSearch, value))
+                    RefreshRegisters();
+            }
+        }
+
+        private bool _showWritableOnly;
+        public bool ShowWritableOnly
+        {
+            get => _showWritableOnly;
+            set
+            {
+                if (SetProperty(ref _showWritableOnly, value))
+                    RefreshRegisters();
+            }
+        }
+
+        private string _selectedCategory = AllCategories;
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set
+            {
+                if (SetProperty(ref _selectedCategory, value))
+                    RefreshRegisters();
+            }
+        }
+
+        public int VisibleRegistersCount => FilteredRegisters.Count;
 
         private bool _isMonitoring;
         public bool IsMonitoring
@@ -60,6 +122,10 @@ namespace TestBuilder.ViewModels
             try
             {
                 await _slaveManager.ScanAsync();
+                if (SelectedSlave is null || !Slaves.Contains(SelectedSlave))
+                    SelectedSlave = Slaves.FirstOrDefault();
+                else
+                    RefreshRegisters();
             }
             finally
             {
@@ -108,6 +174,56 @@ namespace TestBuilder.ViewModels
 
         private void OnModbusConnectionChanged(object? sender, EventArgs e)
             => OnPropertyChanged(nameof(IsConnected));
+
+        private void RefreshCategories()
+        {
+            var currentCategory = SelectedCategory;
+            Categories.Clear();
+            Categories.Add(AllCategories);
+
+            if (SelectedSlave is not null)
+            {
+                foreach (var category in SelectedSlave.RegisterItems
+                             .Select(register => register.Category)
+                             .Where(category => !string.IsNullOrWhiteSpace(category))
+                             .Distinct()
+                             .OrderBy(category => category))
+                {
+                    Categories.Add(category);
+                }
+            }
+
+            _selectedCategory = Categories.Contains(currentCategory)
+                ? currentCategory
+                : AllCategories;
+            OnPropertyChanged(nameof(SelectedCategory));
+        }
+
+        private void RefreshRegisters()
+        {
+            FilteredRegisters.Clear();
+
+            if (SelectedSlave is null)
+            {
+                OnPropertyChanged(nameof(VisibleRegistersCount));
+                return;
+            }
+
+            var search = RegisterSearch.Trim();
+            foreach (var register in SelectedSlave.RegisterItems)
+            {
+                var matchesSearch = string.IsNullOrEmpty(search)
+                    || register.Address.ToString().Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || register.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+                var matchesCategory = SelectedCategory == AllCategories
+                    || register.Category == SelectedCategory;
+
+                if (matchesSearch && matchesCategory && (!ShowWritableOnly || !register.IsReadOnly))
+                    FilteredRegisters.Add(register);
+            }
+
+            OnPropertyChanged(nameof(VisibleRegistersCount));
+        }
 
         public void Dispose()
         {

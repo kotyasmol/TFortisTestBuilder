@@ -23,25 +23,46 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center" />
-        <Button Grid.Column="1"
-                Click="OnClearLogs"
-                Classes="ghost"
-                Height="28"
-                MinHeight="28"
-                Padding="8,0"
-                FontSize="12"
-                ToolTip.Tip="Очистить логи">
-          <StackPanel Orientation="Horizontal"
-                      Spacing="6">
-            <PathIcon Width="13"
-                      Height="13"
-                      Data="M7 4V2h10v2h5v2H2V4h5z M5 8h14l-1 14H6z M9 10v9h2v-9H9z M13 10v9h2v-9h-2z"
-                      Foreground="{DynamicResource TextMutedBrush}" />
-            <TextBlock Text="Очистить"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       FontSize="12" />
-          </StackPanel>
-        </Button>
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="4">
+          <Button Click="OnCopyLogs"
+                  Classes="ghost"
+                  Height="28"
+                  MinHeight="28"
+                  Padding="8,0"
+                  FontSize="12"
+                  ToolTip.Tip="Копировать все логи в буфер обмена">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6">
+              <PathIcon Width="13"
+                        Height="13"
+                        Data="M8 2h11v14H8z M5 5H3v17h13v-2H5z M10 4v10h7V4z"
+                        Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="Копировать"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         FontSize="12" />
+            </StackPanel>
+          </Button>
+          <Button Click="OnClearLogs"
+                  Classes="ghost"
+                  Height="28"
+                  MinHeight="28"
+                  Padding="8,0"
+                  FontSize="12"
+                  ToolTip.Tip="Очистить логи">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6">
+              <PathIcon Width="13"
+                        Height="13"
+                        Data="M7 4V2h10v2h5v2H2V4h5z M5 8h14l-1 14H6z M9 10v9h2v-9H9z M13 10v9h2v-9h-2z"
+                        Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="Очистить"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         FontSize="12" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
       </Grid>
 
       <Border Grid.Row="1"
