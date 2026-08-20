@@ -1746,13 +1746,13 @@
             "pollAction": "GetUpsStatus",
             "requestTimeoutMs": 5000,
             "intervalMs": 5000,
-            "failOnTimeout": true
+            "failOnTimeout": false
           },
           {
             "id": "12",
             "type": "Delay",
-            "x": 5600,
-            "y": 120,
+            "x": 5712,
+            "y": -48,
             "milliseconds": 2000
           },
           {
