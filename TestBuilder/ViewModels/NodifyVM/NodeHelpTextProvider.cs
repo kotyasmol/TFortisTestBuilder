@@ -148,6 +148,14 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Fail on error - считать ошибку очистки провалом теста.
                 """,
 
+            [typeof(ConfigureNetworkAdaptersNodeViewModel)] = """
+                Назначает статические IPv4-адреса сетевым картам Windows перед DataTest.
+                Adapters - одна строка на карту: Name=Ethernet 0;192.168.10.1;24 или MAC=001122334455;192.168.10.1;24.
+                MAC-селектор надежнее имени адаптера: имя Windows может измениться.
+                Output var - префикс переменных результата по каждой карте.
+                Нода требует запуск приложения от имени администратора и сохраняет адреса в Windows.
+                """,
+
             [typeof(GetSerialNumberFromServerNodeViewModel)] = """
                 Запрашивает серийный номер устройства с сервера.
                 Server - базовый адрес сервера.

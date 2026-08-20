@@ -33,6 +33,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("y")]
         public double Y { get; set; }
 
+        [JsonPropertyName("color")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Color { get; set; }
+
         // --- Delay ---
         [JsonPropertyName("milliseconds")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -227,6 +231,11 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("arguments")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Arguments { get; set; }
+
+        // --- Configure Network Adapters ---
+        [JsonPropertyName("adaptersText")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? AdaptersText { get; set; }
 
         // --- Server / API ---
         [JsonPropertyName("serverBaseUrl")]
