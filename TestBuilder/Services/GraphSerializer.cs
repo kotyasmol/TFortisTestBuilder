@@ -42,6 +42,7 @@ namespace TestBuilder.Services
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
+            ConfigureNetworkAdaptersNodeViewModel => "Configure Network Adapters",
             GetSerialNumberFromServerNodeViewModel => "Get Serial Number",
             SendUdpSetMacPacketNodeViewModel => "Send UDP Set MAC",
             RunDataTestNodeViewModel => "Run Data Test",
@@ -80,7 +81,8 @@ namespace TestBuilder.Services
                     Id = nodeIds[node],
                     Type = GetNodeType(node),  // всегда английский
                     X = node.Location.X,
-                    Y = node.Location.Y
+                    Y = node.Location.Y,
+                    Color = node.NodeColor
                 };
 
                 switch (node)
@@ -224,6 +226,12 @@ namespace TestBuilder.Services
                         n.TimeoutMs = uv.TimeoutMs;
                         n.OutputVariableName = uv.OutputVariableName;
                         n.FailOnError = uv.FailOnError;
+                        break;
+
+                    case ConfigureNetworkAdaptersNodeViewModel configureNetwork:
+                        n.AdaptersText = configureNetwork.AdaptersText;
+                        n.OutputVariableName = configureNetwork.OutputVariableName;
+                        n.FailOnError = configureNetwork.FailOnError;
                         break;
 
                     case GetIrpStatusNodeViewModel irp:
@@ -583,6 +591,14 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? false
                     },
 
+                    "Configure Network Adapters" or "CONFIGURE_NETWORK_ADAPTERS" or "Настройка сетевых карт" => new ConfigureNetworkAdaptersNodeViewModel
+                    {
+                        Location = location,
+                        AdaptersText = n.AdaptersText ?? "Name=Ethernet 0;192.168.10.1;24",
+                        OutputVariableName = n.OutputVariableName ?? "NetworkConfig",
+                        FailOnError = n.FailOnError ?? true
+                    },
+
                     "Subtest" or "SUBTEST" or "Подтест" => CreateSubtestNode(n, location),
 
                     "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
@@ -601,6 +617,8 @@ namespace TestBuilder.Services
 
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {type}")
                 };
+
+                node.NodeColor = n.Color ?? "blue";
 
                 nodeMap[n.Id] = node;
                 graph.Nodes.Add(node);

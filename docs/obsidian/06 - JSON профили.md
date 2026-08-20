@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-07-15
+updated: 2026-08-20
 ---
 
 # JSON профили
@@ -47,6 +47,7 @@ updated: 2026-07-15
 | `type` | string | Канонический английский тип ноды. |
 | `NodeType` | string? | Совместимость со старым форматом; читается, если `type` пустой. |
 | `x`, `y` | double | Координаты на рабочем поле. |
+| `color` | string? | Цвет рамки ноды: `blue`, `turquoise`, `green`, `yellow`, `orange`, `red` или `purple`. |
 
 ## Связь
 
@@ -129,6 +130,7 @@ Deserializer также принимает часть русских и legacy-�
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `requestTimeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
+| Configure Network Adapters | `adaptersText`, `outputVariableName`, `failOnError` |
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
@@ -185,6 +187,7 @@ Deserializer также принимает часть русских и legacy-�
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
 | `Subtest` | `runOnFailure` | `false` |
 | `Check Register Range` / `Check Register Equality` / `Wait Until` / `Poll Register` | `liveRead` | `false` |
+| Любая нода | `color` | `blue` |
 
 Полный список дефолтов описан в [[05 - Справочник нод]].
 

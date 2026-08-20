@@ -101,6 +101,7 @@ namespace TestBuilder.Services
                 CheckVariableEqualityNodeViewModel variableEquality => variableEquality.CreateStep(_logger),
                 CheckVariableRangeNodeViewModel variableRange => variableRange.CreateStep(_logger),
                 ClearArpCacheNodeViewModel clearArp => clearArp.CreateStep(_logger),
+                ConfigureNetworkAdaptersNodeViewModel configureNetwork => configureNetwork.CreateStep(_logger),
                 GetSerialNumberFromServerNodeViewModel serial => serial.CreateStep(_httpRequestService, _logger),
                 SendUdpSetMacPacketNodeViewModel setMac => setMac.CreateStep(_logger),
                 RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
@@ -244,6 +245,10 @@ namespace TestBuilder.Services
 
                 case ClearArpCacheNodeViewModel clearArpVm:
                     BindTrueFalse(sourceConnector, source, target, clearArpVm.TrueOut, clearArpVm.FalseOut);
+                    break;
+
+                case ConfigureNetworkAdaptersNodeViewModel configureNetworkVm:
+                    BindTrueFalse(sourceConnector, source, target, configureNetworkVm.TrueOut, configureNetworkVm.FalseOut);
                     break;
 
                 case GetSerialNumberFromServerNodeViewModel serialVm:
