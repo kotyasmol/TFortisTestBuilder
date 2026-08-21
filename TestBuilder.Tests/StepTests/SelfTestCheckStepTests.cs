@@ -1,4 +1,3 @@
-using System.Net;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -10,62 +9,6 @@ namespace TestBuilder.Tests.StepTests;
 
 public class SelfTestCheckStepTests
 {
-    [Theory]
-    [InlineData("192.168.0.2", "192.168.0.1", 24, true)]
-    [InlineData("192.168.1.2", "192.168.0.1", 24, false)]
-    [InlineData("10.160.24.159", "192.168.0.1", 24, false)]
-    [InlineData("192.168.0.2", "192.168.0.1", 32, false)]
-    public void IsSameIpv4Subnet_UsesConfiguredPrefix(
-        string first,
-        string second,
-        int prefixLength,
-        bool expected)
-    {
-        Assert.Equal(
-            expected,
-            SelfTestCheckStep.IsSameIpv4Subnet(
-                IPAddress.Parse(first),
-                IPAddress.Parse(second),
-                prefixLength));
-    }
-
-    [Fact]
-    public void LooksLikeLuciLoginPage_DetectsCredentialForm()
-    {
-        const string loginPage =
-            "<form><input name='luci_username'><input type=\"password\" name=\"luci_password\"></form>";
-        const string customTfortisLoginPage =
-            "<form><input id='login'><input id='pwd' type='password'><button>Войти</button></form>";
-
-        Assert.True(SelfTestCheckStep.LooksLikeLuciLoginPage(loginPage));
-        Assert.True(SelfTestCheckStep.LooksLikeLuciLoginPage(customTfortisLoginPage));
-        Assert.False(SelfTestCheckStep.LooksLikeLuciLoginPage("<html>device info</html>"));
-    }
-
-    [Fact]
-    public void TryGetLuciCredentials_DecodesValuesFromSelftestUrl()
-    {
-        var found = SelfTestCheckStep.TryGetLuciCredentials(
-            "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=Admin%20User&luci_password=p%40ss%2Bword",
-            out var username,
-            out var password);
-
-        Assert.True(found);
-        Assert.Equal("Admin User", username);
-        Assert.Equal("p@ss+word", password);
-    }
-
-    [Fact]
-    public void SanitizeUrlForLog_RedactsLuciCredentials()
-    {
-        var sanitized = SelfTestCheckStep.SanitizeUrlForLog(
-            "http://192.168.0.1/deviceinfo?luci_username=Admin&luci_password=Secret&mode=full");
-
-        Assert.Equal(
-            "http://192.168.0.1/deviceinfo?luci_username=***&luci_password=***&mode=full",
-            sanitized);
-    }
-
     [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_AndSavesFields_WhenRulesPass()
     {
@@ -308,11 +251,6 @@ public class SelfTestCheckStepTests
         Assert.Contains(logger.Messages, message => message.Contains("Selftest check init_ok", StringComparison.Ordinal));
         Assert.Contains(logger.Messages, message => message.Contains("expected 1..1", StringComparison.Ordinal));
         Assert.Contains(logger.Messages, message => message.Contains("actual 0", StringComparison.Ordinal));
-        Assert.True(context.GetVariable<bool>("SelfTest.DirectConnection"));
-        Assert.Equal("192.168.0.1", context.GetVariable<string>("SelfTest.RouteDestinationAddress"));
-        Assert.Contains(
-            logger.Messages,
-            message => message.Contains("system proxy is disabled", StringComparison.Ordinal));
     }
 
     private static SelfTestCheckStep CreateStep(

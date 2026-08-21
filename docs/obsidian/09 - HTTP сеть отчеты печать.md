@@ -25,11 +25,8 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 1. Проверяет, что URL не пустой.
 2. Проверяет, что URL абсолютный и схема `http` или `https`.
 3. Создает linked timeout token.
-4. Для loopback, link-local и private IP выбирает отдельный `HttpClient` с
-   `SocketsHttpHandler.UseProxy = false`; публичные URL продолжают использовать
-   обычные системные настройки proxy.
-5. Делает GET через выбранный `HttpClient`.
-6. Возвращает `HttpRequestResult.Success` или `Failure`.
+4. Делает GET через `HttpClient`.
+5. Возвращает `HttpRequestResult.Success` или `Failure`.
 
 `HttpRequestResult` содержит:
 
@@ -47,14 +44,6 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser и читает DOM через DevTools Protocol;
-- private/local DUT открывается с `--no-proxy-server`, а выбранный ОС исходный IP
-  сохраняется как `SelfTest.RouteSourceAddress` и выводится в лог;
-- на Windows при наличии локальных адресов в подсети DUT запросы ждут, пока таблица
-  маршрутизации выберет один из них; например, `192.168.0.2/.3`, а не рабочий
-  адрес `10.x.x.x`; результат запроса отбрасывается, если маршрут успел смениться;
-- login-форма распознаётся как по стандартным именам LuCI, так и по обычному
-  password input кастомной страницы TFortis; headless browser заполняет подходящие
-  поля, генерирует `input`/`change`, отправляет форму, ждёт навигацию и повторно читает DOM;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
 - timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
 - для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
@@ -68,10 +57,6 @@ Fallback на HTTP нужен для случаев, когда устройст
 Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
 Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
 загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
-Завершение временного процесса Chrome/Edge выполняется вне UI-потока с ограниченным ожиданием,
-чтобы истекший timeout selftest не делал окно Avalonia неотзывчивым.
-Автоматическая отправка LuCI-формы не пишет логин или пароль в лог. Повторный возврат
-формы считается диагностическим признаком неверных учетных данных или их регистра.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 Проверка `ValidationRules` пишет в лог отдельные строки по каждому параметру и сохраняет
 `SelfTest.CheckedRuleCount`, `SelfTest.FailedRuleCount`, `SelfTest.ValidationSummary`.
