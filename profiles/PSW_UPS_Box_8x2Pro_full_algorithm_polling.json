@@ -5,13 +5,15 @@
       "id": "0",
       "type": "Start",
       "x": 80,
-      "y": 120
+      "y": 120,
+      "color": "blue"
     },
     {
       "id": "1",
       "type": "Subtest",
       "x": 560,
       "y": 120,
+      "color": "green",
       "name": "01. Подготовка стенда",
       "description": "Сброс питания/ключей/нагревателей, очистка ARP, фиксация параметров профиля",
       "isEnabled": true,
@@ -24,13 +26,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Label",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "text": "Профиль: PSW+UPS-Box 8x2Pro; start_delay=160s; AC1=true; AC2=false; PoE lines 0..15; data ports 0..9; UPS=true; heaters=true; print labels=4",
             "labelWidth": 300,
             "labelHeight": 120
@@ -40,6 +44,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -51,6 +56,7 @@
             "type": "Write Register",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1201,
@@ -62,6 +68,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -73,6 +80,7 @@
             "type": "Write Register",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -84,6 +92,7 @@
             "type": "Write Register",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -95,6 +104,7 @@
             "type": "Write Register",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -106,6 +116,7 @@
             "type": "Write Register",
             "x": 3760,
             "y": 120,
+            "color": "blue",
             "slaveId": 17,
             "useCurrentSlaveId": false,
             "address": 1700,
@@ -117,6 +128,7 @@
             "type": "Clear ARP Cache",
             "x": 4220,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 5000,
             "failOnError": false,
             "runArpdBat": true,
@@ -128,7 +140,8 @@
             "id": "10",
             "type": "End",
             "x": 4680,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -198,8 +211,9 @@
     {
       "id": "2",
       "type": "Subtest",
-      "x": 560,
-      "y": 432,
+      "x": 1056,
+      "y": 128,
+      "color": "blue",
       "name": "02. Сброс PoE-нагрузок EL60v5",
       "description": "Безопасно выключить нагрузку на EL60v5 перед стартом",
       "isEnabled": true,
@@ -212,17 +226,19 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "For Slaves",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "fromSlaveId": 1,
             "toSlaveId": 15,
             "step": 2,
-            "stopOnError": false,
+            "stopOnError": true,
             "body": {
               "name": "???? ????? For Slaves",
               "nodes": [
@@ -230,13 +246,15 @@
                   "id": "0",
                   "type": "Body Start",
                   "x": 80,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 },
                 {
                   "id": "1",
                   "type": "Write Register",
                   "x": 540,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1420,
@@ -248,6 +266,7 @@
                   "type": "Write Register",
                   "x": 1000,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1421,
@@ -259,6 +278,7 @@
                   "type": "Delay",
                   "x": 1460,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 1000
                 },
                 {
@@ -266,6 +286,7 @@
                   "type": "Write Register",
                   "x": 1920,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1414,
@@ -277,6 +298,7 @@
                   "type": "Write Register",
                   "x": 2380,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1415,
@@ -288,6 +310,7 @@
                   "type": "Write Register",
                   "x": 2840,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1412,
@@ -299,6 +322,7 @@
                   "type": "Write Register",
                   "x": 3300,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1413,
@@ -310,6 +334,7 @@
                   "type": "Write Register",
                   "x": 3760,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1430,
@@ -321,6 +346,7 @@
                   "type": "Delay",
                   "x": 4220,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 1000
                 },
                 {
@@ -328,6 +354,7 @@
                   "type": "Write Register",
                   "x": 4680,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1430,
@@ -339,13 +366,15 @@
                   "type": "Delay",
                   "x": 5140,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 2000
                 },
                 {
                   "id": "12",
                   "type": "Body End",
                   "x": 5600,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 }
               ],
               "connections": [
@@ -428,7 +457,8 @@
             "id": "2",
             "type": "End",
             "x": 1000,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -450,8 +480,9 @@
     {
       "id": "3",
       "type": "Subtest",
-      "x": 1232,
-      "y": 336,
+      "x": 1552,
+      "y": 128,
+      "color": "blue",
       "name": "03. Подключение оператора",
       "description": "Оператор подключает разъемы/нагрузки перед тестом",
       "isEnabled": false,
@@ -464,20 +495,23 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Operator Action",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "text": "Подключите разъемы DUT, PoE-нагрузки, АКБ/БП. После проверки нажмите Продолжить."
           },
           {
             "id": "2",
             "type": "End",
             "x": 1000,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -499,8 +533,9 @@
     {
       "id": "4",
       "type": "Subtest",
-      "x": 560,
-      "y": 780,
+      "x": 2032,
+      "y": 112,
+      "color": "blue",
       "name": "04. Настройка PoE-нагрузок EL60v5",
       "description": "Мощность 15000 и включение обеих линий A/B для slave 1..15 шаг 2",
       "isEnabled": true,
@@ -513,13 +548,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "For Slaves",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "fromSlaveId": 1,
             "toSlaveId": 15,
             "step": 2,
@@ -531,13 +568,15 @@
                   "id": "0",
                   "type": "Body Start",
                   "x": 80,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 },
                 {
                   "id": "1",
                   "type": "Write Register",
                   "x": 540,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1412,
@@ -549,6 +588,7 @@
                   "type": "Delay",
                   "x": 1000,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 100
                 },
                 {
@@ -556,6 +596,7 @@
                   "type": "Write Register",
                   "x": 1460,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1413,
@@ -567,6 +608,7 @@
                   "type": "Delay",
                   "x": 1920,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 100
                 },
                 {
@@ -574,6 +616,7 @@
                   "type": "Write Register",
                   "x": 2380,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1414,
@@ -585,6 +628,7 @@
                   "type": "Delay",
                   "x": 2840,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 100
                 },
                 {
@@ -592,6 +636,7 @@
                   "type": "Write Register",
                   "x": 3300,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1415,
@@ -603,13 +648,15 @@
                   "type": "Delay",
                   "x": 3760,
                   "y": 120,
+                  "color": "blue",
                   "milliseconds": 400
                 },
                 {
                   "id": "9",
                   "type": "Body End",
                   "x": 4220,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 }
               ],
               "connections": [
@@ -674,7 +721,8 @@
             "id": "2",
             "type": "End",
             "x": 1000,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -696,8 +744,9 @@
     {
       "id": "5",
       "type": "Subtest",
-      "x": 560,
-      "y": 1000,
+      "x": 496,
+      "y": 528,
+      "color": "blue",
       "name": "05. Подача питания DUT",
       "description": "Включить разряд/АКБ и AC1, AC2 выключен по профилю",
       "isEnabled": true,
@@ -710,13 +759,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -728,6 +779,7 @@
             "type": "Delay",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "milliseconds": 300
           },
           {
@@ -735,6 +787,7 @@
             "type": "Delay",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "milliseconds": 500
           },
           {
@@ -742,6 +795,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -753,6 +807,7 @@
             "type": "Write Register",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1201,
@@ -764,13 +819,15 @@
             "type": "Delay",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "milliseconds": 200
           },
           {
             "id": "7",
             "type": "End",
             "x": 3300,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -822,8 +879,9 @@
     {
       "id": "6",
       "type": "Subtest",
-      "x": 560,
-      "y": 1220,
+      "x": 976,
+      "y": 624,
+      "color": "blue",
       "name": "06. Ожидание загрузки DUT и selftest",
       "description": "Start delay 160s, очистка ARP, ожидание страницы selftest",
       "isEnabled": true,
@@ -836,13 +894,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Delay",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "milliseconds": 1000
           },
           {
@@ -850,6 +910,7 @@
             "type": "Clear ARP Cache",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 5000,
             "failOnError": false,
             "runArpdBat": true,
@@ -862,6 +923,7 @@
             "type": "Selftest Check",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 180000,
             "pollIntervalMs": 5000,
@@ -874,13 +936,15 @@
             "type": "Delay",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "milliseconds": 2000
           },
           {
             "id": "5",
             "type": "End",
             "x": 2380,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -920,8 +984,9 @@
     {
       "id": "7",
       "type": "Subtest",
-      "x": 1056,
-      "y": 1072,
+      "x": 1504,
+      "y": 608,
+      "color": "blue",
       "name": "07. Проверка selftest DUT",
       "description": "Базовые проверки selftest/deviceinfo",
       "isEnabled": true,
@@ -934,13 +999,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Selftest Check",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 30000,
             "pollIntervalMs": 5000,
@@ -953,6 +1020,7 @@
             "type": "Check Variable Equality",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "expectedValue": "1",
             "variableName": "Dut.init_ok",
             "comparisonType": "Number",
@@ -963,6 +1031,7 @@
             "type": "Check Variable Equality",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "expectedValue": "0",
             "variableName": "Dut.dev_type",
             "comparisonType": "Number",
@@ -973,6 +1042,7 @@
             "type": "Check Variable Equality",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "expectedValue": "1119",
             "variableName": "Dut.firmvare_vers",
             "comparisonType": "Version",
@@ -983,6 +1053,7 @@
             "type": "Check Variable Equality",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "expectedValue": "1",
             "variableName": "Dut.ups_det",
             "comparisonType": "Number",
@@ -993,6 +1064,7 @@
             "type": "Check Variable Equality",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "expectedValue": "0",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
@@ -1003,6 +1075,7 @@
             "type": "Check Variable Range",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "min": 0,
             "max": 100,
             "variableName": "Dut.akb_voltage",
@@ -1013,7 +1086,8 @@
             "id": "8",
             "type": "End",
             "x": 3760,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1071,8 +1145,9 @@
     {
       "id": "8",
       "type": "Subtest",
-      "x": 1072,
-      "y": 1456,
+      "x": 2080,
+      "y": 576,
+      "color": "blue",
       "name": "08. Проверка нагревателя 1",
       "description": "Ток нагревателя 1: до включения 0..50, после включения 150..1000",
       "isEnabled": true,
@@ -1085,13 +1160,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Check Register Range",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1104,6 +1181,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -1115,6 +1193,7 @@
             "type": "Write Register",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -1126,6 +1205,7 @@
             "type": "Delay",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "milliseconds": 5000
           },
           {
@@ -1133,6 +1213,7 @@
             "type": "Check Register Range",
             "x": 2368,
             "y": 208,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1145,6 +1226,7 @@
             "type": "Write Register",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -1156,13 +1238,15 @@
             "type": "Delay",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "milliseconds": 2000
           },
           {
             "id": "8",
             "type": "End",
             "x": 3760,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1220,8 +1304,9 @@
     {
       "id": "9",
       "type": "Subtest",
-      "x": 1088,
-      "y": 1824,
+      "x": 544,
+      "y": 960,
+      "color": "blue",
       "name": "09. Проверка нагревателя 2",
       "description": "Ток нагревателя 2: до включения 0..50, после включения 150..1000",
       "isEnabled": true,
@@ -1234,13 +1319,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Check Register Range",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1253,6 +1340,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -1264,6 +1352,7 @@
             "type": "Write Register",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -1275,6 +1364,7 @@
             "type": "Delay",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "milliseconds": 3000
           },
           {
@@ -1282,6 +1372,7 @@
             "type": "Check Register Range",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1294,6 +1385,7 @@
             "type": "Write Register",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -1305,13 +1397,15 @@
             "type": "Delay",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "milliseconds": 2000
           },
           {
             "id": "8",
             "type": "End",
             "x": 3760,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1369,8 +1463,9 @@
     {
       "id": "10",
       "type": "Subtest",
-      "x": 560,
-      "y": 2224,
+      "x": 1056,
+      "y": 1040,
+      "color": "blue",
       "name": "10. DataTest портов 0..9",
       "description": "Автонастройка 10 карт и SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9",
       "isEnabled": true,
@@ -1383,22 +1478,26 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Configure Network Adapters",
             "x": 540,
             "y": 120,
-            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.30.1;24\r\nMAC=5C628B243F0F;192.168.30.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24",
+            "color": "blue",
+            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.30.1;24\r\nMAC=5C628B243F0F;192.168.30.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24"
             "outputVariableName": "NetworkConfig",
-            "failOnError": true
+            "failOnError": true,
+            "adaptersText": "Name=Ethernet 0;192.168.10.1;24\r\nName=Ethernet 1;192.168.10.2;24\r\nName=Ethernet 2;192.168.20.1;24\r\nName=Ethernet 3;192.168.20.2;24\r\nName=Ethernet 4;192.168.30.1;24\r\nName=Ethernet 5;192.168.30.2;24\r\nName=Ethernet 6;192.168.40.1;24\r\nName=Ethernet 7;192.168.40.2;24\r\nName=Ethernet 8;192.168.50.1;24\r\nName=Ethernet 9;192.168.50.2;24"
           },
           {
             "id": "2",
             "type": "Run Data Test",
             "x": 1080,
             "y": 120,
+            "color": "blue",
             "durationMs": 5000,
             "outputVariableName": "DataTest",
             "failOnError": true,
@@ -1416,7 +1515,8 @@
             "id": "3",
             "type": "End",
             "x": 1760,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1444,8 +1544,9 @@
     {
       "id": "11",
       "type": "Subtest",
-      "x": 1024,
-      "y": 2256,
+      "x": 1536,
+      "y": 1040,
+      "color": "blue",
       "name": "11. UPS: подготовка и детекция",
       "description": "Проверка UPS/IRP, напряжения АКБ и исходного статуса от сети",
       "isEnabled": true,
@@ -1458,13 +1559,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1219,
@@ -1476,6 +1579,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -1487,6 +1591,7 @@
             "type": "Delay",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "milliseconds": 15000
           },
           {
@@ -1494,6 +1599,7 @@
             "type": "Selftest Check",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 30000,
             "pollIntervalMs": 5000,
@@ -1506,6 +1612,7 @@
             "type": "Get IRP Status",
             "x": 2368,
             "y": -96,
+            "color": "blue",
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_det",
             "baseUrl": "http://192.168.0.1",
@@ -1516,6 +1623,7 @@
             "type": "Check Variable Equality",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "expectedValue": "1",
             "variableName": "Dut.ups_det",
             "comparisonType": "Number",
@@ -1526,6 +1634,7 @@
             "type": "Get UPS Voltage",
             "x": 3312,
             "y": -112,
+            "color": "blue",
             "timeoutMs": 5000,
             "outputVariableName": "Dut.akb_voltage",
             "baseUrl": "http://192.168.0.1",
@@ -1536,6 +1645,7 @@
             "type": "Check Variable Range",
             "x": 3760,
             "y": 120,
+            "color": "blue",
             "min": 12,
             "max": 27,
             "variableName": "Dut.akb_voltage",
@@ -1547,6 +1657,7 @@
             "type": "Get UPS Status",
             "x": 4208,
             "y": -112,
+            "color": "blue",
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_rez",
             "baseUrl": "http://192.168.0.1",
@@ -1557,6 +1668,7 @@
             "type": "Check Variable Equality",
             "x": 4680,
             "y": 120,
+            "color": "blue",
             "expectedValue": "0",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
@@ -1566,7 +1678,8 @@
             "id": "11",
             "type": "End",
             "x": 5140,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1642,8 +1755,9 @@
     {
       "id": "12",
       "type": "Subtest",
-      "x": 1120,
-      "y": 2624,
+      "x": 2016,
+      "y": 1040,
+      "color": "blue",
       "name": "12. UPS: переход на АКБ",
       "description": "Отключение AC1 и ожидание ups_rez=1 до 160 секунд",
       "isEnabled": true,
@@ -1656,13 +1770,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -1674,6 +1790,7 @@
             "type": "Delay",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "milliseconds": 500
           },
           {
@@ -1681,6 +1798,7 @@
             "type": "Delay",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "milliseconds": 300
           },
           {
@@ -1688,6 +1806,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -1699,6 +1818,7 @@
             "type": "Delay",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "milliseconds": 500
           },
           {
@@ -1706,6 +1826,7 @@
             "type": "Delay",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "milliseconds": 200
           },
           {
@@ -1713,6 +1834,7 @@
             "type": "Write Register",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -1724,6 +1846,7 @@
             "type": "Write Register",
             "x": 3760,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -1735,6 +1858,7 @@
             "type": "Write Register",
             "x": 4220,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -1746,6 +1870,7 @@
             "type": "Delay",
             "x": 4680,
             "y": 120,
+            "color": "blue",
             "milliseconds": 500
           },
           {
@@ -1753,6 +1878,7 @@
             "type": "Wait Variable Until",
             "x": 5140,
             "y": 120,
+            "color": "blue",
             "expectedValue": "1",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
@@ -1761,20 +1887,22 @@
             "pollAction": "GetUpsStatus",
             "requestTimeoutMs": 5000,
             "intervalMs": 5000,
-            "failOnTimeout": true
+            "failOnTimeout": false
           },
           {
             "id": "12",
             "type": "Delay",
-            "x": 5600,
-            "y": 120,
+            "x": 5712,
+            "y": -48,
+            "color": "blue",
             "milliseconds": 2000
           },
           {
             "id": "13",
             "type": "End",
             "x": 6060,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1862,8 +1990,9 @@
     {
       "id": "13",
       "type": "Subtest",
-      "x": 560,
-      "y": 2760,
+      "x": 544,
+      "y": 1408,
+      "color": "blue",
       "name": "13. UPS: измерение разряда SIMBAT24",
       "description": "Проверка discharge voltage/current на SIMBAT24 slave 17",
       "isEnabled": true,
@@ -1876,13 +2005,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Check Register Range",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 17,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1895,6 +2026,7 @@
             "type": "Check Register Range",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 17,
             "useCurrentSlaveId": false,
             "liveRead": true,
@@ -1906,7 +2038,8 @@
             "id": "3",
             "type": "End",
             "x": 1460,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -1934,8 +2067,9 @@
     {
       "id": "14",
       "type": "Subtest",
-      "x": 560,
-      "y": 2980,
+      "x": 1056,
+      "y": 1520,
+      "color": "blue",
       "name": "14. UPS: возврат на AC1",
       "description": "Включение AC1 и ожидание ups_rez=0 до 160 секунд",
       "isEnabled": true,
@@ -1948,13 +2082,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -1966,6 +2102,7 @@
             "type": "Delay",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "milliseconds": 3000
           },
           {
@@ -1973,6 +2110,7 @@
             "type": "Wait Variable Until",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "expectedValue": "0",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
@@ -1988,6 +2126,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -1999,6 +2138,7 @@
             "type": "Write Register",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -2009,7 +2149,8 @@
             "id": "6",
             "type": "End",
             "x": 2840,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -2055,8 +2196,9 @@
     {
       "id": "15",
       "type": "Subtest",
-      "x": 560,
-      "y": 3200,
+      "x": 1552,
+      "y": 1520,
+      "color": "blue",
       "name": "15. Получение серийника и запись MAC",
       "description": "Получить serial, вычислить MAC, отправить UDP set MAC, перезагрузить DUT и проверить MAC",
       "isEnabled": true,
@@ -2069,13 +2211,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Get Serial Number",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 30000,
             "outputVariableName": "SerialNumber",
             "retryCount": 1,
@@ -2090,6 +2234,7 @@
             "type": "Check Variable Range",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "min": 3200000,
             "max": 3299999,
             "variableName": "SerialNumber",
@@ -2101,6 +2246,7 @@
             "type": "Build MAC From Serial",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "failOnError": true,
             "serialOffset": 3200000,
             "macPrefix": "C0:11:A6:20",
@@ -2113,6 +2259,7 @@
             "type": "Send UDP Set MAC",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 1000,
             "targetIp": "192.168.0.1",
             "targetPort": 43962,
@@ -2126,6 +2273,7 @@
             "type": "Delay",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "milliseconds": 7000
           },
           {
@@ -2133,6 +2281,7 @@
             "type": "Write Register",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -2144,6 +2293,7 @@
             "type": "Write Register",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -2155,6 +2305,7 @@
             "type": "Delay",
             "x": 3760,
             "y": 120,
+            "color": "blue",
             "milliseconds": 10000
           },
           {
@@ -2162,6 +2313,7 @@
             "type": "Write Register",
             "x": 4220,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -2173,6 +2325,7 @@
             "type": "Delay",
             "x": 4680,
             "y": 120,
+            "color": "blue",
             "milliseconds": 100
           },
           {
@@ -2180,6 +2333,7 @@
             "type": "Clear ARP Cache",
             "x": 5140,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 5000,
             "failOnError": false,
             "runArpdBat": true,
@@ -2192,6 +2346,7 @@
             "type": "Selftest Check",
             "x": 5600,
             "y": 120,
+            "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 160000,
             "pollIntervalMs": 5000,
@@ -2204,6 +2359,7 @@
             "type": "Compare Variables",
             "x": 6060,
             "y": 120,
+            "color": "blue",
             "comparisonType": "MacAddress",
             "failMessage": "MAC после перезапуска должен совпасть с рассчитанным",
             "leftVariableName": "Dut.default_mac",
@@ -2213,7 +2369,8 @@
             "id": "14",
             "type": "End",
             "x": 6520,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -2307,8 +2464,9 @@
     {
       "id": "16",
       "type": "Subtest",
-      "x": 560,
-      "y": 3420,
+      "x": 2064,
+      "y": 1520,
+      "color": "blue",
       "name": "16. Печать этикеток",
       "description": "Печать 4 этикеток Zebra",
       "isEnabled": true,
@@ -2321,13 +2479,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Print Label",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "deviceType": 32,
             "macVariableName": "Dut.NewMac",
             "printerName": "Zebra",
@@ -2344,7 +2504,8 @@
             "id": "2",
             "type": "End",
             "x": 1000,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -2366,8 +2527,9 @@
     {
       "id": "17",
       "type": "Subtest",
-      "x": 560,
-      "y": 3640,
+      "x": 544,
+      "y": 1888,
+      "color": "blue",
       "name": "17. Финальная статистика и отчет",
       "description": "Финальный selftest, сбор JSON-отчета, отправка на сервер и локальная копия",
       "isEnabled": true,
@@ -2380,13 +2542,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Selftest Check",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 30000,
             "pollIntervalMs": 5000,
@@ -2399,6 +2563,7 @@
             "type": "Build Test Report",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "deviceType": 32,
             "macVariableName": "Dut.NewMac",
             "deviceName": "PSW+UPS-Box 8x2Pro",
@@ -2411,6 +2576,7 @@
             "type": "Send Test Report",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "timeoutMs": 10000,
             "retryCount": 1,
             "retryDelayMs": 1000,
@@ -2425,7 +2591,8 @@
             "id": "4",
             "type": "End",
             "x": 1920,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -2459,8 +2626,9 @@
     {
       "id": "18",
       "type": "Subtest",
-      "x": 560,
-      "y": 3860,
+      "x": 1056,
+      "y": 2016,
+      "color": "blue",
       "name": "18. Безопасное выключение стенда",
       "description": "Финальный StandOff",
       "isEnabled": true,
@@ -2473,13 +2641,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -2491,6 +2661,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -2502,6 +2673,7 @@
             "type": "Write Register",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -2513,6 +2685,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -2524,6 +2697,7 @@
             "type": "Write Register",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -2534,7 +2708,8 @@
             "id": "6",
             "type": "End",
             "x": 2840,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
@@ -2580,14 +2755,16 @@
     {
       "id": "19",
       "type": "End",
-      "x": 1040,
-      "y": 4080
+      "x": 1776,
+      "y": 2160,
+      "color": "blue"
     },
     {
       "id": "20",
       "type": "Subtest",
       "x": 272,
       "y": -304,
+      "color": "blue",
       "name": "Аварийное выключение стенда",
       "description": "Автоматически запускается при ошибке или Stop; не подключать в основную цепочку",
       "isEnabled": true,
@@ -2600,13 +2777,15 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           },
           {
             "id": "1",
             "type": "Label",
             "x": 540,
             "y": 120,
+            "color": "blue",
             "text": "Аварийный cleanup: выключить питание, разряд, заряд, нагреватели и PoE-нагрузки",
             "labelWidth": 300,
             "labelHeight": 120
@@ -2616,6 +2795,7 @@
             "type": "Write Register",
             "x": 1000,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1200,
@@ -2627,6 +2807,7 @@
             "type": "Write Register",
             "x": 1460,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1210,
@@ -2638,6 +2819,7 @@
             "type": "Write Register",
             "x": 1920,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1204,
@@ -2649,6 +2831,7 @@
             "type": "Write Register",
             "x": 2380,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1215,
@@ -2660,6 +2843,7 @@
             "type": "Write Register",
             "x": 2840,
             "y": 120,
+            "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -2671,6 +2855,7 @@
             "type": "For Slaves",
             "x": 3300,
             "y": 120,
+            "color": "blue",
             "fromSlaveId": 1,
             "toSlaveId": 15,
             "step": 2,
@@ -2682,13 +2867,15 @@
                   "id": "0",
                   "type": "Body Start",
                   "x": 80,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 },
                 {
                   "id": "1",
                   "type": "Write Register",
                   "x": 540,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1414,
@@ -2700,6 +2887,7 @@
                   "type": "Write Register",
                   "x": 1000,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1415,
@@ -2711,6 +2899,7 @@
                   "type": "Write Register",
                   "x": 1460,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1412,
@@ -2722,6 +2911,7 @@
                   "type": "Write Register",
                   "x": 1920,
                   "y": 120,
+                  "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
                   "address": 1413,
@@ -2732,7 +2922,8 @@
                   "id": "5",
                   "type": "Body End",
                   "x": 2380,
-                  "y": 120
+                  "y": 120,
+                  "color": "blue"
                 }
               ],
               "connections": [
@@ -2773,7 +2964,8 @@
             "id": "8",
             "type": "End",
             "x": 3760,
-            "y": 120
+            "y": 120,
+            "color": "blue"
           }
         ],
         "connections": [
