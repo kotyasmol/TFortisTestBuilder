@@ -13,6 +13,14 @@
 
 	<ItemGroup>
 		<None Include="arpd.bat" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="..\profiles\*.json"
+		         Link="profiles\%(Filename)%(Extension)"
+		         CopyToOutputDirectory="PreserveNewest"
+		         CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="TestBuilder.Tests" />
 	</ItemGroup>
 
 	<ItemGroup>

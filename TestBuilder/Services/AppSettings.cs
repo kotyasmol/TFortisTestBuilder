@@ -35,18 +35,33 @@ namespace TestBuilder.Services
 
         private static AppSettings Load()
         {
+            AppSettings settings;
+
             try
             {
                 if (File.Exists(SettingsPath))
                 {
                     var json = File.ReadAllText(SettingsPath);
-                    return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
-                           ?? new AppSettings();
+                    settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
+                               ?? new AppSettings();
+                    return ApplyProfileFolderDefault(settings);
                 }
             }
             catch { }
 
-            return new AppSettings();
+            settings = new AppSettings();
+            return ApplyProfileFolderDefault(settings);
+        }
+
+        private static AppSettings ApplyProfileFolderDefault(AppSettings settings)
+        {
+            if (string.IsNullOrWhiteSpace(settings.GraphsFolder) ||
+                !Directory.Exists(settings.GraphsFolder))
+            {
+                settings.GraphsFolder = ProfileDirectoryLocator.Resolve();
+            }
+
+            return settings;
         }
 
         public void Save()
