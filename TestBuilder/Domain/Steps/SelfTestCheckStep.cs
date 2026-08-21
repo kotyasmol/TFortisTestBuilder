@@ -36,14 +36,10 @@ namespace TestBuilder.Domain.Steps
             "firmvare_vers=0..65535\n" +
             "boot_vers=0..65535";
 
-        private const int MaxPageAttemptTimeoutMs = 20000;
         private const int MinimumPollIntervalMs = 100;
         private const int LegacyShortTimeoutMs = 30000;
         private const int MinimumDeviceReadyTimeoutMs = 160000;
         private const int BrowserDomSettleDelayMs = 10000;
-        private const int MaxBrowserProcessTimeoutMs = 15000;
-        private const int MinHttpFallbackTimeoutMs = 3000;
-        private const int MaxLoggedBrowserErrorLength = 300;
         private const int MaxExtractionCandidates = 64;
 
         private readonly IHttpRequestService _httpRequestService;
@@ -377,111 +373,52 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
-            var attempts = 0;
-            var lastError = "Selftest page was not requested.";
-            var candidateUrls = BuildSelfTestUrlCandidates(url);
-            HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
+            const int attempts = 1;
 
-            while (true)
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = await GetPageAsync(url, timeout, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var remaining = timeout - stopwatch.Elapsed;
-                if (remaining <= TimeSpan.Zero)
-                {
-                    break;
-                }
-
-                foreach (var candidateUrl in candidateUrls)
-                {
-                    remaining = timeout - stopwatch.Elapsed;
-                    if (remaining <= TimeSpan.Zero)
-                    {
-                        break;
-                    }
-
-                    attempts++;
-                    var attemptTimeout = GetAttemptTimeout(remaining);
-                    lastResult = await GetPageAsync(candidateUrl, attemptTimeout, cancellationToken);
-
-                    if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
-                    {
-                        lastError = lastResult.ErrorMessage;
-                    }
-                    else if (!lastResult.IsSuccessStatusCode && lastResult.StatusCode != 0)
-                    {
-                        lastError = $"HTTP {lastResult.StatusCode}.";
-                    }
-                    else if (!TryExtractSelfTestXml(lastResult.Body, out var raw))
-                    {
-                        lastError = "Response does not contain <selftest>...</selftest> or <settings>...</settings>.";
-                    }
-                    else if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
-                    {
-                        lastError = "Selftest XML does not contain default_mac.";
-                    }
-                    else
-                    {
-                        return new SelfTestFetchResult(lastResult, raw, attempts, stopwatch.Elapsed, string.Empty);
-                    }
-
-                    _logger.Warning($"Selftest page is not ready yet (attempt {attempts}, url {candidateUrl}): {lastError}");
-                }
-
-                var delay = GetRetryDelay(timeout - stopwatch.Elapsed);
-                if (delay <= TimeSpan.Zero)
-                {
-                    break;
-                }
-
-                _logger.Info($"Selftest next poll in {(int)delay.TotalMilliseconds} ms.");
-                await Task.Delay(delay, cancellationToken);
+                return new SelfTestFetchResult(
+                    result,
+                    string.Empty,
+                    attempts,
+                    stopwatch.Elapsed,
+                    result.ErrorMessage);
             }
 
-            var totalError = attempts == 0
-                ? $"Selftest timeout: {(int)timeout.TotalMilliseconds} ms."
-                : $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.";
-
-            return new SelfTestFetchResult(lastResult, string.Empty, attempts, stopwatch.Elapsed, totalError);
-        }
-
-        private static IReadOnlyList<string> BuildSelfTestUrlCandidates(string url)
-        {
-            var urls = new List<string> { url };
-
-            if (TryBuildLegacyTestPageUrl(url, out var legacyUrl) &&
-                !urls.Contains(legacyUrl, StringComparer.OrdinalIgnoreCase))
+            if (!result.IsSuccessStatusCode && result.StatusCode != 0)
             {
-                urls.Add(legacyUrl);
+                return new SelfTestFetchResult(
+                    result,
+                    string.Empty,
+                    attempts,
+                    stopwatch.Elapsed,
+                    $"HTTP {result.StatusCode}.");
             }
 
-            return urls;
-        }
-
-        private static bool TryBuildLegacyTestPageUrl(string url, out string legacyUrl)
-        {
-            legacyUrl = string.Empty;
-
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            if (!TryExtractSelfTestXml(result.Body, out var raw))
             {
-                return false;
+                return new SelfTestFetchResult(
+                    result,
+                    string.Empty,
+                    attempts,
+                    stopwatch.Elapsed,
+                    "Response does not contain <selftest>...</selftest> or <settings>...</settings>.");
             }
 
-            if (!uri.AbsolutePath.Contains("/cgi-bin/luci", StringComparison.OrdinalIgnoreCase) &&
-                !uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase))
+            if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
             {
-                return false;
+                return new SelfTestFetchResult(
+                    result,
+                    string.Empty,
+                    attempts,
+                    stopwatch.Elapsed,
+                    "Selftest XML does not contain default_mac.");
             }
 
-            var builder = new UriBuilder(uri)
-            {
-                Path = "test.shtml",
-                Query = string.Empty,
-                Fragment = string.Empty
-            };
-
-            legacyUrl = builder.Uri.ToString();
-            return true;
+            return new SelfTestFetchResult(result, raw, attempts, stopwatch.Elapsed, string.Empty);
         }
 
         private static bool IsDeviceSelfTestUrl(string url)
@@ -496,120 +433,32 @@ namespace TestBuilder.Domain.Steps
                    uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static TimeSpan GetAttemptTimeout(TimeSpan remaining)
-        {
-            var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
-            var attemptMs = remainingMs < 1000
-                ? remainingMs
-                : Math.Min(remainingMs, MaxPageAttemptTimeoutMs);
-
-            return TimeSpan.FromMilliseconds(attemptMs);
-        }
-
-        private TimeSpan GetRetryDelay(TimeSpan remaining)
-        {
-            var remainingMs = (int)remaining.TotalMilliseconds;
-            if (remainingMs <= 0)
-            {
-                return TimeSpan.Zero;
-            }
-
-            return TimeSpan.FromMilliseconds(Math.Min(_pollIntervalMs, remainingMs));
-        }
-
         private async Task<HttpRequestResult> GetPageAsync(
             string url,
             TimeSpan timeout,
             CancellationToken cancellationToken)
         {
-            if (_useBrowser && ShouldUseBrowserForUrl(url))
+            if (!_useBrowser)
             {
-                var browserPath = FindBrowserExecutable();
-
-                if (!string.IsNullOrWhiteSpace(browserPath))
-                {
-                    var browserTimeout = GetBrowserAttemptTimeout(timeout);
-                    if (browserTimeout <= TimeSpan.Zero)
-                    {
-                        return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
-                    }
-
-                    var browserResult = await GetPageWithBrowserAsync(
-                        browserPath,
-                        url,
-                        browserTimeout,
-                        cancellationToken);
-
-                    if (string.IsNullOrWhiteSpace(browserResult.ErrorMessage))
-                    {
-                        if (TryExtractSelfTestXml(browserResult.Body, out _))
-                        {
-                            return browserResult;
-                        }
-
-                        _logger.Warning("Headless browser returned DOM without selftest XML. Falling back to plain HTTP.");
-                    }
-                    else if (TryExtractSelfTestXml(browserResult.Body, out _))
-                    {
-                        return HttpRequestResult.Success(0, browserResult.Body, browserResult.Elapsed);
-                    }
-                    else
-                    {
-                        _logger.Warning(
-                            $"Headless browser failed: {TrimForLog(browserResult.ErrorMessage)}. Falling back to plain HTTP.");
-                    }
-
-                    var fallbackTimeout = timeout - browserResult.Elapsed;
-                    if (fallbackTimeout <= TimeSpan.Zero)
-                    {
-                        return browserResult;
-                    }
-
-                    var httpResult = await _httpRequestService.GetAsync(url, fallbackTimeout, cancellationToken);
-                    return string.IsNullOrWhiteSpace(httpResult.ErrorMessage)
-                        ? httpResult
-                        : browserResult;
-                }
-
-                _logger.Warning("Headless Chrome/Edge was not found. Falling back to plain HTTP.");
+                return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
             }
 
-            return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
-        }
-
-        private static TimeSpan GetBrowserAttemptTimeout(TimeSpan attemptTimeout)
-        {
-            var attemptMs = Math.Max(1, (int)attemptTimeout.TotalMilliseconds);
-            if (attemptMs <= MinHttpFallbackTimeoutMs)
+            var browserPath = FindBrowserExecutable();
+            if (string.IsNullOrWhiteSpace(browserPath))
             {
-                return TimeSpan.Zero;
+                return HttpRequestResult.Failure(
+                    "Headless Chrome/Edge was not found.",
+                    TimeSpan.Zero);
             }
 
-            var browserMs = Math.Min(MaxBrowserProcessTimeoutMs, attemptMs - MinHttpFallbackTimeoutMs);
-            return TimeSpan.FromMilliseconds(Math.Max(1, browserMs));
-        }
+            _logger.Info(
+                $"[INFO] Selftest opens one headless browser, waits for page load and then waits {BrowserDomSettleDelayMs} ms before one PageSource snapshot.");
 
-        private static bool ShouldUseBrowserForUrl(string url)
-        {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return true;
-            }
-
-            return !uri.AbsolutePath.EndsWith("/test.shtml", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string TrimForLog(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var singleLine = Regex.Replace(value.Trim(), @"\s+", " ");
-            return singleLine.Length <= MaxLoggedBrowserErrorLength
-                ? singleLine
-                : singleLine.Substring(0, MaxLoggedBrowserErrorLength) + "...";
+            return await GetPageWithBrowserAsync(
+                browserPath,
+                url,
+                timeout,
+                cancellationToken);
         }
 
         private static async Task<HttpRequestResult> GetPageWithBrowserAsync(
@@ -656,13 +505,9 @@ namespace TestBuilder.Domain.Steps
                     GetRemainingTimeout(timeout, stopwatch.Elapsed),
                     timeoutCts.Token);
 
-                var settleDelay = GetBrowserSettleDelay(GetRemainingTimeout(timeout, stopwatch.Elapsed));
-                if (settleDelay > TimeSpan.Zero)
-                {
-                    await Task.Delay(settleDelay, timeoutCts.Token);
-                }
-
-                var pageSource = await ReadPageSourceWithDevToolsAsync(webSocketUrl, timeoutCts.Token);
+                var pageSource = await ReadPageSourceLikeLegacyHelperAsync(
+                    webSocketUrl,
+                    timeoutCts.Token);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -703,17 +548,6 @@ namespace TestBuilder.Domain.Steps
             return remaining <= TimeSpan.Zero
                 ? TimeSpan.FromMilliseconds(1)
                 : remaining;
-        }
-
-        private static TimeSpan GetBrowserSettleDelay(TimeSpan remaining)
-        {
-            var remainingMs = (int)remaining.TotalMilliseconds;
-            if (remainingMs <= 500)
-            {
-                return TimeSpan.Zero;
-            }
-
-            return TimeSpan.FromMilliseconds(Math.Min(BrowserDomSettleDelayMs, remainingMs - 500));
         }
 
         private static int GetAvailableTcpPort()
@@ -802,7 +636,7 @@ namespace TestBuilder.Domain.Steps
             return false;
         }
 
-        private static async Task<string> ReadPageSourceWithDevToolsAsync(
+        private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
             string webSocketUrl,
             CancellationToken cancellationToken)
         {
@@ -810,13 +644,54 @@ namespace TestBuilder.Domain.Steps
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
 
             var commandId = 1;
+            while (true)
+            {
+                try
+                {
+                    var readyState = await EvaluateStringAsync(
+                        socket,
+                        commandId++,
+                        "document.readyState",
+                        cancellationToken);
+
+                    if (string.Equals(readyState, "complete", StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Selenium's GoToUrl also waits through redirects/navigation.
+                    // A CDP execution context can disappear briefly during that transition.
+                }
+
+                await Task.Delay(100, cancellationToken);
+            }
+
+            // Match the legacy helper: Selenium GoToUrl waits for page load,
+            // then the program sleeps for a full ten seconds before PageSource.
+            await Task.Delay(BrowserDomSettleDelayMs, cancellationToken);
+
+            return await EvaluateStringAsync(
+                socket,
+                commandId,
+                "document.documentElement.outerHTML",
+                cancellationToken);
+        }
+
+        private static async Task<string> EvaluateStringAsync(
+            ClientWebSocket socket,
+            int commandId,
+            string expression,
+            CancellationToken cancellationToken)
+        {
             await SendDevToolsCommandAsync(
                 socket,
                 commandId,
                 "Runtime.evaluate",
                 new Dictionary<string, object>
                 {
-                    ["expression"] = "document.documentElement.outerHTML",
+                    ["expression"] = expression,
                     ["returnByValue"] = true
                 },
                 cancellationToken);

@@ -42,21 +42,21 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 `SelfTestCheckStep` имеет особую логику получения страницы:
 
-- сначала пытается найти Chrome/Edge;
-- если браузер найден, запускает headless browser и читает DOM через DevTools Protocol;
-- если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
-- timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
-- для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
-- в пределах `TimeoutMs` повторяет циклы запросов через `PollIntervalMs`, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`.
+- находит Chrome/Edge и запускает ровно один headless-процесс с исходным URL;
+- ждет завершения загрузки по `document.readyState == complete`;
+- после загрузки выдерживает полные 10 секунд;
+- один раз читает DOM через DevTools Protocol как аналог Selenium `driver.PageSource`;
+- извлекает из этого снимка `<selftest>...</selftest>` или совместимый
+  `<settings>...</settings>` с `default_mac`.
 
-Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
+Алгоритм намеренно повторяет старую отдельную Selenium-утилиту: один `GoToUrl`,
+`Thread.Sleep(10000)`, один `PageSource`. В рабочем браузерном режиме нет POST-логина,
+обычного HTTP fallback, повторных запусков Chrome и запроса `/test.shtml`.
 Старые сохраненные профили с `TimeoutMs` до `30000` для DUT selftest автоматически получают
 эффективный таймаут `160000`, как в старом стенде.
-Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы
-или дополнительных ресурсов.
-Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
 Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
 загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
+`PollIntervalMs` оставлен в модели и JSON только для совместимости и в однопроходном режиме не используется.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 Проверка `ValidationRules` пишет в лог отдельные строки по каждому параметру и сохраняет
 `SelfTest.CheckedRuleCount`, `SelfTest.FailedRuleCount`, `SelfTest.ValidationSummary`.

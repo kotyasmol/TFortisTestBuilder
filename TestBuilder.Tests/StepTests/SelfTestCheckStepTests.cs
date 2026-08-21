@@ -56,7 +56,7 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
-    public async Task SelfTestCheckStep_RetriesUntilSelfTestAppears()
+    public async Task SelfTestCheckStep_UsesOnlyOnePageSourceSnapshot()
     {
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(
@@ -78,14 +78,14 @@ public class SelfTestCheckStepTests
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-        Assert.Equal(StepResult.True, result);
-        Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
-        Assert.Equal(2, context.GetVariable<int>("SelfTest.Attempts"));
-        Assert.Equal(2, service.Calls);
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Equal(1, context.GetVariable<int>("SelfTest.Attempts"));
+        Assert.Equal(1, service.Calls);
     }
 
     [Fact]
-    public async Task SelfTestCheckStep_TriesLegacyTestShtml_WhenLuciPageHasNoXml()
+    public async Task SelfTestCheckStep_DoesNotTryLegacyTestShtml_WhenLuciPageHasNoXml()
     {
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(
@@ -102,11 +102,10 @@ public class SelfTestCheckStepTests
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-        Assert.Equal(StepResult.True, result);
-        Assert.Equal("1", context.GetVariable<string>("Dut.init_ok"));
-        Assert.Equal(2, service.Calls);
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Equal(1, service.Calls);
         Assert.Equal(SelfTestCheckStep.DefaultUrl, service.RequestedUrls[0]);
-        Assert.Equal("http://192.168.0.1/test.shtml", service.RequestedUrls[1]);
     }
 
     [Fact]
