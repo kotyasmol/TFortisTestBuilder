@@ -906,17 +906,17 @@
             "milliseconds": 5000
           },
           {
-            "id": "6",
+            "id": "2",
             "type": "Configure Network Adapters",
-            "x": 1000,
-            "y": 120,
+            "x": 800,
+            "y": 320,
             "color": "blue",
-            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24",
             "outputVariableName": "NetworkConfig",
-            "failOnError": true
+            "failOnError": true,
+            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24"
           },
           {
-            "id": "2",
+            "id": "3",
             "type": "Clear ARP Cache",
             "x": 1460,
             "y": 120,
@@ -929,7 +929,7 @@
             "arguments": "-d *"
           },
           {
-            "id": "3",
+            "id": "4",
             "type": "Selftest Check",
             "x": 1920,
             "y": 120,
@@ -942,7 +942,7 @@
             "outputPrefix": "Dut"
           },
           {
-            "id": "4",
+            "id": "5",
             "type": "Delay",
             "x": 2380,
             "y": 120,
@@ -950,7 +950,7 @@
             "milliseconds": 2000
           },
           {
-            "id": "5",
+            "id": "6",
             "type": "End",
             "x": 2840,
             "y": 120,
@@ -965,34 +965,28 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "Выход",
-            "targetNodeId": "6",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "6",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "In"
-          },
-          {
             "sourceNodeId": "3",
             "sourceConnector": "True",
             "targetNodeId": "4",
-            "targetConnector": "Вход"
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "4",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Выход",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Выход",
+            "targetNodeId": "3",
+            "targetConnector": "In"
           }
         ]
       }
@@ -1500,12 +1494,12 @@
           {
             "id": "1",
             "type": "Configure Network Adapters",
-            "x": 540,
-            "y": 120,
+            "x": 176,
+            "y": 320,
             "color": "blue",
-            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24",
             "outputVariableName": "NetworkConfig",
-            "failOnError": true
+            "failOnError": true,
+            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24"
           },
           {
             "id": "2",
@@ -1536,22 +1530,16 @@
         ],
         "connections": [
           {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "In"
           }
         ]
       }
