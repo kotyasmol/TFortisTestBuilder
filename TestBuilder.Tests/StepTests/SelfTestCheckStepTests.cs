@@ -34,8 +34,11 @@ public class SelfTestCheckStepTests
     {
         const string loginPage =
             "<form><input name='luci_username'><input type=\"password\" name=\"luci_password\"></form>";
+        const string customTfortisLoginPage =
+            "<form><input id='login'><input id='pwd' type='password'><button>Войти</button></form>";
 
         Assert.True(SelfTestCheckStep.LooksLikeLuciLoginPage(loginPage));
+        Assert.True(SelfTestCheckStep.LooksLikeLuciLoginPage(customTfortisLoginPage));
         Assert.False(SelfTestCheckStep.LooksLikeLuciLoginPage("<html>device info</html>"));
     }
 

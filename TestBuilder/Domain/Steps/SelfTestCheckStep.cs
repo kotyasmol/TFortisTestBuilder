@@ -625,6 +625,20 @@ namespace TestBuilder.Domain.Steps
                     var attemptTimeout = GetAttemptTimeout(remaining);
                     lastResult = await GetPageAsync(candidateUrl, attemptTimeout, cancellationToken);
 
+                    if (!IsDirectDutRouteReady(url, context, out routeError))
+                    {
+                        lastError = routeError;
+                        if (!string.Equals(lastRouteError, routeError, StringComparison.Ordinal))
+                        {
+                            _logger.Warning(
+                                $"[WARN] Маршрут к DUT изменился во время HTTP-запроса; " +
+                                $"результат попытки {attempts} отброшен. {routeError}");
+                            lastRouteError = routeError;
+                        }
+
+                        break;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
                     {
                         lastError = lastResult.ErrorMessage;
@@ -770,7 +784,9 @@ namespace TestBuilder.Domain.Steps
                             return browserResult;
                         }
 
-                        _logger.Warning("Headless browser returned DOM without selftest XML. Falling back to plain HTTP.");
+                        _logger.Warning(
+                            $"Headless browser returned DOM without selftest XML " +
+                            $"({DescribeHtmlPage(browserResult.Body)}). Falling back to plain HTTP.");
                     }
                     else if (TryExtractSelfTestXml(browserResult.Body, out _))
                     {
@@ -1117,13 +1133,19 @@ namespace TestBuilder.Domain.Steps
             var passwordLiteral = JsonSerializer.Serialize(password);
             var expression =
                 "(() => {" +
-                "const userInput = document.querySelector('input[name=\"luci_username\"]');" +
-                "const passwordInput = document.querySelector('input[name=\"luci_password\"]');" +
-                "const form = userInput?.form || passwordInput?.form || document.querySelector('form');" +
-                "if (!userInput || !passwordInput || !form) return false;" +
-                $"userInput.value = {usernameLiteral};" +
-                $"passwordInput.value = {passwordLiteral};" +
-                "setTimeout(() => form.submit(), 0);" +
+                "const passwordInput = document.querySelector('input[name=\"luci_password\"], input[name=\"password\"], input[name=\"passwd\"], input[type=\"password\"], input[id*=\"password\" i], input[name*=\"pass\" i]');" +
+                "const form = passwordInput?.form || document.querySelector('form');" +
+                "const userInput = form?.querySelector('input[name=\"luci_username\"], input[name=\"username\"], input[name=\"user\"], input[name=\"login\"], input[id*=\"user\" i], input[id*=\"login\" i], input[type=\"text\"]');" +
+                "if (!passwordInput || !form) return false;" +
+                "const setValue = (element, value) => {" +
+                "const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;" +
+                "if (setter) setter.call(element, value); else element.value = value;" +
+                "element.dispatchEvent(new Event('input', { bubbles: true }));" +
+                "element.dispatchEvent(new Event('change', { bubbles: true }));" +
+                "};" +
+                $"if (userInput) setValue(userInput, {usernameLiteral});" +
+                $"setValue(passwordInput, {passwordLiteral});" +
+                "setTimeout(() => form.requestSubmit ? form.requestSubmit() : form.submit(), 0);" +
                 "return true;" +
                 "})()";
 
@@ -1196,13 +1218,31 @@ namespace TestBuilder.Domain.Steps
             }
 
             return Regex.IsMatch(
-                       pageSource,
-                       "name\\s*=\\s*['\"]luci_username['\"]",
-                       RegexOptions.IgnoreCase) &&
-                   Regex.IsMatch(
-                       pageSource,
-                       "name\\s*=\\s*['\"]luci_password['\"]",
-                       RegexOptions.IgnoreCase);
+                pageSource,
+                "<input\\b[^>]*(?:type|name|id)\\s*=\\s*['\"]?[^'\">]*(?:password|passwd|pass)[^'\">]*['\"]?[^>]*>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        }
+
+        private static string DescribeHtmlPage(string pageSource)
+        {
+            if (string.IsNullOrWhiteSpace(pageSource))
+            {
+                return "empty DOM";
+            }
+
+            var titleMatch = Regex.Match(
+                pageSource,
+                "<title[^>]*>(.*?)</title>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            var title = titleMatch.Success
+                ? Regex.Replace(WebUtility.HtmlDecode(titleMatch.Groups[1].Value), @"\s+", " ").Trim()
+                : string.Empty;
+            var formCount = Regex.Matches(pageSource, "<form\\b", RegexOptions.IgnoreCase).Count;
+            var hasPasswordInput = LooksLikeLuciLoginPage(pageSource);
+
+            return
+                $"title='{TrimForLog(title)}', forms={formCount}, " +
+                $"passwordInput={hasPasswordInput}, length={pageSource.Length}";
         }
 
         internal static bool TryGetLuciCredentials(

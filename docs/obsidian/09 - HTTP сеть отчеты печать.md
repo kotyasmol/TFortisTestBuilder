@@ -51,9 +51,10 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
   сохраняется как `SelfTest.RouteSourceAddress` и выводится в лог;
 - на Windows при наличии локальных адресов в подсети DUT запросы ждут, пока таблица
   маршрутизации выберет один из них; например, `192.168.0.2/.3`, а не рабочий
-  адрес `10.x.x.x`;
-- если DOM содержит поля `luci_username` и `luci_password`, headless browser
-  отправляет форму с данными из query URL, ждёт навигацию и повторно читает DOM;
+  адрес `10.x.x.x`; результат запроса отбрасывается, если маршрут успел смениться;
+- login-форма распознаётся как по стандартным именам LuCI, так и по обычному
+  password input кастомной страницы TFortis; headless browser заполняет подходящие
+  поля, генерирует `input`/`change`, отправляет форму, ждёт навигацию и повторно читает DOM;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
 - timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
 - для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
