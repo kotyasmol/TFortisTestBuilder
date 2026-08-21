@@ -26,8 +26,6 @@ namespace TestBuilder.Views
 
         public IDataTemplate? ClearArpCacheTemplate { get; set; }
 
-        public IDataTemplate? ConfigureNetworkAdaptersTemplate { get; set; }
-
         public IDataTemplate? GetSerialNumberTemplate { get; set; }
 
         public IDataTemplate? SendUdpSetMacTemplate { get; set; }
@@ -79,7 +77,6 @@ namespace TestBuilder.Views
                 CheckVariableEqualityNodeViewModel => CheckVariableEqualityTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableRangeNodeViewModel => CheckVariableRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ClearArpCacheNodeViewModel => ClearArpCacheTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                ConfigureNetworkAdaptersNodeViewModel => ConfigureNetworkAdaptersTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetSerialNumberFromServerNodeViewModel => GetSerialNumberTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SendUdpSetMacPacketNodeViewModel => SendUdpSetMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

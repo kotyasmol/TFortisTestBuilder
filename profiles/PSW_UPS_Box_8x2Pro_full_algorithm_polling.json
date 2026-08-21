@@ -906,16 +906,6 @@
             "milliseconds": 5000
           },
           {
-            "id": "2",
-            "type": "Configure Network Adapters",
-            "x": 800,
-            "y": 320,
-            "color": "blue",
-            "outputVariableName": "NetworkConfig",
-            "failOnError": true,
-            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24"
-          },
-          {
             "id": "3",
             "type": "Clear ARP Cache",
             "x": 1460,
@@ -1477,7 +1467,7 @@
       "y": 1040,
       "color": "blue",
       "name": "10. DataTest портов 0..9",
-      "description": "Автонастройка 10 карт и SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9",
+      "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1490,16 +1480,6 @@
             "x": 80,
             "y": 120,
             "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Configure Network Adapters",
-            "x": 176,
-            "y": 320,
-            "color": "blue",
-            "outputVariableName": "NetworkConfig",
-            "failOnError": true,
-            "adaptersText": "MAC=A0369F30E32C;192.168.10.1;24\r\nMAC=A0369F30E32D;192.168.10.2;24\r\nMAC=A0369F30E32E;192.168.20.1;24\r\nMAC=A0369F30E32F;192.168.20.2;24\r\nMAC=5C628B243F4C;192.168.0.3;24\r\nMAC=5C628B243F0F;192.168.0.2;24\r\nMAC=1CFD087A6CF3;192.168.40.1;24\r\nMAC=1CFD087A6CF1;192.168.40.2;24\r\nMAC=1CFD087A6CF0;192.168.50.1;24\r\nMAC=1CFD087A6CF2;192.168.50.2;24"
           },
           {
             "id": "2",
@@ -1518,7 +1498,7 @@
             "targetBandwidthMbps": 1000,
             "warmupMs": 500,
             "allowedLossPercent": 1,
-            "portsText": "port0-1,192.168.10.1,192.168.10.2,1000\r\nport2-3,192.168.20.1,192.168.20.2,1000\r\nport4-5,192.168.0.3,192.168.0.2,1000\r\nport6-7,192.168.40.1,192.168.40.2,1000\r\nport8-9,192.168.50.1,192.168.50.2,1000"
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,1000\r\nport2-3,192.168.0.4,192.168.0.5,1000\r\nport4-5,192.168.0.6,192.168.0.7,1000\r\nport6-7,192.168.0.8,192.168.0.9,1000\r\nport8-9,192.168.0.10,192.168.0.11,1000"
           },
           {
             "id": "3",

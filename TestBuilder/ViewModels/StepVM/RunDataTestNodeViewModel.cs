@@ -11,6 +11,13 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class RunDataTestNodeViewModel : NodeViewModel
     {
+        public const string DefaultPortsText =
+            "port0-1,192.168.0.2,192.168.0.3,1000\r\n" +
+            "port2-3,192.168.0.4,192.168.0.5,1000\r\n" +
+            "port4-5,192.168.0.6,192.168.0.7,1000\r\n" +
+            "port6-7,192.168.0.8,192.168.0.9,1000\r\n" +
+            "port8-9,192.168.0.10,192.168.0.11,1000";
+
         [ObservableProperty] private string mode = "SoftwarePcap";
         [ObservableProperty] private int expectedPackets = 10000;
         [ObservableProperty] private int packetSizeBytes = 1514;
@@ -20,7 +27,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int durationMs = 5000;
         [ObservableProperty] private int warmupMs = 500;
         [ObservableProperty] private double allowedLossPercent = 1.0;
-        [ObservableProperty] private string portsText = "Port 0,192.168.10.1,192.168.10.2";
+        [ObservableProperty] private string portsText = DefaultPortsText;
         [ObservableProperty] private string outputVariableName = "DataTest";
         [ObservableProperty] private bool failOnError = true;
 

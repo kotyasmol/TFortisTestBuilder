@@ -232,11 +232,6 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Arguments { get; set; }
 
-        // --- Configure Network Adapters ---
-        [JsonPropertyName("adaptersText")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? AdaptersText { get; set; }
-
         // --- Server / API ---
         [JsonPropertyName("serverBaseUrl")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

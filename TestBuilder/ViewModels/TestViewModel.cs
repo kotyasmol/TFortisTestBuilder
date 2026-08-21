@@ -159,7 +159,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new CheckVariableEqualityNodeViewModel(),
         new CheckVariableRangeNodeViewModel(),
         new ClearArpCacheNodeViewModel(),
-        new ConfigureNetworkAdaptersNodeViewModel(),
         new GetSerialNumberFromServerNodeViewModel(),
         new SendUdpSetMacPacketNodeViewModel(),
         new RunDataTestNodeViewModel(),
@@ -313,7 +312,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
             "HTTP и сеть",
             Find("Clear ARP Cache"),
-            Find("Configure Network Adapters"),
             Find("Get Serial Number"),
             Find("Send UDP Set MAC"),
             Find("Run Data Test"),
@@ -1459,7 +1457,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Check Variable Equality" => new CheckVariableEqualityNodeViewModel { Location = location },
             "Check Variable Range" => new CheckVariableRangeNodeViewModel { Location = location },
             "Clear ARP Cache" => new ClearArpCacheNodeViewModel { Location = location },
-            "Configure Network Adapters" => new ConfigureNetworkAdaptersNodeViewModel { Location = location },
             "Get Serial Number" => new GetSerialNumberFromServerNodeViewModel { Location = location },
             "Send UDP Set MAC" => new SendUdpSetMacPacketNodeViewModel { Location = location },
             "Run Data Test" => new RunDataTestNodeViewModel { Location = location },

@@ -198,8 +198,8 @@ public class ProductionStepTests
         var packet = RunDataTestStep.BuildPacket(
             sourceMac,
             destinationMac,
-            IPAddress.Parse("192.168.10.2"),
-            IPAddress.Parse("192.168.10.1"),
+            IPAddress.Parse("192.168.0.3"),
+            IPAddress.Parse("192.168.0.2"),
             1514,
             43962);
 
@@ -210,8 +210,8 @@ public class ProductionStepTests
         Assert.Equal(0x45, packet[14]);
         Assert.Equal("05DC", Convert.ToHexString(packet[16..18]));
         Assert.Equal(17, packet[23]);
-        Assert.Equal("C0A80A02", Convert.ToHexString(packet[26..30]));
-        Assert.Equal("C0A80A01", Convert.ToHexString(packet[30..34]));
+        Assert.Equal("C0A80003", Convert.ToHexString(packet[26..30]));
+        Assert.Equal("C0A80002", Convert.ToHexString(packet[30..34]));
         Assert.Equal("ABBAABBA05C80000", Convert.ToHexString(packet[34..42]));
         Assert.All(packet[42..], value => Assert.Equal(0x41, value));
     }
@@ -247,7 +247,7 @@ public class ProductionStepTests
             5000,
             500,
             1.0,
-            new[] { new DataTestPortConfig("Port 0", "192.168.10.1", "192.168.10.2") },
+            new[] { new DataTestPortConfig("port0-1", "192.168.0.2", "192.168.0.3") },
             "DataTest",
             failOnError: true);
 

@@ -30,25 +30,9 @@ public class FullProfileSerializationTests
         var startupSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "06. Ожидание загрузки DUT и selftest");
-        var startupNetworkNode = startupSubtest.BodyGraph.Nodes
-            .OfType<ConfigureNetworkAdaptersNodeViewModel>()
-            .Single();
         var dataTestSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "10. DataTest портов 0..9");
-        var networkNode = dataTestSubtest.BodyGraph.Nodes
-            .OfType<ConfigureNetworkAdaptersNodeViewModel>()
-            .Single();
-        Assert.Equal(10, networkNode.AdaptersText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length);
-        Assert.DoesNotContain("Name=", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("74563CA71264", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(networkNode.AdaptersText, startupNetworkNode.AdaptersText);
-        Assert.Contains("MAC=5C628B243F4C;192.168.0.3;24", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("MAC=5C628B243F0F;192.168.0.2;24", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(
-            startupSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, startupNetworkNode) ||
-                          ReferenceEquals(connection.Target.Parent, startupNetworkNode));
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&
@@ -57,6 +41,22 @@ public class FullProfileSerializationTests
         var dataTestNode = dataTestSubtest.BodyGraph.Nodes
             .OfType<RunDataTestNodeViewModel>()
             .Single();
-        Assert.Contains("port4-5,192.168.0.3,192.168.0.2,1000", dataTestNode.PortsText, StringComparison.OrdinalIgnoreCase);
+        var portLines = dataTestNode.PortsText.Split(
+            new[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        Assert.Equal(
+            new[]
+            {
+                "port0-1,192.168.0.2,192.168.0.3,1000",
+                "port2-3,192.168.0.4,192.168.0.5,1000",
+                "port4-5,192.168.0.6,192.168.0.7,1000",
+                "port6-7,192.168.0.8,192.168.0.9,1000",
+                "port8-9,192.168.0.10,192.168.0.11,1000"
+            },
+            portLines);
+        Assert.Contains(
+            dataTestSubtest.BodyGraph.Connections,
+            connection => connection.Source.Parent is StartNodeViewModel &&
+                          ReferenceEquals(connection.Target.Parent, dataTestNode));
     }
 }

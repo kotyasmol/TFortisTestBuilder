@@ -130,17 +130,14 @@ Deserializer также принимает часть русских и legacy-�
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `requestTimeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
-| Configure Network Adapters | `adaptersText`, `outputVariableName`, `failOnError` |
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
 `arp`.
 
-В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` одинаковая конфигурация
-10 тестовых карт выполняется перед первым HTTP selftest и повторно
-перед `Run Data Test`. Пара Realtek с MAC `5C628B243F4C`/`5C628B243F0F`
-остается в `192.168.0.3/24`/`192.168.0.2/24`, чтобы профиль не удалял
-маршрут к DUT `192.168.0.1` между запусками.
+В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` `Run Data Test` использует
+пять постоянных пар: `.2/.3`, `.4/.5`, `.6/.7`, `.8/.9`, `.10/.11` в сети
+`192.168.0.0/24`. Адреса назначаются вручную в Windows и профилем не изменяются.
 
 ## Вложенные графы
 
