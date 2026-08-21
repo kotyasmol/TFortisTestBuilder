@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-08-20
+updated: 2026-08-21
 ---
 
 # JSON профили
@@ -135,6 +135,12 @@ Deserializer также принимает часть русских и legacy-�
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
 `arp`.
+
+В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` одинаковая конфигурация
+10 тестовых карт выполняется перед первым HTTP selftest и повторно
+перед `Run Data Test`. Пара Realtek с MAC `5C628B243F4C`/`5C628B243F0F`
+остается в `192.168.0.3/24`/`192.168.0.2/24`, чтобы профиль не удалял
+маршрут к DUT `192.168.0.1` между запусками.
 
 ## Вложенные графы
 
