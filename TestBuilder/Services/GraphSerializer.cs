@@ -594,7 +594,7 @@ namespace TestBuilder.Services
                     "Configure Network Adapters" or "CONFIGURE_NETWORK_ADAPTERS" or "Настройка сетевых карт" => new ConfigureNetworkAdaptersNodeViewModel
                     {
                         Location = location,
-                        AdaptersText = n.AdaptersText ?? "Name=Ethernet 0;192.168.10.1;24",
+                        AdaptersText = n.AdaptersText ?? "Auto=Switch;192.168.10.1;24",
                         OutputVariableName = n.OutputVariableName ?? "NetworkConfig",
                         FailOnError = n.FailOnError ?? true
                     },

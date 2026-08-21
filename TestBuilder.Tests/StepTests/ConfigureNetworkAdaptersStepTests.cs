@@ -16,12 +16,14 @@ public class ConfigureNetworkAdaptersStepTests
         var configurations = ConfigureNetworkAdaptersStep.ParseConfigurations("""
             Name=Ethernet 0;192.168.10.1;24
             MAC=00-11-22-33-44-55;192.168.10.2;24
+            Auto=Switch;192.168.20.1;24
             """);
 
         Assert.Collection(
             configurations,
             first => Assert.Equal(new NetworkAdapterConfiguration("Name=Ethernet 0", "192.168.10.1", 24), first),
-            second => Assert.Equal(new NetworkAdapterConfiguration("MAC=00-11-22-33-44-55", "192.168.10.2", 24), second));
+            second => Assert.Equal(new NetworkAdapterConfiguration("MAC=00-11-22-33-44-55", "192.168.10.2", 24), second),
+            third => Assert.Equal(new NetworkAdapterConfiguration("Auto=Switch", "192.168.20.1", 24), third));
     }
 
     [Fact]

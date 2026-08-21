@@ -8,7 +8,7 @@ namespace TestBuilder.ViewModels.StepVM;
 
 public partial class ConfigureNetworkAdaptersNodeViewModel : NodeViewModel
 {
-    [ObservableProperty] private string adaptersText = "Name=Ethernet 0;192.168.10.1;24\r\nName=Ethernet 1;192.168.10.2;24";
+    [ObservableProperty] private string adaptersText = "Auto=Switch;192.168.10.1;24\r\nAuto=Switch;192.168.10.2;24";
     [ObservableProperty] private string outputVariableName = "NetworkConfig";
     [ObservableProperty] private bool failOnError = true;
 

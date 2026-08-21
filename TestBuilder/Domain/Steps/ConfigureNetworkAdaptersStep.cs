@@ -14,8 +14,9 @@ namespace TestBuilder.Domain.Steps;
 
 /// <summary>
 /// Assigns one static IPv4 address to every configured Windows network adapter.
-/// Selectors are either an interface alias (Name=Ethernet 0) or a MAC address
-/// (MAC=001122334455). MAC selectors are preferred because aliases can change.
+/// Selectors are an interface alias (Name=Ethernet 0), MAC address
+/// (MAC=001122334455), or Auto=Switch. MAC selectors are preferred because
+/// aliases can change. Adapters with an IPv4 default gateway are always protected.
 /// </summary>
 public sealed class ConfigureNetworkAdaptersStep : ITestStep
 {
@@ -52,6 +53,11 @@ public sealed class ConfigureNetworkAdaptersStep : ITestStep
 
         _logger.Info($"[ШАГ] Настройка {_configurations.Count} сетевых карт.");
         var errors = new List<string>();
+        var switchCandidates = GetSwitchCandidates();
+        var claimedAutoAdapters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        context.SetVariable(
+            $"{_outputVariableName}.AvailableSwitchAdapters",
+            string.Join("; ", switchCandidates.Select(adapter => $"{adapter.Name} ({FormatMac(adapter.GetPhysicalAddress())})")));
 
         for (var index = 0; index < _configurations.Count; index++)
         {
@@ -71,14 +77,25 @@ public sealed class ConfigureNetworkAdaptersStep : ITestStep
                 continue;
             }
 
-            var adapter = FindAdapter(configuration.Selector);
+            var adapter = FindAdapter(configuration.Selector, switchCandidates, claimedAutoAdapters);
             if (adapter == null)
             {
-                error = $"Не найдена сетевая карта '{configuration.Selector}'.";
+                error = $"Не найдена сетевая карта '{configuration.Selector}'. Доступные карты коммутатора: {context.GetVariable<string>($"{_outputVariableName}.AvailableSwitchAdapters")}";
                 WriteFailure(context, prefix, error);
                 errors.Add(error);
                 continue;
             }
+
+            if (HasDefaultIpv4Gateway(adapter))
+            {
+                error = $"Карта '{adapter.Name}' имеет IPv4-шлюз по умолчанию и защищена от изменения. Это, вероятно, интернет-подключение.";
+                WriteFailure(context, prefix, error);
+                errors.Add(error);
+                continue;
+            }
+
+            if (IsAutoSwitchSelector(configuration.Selector))
+                claimedAutoAdapters.Add(adapter.Id);
 
             var result = await SetStaticAddressAsync(adapter.Name, address!, configuration.PrefixLength, cancellationToken);
             context.SetVariable($"{prefix}.AdapterName", adapter.Name);
@@ -152,9 +169,15 @@ public sealed class ConfigureNetworkAdaptersStep : ITestStep
         return true;
     }
 
-    private static NetworkInterface? FindAdapter(string selector)
+    private static NetworkInterface? FindAdapter(
+        string selector,
+        IReadOnlyList<NetworkInterface> switchCandidates,
+        ISet<string> claimedAutoAdapters)
     {
         var normalized = selector.Trim();
+        if (IsAutoSwitchSelector(normalized))
+            return switchCandidates.FirstOrDefault(adapter => !claimedAutoAdapters.Contains(adapter.Id));
+
         var allAdapters = NetworkInterface.GetAllNetworkInterfaces()
             .Where(networkInterface => networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback);
 
@@ -168,6 +191,45 @@ public sealed class ConfigureNetworkAdaptersStep : ITestStep
         var alias = normalized.StartsWith("Name=", StringComparison.OrdinalIgnoreCase) ? normalized[5..].Trim() : normalized;
         return allAdapters.FirstOrDefault(adapter => string.Equals(adapter.Name, alias, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static IReadOnlyList<NetworkInterface> GetSwitchCandidates()
+    {
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(adapter => adapter.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+            .Where(adapter => !HasDefaultIpv4Gateway(adapter))
+            .OrderBy(GetInterfaceIndex)
+            .ThenBy(adapter => adapter.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static int GetInterfaceIndex(NetworkInterface adapter)
+    {
+        try
+        {
+            return adapter.GetIPProperties().GetIPv4Properties().Index;
+        }
+        catch
+        {
+            return int.MaxValue;
+        }
+    }
+
+    private static bool HasDefaultIpv4Gateway(NetworkInterface adapter)
+    {
+        try
+        {
+            return adapter.GetIPProperties().GatewayAddresses.Any(gateway =>
+                gateway.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
+                !gateway.Address.Equals(IPAddress.Any));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsAutoSwitchSelector(string selector) =>
+        string.Equals(selector.Trim(), "Auto=Switch", StringComparison.OrdinalIgnoreCase);
 
     private static async Task<ProcessRunResult> SetStaticAddressAsync(string adapterName, IPAddress address, int prefixLength, CancellationToken cancellationToken)
     {
