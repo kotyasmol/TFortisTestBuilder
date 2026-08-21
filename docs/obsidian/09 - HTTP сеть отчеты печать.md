@@ -44,25 +44,12 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser и читает DOM через DevTools Protocol;
-- для LuCI/deviceinfo берет `luci_username` и `luci_password` из URL ноды, отправляет
-  настоящую форму `POST` на deviceinfo без query и продолжает работу с cookie-сессией LuCI;
-- после входа опрашивает DOM каждые 500 мс до появления динамически созданного XML selftest;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
-- timeout headless browser внутри одной попытки ограничен 85 секундами, чтобы дождаться
-  медленных UBUS/CGI-запросов страницы и оставить запас времени для обычного HTTP fallback;
+- timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
 - для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
 - в пределах `TimeoutMs` повторяет циклы запросов через `PollIntervalMs`, пока из DOM/ответа не получится извлечь `<selftest>...</selftest>` или legacy `<settings>...</settings>` с `default_mac`.
 
-HAR актуальной прошивки `PSW+UPS-Box 8x2Pro` подтвердил последовательность:
-`POST deviceinfo` с form-urlencoded логином и паролем → `302` с cookie `sysauth_http` →
-авторизованный `GET deviceinfo` → JavaScript-вызовы UBUS/CGI → скрытый
-`<settings><selftest>...</selftest></settings>` в DOM. Query-параметры логина сами по
-себе устройство не авторизуют. На этой прошивке legacy `/test.shtml` отвечает `404`.
-Формирование динамических данных в HAR занимает около 38–45 секунд, поэтому прежний
-15-секундный browser timeout гарантированно завершался раньше готовности XML.
-
-Причина использования браузера: текущий selftest не присутствует в исходном HTTP-ответе,
-а конструируется JavaScript после нескольких запросов к устройству.
+Причина: некоторые устройства могут отдавать страницу, где selftest доступнее через browser dump, чем через обычный HTTP.
 Старые сохраненные профили с `TimeoutMs` до `30000` для DUT selftest автоматически получают
 эффективный таймаут `160000`, как в старом стенде.
 Fallback на HTTP нужен для случаев, когда устройство уже отдало raw selftest, но headless browser зависает на загрузке страницы

@@ -36,13 +36,12 @@ namespace TestBuilder.Domain.Steps
             "firmvare_vers=0..65535\n" +
             "boot_vers=0..65535";
 
-        private const int MaxPageAttemptTimeoutMs = 90000;
+        private const int MaxPageAttemptTimeoutMs = 20000;
         private const int MinimumPollIntervalMs = 100;
         private const int LegacyShortTimeoutMs = 30000;
         private const int MinimumDeviceReadyTimeoutMs = 160000;
         private const int BrowserDomSettleDelayMs = 10000;
-        private const int BrowserDomPollIntervalMs = 500;
-        private const int MaxBrowserProcessTimeoutMs = 85000;
+        private const int MaxBrowserProcessTimeoutMs = 15000;
         private const int MinHttpFallbackTimeoutMs = 3000;
         private const int MaxLoggedBrowserErrorLength = 300;
         private const int MaxExtractionCandidates = 64;
@@ -613,7 +612,7 @@ namespace TestBuilder.Domain.Steps
                 : singleLine.Substring(0, MaxLoggedBrowserErrorLength) + "...";
         }
 
-        private async Task<HttpRequestResult> GetPageWithBrowserAsync(
+        private static async Task<HttpRequestResult> GetPageWithBrowserAsync(
             string browserPath,
             string url,
             TimeSpan timeout,
@@ -657,11 +656,13 @@ namespace TestBuilder.Domain.Steps
                     GetRemainingTimeout(timeout, stopwatch.Elapsed),
                     timeoutCts.Token);
 
-                var pageSource = await ReadPageSourceWithDevToolsAsync(
-                    webSocketUrl,
-                    url,
-                    GetRemainingTimeout(timeout, stopwatch.Elapsed),
-                    timeoutCts.Token);
+                var settleDelay = GetBrowserSettleDelay(GetRemainingTimeout(timeout, stopwatch.Elapsed));
+                if (settleDelay > TimeSpan.Zero)
+                {
+                    await Task.Delay(settleDelay, timeoutCts.Token);
+                }
+
+                var pageSource = await ReadPageSourceWithDevToolsAsync(webSocketUrl, timeoutCts.Token);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -801,225 +802,14 @@ namespace TestBuilder.Domain.Steps
             return false;
         }
 
-        private async Task<string> ReadPageSourceWithDevToolsAsync(
+        private static async Task<string> ReadPageSourceWithDevToolsAsync(
             string webSocketUrl,
-            string pageUrl,
-            TimeSpan timeout,
             CancellationToken cancellationToken)
         {
             using var socket = new ClientWebSocket();
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
 
-            var stopwatch = Stopwatch.StartNew();
             var commandId = 1;
-            var pageSource = string.Empty;
-
-            // The DUT can take several seconds to return even the login page.
-            // Wait for a real document before constructing the login POST.
-            while (stopwatch.Elapsed < timeout)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    pageSource = await ReadOuterHtmlAsync(
-                        socket,
-                        commandId++,
-                        cancellationToken);
-
-                    if (pageSource.Contains("<body", StringComparison.OrdinalIgnoreCase))
-                    {
-                        break;
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // Navigation can temporarily destroy the JavaScript context.
-                }
-
-                await DelayWithinTimeoutAsync(
-                    stopwatch,
-                    timeout,
-                    BrowserDomPollIntervalMs,
-                    cancellationToken);
-            }
-
-            if (TryGetLuciCredentials(pageUrl, out var username, out var password))
-            {
-                _logger.Info(
-                    "[INFO] Selftest authenticates in LuCI with POST and waits for the dynamic selftest DOM.");
-
-                if (await SubmitLuciLoginPostAsync(
-                        socket,
-                        commandId++,
-                        pageUrl,
-                        username,
-                        password,
-                        cancellationToken))
-                {
-                    var remaining = timeout - stopwatch.Elapsed;
-                    if (remaining > TimeSpan.Zero)
-                    {
-                        pageSource = await WaitForSelfTestDomAsync(
-                            socket,
-                            commandId,
-                            remaining,
-                            cancellationToken);
-                    }
-
-                    if (TryExtractSelfTestXml(pageSource, out _))
-                    {
-                        _logger.Info("[OK] LuCI rendered the dynamic selftest XML.");
-                    }
-                    else
-                    {
-                        _logger.Warning(
-                            "[WARN] LuCI login POST completed, but dynamic selftest XML did not appear before the browser timeout.");
-                    }
-
-                    return pageSource;
-                }
-
-                _logger.Warning("[WARN] Headless browser could not submit the LuCI login POST.");
-            }
-
-            var settleDelay = GetBrowserSettleDelay(timeout - stopwatch.Elapsed);
-            if (settleDelay > TimeSpan.Zero)
-            {
-                await Task.Delay(settleDelay, cancellationToken);
-            }
-
-            return await ReadOuterHtmlAsync(
-                socket,
-                commandId,
-                cancellationToken);
-        }
-
-        private static async Task<bool> SubmitLuciLoginPostAsync(
-            ClientWebSocket socket,
-            int commandId,
-            string pageUrl,
-            string username,
-            string password,
-            CancellationToken cancellationToken)
-        {
-            if (!Uri.TryCreate(pageUrl, UriKind.Absolute, out var uri))
-            {
-                return false;
-            }
-
-            var loginUri = new UriBuilder(uri)
-            {
-                Query = string.Empty,
-                Fragment = string.Empty
-            }.Uri;
-            var actionLiteral = JsonSerializer.Serialize(loginUri.ToString());
-            var usernameLiteral = JsonSerializer.Serialize(username);
-            var passwordLiteral = JsonSerializer.Serialize(password);
-            var expression =
-                "(() => {" +
-                "const parent = document.body || document.documentElement;" +
-                "if (!parent) return false;" +
-                "const form = document.createElement('form');" +
-                "form.method = 'POST';" +
-                $"form.action = {actionLiteral};" +
-                "const add = (name, value) => {" +
-                "const input = document.createElement('input');" +
-                "input.type = 'hidden'; input.name = name; input.value = value;" +
-                "form.appendChild(input);" +
-                "};" +
-                $"add('luci_username', {usernameLiteral});" +
-                $"add('luci_password', {passwordLiteral});" +
-                "parent.appendChild(form);" +
-                "form.submit();" +
-                "return true;" +
-                "})()";
-
-            await SendDevToolsCommandAsync(
-                socket,
-                commandId,
-                "Runtime.evaluate",
-                new Dictionary<string, object>
-                {
-                    ["expression"] = expression,
-                    ["returnByValue"] = true
-                },
-                cancellationToken);
-
-            var response = await ReceiveDevToolsResponseAsync(
-                socket,
-                commandId,
-                cancellationToken);
-            using var document = JsonDocument.Parse(response);
-
-            return document.RootElement.TryGetProperty("result", out var result) &&
-                   result.TryGetProperty("result", out var runtimeResult) &&
-                   runtimeResult.TryGetProperty("value", out var value) &&
-                   value.ValueKind == JsonValueKind.True;
-        }
-
-        private static async Task<string> WaitForSelfTestDomAsync(
-            ClientWebSocket socket,
-            int commandId,
-            TimeSpan timeout,
-            CancellationToken cancellationToken)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var pageSource = string.Empty;
-
-            while (stopwatch.Elapsed < timeout)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    pageSource = await ReadOuterHtmlAsync(
-                        socket,
-                        commandId++,
-                        cancellationToken);
-
-                    if (TryExtractSelfTestXml(pageSource, out _))
-                    {
-                        return pageSource;
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // Expected while the login POST redirects to the authenticated page.
-                }
-
-                await DelayWithinTimeoutAsync(
-                    stopwatch,
-                    timeout,
-                    BrowserDomPollIntervalMs,
-                    cancellationToken);
-            }
-
-            return pageSource;
-        }
-
-        private static async Task DelayWithinTimeoutAsync(
-            Stopwatch stopwatch,
-            TimeSpan timeout,
-            int delayMs,
-            CancellationToken cancellationToken)
-        {
-            var remaining = timeout - stopwatch.Elapsed;
-            if (remaining <= TimeSpan.Zero)
-            {
-                return;
-            }
-
-            var delay = TimeSpan.FromMilliseconds(
-                Math.Min(delayMs, Math.Max(1, remaining.TotalMilliseconds)));
-            await Task.Delay(delay, cancellationToken);
-        }
-
-        private static async Task<string> ReadOuterHtmlAsync(
-            ClientWebSocket socket,
-            int commandId,
-            CancellationToken cancellationToken)
-        {
             await SendDevToolsCommandAsync(
                 socket,
                 commandId,
@@ -1031,10 +821,7 @@ namespace TestBuilder.Domain.Steps
                 },
                 cancellationToken);
 
-            var response = await ReceiveDevToolsResponseAsync(
-                socket,
-                commandId,
-                cancellationToken);
+            var response = await ReceiveDevToolsResponseAsync(socket, commandId, cancellationToken);
             using var document = JsonDocument.Parse(response);
             var root = document.RootElement;
 
@@ -1051,53 +838,6 @@ namespace TestBuilder.Domain.Steps
             }
 
             return value.GetString() ?? string.Empty;
-        }
-
-        internal static bool TryGetLuciCredentials(
-            string url,
-            out string username,
-            out string password)
-        {
-            username = string.Empty;
-            password = string.Empty;
-
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return false;
-            }
-
-            foreach (var part in uri.Query.TrimStart('?')
-                         .Split('&', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var separator = part.IndexOf('=');
-                var rawName = separator >= 0 ? part[..separator] : part;
-                var rawValue = separator >= 0 ? part[(separator + 1)..] : string.Empty;
-                var name = DecodeQueryValue(rawName);
-                var value = DecodeQueryValue(rawValue);
-
-                if (name.Equals("luci_username", StringComparison.OrdinalIgnoreCase))
-                {
-                    username = value;
-                }
-                else if (name.Equals("luci_password", StringComparison.OrdinalIgnoreCase))
-                {
-                    password = value;
-                }
-            }
-
-            return !string.IsNullOrWhiteSpace(username) && !string.IsNullOrEmpty(password);
-        }
-
-        private static string DecodeQueryValue(string value)
-        {
-            try
-            {
-                return Uri.UnescapeDataString(value.Replace("+", " ", StringComparison.Ordinal));
-            }
-            catch (UriFormatException)
-            {
-                return value;
-            }
         }
 
         private static async Task SendDevToolsCommandAsync(
