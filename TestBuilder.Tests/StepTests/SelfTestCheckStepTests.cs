@@ -1,3 +1,4 @@
+using System.Net;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -9,6 +10,59 @@ namespace TestBuilder.Tests.StepTests;
 
 public class SelfTestCheckStepTests
 {
+    [Theory]
+    [InlineData("192.168.0.2", "192.168.0.1", 24, true)]
+    [InlineData("192.168.1.2", "192.168.0.1", 24, false)]
+    [InlineData("10.160.24.159", "192.168.0.1", 24, false)]
+    [InlineData("192.168.0.2", "192.168.0.1", 32, false)]
+    public void IsSameIpv4Subnet_UsesConfiguredPrefix(
+        string first,
+        string second,
+        int prefixLength,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            SelfTestCheckStep.IsSameIpv4Subnet(
+                IPAddress.Parse(first),
+                IPAddress.Parse(second),
+                prefixLength));
+    }
+
+    [Fact]
+    public void LooksLikeLuciLoginPage_DetectsCredentialForm()
+    {
+        const string loginPage =
+            "<form><input name='luci_username'><input type=\"password\" name=\"luci_password\"></form>";
+
+        Assert.True(SelfTestCheckStep.LooksLikeLuciLoginPage(loginPage));
+        Assert.False(SelfTestCheckStep.LooksLikeLuciLoginPage("<html>device info</html>"));
+    }
+
+    [Fact]
+    public void TryGetLuciCredentials_DecodesValuesFromSelftestUrl()
+    {
+        var found = SelfTestCheckStep.TryGetLuciCredentials(
+            "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=Admin%20User&luci_password=p%40ss%2Bword",
+            out var username,
+            out var password);
+
+        Assert.True(found);
+        Assert.Equal("Admin User", username);
+        Assert.Equal("p@ss+word", password);
+    }
+
+    [Fact]
+    public void SanitizeUrlForLog_RedactsLuciCredentials()
+    {
+        var sanitized = SelfTestCheckStep.SanitizeUrlForLog(
+            "http://192.168.0.1/deviceinfo?luci_username=Admin&luci_password=Secret&mode=full");
+
+        Assert.Equal(
+            "http://192.168.0.1/deviceinfo?luci_username=***&luci_password=***&mode=full",
+            sanitized);
+    }
+
     [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_AndSavesFields_WhenRulesPass()
     {

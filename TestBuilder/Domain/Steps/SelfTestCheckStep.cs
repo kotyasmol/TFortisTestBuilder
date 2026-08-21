@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
@@ -41,6 +42,7 @@ namespace TestBuilder.Domain.Steps
         private const int LegacyShortTimeoutMs = 30000;
         private const int MinimumDeviceReadyTimeoutMs = 160000;
         private const int BrowserDomSettleDelayMs = 10000;
+        private const int BrowserLateLoginSettleDelayMs = 3000;
         private const int MaxBrowserProcessTimeoutMs = 15000;
         private const int MinHttpFallbackTimeoutMs = 3000;
         private const int BrowserCleanupTimeoutMs = 2000;
@@ -110,12 +112,15 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
+            _logger.Info(
+                $"[STEP] Selftest request: {SanitizeUrlForLog(_url)}, " +
+                $"timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
             SaveNetworkDiagnostics(context);
 
             var fetch = await WaitForSelfTestXmlAsync(
                 _url,
                 TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs)),
+                context,
                 cancellationToken);
             var result = fetch.Result;
 
@@ -206,12 +211,144 @@ namespace TestBuilder.Domain.Steps
                 _logger.Info("[INFO] Selftest local DUT request: system proxy is disabled.");
             }
 
-            if (!IPAddress.TryParse(uri.Host, out var destinationAddress))
+            if (!IPAddress.TryParse(uri.Host.Trim('[', ']'), out var destinationAddress))
             {
                 return;
             }
 
             context.SetVariable("SelfTest.RouteDestinationAddress", destinationAddress.ToString());
+
+            if (TryGetRouteSourceAddress(uri, destinationAddress, out var sourceAddress, out var routeError))
+            {
+                context.SetVariable("SelfTest.RouteSourceAddress", sourceAddress.ToString());
+                _logger.Info(
+                    $"[INFO] Selftest route selected by OS: {sourceAddress} -> {destinationAddress}:{uri.Port}.");
+            }
+            else
+            {
+                context.SetVariable("SelfTest.RouteError", routeError);
+                _logger.Warning($"[WARN] Selftest route diagnostics failed: {routeError}");
+            }
+        }
+
+        private bool IsDirectDutRouteReady(
+            string url,
+            TestContext context,
+            out string error)
+        {
+            error = string.Empty;
+
+            if (!_useBrowser || !OperatingSystem.IsWindows() ||
+                !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                !HttpRequestService.ShouldBypassProxy(uri) ||
+                !IPAddress.TryParse(uri.Host.Trim('[', ']'), out var destinationAddress) ||
+                destinationAddress.AddressFamily != AddressFamily.InterNetwork)
+            {
+                return true;
+            }
+
+            var candidateAddresses = GetDirectLocalAddresses(destinationAddress);
+            context.SetVariable(
+                "SelfTest.RouteCandidateAddresses",
+                string.Join(", ", candidateAddresses.Select(address => address.ToString())));
+
+            // Private networks routed through a gateway are valid too. Enforce the
+            // direct route only when Windows actually has local addresses in the
+            // DUT subnet (the production stand has 192.168.0.2 and 192.168.0.3).
+            if (candidateAddresses.Count == 0)
+            {
+                return true;
+            }
+
+            context.SetVariable("SelfTest.RouteDestinationAddress", destinationAddress.ToString());
+
+            if (!TryGetRouteSourceAddress(uri, destinationAddress, out var sourceAddress, out var routeError))
+            {
+                context.SetVariable("SelfTest.RouteError", routeError);
+                error = $"Не удалось определить маршрут к DUT {destinationAddress}: {routeError}";
+                return false;
+            }
+
+            context.SetVariable("SelfTest.RouteSourceAddress", sourceAddress.ToString());
+
+            if (candidateAddresses.Contains(sourceAddress))
+            {
+                context.SetVariable("SelfTest.RouteError", string.Empty);
+                return true;
+            }
+
+            error =
+                $"Маршрут к DUT ещё не готов: Windows выбрала {sourceAddress}, " +
+                $"ожидалась одна из локальных карт {string.Join(", ", candidateAddresses)}.";
+            context.SetVariable("SelfTest.RouteError", error);
+            return false;
+        }
+
+        private static IReadOnlyList<IPAddress> GetDirectLocalAddresses(IPAddress destinationAddress)
+        {
+            try
+            {
+                return NetworkInterface.GetAllNetworkInterfaces()
+                    .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses)
+                    .Where(address =>
+                        address.Address.AddressFamily == AddressFamily.InterNetwork &&
+                        !address.Address.Equals(destinationAddress) &&
+                        IsSameIpv4Subnet(
+                            address.Address,
+                            destinationAddress,
+                            address.PrefixLength))
+                    .Select(address => address.Address)
+                    .Distinct()
+                    .ToList();
+            }
+            catch (NetworkInformationException)
+            {
+                return Array.Empty<IPAddress>();
+            }
+        }
+
+        internal static bool IsSameIpv4Subnet(
+            IPAddress first,
+            IPAddress second,
+            int prefixLength)
+        {
+            if (first.AddressFamily != AddressFamily.InterNetwork ||
+                second.AddressFamily != AddressFamily.InterNetwork ||
+                prefixLength is < 0 or > 32)
+            {
+                return false;
+            }
+
+            var firstBytes = first.GetAddressBytes();
+            var secondBytes = second.GetAddressBytes();
+            var wholeBytes = prefixLength / 8;
+            var remainingBits = prefixLength % 8;
+
+            for (var index = 0; index < wholeBytes; index++)
+            {
+                if (firstBytes[index] != secondBytes[index])
+                {
+                    return false;
+                }
+            }
+
+            if (remainingBits == 0)
+            {
+                return true;
+            }
+
+            var mask = (byte)(0xFF << (8 - remainingBits));
+            return (firstBytes[wholeBytes] & mask) == (secondBytes[wholeBytes] & mask);
+        }
+
+        private static bool TryGetRouteSourceAddress(
+            Uri uri,
+            IPAddress destinationAddress,
+            out IPAddress sourceAddress,
+            out string error)
+        {
+            sourceAddress = IPAddress.None;
+            error = string.Empty;
 
             try
             {
@@ -221,18 +358,19 @@ namespace TestBuilder.Domain.Steps
                     ProtocolType.Udp);
                 socket.Connect(new IPEndPoint(destinationAddress, uri.Port));
 
-                if (socket.LocalEndPoint is IPEndPoint localEndPoint)
+                if (socket.LocalEndPoint is not IPEndPoint localEndPoint)
                 {
-                    var sourceAddress = localEndPoint.Address.ToString();
-                    context.SetVariable("SelfTest.RouteSourceAddress", sourceAddress);
-                    _logger.Info(
-                        $"[INFO] Selftest route selected by OS: {sourceAddress} -> {destinationAddress}:{uri.Port}.");
+                    error = "ОС не вернула локальный endpoint.";
+                    return false;
                 }
+
+                sourceAddress = localEndPoint.Address;
+                return true;
             }
             catch (Exception ex) when (ex is SocketException or InvalidOperationException)
             {
-                context.SetVariable("SelfTest.RouteError", ex.Message);
-                _logger.Warning($"[WARN] Selftest route diagnostics failed: {ex.Message}");
+                error = ex.Message;
+                return false;
             }
         }
 
@@ -426,11 +564,13 @@ namespace TestBuilder.Domain.Steps
         private async Task<SelfTestFetchResult> WaitForSelfTestXmlAsync(
             string url,
             TimeSpan timeout,
+            TestContext context,
             CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
             var attempts = 0;
             var lastError = "Selftest page was not requested.";
+            string? lastRouteError = null;
             var candidateUrls = BuildSelfTestUrlCandidates(url);
             HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
 
@@ -442,6 +582,35 @@ namespace TestBuilder.Domain.Steps
                 if (remaining <= TimeSpan.Zero)
                 {
                     break;
+                }
+
+                if (!IsDirectDutRouteReady(url, context, out var routeError))
+                {
+                    lastError = routeError;
+                    if (!string.Equals(lastRouteError, routeError, StringComparison.Ordinal))
+                    {
+                        _logger.Warning($"[WARN] {routeError}");
+                        lastRouteError = routeError;
+                    }
+
+                    var routeDelay = GetRetryDelay(remaining);
+                    if (routeDelay <= TimeSpan.Zero)
+                    {
+                        break;
+                    }
+
+                    _logger.Info($"Selftest waits for DUT route; next check in {(int)routeDelay.TotalMilliseconds} ms.");
+                    await Task.Delay(routeDelay, cancellationToken);
+                    continue;
+                }
+
+                if (lastRouteError != null)
+                {
+                    _logger.Info(
+                        $"[OK] Selftest direct DUT route is ready: " +
+                        $"{context.GetVariable<string>("SelfTest.RouteSourceAddress")} -> " +
+                        $"{context.GetVariable<string>("SelfTest.RouteDestinationAddress")}.");
+                    lastRouteError = null;
                 }
 
                 foreach (var candidateUrl in candidateUrls)
@@ -477,7 +646,9 @@ namespace TestBuilder.Domain.Steps
                         return new SelfTestFetchResult(lastResult, raw, attempts, stopwatch.Elapsed, string.Empty);
                     }
 
-                    _logger.Warning($"Selftest page is not ready yet (attempt {attempts}, url {candidateUrl}): {lastError}");
+                    _logger.Warning(
+                        $"Selftest page is not ready yet (attempt {attempts}, " +
+                        $"url {SanitizeUrlForLog(candidateUrl)}): {lastError}");
                 }
 
                 var delay = GetRetryDelay(timeout - stopwatch.Elapsed);
@@ -491,7 +662,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             var totalError = attempts == 0
-                ? $"Selftest timeout: {(int)timeout.TotalMilliseconds} ms."
+                ? $"{lastError} Elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms."
                 : $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.";
 
             return new SelfTestFetchResult(lastResult, string.Empty, attempts, stopwatch.Elapsed, totalError);
@@ -664,7 +835,7 @@ namespace TestBuilder.Domain.Steps
                 : singleLine.Substring(0, MaxLoggedBrowserErrorLength) + "...";
         }
 
-        private static async Task<HttpRequestResult> GetPageWithBrowserAsync(
+        private async Task<HttpRequestResult> GetPageWithBrowserAsync(
             string browserPath,
             string url,
             TimeSpan timeout,
@@ -715,14 +886,9 @@ namespace TestBuilder.Domain.Steps
                     GetRemainingTimeout(timeout, stopwatch.Elapsed),
                     timeoutCts.Token).ConfigureAwait(false);
 
-                var settleDelay = GetBrowserSettleDelay(GetRemainingTimeout(timeout, stopwatch.Elapsed));
-                if (settleDelay > TimeSpan.Zero)
-                {
-                    await Task.Delay(settleDelay, timeoutCts.Token).ConfigureAwait(false);
-                }
-
                 var pageSource = await ReadPageSourceWithDevToolsAsync(
                     webSocketUrl,
+                    url,
                     timeoutCts.Token).ConfigureAwait(false);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
@@ -758,17 +924,6 @@ namespace TestBuilder.Domain.Steps
             return remaining <= TimeSpan.Zero
                 ? TimeSpan.FromMilliseconds(1)
                 : remaining;
-        }
-
-        private static TimeSpan GetBrowserSettleDelay(TimeSpan remaining)
-        {
-            var remainingMs = (int)remaining.TotalMilliseconds;
-            if (remainingMs <= 500)
-            {
-                return TimeSpan.Zero;
-            }
-
-            return TimeSpan.FromMilliseconds(Math.Min(BrowserDomSettleDelayMs, remainingMs - 500));
         }
 
         private static int GetAvailableTcpPort()
@@ -857,14 +1012,149 @@ namespace TestBuilder.Domain.Steps
             return false;
         }
 
-        private static async Task<string> ReadPageSourceWithDevToolsAsync(
+        private async Task<string> ReadPageSourceWithDevToolsAsync(
             string webSocketUrl,
+            string pageUrl,
             CancellationToken cancellationToken)
         {
             using var socket = new ClientWebSocket();
-            await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+            await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken).ConfigureAwait(false);
+
+            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
 
             var commandId = 1;
+            var pageSource = await ReadOuterHtmlAsync(
+                socket,
+                commandId++,
+                cancellationToken).ConfigureAwait(false);
+
+            if (TryGetLuciCredentials(pageUrl, out var username, out var password) &&
+                LooksLikeLuciLoginPage(pageSource))
+            {
+                return await SubmitLuciLoginAndReadPageAsync(
+                    socket,
+                    pageSource,
+                    username,
+                    password,
+                    commandId,
+                    BrowserDomSettleDelayMs,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(BrowserDomSettleDelayMs),
+                cancellationToken).ConfigureAwait(false);
+
+            pageSource = await ReadOuterHtmlAsync(
+                socket,
+                commandId++,
+                cancellationToken).ConfigureAwait(false);
+
+            if (TryGetLuciCredentials(pageUrl, out username, out password) &&
+                LooksLikeLuciLoginPage(pageSource))
+            {
+                return await SubmitLuciLoginAndReadPageAsync(
+                    socket,
+                    pageSource,
+                    username,
+                    password,
+                    commandId,
+                    BrowserLateLoginSettleDelayMs,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            return pageSource;
+        }
+
+        private async Task<string> SubmitLuciLoginAndReadPageAsync(
+            ClientWebSocket socket,
+            string loginPageSource,
+            string username,
+            string password,
+            int commandId,
+            int settleDelayMs,
+            CancellationToken cancellationToken)
+        {
+            _logger.Info("[INFO] LuCI login page detected; submitting credentials from Selftest URL.");
+
+            if (!await SubmitLuciLoginFormAsync(
+                    socket,
+                    commandId++,
+                    username,
+                    password,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                _logger.Warning("[WARN] LuCI login form was detected but could not be submitted.");
+                return loginPageSource;
+            }
+
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(settleDelayMs),
+                cancellationToken).ConfigureAwait(false);
+
+            var authenticatedPageSource = await ReadOuterHtmlAsync(
+                socket,
+                commandId,
+                cancellationToken).ConfigureAwait(false);
+
+            if (LooksLikeLuciLoginPage(authenticatedPageSource))
+            {
+                _logger.Warning(
+                    "[WARN] LuCI authentication returned the login page again. Check username/password and letter case.");
+            }
+
+            return authenticatedPageSource;
+        }
+
+        private static async Task<bool> SubmitLuciLoginFormAsync(
+            ClientWebSocket socket,
+            int commandId,
+            string username,
+            string password,
+            CancellationToken cancellationToken)
+        {
+            var usernameLiteral = JsonSerializer.Serialize(username);
+            var passwordLiteral = JsonSerializer.Serialize(password);
+            var expression =
+                "(() => {" +
+                "const userInput = document.querySelector('input[name=\"luci_username\"]');" +
+                "const passwordInput = document.querySelector('input[name=\"luci_password\"]');" +
+                "const form = userInput?.form || passwordInput?.form || document.querySelector('form');" +
+                "if (!userInput || !passwordInput || !form) return false;" +
+                $"userInput.value = {usernameLiteral};" +
+                $"passwordInput.value = {passwordLiteral};" +
+                "setTimeout(() => form.submit(), 0);" +
+                "return true;" +
+                "})()";
+
+            await SendDevToolsCommandAsync(
+                socket,
+                commandId,
+                "Runtime.evaluate",
+                new Dictionary<string, object>
+                {
+                    ["expression"] = expression,
+                    ["returnByValue"] = true
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            var response = await ReceiveDevToolsResponseAsync(
+                socket,
+                commandId,
+                cancellationToken).ConfigureAwait(false);
+            using var document = JsonDocument.Parse(response);
+
+            return document.RootElement.TryGetProperty("result", out var result) &&
+                   result.TryGetProperty("result", out var runtimeResult) &&
+                   runtimeResult.TryGetProperty("value", out var value) &&
+                   value.ValueKind == JsonValueKind.True;
+        }
+
+        private static async Task<string> ReadOuterHtmlAsync(
+            ClientWebSocket socket,
+            int commandId,
+            CancellationToken cancellationToken)
+        {
             await SendDevToolsCommandAsync(
                 socket,
                 commandId,
@@ -874,9 +1164,12 @@ namespace TestBuilder.Domain.Steps
                     ["expression"] = "document.documentElement.outerHTML",
                     ["returnByValue"] = true
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
-            var response = await ReceiveDevToolsResponseAsync(socket, commandId, cancellationToken);
+            var response = await ReceiveDevToolsResponseAsync(
+                socket,
+                commandId,
+                cancellationToken).ConfigureAwait(false);
             using var document = JsonDocument.Parse(response);
             var root = document.RootElement;
 
@@ -893,6 +1186,84 @@ namespace TestBuilder.Domain.Steps
             }
 
             return value.GetString() ?? string.Empty;
+        }
+
+        internal static bool LooksLikeLuciLoginPage(string pageSource)
+        {
+            if (string.IsNullOrWhiteSpace(pageSource))
+            {
+                return false;
+            }
+
+            return Regex.IsMatch(
+                       pageSource,
+                       "name\\s*=\\s*['\"]luci_username['\"]",
+                       RegexOptions.IgnoreCase) &&
+                   Regex.IsMatch(
+                       pageSource,
+                       "name\\s*=\\s*['\"]luci_password['\"]",
+                       RegexOptions.IgnoreCase);
+        }
+
+        internal static bool TryGetLuciCredentials(
+            string url,
+            out string username,
+            out string password)
+        {
+            username = string.Empty;
+            password = string.Empty;
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            string? foundUsername = null;
+            string? foundPassword = null;
+
+            foreach (var part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var separator = part.IndexOf('=');
+                var rawName = separator >= 0 ? part[..separator] : part;
+                var rawValue = separator >= 0 ? part[(separator + 1)..] : string.Empty;
+                var name = DecodeQueryValue(rawName);
+                var value = DecodeQueryValue(rawValue);
+
+                if (string.Equals(name, "luci_username", StringComparison.OrdinalIgnoreCase))
+                {
+                    foundUsername = value;
+                }
+                else if (string.Equals(name, "luci_password", StringComparison.OrdinalIgnoreCase))
+                {
+                    foundPassword = value;
+                }
+            }
+
+            if (foundUsername == null || foundPassword == null)
+            {
+                return false;
+            }
+
+            username = foundUsername;
+            password = foundPassword;
+            return true;
+        }
+
+        private static string DecodeQueryValue(string value) =>
+            Uri.UnescapeDataString(value.Replace('+', ' '));
+
+        internal static string SanitizeUrlForLog(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(
+                url,
+                @"([?&](?:luci_username|luci_password)=)[^&#]*",
+                "$1***",
+                RegexOptions.IgnoreCase);
         }
 
         private static async Task SendDevToolsCommandAsync(
