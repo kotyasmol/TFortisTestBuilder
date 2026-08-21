@@ -10,6 +10,19 @@ namespace TestBuilder.Tests.StepTests;
 public class SelfTestCheckStepTests
 {
     [Fact]
+    public void TryGetLuciCredentials_ReadsLoginPostFieldsFromSelftestUrl()
+    {
+        var found = SelfTestCheckStep.TryGetLuciCredentials(
+            "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=p%40ss%2Bword",
+            out var username,
+            out var password);
+
+        Assert.True(found);
+        Assert.Equal("admin", username);
+        Assert.Equal("p@ss+word", password);
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_AndSavesFields_WhenRulesPass()
     {
         var service = new QueueHttpRequestService(

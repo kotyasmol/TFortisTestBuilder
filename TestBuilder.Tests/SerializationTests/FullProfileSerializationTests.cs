@@ -45,13 +45,13 @@ public class FullProfileSerializationTests
         Assert.Equal(networkNode.AdaptersText, startupNetworkNode.AdaptersText);
         Assert.Contains("MAC=5C628B243F4C;192.168.0.3;24", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("MAC=5C628B243F0F;192.168.0.2;24", networkNode.AdaptersText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
+        Assert.DoesNotContain(
             startupSubtest.BodyGraph.Connections,
-            connection => connection.Source.Parent is DelayNodeViewModel &&
+            connection => ReferenceEquals(connection.Source.Parent, startupNetworkNode) ||
                           ReferenceEquals(connection.Target.Parent, startupNetworkNode));
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, startupNetworkNode) &&
+            connection => connection.Source.Parent is DelayNodeViewModel &&
                           connection.Target.Parent is ClearArpCacheNodeViewModel);
 
         var dataTestNode = dataTestSubtest.BodyGraph.Nodes
