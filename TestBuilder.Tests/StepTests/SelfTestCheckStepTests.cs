@@ -251,6 +251,11 @@ public class SelfTestCheckStepTests
         Assert.Contains(logger.Messages, message => message.Contains("Selftest check init_ok", StringComparison.Ordinal));
         Assert.Contains(logger.Messages, message => message.Contains("expected 1..1", StringComparison.Ordinal));
         Assert.Contains(logger.Messages, message => message.Contains("actual 0", StringComparison.Ordinal));
+        Assert.True(context.GetVariable<bool>("SelfTest.DirectConnection"));
+        Assert.Equal("192.168.0.1", context.GetVariable<string>("SelfTest.RouteDestinationAddress"));
+        Assert.Contains(
+            logger.Messages,
+            message => message.Contains("system proxy is disabled", StringComparison.Ordinal));
     }
 
     private static SelfTestCheckStep CreateStep(

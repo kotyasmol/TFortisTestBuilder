@@ -25,8 +25,11 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 1. Проверяет, что URL не пустой.
 2. Проверяет, что URL абсолютный и схема `http` или `https`.
 3. Создает linked timeout token.
-4. Делает GET через `HttpClient`.
-5. Возвращает `HttpRequestResult.Success` или `Failure`.
+4. Для loopback, link-local и private IP выбирает отдельный `HttpClient` с
+   `SocketsHttpHandler.UseProxy = false`; публичные URL продолжают использовать
+   обычные системные настройки proxy.
+5. Делает GET через выбранный `HttpClient`.
+6. Возвращает `HttpRequestResult.Success` или `Failure`.
 
 `HttpRequestResult` содержит:
 
@@ -44,6 +47,8 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 - сначала пытается найти Chrome/Edge;
 - если браузер найден, запускает headless browser и читает DOM через DevTools Protocol;
+- private/local DUT открывается с `--no-proxy-server`, а выбранный ОС исходный IP
+  сохраняется как `SelfTest.RouteSourceAddress` и выводится в лог;
 - если браузер не найден или headless browser вернул ошибку/таймаут без пригодного DOM, делает обычный HTTP GET;
 - timeout headless browser внутри одной попытки ограничен, чтобы у обычного HTTP fallback оставался запас времени;
 - для LuCI/deviceinfo URL без найденного XML дополнительно пробует legacy `http://host/test.shtml`, причем `test.shtml` запрашивается обычным HTTP без headless browser;
@@ -57,6 +62,8 @@ Fallback на HTTP нужен для случаев, когда устройст
 Fallback на `test.shtml` оставлен для совместимости со старым стендом, где selftest лежал в legacy XML `<settings>`.
 Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
 загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
+Завершение временного процесса Chrome/Edge выполняется вне UI-потока с ограниченным ожиданием,
+чтобы истекший timeout selftest не делал окно Avalonia неотзывчивым.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 Проверка `ValidationRules` пишет в лог отдельные строки по каждому параметру и сохраняет
 `SelfTest.CheckedRuleCount`, `SelfTest.FailedRuleCount`, `SelfTest.ValidationSummary`.

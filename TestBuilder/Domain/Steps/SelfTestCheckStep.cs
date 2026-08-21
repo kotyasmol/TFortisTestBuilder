@@ -43,6 +43,7 @@ namespace TestBuilder.Domain.Steps
         private const int BrowserDomSettleDelayMs = 10000;
         private const int MaxBrowserProcessTimeoutMs = 15000;
         private const int MinHttpFallbackTimeoutMs = 3000;
+        private const int BrowserCleanupTimeoutMs = 2000;
         private const int MaxLoggedBrowserErrorLength = 300;
         private const int MaxExtractionCandidates = 64;
 
@@ -110,6 +111,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
+            SaveNetworkDiagnostics(context);
 
             var fetch = await WaitForSelfTestXmlAsync(
                 _url,
@@ -182,6 +184,56 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Warning($"[ERROR] Selftest failed: {error}");
             return StepResult.False;
+        }
+
+        private void SaveNetworkDiagnostics(TestContext context)
+        {
+            context.SetVariable("SelfTest.DirectConnection", false);
+            context.SetVariable("SelfTest.RouteSourceAddress", string.Empty);
+            context.SetVariable("SelfTest.RouteDestinationAddress", string.Empty);
+            context.SetVariable("SelfTest.RouteError", string.Empty);
+
+            if (!Uri.TryCreate(_url, UriKind.Absolute, out var uri))
+            {
+                return;
+            }
+
+            var directConnection = HttpRequestService.ShouldBypassProxy(uri);
+            context.SetVariable("SelfTest.DirectConnection", directConnection);
+
+            if (directConnection)
+            {
+                _logger.Info("[INFO] Selftest local DUT request: system proxy is disabled.");
+            }
+
+            if (!IPAddress.TryParse(uri.Host, out var destinationAddress))
+            {
+                return;
+            }
+
+            context.SetVariable("SelfTest.RouteDestinationAddress", destinationAddress.ToString());
+
+            try
+            {
+                using var socket = new Socket(
+                    destinationAddress.AddressFamily,
+                    SocketType.Dgram,
+                    ProtocolType.Udp);
+                socket.Connect(new IPEndPoint(destinationAddress, uri.Port));
+
+                if (socket.LocalEndPoint is IPEndPoint localEndPoint)
+                {
+                    var sourceAddress = localEndPoint.Address.ToString();
+                    context.SetVariable("SelfTest.RouteSourceAddress", sourceAddress);
+                    _logger.Info(
+                        $"[INFO] Selftest route selected by OS: {sourceAddress} -> {destinationAddress}:{uri.Port}.");
+                }
+            }
+            catch (Exception ex) when (ex is SocketException or InvalidOperationException)
+            {
+                context.SetVariable("SelfTest.RouteError", ex.Message);
+                _logger.Warning($"[WARN] Selftest route diagnostics failed: {ex.Message}");
+            }
         }
 
         private static void SetError(TestContext context, string error)
@@ -644,6 +696,13 @@ namespace TestBuilder.Domain.Steps
                 process.StartInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
                 process.StartInfo.ArgumentList.Add("--remote-allow-origins=*");
                 process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
+
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                    HttpRequestService.ShouldBypassProxy(uri))
+                {
+                    process.StartInfo.ArgumentList.Add("--no-proxy-server");
+                }
+
                 process.StartInfo.ArgumentList.Add(url);
 
                 process.Start();
@@ -654,15 +713,17 @@ namespace TestBuilder.Domain.Steps
                 var webSocketUrl = await WaitForPageWebSocketUrlAsync(
                     debuggingPort,
                     GetRemainingTimeout(timeout, stopwatch.Elapsed),
-                    timeoutCts.Token);
+                    timeoutCts.Token).ConfigureAwait(false);
 
                 var settleDelay = GetBrowserSettleDelay(GetRemainingTimeout(timeout, stopwatch.Elapsed));
                 if (settleDelay > TimeSpan.Zero)
                 {
-                    await Task.Delay(settleDelay, timeoutCts.Token);
+                    await Task.Delay(settleDelay, timeoutCts.Token).ConfigureAwait(false);
                 }
 
-                var pageSource = await ReadPageSourceWithDevToolsAsync(webSocketUrl, timeoutCts.Token);
+                var pageSource = await ReadPageSourceWithDevToolsAsync(
+                    webSocketUrl,
+                    timeoutCts.Token).ConfigureAwait(false);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -687,13 +748,7 @@ namespace TestBuilder.Domain.Steps
             {
                 // Chrome is only a transient DOM reader for this one attempt.
                 // Keep the extracted XML in TestContext, not in browser state or files.
-                if (process != null)
-                {
-                    TryKill(process);
-                    process.Dispose();
-                }
-
-                TryDeleteDirectory(userDataDir);
+                await CleanupBrowserResourcesAsync(process, userDataDir).ConfigureAwait(false);
             }
         }
 
@@ -1140,6 +1195,41 @@ namespace TestBuilder.Domain.Steps
                 : kind.ToLowerInvariant();
 
             yield return $"poe_{side}_{kind}[{Math.Max(0, number - 1)}]";
+        }
+
+        private static async Task CleanupBrowserResourcesAsync(
+            Process? process,
+            string userDataDir)
+        {
+            var cleanupTask = Task.Run(() =>
+            {
+                if (process != null)
+                {
+                    TryKill(process);
+
+                    try
+                    {
+                        process.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                TryDeleteDirectory(userDataDir);
+            });
+
+            try
+            {
+                await cleanupTask
+                    .WaitAsync(TimeSpan.FromMilliseconds(BrowserCleanupTimeoutMs))
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                // Do not block the test runner or Avalonia UI while Windows/Chrome
+                // finishes terminating the transient browser process tree.
+            }
         }
 
         private static void TryKill(Process process)
