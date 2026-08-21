@@ -42,21 +42,22 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 `SelfTestCheckStep` имеет особую логику получения страницы:
 
-- находит Chrome/Edge и запускает ровно один headless-процесс с исходным URL;
-- ждет завершения загрузки по `document.readyState == complete`;
-- после загрузки выдерживает полные 10 секунд;
-- один раз читает DOM через DevTools Protocol как аналог Selenium `driver.PageSource`;
-- извлекает из этого снимка `<selftest>...</selftest>` или совместимый
-  `<settings>...</settings>` с `default_mac`.
+- до общего timeout повторяет браузерные попытки по одному исходному URL;
+- в каждой попытке запускает один headless-процесс Chrome/Edge;
+- ждет завершения загрузки по `document.readyState == complete`, затем полные 10 секунд;
+- один раз читает DOM через DevTools Protocol как аналог Selenium `driver.PageSource`
+  и закрывает браузер этой попытки;
+- если снимок не содержит `<selftest>...</selftest>` или совместимый
+  `<settings>...</settings>` с `default_mac`, ждет `PollIntervalMs` и пробует снова.
 
-Алгоритм намеренно повторяет старую отдельную Selenium-утилиту: один `GoToUrl`,
+Каждая попытка намеренно повторяет старую отдельную Selenium-утилиту: один `GoToUrl`,
 `Thread.Sleep(10000)`, один `PageSource`. В рабочем браузерном режиме нет POST-логина,
-обычного HTTP fallback, повторных запусков Chrome и запроса `/test.shtml`.
-Старые сохраненные профили с `TimeoutMs` до `30000` для DUT selftest автоматически получают
-эффективный таймаут `160000`, как в старом стенде.
+обычного HTTP fallback и запроса `/test.shtml`; повторяется только эта целая попытка.
+Старые сохраненные профили с `TimeoutMs` до `240000` для DUT selftest автоматически получают
+эффективный таймаут `300000`: коммутатор может запускаться до четырех минут.
 Для headless Chrome/Edge используется внутреннее чтение DOM через DevTools Protocol после ожидания
 загрузки страницы, по смыслу аналогично старому Selenium `driver.PageSource`, но без внешней утилиты.
-`PollIntervalMs` оставлен в модели и JSON только для совместимости и в однопроходном режиме не используется.
+`PollIntervalMs` задает паузу между полными браузерными попытками.
 Извлечение декодирует HTML-, URL- и JS-экранирования, потому что нужный XML может лежать в скрытом DOM/скриптах LuCI.
 Проверка `ValidationRules` пишет в лог отдельные строки по каждому параметру и сохраняет
 `SelfTest.CheckedRuleCount`, `SelfTest.FailedRuleCount`, `SelfTest.ValidationSummary`.

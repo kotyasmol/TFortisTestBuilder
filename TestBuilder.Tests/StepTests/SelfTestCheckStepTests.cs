@@ -56,7 +56,7 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
-    public async Task SelfTestCheckStep_UsesOnlyOnePageSourceSnapshot()
+    public async Task SelfTestCheckStep_RetriesSameUrlUntilSelfTestAppears()
     {
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(
@@ -78,14 +78,15 @@ public class SelfTestCheckStepTests
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-        Assert.Equal(StepResult.False, result);
-        Assert.False(context.GetVariable<bool>("SelfTest.Ok"));
-        Assert.Equal(1, context.GetVariable<int>("SelfTest.Attempts"));
-        Assert.Equal(1, service.Calls);
+        Assert.Equal(StepResult.True, result);
+        Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Equal(2, context.GetVariable<int>("SelfTest.Attempts"));
+        Assert.Equal(2, service.Calls);
+        Assert.All(service.RequestedUrls, requestedUrl => Assert.Equal("http://192.168.0.1/selftest.xml", requestedUrl));
     }
 
     [Fact]
-    public async Task SelfTestCheckStep_DoesNotTryLegacyTestShtml_WhenLuciPageHasNoXml()
+    public async Task SelfTestCheckStep_RetriesOriginalUrlWithoutTryingLegacyTestShtml()
     {
         var service = new QueueHttpRequestService(
             HttpRequestResult.Success(
@@ -97,15 +98,16 @@ public class SelfTestCheckStepTests
                 "<!DOCTYPE settings><settings><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></settings>",
                 TimeSpan.FromMilliseconds(10)));
 
-        var step = CreateStep(service, "init_ok=1..1");
+        var step = CreateStep(service, "init_ok=1..1", pollIntervalMs: 10);
         var context = new TestContext(new RegisterState());
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-        Assert.Equal(StepResult.False, result);
-        Assert.False(context.GetVariable<bool>("SelfTest.Ok"));
-        Assert.Equal(1, service.Calls);
+        Assert.Equal(StepResult.True, result);
+        Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Equal(2, service.Calls);
         Assert.Equal(SelfTestCheckStep.DefaultUrl, service.RequestedUrls[0]);
+        Assert.Equal(SelfTestCheckStep.DefaultUrl, service.RequestedUrls[1]);
     }
 
     [Fact]

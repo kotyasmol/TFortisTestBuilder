@@ -26,7 +26,7 @@ namespace TestBuilder.Domain.Steps
         public const string DefaultUrl =
             "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
 
-        public const int DefaultTimeoutMs = 160000;
+        public const int DefaultTimeoutMs = 300000;
         public const int DefaultPollIntervalMs = 5000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
@@ -37,8 +37,9 @@ namespace TestBuilder.Domain.Steps
             "boot_vers=0..65535";
 
         private const int MinimumPollIntervalMs = 100;
-        private const int LegacyShortTimeoutMs = 30000;
-        private const int MinimumDeviceReadyTimeoutMs = 160000;
+        private const int LegacyShortTimeoutMs = 240000;
+        private const int MinimumDeviceReadyTimeoutMs = 300000;
+        private const int MaxPageAttemptTimeoutMs = 30000;
         private const int BrowserDomSettleDelayMs = 10000;
         private const int MaxExtractionCandidates = 64;
 
@@ -373,52 +374,71 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
-            const int attempts = 1;
+            var attempts = 0;
+            var lastError = "Selftest page was not requested.";
+            HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
 
-            cancellationToken.ThrowIfCancellationRequested();
-            var result = await GetPageAsync(url, timeout, cancellationToken);
-
-            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+            while (stopwatch.Elapsed < timeout)
             {
-                return new SelfTestFetchResult(
-                    result,
-                    string.Empty,
-                    attempts,
-                    stopwatch.Elapsed,
-                    result.ErrorMessage);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var remaining = timeout - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                attempts++;
+                lastResult = await GetPageAsync(
+                    url,
+                    GetAttemptTimeout(remaining),
+                    cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
+                {
+                    lastError = lastResult.ErrorMessage;
+                }
+                else if (!lastResult.IsSuccessStatusCode && lastResult.StatusCode != 0)
+                {
+                    lastError = $"HTTP {lastResult.StatusCode}.";
+                }
+                else if (!TryExtractSelfTestXml(lastResult.Body, out var raw))
+                {
+                    lastError = "Response does not contain <selftest>...</selftest> or <settings>...</settings>.";
+                }
+                else if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
+                {
+                    lastError = "Selftest XML does not contain default_mac.";
+                }
+                else
+                {
+                    return new SelfTestFetchResult(
+                        lastResult,
+                        raw,
+                        attempts,
+                        stopwatch.Elapsed,
+                        string.Empty);
+                }
+
+                _logger.Warning(
+                    $"Selftest page is not ready yet (attempt {attempts}, url {url}): {lastError}");
+
+                var delay = GetRetryDelay(timeout - stopwatch.Elapsed);
+                if (delay <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                _logger.Info($"Selftest next browser attempt in {(int)delay.TotalMilliseconds} ms.");
+                await Task.Delay(delay, cancellationToken);
             }
 
-            if (!result.IsSuccessStatusCode && result.StatusCode != 0)
-            {
-                return new SelfTestFetchResult(
-                    result,
-                    string.Empty,
-                    attempts,
-                    stopwatch.Elapsed,
-                    $"HTTP {result.StatusCode}.");
-            }
-
-            if (!TryExtractSelfTestXml(result.Body, out var raw))
-            {
-                return new SelfTestFetchResult(
-                    result,
-                    string.Empty,
-                    attempts,
-                    stopwatch.Elapsed,
-                    "Response does not contain <selftest>...</selftest> or <settings>...</settings>.");
-            }
-
-            if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
-            {
-                return new SelfTestFetchResult(
-                    result,
-                    string.Empty,
-                    attempts,
-                    stopwatch.Elapsed,
-                    "Selftest XML does not contain default_mac.");
-            }
-
-            return new SelfTestFetchResult(result, raw, attempts, stopwatch.Elapsed, string.Empty);
+            return new SelfTestFetchResult(
+                lastResult,
+                string.Empty,
+                attempts,
+                stopwatch.Elapsed,
+                $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.");
         }
 
         private static bool IsDeviceSelfTestUrl(string url)
@@ -431,6 +451,23 @@ namespace TestBuilder.Domain.Steps
             return uri.AbsolutePath.EndsWith("/test.shtml", StringComparison.OrdinalIgnoreCase) ||
                    uri.AbsolutePath.Contains("/cgi-bin/luci", StringComparison.OrdinalIgnoreCase) ||
                    uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static TimeSpan GetAttemptTimeout(TimeSpan remaining)
+        {
+            var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
+            return TimeSpan.FromMilliseconds(Math.Min(remainingMs, MaxPageAttemptTimeoutMs));
+        }
+
+        private TimeSpan GetRetryDelay(TimeSpan remaining)
+        {
+            var remainingMs = (int)remaining.TotalMilliseconds;
+            if (remainingMs <= 0)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return TimeSpan.FromMilliseconds(Math.Min(_pollIntervalMs, remainingMs));
         }
 
         private async Task<HttpRequestResult> GetPageAsync(
