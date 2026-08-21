@@ -207,6 +207,7 @@ namespace TestBuilder.Services
                         n.TargetBandwidthMbps = d.TargetBandwidthMbps;
                         n.DurationMs = d.DurationMs;
                         n.WarmupMs = d.WarmupMs;
+                        n.InterPairDelayMs = d.InterPairDelayMs;
                         n.AllowedLossPercent = d.AllowedLossPercent;
                         n.PortsText = d.PortsText;
                         n.OutputVariableName = d.OutputVariableName;
@@ -476,6 +477,7 @@ namespace TestBuilder.Services
                         TargetBandwidthMbps = n.TargetBandwidthMbps ?? 100,
                         DurationMs = n.DurationMs ?? 5000,
                         WarmupMs = n.WarmupMs ?? 500,
+                        InterPairDelayMs = n.InterPairDelayMs ?? 5000,
                         AllowedLossPercent = n.AllowedLossPercent ?? 1.0,
                         PortsText = n.PortsText ?? PortsToText(n.Ports),
                         OutputVariableName = n.OutputVariableName ?? "DataTest",

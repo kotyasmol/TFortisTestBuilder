@@ -299,6 +299,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? WarmupMs { get; set; }
 
+        [JsonPropertyName("interPairDelayMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? InterPairDelayMs { get; set; }
+
         [JsonPropertyName("allowedLossPercent")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? AllowedLossPercent { get; set; }

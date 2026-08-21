@@ -26,6 +26,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int targetBandwidthMbps = 100;
         [ObservableProperty] private int durationMs = 5000;
         [ObservableProperty] private int warmupMs = 500;
+        [ObservableProperty] private int interPairDelayMs = 5000;
         [ObservableProperty] private double allowedLossPercent = 1.0;
         [ObservableProperty] private string portsText = DefaultPortsText;
         [ObservableProperty] private string outputVariableName = "DataTest";
@@ -57,6 +58,7 @@ namespace TestBuilder.ViewModels.StepVM
                 TargetBandwidthMbps,
                 DurationMs,
                 WarmupMs,
+                InterPairDelayMs,
                 AllowedLossPercent,
                 ParsePorts(),
                 OutputVariableName,
@@ -72,6 +74,7 @@ namespace TestBuilder.ViewModels.StepVM
             TargetBandwidthMbps = TargetBandwidthMbps,
             DurationMs = DurationMs,
             WarmupMs = WarmupMs,
+            InterPairDelayMs = InterPairDelayMs,
             AllowedLossPercent = AllowedLossPercent,
             PortsText = PortsText,
             OutputVariableName = OutputVariableName,

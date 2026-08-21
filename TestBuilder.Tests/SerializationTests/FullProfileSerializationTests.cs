@@ -41,6 +41,7 @@ public class FullProfileSerializationTests
         var dataTestNode = dataTestSubtest.BodyGraph.Nodes
             .OfType<RunDataTestNodeViewModel>()
             .Single();
+        Assert.Equal(5000, dataTestNode.InterPairDelayMs);
         var portLines = dataTestNode.PortsText.Split(
             new[] { '\r', '\n' },
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

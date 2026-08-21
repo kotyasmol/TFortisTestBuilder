@@ -18,6 +18,7 @@ namespace TestBuilder.Domain.Steps
         private const int IpHeaderLength = 20;
         private const int UdpHeaderLength = 8;
         private const int MinEthernetFrameLength = 64;
+        private const int MaxPacketsPerBurst = 512;
 
         private readonly ILogger _logger;
         private readonly string _mode;
@@ -28,6 +29,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _targetBandwidthMbps;
         private readonly int _durationMs;
         private readonly int _warmupMs;
+        private readonly int _interPairDelayMs;
         private readonly double _allowedLossPercent;
         private readonly IReadOnlyList<DataTestPortConfig> _ports;
         private readonly string _outputVariableName;
@@ -43,6 +45,7 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             int durationMs,
             int warmupMs,
+            int interPairDelayMs,
             double allowedLossPercent,
             IEnumerable<DataTestPortConfig> ports,
             string outputVariableName,
@@ -57,6 +60,7 @@ namespace TestBuilder.Domain.Steps
             _targetBandwidthMbps = Math.Clamp(targetBandwidthMbps, 1, 1000);
             _durationMs = Math.Max(100, durationMs);
             _warmupMs = Math.Max(0, warmupMs);
+            _interPairDelayMs = Math.Max(0, interPairDelayMs);
             _allowedLossPercent = Math.Clamp(allowedLossPercent, 0.0, 100.0);
             _ports = ports.ToList();
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "DataTest" : outputVariableName.Trim();
@@ -75,6 +79,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{_outputVariableName}.TargetBandwidthMbps", _targetBandwidthMbps);
             context.SetVariable($"{_outputVariableName}.DurationMs", _durationMs);
             context.SetVariable($"{_outputVariableName}.WarmupMs", _warmupMs);
+            context.SetVariable($"{_outputVariableName}.InterPairDelayMs", _interPairDelayMs);
             context.SetVariable($"{_outputVariableName}.AllowedLossPercent", _allowedLossPercent);
 
             if (_ports.Count == 0)
@@ -106,7 +111,9 @@ namespace TestBuilder.Domain.Steps
                 return Finish(context, false, "Npcap/WinPcap не вернул ни одного сетевого адаптера.");
             }
 
-            _logger.Info($"[ШАГ] DataTest: mode {_mode}, pairs {_ports.Count}, target {_targetBandwidthMbps} Mbps, duration {_durationMs} ms, packet {_packetSizeBytes} bytes.");
+            _logger.Info(
+                $"[ШАГ] DataTest: mode {_mode}, pairs {_ports.Count} sequentially, target {_targetBandwidthMbps} Mbps, " +
+                $"duration {_durationMs} ms, warmup {_warmupMs} ms, pause {_interPairDelayMs} ms, packet {_packetSizeBytes} bytes.");
 
             var allPassed = true;
             var errors = new List<string>();
@@ -116,13 +123,25 @@ namespace TestBuilder.Domain.Steps
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var port = _ports[i];
-                var result = await RunPortPairAsync(i, port, devices, cancellationToken);
+                _logger.Info($"DataTest {port.Name} [{i + 1}/{_ports.Count}]: запуск отдельной пары.");
+
+                // SharpPcap injects every frame synchronously. Running the pair on a worker
+                // keeps the Avalonia UI responsive even at gigabit packet rates.
+                var result = await Task.Run(
+                    () => RunPortPairAsync(i, port, devices, cancellationToken),
+                    cancellationToken);
                 WritePortResult(context, i, port, result);
 
                 if (!result.Passed)
                 {
                     allPassed = false;
                     errors.Add($"{port.Name}: {result.Error}");
+                }
+
+                if (i < _ports.Count - 1 && _interPairDelayMs > 0)
+                {
+                    _logger.Info($"DataTest: пауза {_interPairDelayMs} мс перед следующей парой.");
+                    await Task.Delay(_interPairDelayMs, cancellationToken);
                 }
             }
 
@@ -388,10 +407,19 @@ namespace TestBuilder.Domain.Steps
                     targetPackets,
                     Math.Max(1, (int)Math.Floor(elapsedTicks * packetsPerSecond / Stopwatch.Frequency) + 1));
 
-                while (sent < packetsDue)
+                var burstLimit = Math.Min(packetsDue, sent + MaxPacketsPerBurst);
+
+                while (sent < burstLimit)
                 {
                     device.SendPacket(packet, packet.Length);
                     sent++;
+                }
+
+                if (sent < packetsDue)
+                {
+                    // Do not monopolize a CPU core while catching up after a slow pcap call.
+                    await Task.Yield();
+                    continue;
                 }
 
                 if (sent >= targetPackets)

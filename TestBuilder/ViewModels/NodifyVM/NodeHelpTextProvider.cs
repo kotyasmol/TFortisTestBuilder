@@ -177,6 +177,7 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Target Mbps - целевая скорость.
                 Duration ms - длительность замера.
                 Warmup ms - прогрев перед учетом результата.
+                Pair pause ms - пауза между последовательными парами портов.
                 Allowed fail % - допустимый процент потерь/ошибок.
                 Output var - переменная для результата.
                 Ports - список проверяемых портов.

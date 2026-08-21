@@ -1427,6 +1427,10 @@
                       <TextBox Grid.Column="1" Text="{Binding WarmupMs}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Pair pause ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding InterPairDelayMs}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Allowed fail %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="12" />
                     </Grid>
