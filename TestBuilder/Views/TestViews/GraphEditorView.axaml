@@ -12,17 +12,6 @@
 
   <UserControl.Resources>
 
-    <GeometryDrawing x:Key="SmallGridGeometry"
-                     Geometry="M0,0 L0,1 0.025,1 0.025,0.025 1,0.025 1,0 Z"
-                     Brush="{DynamicResource GridLineBrush}" />
-
-    <DrawingBrush x:Key="SmallGridBrush"
-                  TileMode="Tile"
-                  DestinationRect="0 0 16 16"
-                  TransformOrigin="0,0"
-                  Transform="{Binding DpiScaledViewportTransform, ElementName=Editor}"
-                  Drawing="{StaticResource SmallGridGeometry}" />
-
     <DataTemplate x:Key="NodeHeaderHelpTemplate"
                   x:DataType="nodifyvm:NodeViewModel">
       <DockPanel LastChildFill="True"
@@ -379,7 +368,7 @@
                            PendingConnection="{Binding PendingConnection}"
                            DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}"
                            SelectedItems="{Binding SelectedNodes}"
-                           Background="{StaticResource SmallGridBrush}"
+                           Background="{DynamicResource EditorBackgroundBrush}"
                            GridCellSize="16"
                            DragDrop.AllowDrop="True">
 
