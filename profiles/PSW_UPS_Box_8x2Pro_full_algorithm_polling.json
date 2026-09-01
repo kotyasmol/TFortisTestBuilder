@@ -1534,7 +1534,7 @@
       "y": 1040,
       "color": "blue",
       "name": "11. UPS: подготовка и детекция",
-      "description": "Selftest для детекции IRP/АКБ и быстрый preflight /api/getUpsStatus=0 до снятия AC",
+      "description": "Один свежий selftest-снимок для детекции IRP, напряжения АКБ и исходного ups_rez=0",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1619,7 +1619,7 @@
           {
             "id": "7",
             "type": "Check Variable Equality",
-            "x": 3904,
+            "x": 3408,
             "y": -240,
             "color": "blue",
             "expectedValue": "0",
@@ -1630,22 +1630,9 @@
           {
             "id": "8",
             "type": "End",
-            "x": 4448,
+            "x": 3952,
             "y": -160,
             "color": "blue"
-          },
-          {
-            "id": "9",
-            "type": "Read HTTP Variable",
-            "x": 3408,
-            "y": -144,
-            "color": "blue",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/api/getUpsStatus",
-            "responseType": "Integer",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.ups_rez",
-            "failOnError": true
           }
         ],
         "connections": [
@@ -1688,12 +1675,6 @@
           {
             "sourceNodeId": "6",
             "sourceConnector": "True",
-            "targetNodeId": "9",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "9",
-            "sourceConnector": "True",
             "targetNodeId": "7",
             "targetConnector": "In"
           },
@@ -1713,7 +1694,7 @@
       "y": 1040,
       "color": "blue",
       "name": "12. UPS: переход на АКБ",
-      "description": "Отключение AC1 и ожидание ups_rez=1 до 160 секунд",
+      "description": "Отключение AC1 и нагревателей, затем 2 секунды на стабилизацию разряда",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1776,27 +1757,9 @@
             "verifyWrite": true
           },
           {
-            "id": "5",
-            "type": "Wait Variable Until",
-            "x": 2464,
-            "y": 96,
-            "color": "blue",
-            "expectedValue": "1",
-            "timeoutMs": 160000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "Integer",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "pollAction": "HttpGet",
-            "requestTimeoutMs": 5000,
-            "intervalMs": 5000,
-            "failOnTimeout": true,
-            "endpoint": "/api/getUpsStatus"
-          },
-          {
             "id": "6",
             "type": "Delay",
-            "x": 3040,
+            "x": 2464,
             "y": -64,
             "color": "blue",
             "milliseconds": 2000
@@ -1804,7 +1767,7 @@
           {
             "id": "7",
             "type": "End",
-            "x": 3376,
+            "x": 2800,
             "y": 96,
             "color": "blue"
           }
@@ -1820,12 +1783,6 @@
             "sourceNodeId": "3",
             "sourceConnector": "True",
             "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
             "targetConnector": "Вход"
           },
           {
@@ -1849,8 +1806,8 @@
           {
             "sourceNodeId": "4",
             "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "In"
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
           }
         ]
       }
@@ -1861,13 +1818,13 @@
       "x": 544,
       "y": 1408,
       "color": "blue",
-      "name": "13. UPS: измерение разряда SIMBAT24",
-      "description": "Проверка discharge voltage/current на SIMBAT24 slave 17",
+      "name": "13. UPS: подтверждение питания от АКБ",
+      "description": "Live-проверка разряда SIMBAT24 и ожидание свежего selftest ups_rez=1 до 300 секунд",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "13. UPS: измерение разряда SIMBAT24",
+        "name": "13. UPS: подтверждение питания от АКБ",
         "nodes": [
           {
             "id": "0",
@@ -1905,9 +1862,27 @@
           {
             "id": "3",
             "type": "End",
-            "x": 1460,
+            "x": 2040,
             "y": 120,
             "color": "blue"
+          },
+          {
+            "id": "4",
+            "type": "Wait Variable Until",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "1",
+            "timeoutMs": 300000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.ups_rez",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 300000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           }
         ],
         "connections": [
@@ -1926,6 +1901,12 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
@@ -1939,7 +1920,7 @@
       "y": 1520,
       "color": "blue",
       "name": "14. UPS: возврат на AC1",
-      "description": "Включение AC1 и ожидание ups_rez=0 до 160 секунд",
+      "description": "Включение AC1 и ожидание свежего selftest ups_rez=0 до 300 секунд",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1980,16 +1961,16 @@
             "y": 120,
             "color": "blue",
             "expectedValue": "0",
-            "timeoutMs": 160000,
+            "timeoutMs": 300000,
             "baseUrl": "http://192.168.0.1",
-            "responseType": "Integer",
+            "responseType": "String",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "pollAction": "HttpGet",
-            "requestTimeoutMs": 5000,
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 300000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/api/getUpsStatus"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           },
           {
             "id": "4",

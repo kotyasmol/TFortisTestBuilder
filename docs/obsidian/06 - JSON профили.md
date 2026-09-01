@@ -133,11 +133,11 @@ Deserializer также принимает часть русских и legacy-�
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
 В UPS-переходах рабочего профиля `Wait Variable Until` сохраняется как
-`pollAction: "HttpGet"`, `endpoint: "/api/getUpsStatus"`,
-`responseType: "Integer"`, request timeout `5000`, общий timeout `160000` и
-интервал `5000` мс. До переключения `ups_det` и `akb_voltage` берутся одним
-`Selftest Check`, а отдельный `Read HTTP Variable` проверяет доступность этого
-же status endpoint и свежее `Dut.ups_rez == 0`, пока AC ещё включён.
+`pollAction: "SelftestSnapshot"`, `responseType: "String"`, request и общий
+timeout `300000`, интервал `5000` мс. До переключения `ups_det`, `akb_voltage`
+и исходный `ups_rez` берутся одним `Selftest Check`. После снятия AC перед
+browser-ожиданием выполняются `liveRead`-проверки регистров SIMBAT24 `1707` и
+`1708`; отсутствующие на фактической прошивке `/api/getUps*` не вызываются.
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен

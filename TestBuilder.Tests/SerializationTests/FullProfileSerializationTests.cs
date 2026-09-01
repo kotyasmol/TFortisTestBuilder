@@ -72,6 +72,9 @@ public class FullProfileSerializationTests
         var upsBatteryTransitionSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "12. UPS: переход на АКБ");
+        var upsBatteryConfirmationSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "13. UPS: подтверждение питания от АКБ");
         var upsAcTransitionSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "14. UPS: возврат на AC1");
@@ -118,14 +121,7 @@ public class FullProfileSerializationTests
             upsPreparationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, selftestNode) &&
                           ReferenceEquals(connection.Target.Parent, irpCheckNode));
-        var statusPreflightNode = upsPreparationSubtest.BodyGraph.Nodes
-            .OfType<ReadHttpVariableNodeViewModel>()
-            .Single();
-        Assert.Equal("/api/getUpsStatus", statusPreflightNode.Endpoint);
-        Assert.Equal(HttpResponseValueType.Integer, statusPreflightNode.ResponseType);
-        Assert.Equal(5000, statusPreflightNode.TimeoutMs);
-        Assert.Equal("Dut.ups_rez", statusPreflightNode.OutputVariableName);
-        Assert.True(statusPreflightNode.FailOnError);
+        Assert.Empty(upsPreparationSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>());
         var voltageCheckNode = upsPreparationSubtest.BodyGraph.Nodes
             .OfType<CheckVariableRangeNodeViewModel>()
             .Single(node => node.VariableName == "Dut.akb_voltage");
@@ -139,25 +135,21 @@ public class FullProfileSerializationTests
         Assert.Contains(
             upsPreparationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, voltageCheckNode) &&
-                          ReferenceEquals(connection.Target.Parent, statusPreflightNode));
-        Assert.Contains(
-            upsPreparationSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, statusPreflightNode) &&
                           ReferenceEquals(connection.Target.Parent, sourceCheckNode));
 
-        var batteryWait = upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
+        var batteryWait = upsBatteryConfirmationSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
         var acWait = upsAcTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
         Assert.Equal("1", batteryWait.ExpectedValue);
         Assert.Equal("0", acWait.ExpectedValue);
 
         foreach (var wait in new[] { batteryWait, acWait })
         {
-            Assert.Equal("HttpGet", wait.PollAction);
-            Assert.Equal("/api/getUpsStatus", wait.Endpoint);
-            Assert.Equal(HttpResponseValueType.Integer, wait.ResponseType);
-            Assert.Equal(5000, wait.RequestTimeoutMs);
+            Assert.Equal("SelftestSnapshot", wait.PollAction);
+            Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.String, wait.ResponseType);
+            Assert.Equal(300000, wait.RequestTimeoutMs);
             Assert.Equal(5000, wait.IntervalMs);
-            Assert.Equal(160000, wait.TimeoutMs);
+            Assert.Equal(300000, wait.TimeoutMs);
             Assert.True(wait.FailOnTimeout);
         }
 
@@ -168,5 +160,16 @@ public class FullProfileSerializationTests
         var batteryDelay = Assert.Single(
             upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<DelayNodeViewModel>());
         Assert.Equal(2000, batteryDelay.Milliseconds);
+
+        var dischargeChecks = upsBatteryConfirmationSubtest.BodyGraph.Nodes
+            .OfType<CheckRegisterRangeNodeViewModel>()
+            .OrderBy(node => node.Address)
+            .ToArray();
+        Assert.Equal(new ushort[] { 1707, 1708 }, dischargeChecks.Select(node => node.Address));
+        Assert.All(dischargeChecks, node => Assert.True(node.LiveRead));
+        Assert.Contains(
+            upsBatteryConfirmationSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, dischargeChecks[1]) &&
+                          ReferenceEquals(connection.Target.Parent, batteryWait));
     }
 }
