@@ -1465,7 +1465,7 @@
       "type": "Subtest",
       "x": 1056,
       "y": 1040,
-      "color": "blue",
+      "color": "yellow",
       "name": "10. DataTest портов 0..9",
       "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
       "isEnabled": true,
@@ -1499,7 +1499,9 @@
             "warmupMs": 500,
             "interPairDelayMs": 5000,
             "allowedLossPercent": 1,
-            "portsText": "port0-1,192.168.0.2,192.168.0.3,1000\r\nport2-3,192.168.0.4,192.168.0.5,1000\r\nport4-5,192.168.0.6,192.168.0.7,1000\r\nport6-7,192.168.0.8,192.168.0.9,1000\r\nport8-9,192.168.0.10,192.168.0.11,1000"
+            "allowedTxDeficitPercent": 2,
+            "bidirectional": true,
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,100"
           },
           {
             "id": "2",
@@ -1600,7 +1602,7 @@
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_det",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": false
+            "failOnError": true
           },
           {
             "id": "6",
@@ -1622,7 +1624,7 @@
             "timeoutMs": 5000,
             "outputVariableName": "Dut.akb_voltage",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": false
+            "failOnError": true
           },
           {
             "id": "8",
@@ -1645,7 +1647,7 @@
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_rez",
             "baseUrl": "http://192.168.0.1",
-            "failOnError": false
+            "failOnError": true
           },
           {
             "id": "10",
@@ -1661,8 +1663,8 @@
           {
             "id": "11",
             "type": "End",
-            "x": 5140,
-            "y": 120,
+            "x": 5200,
+            "y": -16,
             "color": "blue"
           }
         ],
