@@ -211,7 +211,7 @@
     {
       "id": "2",
       "type": "Subtest",
-      "x": 1056,
+      "x": 1040,
       "y": 128,
       "color": "green",
       "name": "02. Сброс PoE-нагрузок EL60v5",
@@ -1594,10 +1594,10 @@
             "outputPrefix": "Dut"
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "Check Variable Equality",
-            "x": 2380,
-            "y": 120,
+            "x": 2400,
+            "y": -48,
             "color": "blue",
             "expectedValue": "1",
             "variableName": "Dut.ups_det",
@@ -1605,10 +1605,10 @@
             "failMessage": "UPS/IRP должен быть обнаружен"
           },
           {
-            "id": "8",
+            "id": "6",
             "type": "Check Variable Range",
-            "x": 2840,
-            "y": 120,
+            "x": 2912,
+            "y": -144,
             "color": "blue",
             "min": 12,
             "max": 27,
@@ -1617,10 +1617,10 @@
             "inclusive": true
           },
           {
-            "id": "10",
+            "id": "7",
             "type": "Check Variable Equality",
-            "x": 3300,
-            "y": 120,
+            "x": 3408,
+            "y": -240,
             "color": "blue",
             "expectedValue": "0",
             "variableName": "Dut.ups_rez",
@@ -1628,10 +1628,10 @@
             "failMessage": "Перед отключением AC устройство должно быть от сети: ups_rez=0"
           },
           {
-            "id": "11",
+            "id": "8",
             "type": "End",
-            "x": 3760,
-            "y": -16,
+            "x": 3952,
+            "y": -160,
             "color": "blue"
           }
         ],
@@ -1663,25 +1663,25 @@
           {
             "sourceNodeId": "4",
             "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
             "targetNodeId": "6",
             "targetConnector": "In"
           },
           {
             "sourceNodeId": "6",
             "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
             "targetNodeId": "8",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "8",
-            "sourceConnector": "True",
-            "targetNodeId": "10",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "10",
-            "sourceConnector": "True",
-            "targetNodeId": "11",
             "targetConnector": "Вход"
           }
         ]
@@ -1722,25 +1722,9 @@
           },
           {
             "id": "2",
-            "type": "Delay",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 500
-          },
-          {
-            "id": "3",
-            "type": "Delay",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 300
-          },
-          {
-            "id": "4",
             "type": "Write Register",
-            "x": 1920,
-            "y": 120,
+            "x": 1008,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1749,26 +1733,10 @@
             "verifyWrite": true
           },
           {
-            "id": "5",
-            "type": "Delay",
-            "x": 2380,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 500
-          },
-          {
-            "id": "6",
-            "type": "Delay",
-            "x": 2840,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 200
-          },
-          {
-            "id": "7",
+            "id": "3",
             "type": "Write Register",
-            "x": 3300,
-            "y": 120,
+            "x": 1488,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1777,11 +1745,11 @@
             "verifyWrite": true
           },
           {
-            "id": "8",
+            "id": "4",
             "type": "Write Register",
-            "x": 3760,
-            "y": 120,
-            "color": "blue",
+            "x": 1968,
+            "y": 112,
+            "color": "green",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1220,
@@ -1789,56 +1757,36 @@
             "verifyWrite": true
           },
           {
-            "id": "9",
-            "type": "Write Register",
-            "x": 4220,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "10",
-            "type": "Delay",
-            "x": 4680,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 500
-          },
-          {
-            "id": "11",
+            "id": "5",
             "type": "Wait Variable Until",
-            "x": 5140,
-            "y": 120,
+            "x": 2464,
+            "y": 96,
             "color": "blue",
             "expectedValue": "1",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
             "pollAction": "SelftestSnapshot",
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "responseType": "String",
             "requestTimeoutMs": 30000,
             "intervalMs": 5000,
-            "failOnTimeout": true
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           },
           {
-            "id": "12",
+            "id": "6",
             "type": "Delay",
-            "x": 5712,
-            "y": -48,
+            "x": 3040,
+            "y": -64,
             "color": "blue",
             "milliseconds": 2000
           },
           {
-            "id": "13",
+            "id": "7",
             "type": "End",
-            "x": 6060,
-            "y": 120,
+            "x": 3376,
+            "y": 96,
             "color": "blue"
           }
         ],
@@ -1850,32 +1798,14 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "Выход",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "3",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "5",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "6",
             "targetConnector": "Вход"
           },
@@ -1886,40 +1816,22 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "7",
+            "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "8",
+            "targetNodeId": "2",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "8",
+            "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "9",
+            "targetNodeId": "3",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "9",
+            "sourceNodeId": "4",
             "sourceConnector": "True",
-            "targetNodeId": "10",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "10",
-            "sourceConnector": "Выход",
-            "targetNodeId": "11",
+            "targetNodeId": "5",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "11",
-            "sourceConnector": "True",
-            "targetNodeId": "12",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "12",
-            "sourceConnector": "Выход",
-            "targetNodeId": "13",
-            "targetConnector": "Вход"
           }
         ]
       }
@@ -2051,14 +1963,14 @@
             "expectedValue": "0",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
             "pollAction": "SelftestSnapshot",
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "responseType": "String",
             "requestTimeoutMs": 30000,
             "intervalMs": 5000,
-            "failOnTimeout": true
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           },
           {
             "id": "4",
