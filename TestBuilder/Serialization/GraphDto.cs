@@ -143,6 +143,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? BaseUrl { get; set; }
 
+        [JsonPropertyName("responseType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ResponseType { get; set; }
+
         [JsonPropertyName("retryCount")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? RetryCount { get; set; }

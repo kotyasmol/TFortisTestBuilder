@@ -48,6 +48,7 @@ namespace TestBuilder.Services
             GetUpsStatusNodeViewModel => "Get UPS Status",
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
             GetIrpStatusNodeViewModel => "Get IRP Status",
+            ReadHttpVariableNodeViewModel => "Read HTTP Variable",
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
             CompareVariablesNodeViewModel => "Compare Variables",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
@@ -237,6 +238,15 @@ namespace TestBuilder.Services
                         n.FailOnError = irp.FailOnError;
                         break;
 
+                    case ReadHttpVariableNodeViewModel httpRead:
+                        n.BaseUrl = httpRead.BaseUrl;
+                        n.Endpoint = httpRead.Endpoint;
+                        n.ResponseType = httpRead.ResponseType.ToString();
+                        n.TimeoutMs = httpRead.TimeoutMs;
+                        n.OutputVariableName = httpRead.OutputVariableName;
+                        n.FailOnError = httpRead.FailOnError;
+                        break;
+
                     case BuildMacFromSerialNodeViewModel bm:
                         n.SerialVariableName = bm.SerialVariableName;
                         n.SerialOffset = bm.SerialOffset;
@@ -259,6 +269,8 @@ namespace TestBuilder.Services
                         n.ComparisonType = wait.ComparisonType.ToString();
                         n.PollAction = wait.PollAction;
                         n.BaseUrl = wait.BaseUrl;
+                        n.Endpoint = wait.Endpoint;
+                        n.ResponseType = wait.ResponseType.ToString();
                         n.RequestTimeoutMs = wait.RequestTimeoutMs;
                         n.TimeoutMs = wait.TimeoutMs;
                         n.IntervalMs = wait.IntervalMs;
@@ -515,6 +527,17 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
+                    "Read HTTP Variable" or "READ_HTTP_VARIABLE" or "Прочитать HTTP переменную" => new ReadHttpVariableNodeViewModel
+                    {
+                        Location = location,
+                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
+                        Endpoint = n.Endpoint ?? "/api/getUpsStatus",
+                        ResponseType = ParseHttpResponseValueType(n.ResponseType),
+                        TimeoutMs = n.TimeoutMs ?? 5000,
+                        OutputVariableName = n.OutputVariableName ?? "Dut.value",
+                        FailOnError = n.FailOnError ?? true
+                    },
+
                     "Build MAC From Serial" or "BUILD_MAC_FROM_SERIAL" or "Расчет MAC" => new BuildMacFromSerialNodeViewModel
                     {
                         Location = location,
@@ -543,6 +566,10 @@ namespace TestBuilder.Services
                         ComparisonType = ParseComparisonType(n.ComparisonType),
                         PollAction = n.PollAction ?? "GetUpsStatus",
                         BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
+                        Endpoint = n.Endpoint ?? GetLegacyPollEndpoint(n.PollAction),
+                        ResponseType = ParseHttpResponseValueType(
+                            n.ResponseType,
+                            GetLegacyPollResponseType(n.PollAction)),
                         RequestTimeoutMs = n.RequestTimeoutMs ?? 5000,
                         TimeoutMs = n.TimeoutMs ?? 160000,
                         IntervalMs = n.IntervalMs ?? 5000,
@@ -858,6 +885,37 @@ namespace TestBuilder.Services
             return Enum.TryParse<VariableComparisonType>(value, ignoreCase: true, out var parsed)
                 ? parsed
                 : VariableComparisonType.Number;
+        }
+
+        private static HttpResponseValueType ParseHttpResponseValueType(
+            string? value,
+            HttpResponseValueType fallback = HttpResponseValueType.Integer)
+        {
+            if (string.Equals(value, "Double", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpResponseValueType.Number;
+            }
+
+            return Enum.TryParse<HttpResponseValueType>(value, ignoreCase: true, out var parsed)
+                ? parsed
+                : fallback;
+        }
+
+        private static string GetLegacyPollEndpoint(string? pollAction)
+        {
+            return pollAction?.ToLowerInvariant() switch
+            {
+                "getupsvoltage" => "/api/getUpsVoltage",
+                "getirpstatus" => "/api/isUPS",
+                _ => "/api/getUpsStatus"
+            };
+        }
+
+        private static HttpResponseValueType GetLegacyPollResponseType(string? pollAction)
+        {
+            return pollAction?.Equals("GetUpsVoltage", StringComparison.OrdinalIgnoreCase) == true
+                ? HttpResponseValueType.Number
+                : HttpResponseValueType.Integer;
         }
 
         private static string GetObjectAsString(object? value, string fallback)

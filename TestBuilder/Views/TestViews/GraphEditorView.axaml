@@ -1442,6 +1442,23 @@
               </DataTemplate>
             </views:NodeTemplateSelector.RunDataTestTemplate>
 
+            <views:NodeTemplateSelector.ReadHttpVariableTemplate>
+              <DataTemplate x:DataType="stepvm:ReadHttpVariableNodeViewModel">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                  <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
+                  <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
+                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="12" /></Grid>
+                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                  </StackPanel>
+                </nodify:Node>
+              </DataTemplate>
+            </views:NodeTemplateSelector.ReadHttpVariableTemplate>
+
             <views:NodeTemplateSelector.GetUpsStatusTemplate>
               <DataTemplate x:DataType="stepvm:GetUpsStatusNodeViewModel">
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
@@ -1528,8 +1545,10 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Expected:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Poll action:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding PollAction}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Poll action:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding PollActions}" SelectedItem="{Binding PollAction, Mode=TwoWay}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Request ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Interval ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="12" /></Grid>

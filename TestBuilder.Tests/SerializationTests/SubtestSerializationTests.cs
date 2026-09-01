@@ -1,4 +1,5 @@
 using System.Linq;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
@@ -123,5 +124,98 @@ public class SubtestSerializationTests
 
         Assert.Equal(180000, loadedSelftest.TimeoutMs);
         Assert.Equal(7000, loadedSelftest.PollIntervalMs);
+    }
+
+    [Fact]
+    public void SerializeAndDeserialize_PreservesUniversalHttpNodes()
+    {
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        vm.RootGraph.Clear();
+
+        vm.RootGraph.Nodes.Add(new StartNodeViewModel());
+        vm.RootGraph.Nodes.Add(new ReadHttpVariableNodeViewModel
+        {
+            BaseUrl = "http://dut",
+            Endpoint = "/api/value",
+            ResponseType = HttpResponseValueType.Number,
+            TimeoutMs = 2345,
+            OutputVariableName = "Dut.value",
+            FailOnError = true
+        });
+        vm.RootGraph.Nodes.Add(new WaitVariableUntilNodeViewModel
+        {
+            VariableName = "Dut.state",
+            ExpectedValue = "1",
+            ComparisonType = VariableComparisonType.Number,
+            PollAction = "HttpGet",
+            BaseUrl = "http://dut",
+            Endpoint = "/api/state",
+            ResponseType = HttpResponseValueType.Integer,
+            RequestTimeoutMs = 3456,
+            TimeoutMs = 4567,
+            IntervalMs = 123,
+            FailOnTimeout = true
+        });
+        vm.RootGraph.Nodes.Add(new EndNodeViewModel());
+
+        var json = GraphSerializer.Serialize(vm, "Profile");
+
+        Assert.Contains("\"type\": \"Read HTTP Variable\"", json);
+        Assert.Contains("\"endpoint\": \"/api/value\"", json);
+        Assert.Contains("\"responseType\": \"Number\"", json);
+
+        using var loadedModbus = new ModbusService();
+        var loadedVm = new TestViewModel(loadedModbus, new SlaveManager(loadedModbus));
+        GraphSerializer.Deserialize(json, loadedVm);
+
+        var loadedRead = loadedVm.RootGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>().Single();
+        Assert.Equal("http://dut", loadedRead.BaseUrl);
+        Assert.Equal("/api/value", loadedRead.Endpoint);
+        Assert.Equal(HttpResponseValueType.Number, loadedRead.ResponseType);
+        Assert.Equal(2345, loadedRead.TimeoutMs);
+        Assert.Equal("Dut.value", loadedRead.OutputVariableName);
+
+        var loadedWait = loadedVm.RootGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
+        Assert.Equal("HttpGet", loadedWait.PollAction);
+        Assert.Equal("/api/state", loadedWait.Endpoint);
+        Assert.Equal(HttpResponseValueType.Integer, loadedWait.ResponseType);
+        Assert.Equal(3456, loadedWait.RequestTimeoutMs);
+        Assert.Equal(4567, loadedWait.TimeoutMs);
+        Assert.Equal(123, loadedWait.IntervalMs);
+        Assert.True(loadedWait.FailOnTimeout);
+    }
+
+    [Fact]
+    public void Deserialize_LegacyWaitPollActionInfersEndpointAndResponseType()
+    {
+        const string json = """
+            {
+              "name": "Legacy wait",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Wait Variable Until",
+                  "x": 0,
+                  "y": 0,
+                  "variableName": "Dut.akb_voltage",
+                  "expectedValue": "24.5",
+                  "comparisonType": "Number",
+                  "pollAction": "GetUpsVoltage"
+                }
+              ],
+              "connections": []
+            }
+            """;
+
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+
+        GraphSerializer.Deserialize(json, vm);
+
+        var wait = vm.RootGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
+        Assert.Equal("GetUpsVoltage", wait.PollAction);
+        Assert.Equal("/api/getUpsVoltage", wait.Endpoint);
+        Assert.Equal(HttpResponseValueType.Number, wait.ResponseType);
     }
 }

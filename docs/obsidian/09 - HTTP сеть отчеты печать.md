@@ -67,23 +67,57 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
 
 Raw XML сохраняется только в `TestContext` текущего запуска как `SelfTestRaw`.
 Файл `selftest.txt` больше не создается: он был legacy-артефактом старой консольной утилиты.
+Полный перечень исторических XML-полей, формула фактического количества,
+legacy-алиасы и служебные ключи описаны в [[19 - Поля тестовой страницы DUT]].
 
 `FailOnError` в selftest-нode не переключает результат на `True`; при ошибке step возвращает `False` всегда. Разница только в том, выставляется ли `context.HasCriticalError`, который потом влияет на поле `test_result` в отчете.
 
 ## API устройства
 
-Ноды DUT API используют `BaseUrl` и фиксированные endpoint:
+Для новых графов DUT API использует две универсальные ноды:
 
-| Нода | Endpoint | Ожидаемый ответ |
-|---|---|---|
-| `Get UPS Status` | `/api/getUpsStatus` | int |
-| `Get UPS Voltage` | `/api/getUpsVoltage` | double |
-| `Get IRP Status` | `/api/isUps` | int |
-| `Wait Variable Until` + `GetUpsStatus` | `/api/getUpsStatus` | int |
-| `Wait Variable Until` + `GetUpsVoltage` | `/api/getUpsVoltage` | double |
-| `Wait Variable Until` + `GetIrpStatus` | `/api/isUps` | int |
+| Нода | Назначение |
+|---|---|
+| `Read HTTP Variable` | Один GET, строгий разбор ответа и запись свежего значения. |
+| `Wait Variable Until` + `HttpGet` | Повторный GET до совпадения значения или обязательного таймаута. |
 
-Все эти ноды пишут raw response, success flag и error в `context.Variables`.
+Обе ноды принимают произвольные `BaseUrl`, `Endpoint`, output variable и
+`ResponseType`: `Integer`, `Number`, `Boolean`, `String`. `Endpoint` может быть
+относительным путем или полным HTTP/HTTPS URL. Перед запросом старое output
+value удаляется, поэтому оставшееся от selftest значение не может пройти как
+результат свежего чтения.
+
+Рабочий UPS-алгоритм:
+
+1. `Selftest Check` один раз получает аппаратный снимок; `Dut.ups_det == 1`
+   проверяется непосредственно из него.
+2. `/api/getUpsVoltage` читается универсальной нодой как `Number`, после чего
+   `Dut.akb_voltage` проверяется диапазоном.
+3. `/api/getUpsStatus` читается как `Integer`; перед отключением AC требуется
+   `Dut.ups_rez == 0`.
+4. После отключения AC `Wait Variable Until` раз в 5 секунд читает тот же API
+   до `Dut.ups_rez == 1`.
+5. После возврата AC он ожидает `Dut.ups_rez == 0`.
+
+Оба ожидания рабочего профиля имеют `FailOnTimeout = true`: HTTP-ошибка,
+ошибка типа или недостижение значения действительно проваливают подтест.
+
+Специализированные `Get UPS Status`, `Get UPS Voltage` и `Get IRP Status`
+оставлены в runtime и десериализации только для старых JSON, но убраны из
+палитры. Старые poll actions также поддерживаются.
+
+Регистр пути IRP важен для части прошивок. В официальном PDF одновременно
+встречаются `isUps` в заголовке команды и `isUPS` в примере запроса, поэтому
+runtime сначала использует `/api/isUPS`, затем только при `404`/`Not Found`
+пробует `/api/isUps`. HTML-страница ошибки не парсится как статус.
+
+Legacy `Get IRP Status` перед запросом удаляет прежнюю output variable и принимает
+только `0` или `1`. Результат диагностики сохраняется в
+`GetIrpStatus.Url`, `GetIrpStatus.StatusCode`, `GetIrpStatus.Attempts`,
+`GetIrpStatus.RawResponse`, `GetIrpStatus.Success`, `GetIrpStatus.Error`.
+Это исключает ложный успех по старому `Dut.ups_det`, ранее полученному из
+selftest. Legacy `Wait Variable Until` с `GetIrpStatus` использует тот же алгоритм и
+пишет последний URL/status/raw response в `WaitVariable.*`.
 
 ## Получение серийного номера
 

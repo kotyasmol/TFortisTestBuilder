@@ -162,9 +162,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new GetSerialNumberFromServerNodeViewModel(),
         new SendUdpSetMacPacketNodeViewModel(),
         new RunDataTestNodeViewModel(),
-        new GetUpsStatusNodeViewModel(),
-        new GetUpsVoltageNodeViewModel(),
-        new GetIrpStatusNodeViewModel(),
+        new ReadHttpVariableNodeViewModel(),
         new WaitVariableUntilNodeViewModel(),
         new BuildMacFromSerialNodeViewModel(),
         new CompareVariablesNodeViewModel(),
@@ -315,9 +313,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             Find("Get Serial Number"),
             Find("Send UDP Set MAC"),
             Find("Run Data Test"),
-            Find("Get UPS Status"),
-            Find("Get UPS Voltage"),
-            Find("Get IRP Status"),
+            Find("Read HTTP Variable"),
             Find("Wait Variable Until")));
 
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
@@ -1463,6 +1459,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Get UPS Status" => new GetUpsStatusNodeViewModel { Location = location },
             "Get UPS Voltage" => new GetUpsVoltageNodeViewModel { Location = location },
             "Get IRP Status" => new GetIrpStatusNodeViewModel { Location = location },
+            "Read HTTP Variable" => new ReadHttpVariableNodeViewModel { Location = location },
             "Wait Variable Until" => new WaitVariableUntilNodeViewModel { Location = location },
             "Build MAC From Serial" => new BuildMacFromSerialNodeViewModel { Location = location },
             "Compare Variables" => new CompareVariablesNodeViewModel { Location = location },

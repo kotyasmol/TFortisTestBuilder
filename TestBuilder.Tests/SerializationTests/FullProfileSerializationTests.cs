@@ -1,4 +1,5 @@
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
@@ -65,6 +66,19 @@ public class FullProfileSerializationTests
         var dataTestSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "10. DataTest портов 0..9");
+        var upsPreparationSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "11. UPS: подготовка и детекция");
+        var upsBatteryTransitionSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "12. UPS: переход на АКБ");
+        var upsAcTransitionSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "14. UPS: возврат на AC1");
+        Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
+        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
+        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
+        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetIrpStatusNodeViewModel);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&
@@ -94,5 +108,45 @@ public class FullProfileSerializationTests
             dataTestSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is StartNodeViewModel &&
                           ReferenceEquals(connection.Target.Parent, dataTestNode));
+
+        Assert.DoesNotContain(upsPreparationSubtest.BodyGraph.Nodes, node => node is GetIrpStatusNodeViewModel);
+        var selftestNode = upsPreparationSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>().Single();
+        var irpCheckNode = upsPreparationSubtest.BodyGraph.Nodes
+            .OfType<CheckVariableEqualityNodeViewModel>()
+            .Single(node => node.VariableName == "Dut.ups_det");
+        Assert.Contains(
+            upsPreparationSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, selftestNode) &&
+                          ReferenceEquals(connection.Target.Parent, irpCheckNode));
+        var httpReads = upsPreparationSubtest.BodyGraph.Nodes
+            .OfType<ReadHttpVariableNodeViewModel>()
+            .OrderBy(node => node.Endpoint)
+            .ToArray();
+        Assert.Equal(2, httpReads.Length);
+        Assert.Contains(
+            httpReads,
+            node => node.Endpoint == "/api/getUpsStatus" &&
+                    node.ResponseType == HttpResponseValueType.Integer &&
+                    node.OutputVariableName == "Dut.ups_rez" &&
+                    node.FailOnError);
+        Assert.Contains(
+            httpReads,
+            node => node.Endpoint == "/api/getUpsVoltage" &&
+                    node.ResponseType == HttpResponseValueType.Number &&
+                    node.OutputVariableName == "Dut.akb_voltage" &&
+                    node.FailOnError);
+
+        var batteryWait = upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
+        var acWait = upsAcTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
+        Assert.Equal("1", batteryWait.ExpectedValue);
+        Assert.Equal("0", acWait.ExpectedValue);
+
+        foreach (var wait in new[] { batteryWait, acWait })
+        {
+            Assert.Equal("HttpGet", wait.PollAction);
+            Assert.Equal("/api/getUpsStatus", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.Integer, wait.ResponseType);
+            Assert.True(wait.FailOnTimeout);
+        }
     }
 }

@@ -194,6 +194,16 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Fail on error - считать ошибку запроса провалом теста.
                 """,
 
+            [typeof(ReadHttpVariableNodeViewModel)] = """
+                Универсально читает одно значение через HTTP GET и сохраняет его в TestContext.
+                Base URL - базовый адрес устройства.
+                Endpoint - путь API или полный HTTP/HTTPS URL.
+                Response type - Integer, Number, Boolean или String.
+                Timeout ms - лимит одного запроса.
+                Output var - переменная, куда сохранить свежее значение.
+                Перед запросом старое значение удаляется; HTTP/parse ошибка идет в False при включенном Fail on error.
+                """,
+
             [typeof(GetUpsVoltageNodeViewModel)] = """
                 Читает напряжение UPS через HTTP API устройства.
                 Base URL - базовый адрес устройства.
@@ -229,12 +239,14 @@ namespace TestBuilder.ViewModels.NodifyVM
                 """,
 
             [typeof(WaitVariableUntilNodeViewModel)] = """
-                Ждет, пока переменная примет ожидаемое значение.
+                Ждет, пока переменная примет ожидаемое значение, при необходимости обновляя ее через HTTP.
                 Variable - имя переменной.
                 Expected - ожидаемое значение.
                 Type - тип сравнения.
-                Poll action - что опрашивать между проверками, если нужно обновлять переменную.
+                Poll action HttpGet выполняет универсальный GET; None проверяет уже существующую переменную.
                 Base URL - адрес устройства для HTTP-опроса.
+                Endpoint - путь API или полный URL.
+                Response type - как разобрать ответ перед сравнением.
                 Request ms - лимит одного запроса.
                 Timeout ms - общий лимит ожидания.
                 Interval ms - пауза между попытками.

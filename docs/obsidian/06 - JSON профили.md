@@ -97,6 +97,7 @@ updated: 2026-09-01
 | `Get UPS Status` | `GetUpsStatusNodeViewModel` |
 | `Get UPS Voltage` | `GetUpsVoltageNodeViewModel` |
 | `Get IRP Status` | `GetIrpStatusNodeViewModel` |
+| `Read HTTP Variable` | `ReadHttpVariableNodeViewModel` |
 | `Build MAC From Serial` | `BuildMacFromSerialNodeViewModel` |
 | `Compare Variables` | `CompareVariablesNodeViewModel` |
 | `Wait Variable Until` | `WaitVariableUntilNodeViewModel` |
@@ -120,7 +121,7 @@ Deserializer также принимает часть русских и legacy-�
 | Label | `text`, `labelWidth`, `labelHeight` |
 | Subtest | `name`, `description`, `isEnabled`, `stopOnError`, `runOnFailure`, `bodyGraph` |
 | Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `sampleCount`, `liveRead` |
-| Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `outputVariableName`, `failOnError` |
+| Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
 | UDP | `targetIp`, `targetPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
@@ -128,7 +129,7 @@ Deserializer также принимает часть русских и legacy-�
 | Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
 | Report | `reportVariableName`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
-| Wait Variable | `pollAction`, `requestTimeoutMs`, `intervalMs`, `failOnTimeout` |
+| Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
@@ -188,6 +189,8 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | `Selftest Check` | `url` | `SelfTestCheckStep.DefaultUrl` |
 | `Selftest Check` | `pollIntervalMs` | `SelfTestCheckStep.DefaultPollIntervalMs` |
 | `Get UPS Status` | `baseUrl` | `http://192.168.0.1` |
+| `Read HTTP Variable` | `baseUrl`, `endpoint`, `responseType` | `http://192.168.0.1`, `/api/getUpsStatus`, `Integer` |
+| `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |
 | `Print Label` | `copies` | `4` |
@@ -198,6 +201,12 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | Любая нода | `color` | `blue` |
 
 Полный список дефолтов описан в [[05 - Справочник нод]].
+
+Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
+`GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние
+endpoint и тип ответа. Специализированные типы `Get UPS Status`,
+`Get UPS Voltage`, `Get IRP Status` также десериализуются, но новые графы должны
+использовать `Read HTTP Variable` и `Wait Variable Until` + `HttpGet`.
 
 ## Совместимость и риски
 

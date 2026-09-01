@@ -5,7 +5,7 @@ tags:
   - dut
   - troubleshooting
   - postmortem
-updated: 2026-08-21
+updated: 2026-09-01
 ---
 
 # Selftest и загрузка DUT
@@ -132,6 +132,9 @@ Unit-тесты фиксируют два инварианта:
 ```powershell
 dotnet test TestBuilder.Tests/TestBuilder.Tests.csproj --no-restore
 ```
+
+Состав XML и значения всех известных полей тестовой страницы описаны отдельно в
+[[19 - Поля тестовой страницы DUT]].
 
 Связанные материалы: [[05 - Справочник нод]], [[09 - HTTP сеть отчеты печать]],
 [[14 - Реестр решений]], [[17 - Журнал проверок]].

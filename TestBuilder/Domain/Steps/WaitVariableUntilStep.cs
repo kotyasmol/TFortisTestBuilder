@@ -17,6 +17,8 @@ namespace TestBuilder.Domain.Steps
         private readonly VariableComparisonType _comparisonType;
         private readonly string _pollAction;
         private readonly string _baseUrl;
+        private readonly string _endpoint;
+        private readonly HttpResponseValueType _responseType;
         private readonly int _requestTimeoutMs;
         private readonly int _timeoutMs;
         private readonly int _intervalMs;
@@ -30,6 +32,8 @@ namespace TestBuilder.Domain.Steps
             VariableComparisonType comparisonType,
             string pollAction,
             string baseUrl,
+            string endpoint,
+            HttpResponseValueType responseType,
             int requestTimeoutMs,
             int timeoutMs,
             int intervalMs,
@@ -42,6 +46,8 @@ namespace TestBuilder.Domain.Steps
             _comparisonType = comparisonType;
             _pollAction = string.IsNullOrWhiteSpace(pollAction) ? "None" : pollAction.Trim();
             _baseUrl = string.IsNullOrWhiteSpace(baseUrl) ? "http://192.168.0.1" : baseUrl.Trim();
+            _endpoint = endpoint?.Trim() ?? string.Empty;
+            _responseType = responseType;
             _requestTimeoutMs = Math.Max(1, requestTimeoutMs);
             _timeoutMs = Math.Max(1, timeoutMs);
             _intervalMs = Math.Max(1, intervalMs);
@@ -70,6 +76,10 @@ namespace TestBuilder.Domain.Steps
                     lastError = pollResult;
                     _logger.Warning($"[ПОВТОР] Poll {_pollAction}: {pollResult}");
                 }
+                else
+                {
+                    lastError = string.Empty;
+                }
 
                 if (context.Variables.TryGetValue(_variableName, out var actual))
                 {
@@ -89,7 +99,7 @@ namespace TestBuilder.Domain.Steps
                         lastError = ex.Message;
                     }
                 }
-                else
+                else if (string.IsNullOrWhiteSpace(pollResult))
                 {
                     lastError = $"Переменная '{_variableName}' еще не найдена.";
                 }
@@ -117,47 +127,66 @@ namespace TestBuilder.Domain.Steps
                 return string.Empty;
             }
 
-            var endpoint = _pollAction.ToLowerInvariant() switch
+            if (_pollAction.Equals("GetIrpStatus", StringComparison.OrdinalIgnoreCase))
             {
-                "getupsstatus" => "/api/getUpsStatus",
-                "getupsvoltage" => "/api/getUpsVoltage",
-                "getirpstatus" => "/api/isUps",
-                _ => string.Empty
+                context.Variables.Remove(_variableName);
+
+                var read = await GetIrpStatusStep.ReadStatusAsync(
+                    _httpRequestService,
+                    _logger,
+                    _baseUrl,
+                    _requestTimeoutMs,
+                    cancellationToken);
+
+                context.SetVariable("WaitVariable.RawResponse", read.RawResponse);
+                context.SetVariable("WaitVariable.Url", read.Url);
+                context.SetVariable("WaitVariable.StatusCode", read.StatusCode);
+
+                if (read.Success)
+                {
+                    context.SetVariable(_variableName, read.Value);
+                    return string.Empty;
+                }
+
+                return read.Error;
+            }
+
+            var poll = _pollAction.ToLowerInvariant() switch
+            {
+                "httpget" => (_endpoint, _responseType),
+                "getupsstatus" => ("/api/getUpsStatus", HttpResponseValueType.Integer),
+                "getupsvoltage" => ("/api/getUpsVoltage", HttpResponseValueType.Number),
+                _ => (string.Empty, _responseType)
             };
 
-            if (string.IsNullOrEmpty(endpoint))
+            if (string.IsNullOrWhiteSpace(poll.Item1))
             {
                 return $"Неизвестное pollAction '{_pollAction}'.";
             }
 
-            var url = _baseUrl.TrimEnd('/') + endpoint;
-            var result = await _httpRequestService.GetAsync(url, TimeSpan.FromMilliseconds(_requestTimeoutMs), cancellationToken);
-            var raw = result.Body.Trim();
+            context.Variables.Remove(_variableName);
+            var httpRead = await ReadHttpVariableStep.ReadAsync(
+                _httpRequestService,
+                _logger,
+                _baseUrl,
+                poll.Item1,
+                poll.Item2,
+                _requestTimeoutMs,
+                cancellationToken);
+            ReadHttpVariableStep.SaveDiagnostics(
+                context,
+                "WaitVariable",
+                httpRead,
+                _variableName,
+                poll.Item2);
 
-            if (!string.IsNullOrWhiteSpace(result.ErrorMessage) || !result.IsSuccessStatusCode)
+            if (httpRead.Success)
             {
-                return !string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? result.ErrorMessage
-                    : $"HTTP {result.StatusCode}, response '{raw}'.";
-            }
-
-            if (_pollAction.Equals("GetUpsVoltage", StringComparison.OrdinalIgnoreCase))
-            {
-                if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var voltage))
-                {
-                    context.SetVariable(_variableName, voltage);
-                    context.SetVariable("WaitVariable.RawResponse", raw);
-                    return string.Empty;
-                }
-            }
-            else if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            {
-                context.SetVariable(_variableName, value);
-                context.SetVariable("WaitVariable.RawResponse", raw);
+                context.SetVariable(_variableName, httpRead.Value!);
                 return string.Empty;
             }
 
-            return $"Некорректный ответ '{raw}'.";
+            return httpRead.Error;
         }
 
         private void SaveState(TestContext context, bool passed, int attempts, string actual, string error)

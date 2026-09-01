@@ -107,6 +107,7 @@ namespace TestBuilder.Services
                 GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
                 GetIrpStatusNodeViewModel irpStatus => irpStatus.CreateStep(_httpRequestService, _logger),
+                ReadHttpVariableNodeViewModel httpRead => httpRead.CreateStep(_httpRequestService, _logger),
                 BuildMacFromSerialNodeViewModel buildMac => buildMac.CreateStep(_logger),
                 CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
                 WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
@@ -268,6 +269,10 @@ namespace TestBuilder.Services
 
                 case GetIrpStatusNodeViewModel irpStatusVm:
                     BindTrueFalse(sourceConnector, source, target, irpStatusVm.TrueOut, irpStatusVm.FalseOut);
+                    break;
+
+                case ReadHttpVariableNodeViewModel httpReadVm:
+                    BindTrueFalse(sourceConnector, source, target, httpReadVm.TrueOut, httpReadVm.FalseOut);
                     break;
 
                 case BuildMacFromSerialNodeViewModel buildMacVm:

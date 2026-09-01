@@ -38,6 +38,8 @@ namespace TestBuilder.Views
 
         public IDataTemplate? GetIrpStatusTemplate { get; set; }
 
+        public IDataTemplate? ReadHttpVariableTemplate { get; set; }
+
         public IDataTemplate? BuildMacFromSerialTemplate { get; set; }
 
         public IDataTemplate? CompareVariablesTemplate { get; set; }
@@ -83,6 +85,7 @@ namespace TestBuilder.Views
                 GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetIrpStatusNodeViewModel => GetIrpStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                ReadHttpVariableNodeViewModel => ReadHttpVariableTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 BuildMacFromSerialNodeViewModel => BuildMacFromSerialTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CompareVariablesNodeViewModel => CompareVariablesTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 WaitVariableUntilNodeViewModel => WaitVariableUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

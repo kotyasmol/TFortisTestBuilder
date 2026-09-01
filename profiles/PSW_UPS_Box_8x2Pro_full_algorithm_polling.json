@@ -1534,7 +1534,7 @@
       "y": 1040,
       "color": "blue",
       "name": "11. UPS: подготовка и детекция",
-      "description": "Проверка UPS/IRP, напряжения АКБ и исходного статуса от сети",
+      "description": "Один selftest-снимок для детекции IRP; быстрые HTTP-чтения напряжения АКБ и исходного статуса питания",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1594,20 +1594,9 @@
             "outputPrefix": "Dut"
           },
           {
-            "id": "5",
-            "type": "Get IRP Status",
-            "x": 2368,
-            "y": -96,
-            "color": "blue",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.ups_det",
-            "baseUrl": "http://192.168.0.1",
-            "failOnError": true
-          },
-          {
             "id": "6",
             "type": "Check Variable Equality",
-            "x": 2840,
+            "x": 2380,
             "y": 120,
             "color": "blue",
             "expectedValue": "1",
@@ -1617,10 +1606,12 @@
           },
           {
             "id": "7",
-            "type": "Get UPS Voltage",
-            "x": 3312,
+            "type": "Read HTTP Variable",
+            "x": 2840,
             "y": -112,
             "color": "blue",
+            "endpoint": "/api/getUpsVoltage",
+            "responseType": "Number",
             "timeoutMs": 5000,
             "outputVariableName": "Dut.akb_voltage",
             "baseUrl": "http://192.168.0.1",
@@ -1629,7 +1620,7 @@
           {
             "id": "8",
             "type": "Check Variable Range",
-            "x": 3760,
+            "x": 3300,
             "y": 120,
             "color": "blue",
             "min": 12,
@@ -1640,10 +1631,12 @@
           },
           {
             "id": "9",
-            "type": "Get UPS Status",
-            "x": 4208,
+            "type": "Read HTTP Variable",
+            "x": 3760,
             "y": -112,
             "color": "blue",
+            "endpoint": "/api/getUpsStatus",
+            "responseType": "Integer",
             "timeoutMs": 5000,
             "outputVariableName": "Dut.ups_rez",
             "baseUrl": "http://192.168.0.1",
@@ -1652,7 +1645,7 @@
           {
             "id": "10",
             "type": "Check Variable Equality",
-            "x": 4680,
+            "x": 4220,
             "y": 120,
             "color": "blue",
             "expectedValue": "0",
@@ -1663,7 +1656,7 @@
           {
             "id": "11",
             "type": "End",
-            "x": 5200,
+            "x": 4680,
             "y": -16,
             "color": "blue"
           }
@@ -1695,12 +1688,6 @@
           },
           {
             "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "5",
             "sourceConnector": "True",
             "targetNodeId": "6",
             "targetConnector": "In"
@@ -1870,10 +1857,12 @@
             "baseUrl": "http://192.168.0.1",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "pollAction": "GetUpsStatus",
+            "pollAction": "HttpGet",
+            "endpoint": "/api/getUpsStatus",
+            "responseType": "Integer",
             "requestTimeoutMs": 5000,
             "intervalMs": 5000,
-            "failOnTimeout": false
+            "failOnTimeout": true
           },
           {
             "id": "12",
@@ -2102,7 +2091,9 @@
             "baseUrl": "http://192.168.0.1",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "pollAction": "GetUpsStatus",
+            "pollAction": "HttpGet",
+            "endpoint": "/api/getUpsStatus",
+            "responseType": "Integer",
             "requestTimeoutMs": 5000,
             "intervalMs": 5000,
             "failOnTimeout": true

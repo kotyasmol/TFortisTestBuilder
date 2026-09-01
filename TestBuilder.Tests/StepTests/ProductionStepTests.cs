@@ -164,6 +164,239 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task GetIrpStatusStep_UsesOfficialUppercaseEndpoint()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new GetIrpStatusStep(
+            service,
+            NullLogger.Instance,
+            "http://192.168.0.1/",
+            1000,
+            "Dut.ups_det",
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(1, context.GetVariable<int>("Dut.ups_det"));
+        Assert.Equal(new[] { "http://192.168.0.1/api/isUPS" }, service.RequestedUrls);
+        Assert.Equal("http://192.168.0.1/api/isUPS", context.GetVariable<string>("GetIrpStatus.Url"));
+        Assert.Equal(200, context.GetVariable<int>("GetIrpStatus.StatusCode"));
+        Assert.Equal(1, context.GetVariable<int>("GetIrpStatus.Attempts"));
+        Assert.True(context.GetVariable<bool>("GetIrpStatus.Success"));
+    }
+
+    [Fact]
+    public async Task GetIrpStatusStep_FallsBackToLegacyEndpointAfter404()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(
+                404,
+                "<h1>Not Found</h1><p>The requested URL /api/isUPS was not found on this server.</p>",
+                TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "0", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new GetIrpStatusStep(
+            service,
+            NullLogger.Instance,
+            "http://192.168.0.1",
+            1000,
+            "Dut.ups_det",
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(0, context.GetVariable<int>("Dut.ups_det"));
+        Assert.Equal(
+            new[]
+            {
+                "http://192.168.0.1/api/isUPS",
+                "http://192.168.0.1/api/isUps"
+            },
+            service.RequestedUrls);
+        Assert.Equal("http://192.168.0.1/api/isUps", context.GetVariable<string>("GetIrpStatus.Url"));
+        Assert.Equal(2, context.GetVariable<int>("GetIrpStatus.Attempts"));
+    }
+
+    [Fact]
+    public async Task GetIrpStatusStep_RemovesStaleOutputWhenBothEndpointsAreMissing()
+    {
+        var notFound = HttpRequestResult.Success(
+            404,
+            "<h1>Not Found</h1><p>The requested URL was not found on this server.</p>",
+            TimeSpan.FromMilliseconds(1));
+        var service = new QueueHttpService(notFound, notFound);
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.ups_det", 1);
+        var step = new GetIrpStatusStep(
+            service,
+            NullLogger.Instance,
+            "http://192.168.0.1",
+            1000,
+            "Dut.ups_det",
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.Variables.ContainsKey("Dut.ups_det"));
+        Assert.False(context.GetVariable<bool>("GetIrpStatus.Success"));
+        Assert.Equal(2, context.GetVariable<int>("GetIrpStatus.Attempts"));
+        Assert.Contains("/api/isUPS", context.GetVariable<string>("GetIrpStatus.Error"));
+        Assert.Contains("/api/isUps", context.GetVariable<string>("GetIrpStatus.Error"));
+    }
+
+    [Fact]
+    public async Task WaitVariableUntilStep_GetIrpStatusUsesCompatibleEndpointFallback()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(404, "<h1>Not Found</h1>", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.ups_det",
+            "1",
+            VariableComparisonType.Number,
+            "GetIrpStatus",
+            "http://192.168.0.1",
+            "/api/isUPS",
+            HttpResponseValueType.Integer,
+            1000,
+            1000,
+            10,
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(1, context.GetVariable<int>("Dut.ups_det"));
+        Assert.Equal(1, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal("http://192.168.0.1/api/isUps", context.GetVariable<string>("WaitVariable.Url"));
+    }
+
+    [Fact]
+    public async Task ReadHttpVariableStep_ReplacesStaleValueWithParsedInteger()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(3)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.ups_rez", 99);
+        var step = new ReadHttpVariableStep(
+            service,
+            NullLogger.Instance,
+            "http://192.168.0.1/",
+            "/api/getUpsStatus",
+            HttpResponseValueType.Integer,
+            1000,
+            "Dut.ups_rez",
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(1, context.GetVariable<int>("Dut.ups_rez"));
+        Assert.Equal("http://192.168.0.1/api/getUpsStatus", service.RequestedUrls.Single());
+        Assert.True(context.GetVariable<bool>("HttpRead.Success"));
+        Assert.Equal("Integer", context.GetVariable<string>("HttpRead.ResponseType"));
+        Assert.Equal(200, context.GetVariable<int>("HttpRead.StatusCode"));
+    }
+
+    [Fact]
+    public async Task ReadHttpVariableStep_RemovesStaleValueOnParseFailure()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "<html>not a number</html>", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.akb_voltage", 24.0);
+        var step = new ReadHttpVariableStep(
+            service,
+            NullLogger.Instance,
+            "http://192.168.0.1",
+            "/api/getUpsVoltage",
+            HttpResponseValueType.Number,
+            1000,
+            "Dut.akb_voltage",
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.Variables.ContainsKey("Dut.akb_voltage"));
+        Assert.False(context.GetVariable<bool>("HttpRead.Success"));
+        Assert.Contains("Number", context.GetVariable<string>("HttpRead.Error"));
+    }
+
+    [Fact]
+    public async Task WaitVariableUntilStep_HttpGetPollsFreshValuesUntilExpected()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "0", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.ups_rez", 1);
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.ups_rez",
+            "1",
+            VariableComparisonType.Number,
+            "HttpGet",
+            "http://192.168.0.1",
+            "/api/getUpsStatus",
+            HttpResponseValueType.Integer,
+            1000,
+            1000,
+            1,
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal(1, context.GetVariable<int>("Dut.ups_rez"));
+        Assert.True(context.GetVariable<bool>("WaitVariable.Success"));
+        Assert.Equal("http://192.168.0.1/api/getUpsStatus", context.GetVariable<string>("WaitVariable.Url"));
+    }
+
+    [Fact]
+    public async Task WaitVariableUntilStep_HttpGetDoesNotPassOnStaleExpectedValue()
+    {
+        var service = new CapturingHttpService(
+            HttpRequestResult.Failure("DUT unavailable", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.ups_rez", 1);
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.ups_rez",
+            "1",
+            VariableComparisonType.Number,
+            "HttpGet",
+            "http://192.168.0.1",
+            "/api/getUpsStatus",
+            HttpResponseValueType.Integer,
+            1000,
+            5,
+            1,
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.Variables.ContainsKey("Dut.ups_rez"));
+        Assert.False(context.GetVariable<bool>("WaitVariable.Passed"));
+        Assert.Contains("DUT unavailable", context.GetVariable<string>("WaitVariable.Error"));
+        Assert.True(service.Calls >= 1);
+    }
+
+    [Fact]
     public async Task GetUpsVoltageStep_ParsesDoubleResponse()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "24.7", TimeSpan.FromMilliseconds(1)));
@@ -309,6 +542,27 @@ public class ProductionStepTests
             Calls++;
             LastUrl = url;
             return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class QueueHttpService : IHttpRequestService
+    {
+        private readonly Queue<HttpRequestResult> _results;
+
+        public QueueHttpService(params HttpRequestResult[] results)
+        {
+            _results = new Queue<HttpRequestResult>(results);
+        }
+
+        public List<string> RequestedUrls { get; } = new();
+
+        public Task<HttpRequestResult> GetAsync(
+            string url,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            RequestedUrls.Add(url);
+            return Task.FromResult(_results.Dequeue());
         }
     }
 }
