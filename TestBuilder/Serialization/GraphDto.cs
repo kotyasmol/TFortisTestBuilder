@@ -307,6 +307,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? AllowedLossPercent { get; set; }
 
+        [JsonPropertyName("allowedTxDeficitPercent")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? AllowedTxDeficitPercent { get; set; }
+
+        [JsonPropertyName("bidirectional")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? Bidirectional { get; set; }
+
         [JsonPropertyName("portsText")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PortsText { get; set; }

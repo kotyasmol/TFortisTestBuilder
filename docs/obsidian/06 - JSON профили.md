@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-08-21
+updated: 2026-09-01
 ---
 
 # JSON профили
@@ -124,7 +124,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
 | UDP | `targetIp`, `targetPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
-| DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `allowedLossPercent`, `portsText`, `ports` |
+| DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
 | Report | `reportVariableName`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
@@ -138,6 +138,11 @@ Deserializer также принимает часть русских и legacy-�
 В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` `Run Data Test` использует
 пять постоянных пар: `.2/.3`, `.4/.5`, `.6/.7`, `.8/.9`, `.10/.11` в сети
 `192.168.0.0/24`. Адреса назначаются вручную в Windows и профилем не изменяются.
+Target рабочего профиля — `100 Mbps`, `bidirectional = true`. При загрузке и
+сохранении `targetBandwidthMbps`, `ports[].bandwidthMbps` и четвертое поле каждой
+строки `portsText` ограничиваются диапазоном `1..100`; это автоматически мигрирует
+ошибочные legacy-значения `1000` на `100`. Для старых профилей без новых полей
+используются `allowedTxDeficitPercent = 2.0` и `bidirectional = true`.
 
 ## Вложенные графы
 

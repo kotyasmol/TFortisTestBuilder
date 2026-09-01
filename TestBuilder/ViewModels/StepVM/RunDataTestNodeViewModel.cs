@@ -12,11 +12,11 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class RunDataTestNodeViewModel : NodeViewModel
     {
         public const string DefaultPortsText =
-            "port0-1,192.168.0.2,192.168.0.3,1000\r\n" +
-            "port2-3,192.168.0.4,192.168.0.5,1000\r\n" +
-            "port4-5,192.168.0.6,192.168.0.7,1000\r\n" +
-            "port6-7,192.168.0.8,192.168.0.9,1000\r\n" +
-            "port8-9,192.168.0.10,192.168.0.11,1000";
+            "port0-1,192.168.0.2,192.168.0.3,100\r\n" +
+            "port2-3,192.168.0.4,192.168.0.5,100\r\n" +
+            "port4-5,192.168.0.6,192.168.0.7,100\r\n" +
+            "port6-7,192.168.0.8,192.168.0.9,100\r\n" +
+            "port8-9,192.168.0.10,192.168.0.11,100";
 
         [ObservableProperty] private string mode = "SoftwarePcap";
         [ObservableProperty] private int expectedPackets = 10000;
@@ -28,6 +28,8 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int warmupMs = 500;
         [ObservableProperty] private int interPairDelayMs = 5000;
         [ObservableProperty] private double allowedLossPercent = 1.0;
+        [ObservableProperty] private double allowedTxDeficitPercent = 2.0;
+        [ObservableProperty] private bool bidirectional = true;
         [ObservableProperty] private string portsText = DefaultPortsText;
         [ObservableProperty] private string outputVariableName = "DataTest";
         [ObservableProperty] private bool failOnError = true;
@@ -47,6 +49,15 @@ namespace TestBuilder.ViewModels.StepVM
             Output.Add(FalseOut);
         }
 
+        partial void OnTargetBandwidthMbpsChanged(int value)
+        {
+            var normalized = RunDataTestStep.NormalizeBandwidth(value);
+            if (normalized != value)
+            {
+                TargetBandwidthMbps = normalized;
+            }
+        }
+
         public ITestStep CreateStep(ILogger logger) =>
             new RunDataTestStep(
                 logger,
@@ -60,6 +71,8 @@ namespace TestBuilder.ViewModels.StepVM
                 WarmupMs,
                 InterPairDelayMs,
                 AllowedLossPercent,
+                AllowedTxDeficitPercent,
+                Bidirectional,
                 ParsePorts(),
                 OutputVariableName,
                 FailOnError);
@@ -76,6 +89,8 @@ namespace TestBuilder.ViewModels.StepVM
             WarmupMs = WarmupMs,
             InterPairDelayMs = InterPairDelayMs,
             AllowedLossPercent = AllowedLossPercent,
+            AllowedTxDeficitPercent = AllowedTxDeficitPercent,
+            Bidirectional = Bidirectional,
             PortsText = PortsText,
             OutputVariableName = OutputVariableName,
             FailOnError = FailOnError
@@ -91,7 +106,9 @@ namespace TestBuilder.ViewModels.StepVM
                     parts[0].Trim(),
                     parts[1].Trim(),
                     parts[2].Trim(),
-                    parts.Length >= 4 && int.TryParse(parts[3].Trim(), out var mbps) ? mbps : null));
+                    parts.Length >= 4 && int.TryParse(parts[3].Trim(), out var mbps)
+                        ? RunDataTestStep.NormalizeBandwidth(mbps)
+                        : null));
         }
     }
 }

@@ -204,12 +204,14 @@ namespace TestBuilder.Services
                         n.PacketSizeBytes = d.PacketSizeBytes;
                         n.UdpPort = d.UdpPort;
                         n.MaxPortTestTimeMs = d.MaxPortTestTimeMs;
-                        n.TargetBandwidthMbps = d.TargetBandwidthMbps;
+                        n.TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(d.TargetBandwidthMbps);
                         n.DurationMs = d.DurationMs;
                         n.WarmupMs = d.WarmupMs;
                         n.InterPairDelayMs = d.InterPairDelayMs;
                         n.AllowedLossPercent = d.AllowedLossPercent;
-                        n.PortsText = d.PortsText;
+                        n.AllowedTxDeficitPercent = d.AllowedTxDeficitPercent;
+                        n.Bidirectional = d.Bidirectional;
+                        n.PortsText = NormalizeDataTestPortsText(d.PortsText);
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
                         break;
@@ -474,12 +476,14 @@ namespace TestBuilder.Services
                         PacketSizeBytes = n.PacketSizeBytes ?? 1514,
                         UdpPort = n.UdpPort ?? 43962,
                         MaxPortTestTimeMs = n.MaxPortTestTimeMs ?? 15000,
-                        TargetBandwidthMbps = n.TargetBandwidthMbps ?? 100,
+                        TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(n.TargetBandwidthMbps ?? 100),
                         DurationMs = n.DurationMs ?? 5000,
                         WarmupMs = n.WarmupMs ?? 500,
                         InterPairDelayMs = n.InterPairDelayMs ?? 5000,
                         AllowedLossPercent = n.AllowedLossPercent ?? 1.0,
-                        PortsText = n.PortsText ?? PortsToText(n.Ports),
+                        AllowedTxDeficitPercent = n.AllowedTxDeficitPercent ?? 2.0,
+                        Bidirectional = n.Bidirectional ?? true,
+                        PortsText = NormalizeDataTestPortsText(n.PortsText ?? PortsToText(n.Ports)),
                         OutputVariableName = n.OutputVariableName ?? "DataTest",
                         FailOnError = n.FailOnError ?? true
                     },
@@ -892,8 +896,29 @@ namespace TestBuilder.Services
             return string.Join(
                 Environment.NewLine,
                 ports.Select(port => port.BandwidthMbps.HasValue
-                    ? $"{port.Name},{port.InIp},{port.OutIp},{port.BandwidthMbps.Value}"
+                    ? $"{port.Name},{port.InIp},{port.OutIp},{RunDataTestStep.NormalizeBandwidth(port.BandwidthMbps.Value)}"
                     : $"{port.Name},{port.InIp},{port.OutIp}"));
+        }
+
+        private static string NormalizeDataTestPortsText(string portsText)
+        {
+            var lines = portsText.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            return string.Join(
+                Environment.NewLine,
+                lines.Select(line =>
+                {
+                    var parts = line.Split(',');
+                    if (parts.Length >= 4 &&
+                        int.TryParse(parts[3].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bandwidthMbps))
+                    {
+                        parts[3] = RunDataTestStep.NormalizeBandwidth(bandwidthMbps).ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    return string.Join(",", parts.Select(part => part.Trim()));
+                }));
         }
 
         public static string? ReadProfileName(string filePath)

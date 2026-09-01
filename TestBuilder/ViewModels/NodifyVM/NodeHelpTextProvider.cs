@@ -174,13 +174,15 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Mode - режим теста.
                 Packet size - размер UDP-пакета.
                 UDP port - порт тестового обмена.
-                Target Mbps - целевая скорость.
+                Target wire Mbps - целевая скорость на линии; для этой ноды максимум 100 Mbps.
                 Duration ms - длительность замера.
                 Warmup ms - прогрев перед учетом результата.
                 Pair pause ms - пауза между последовательными парами портов.
-                Allowed fail % - допустимый процент потерь/ошибок.
+                Max loss % - допустимая потеря между подтвержденными TX и RX.
+                Max TX deficit % - допустимое отставание генератора от target.
                 Output var - переменная для результата.
-                Ports - список проверяемых портов.
+                Ports - список пар Name,InIp,OutIp[,Mbps]; Mbps ограничивается значением 100.
+                Test both directions - проверить оба направления каждой пары.
                 Fail on error - считать ошибку DataTest провалом теста.
                 """,
 

@@ -1,10 +1,12 @@
 using SharpPcap;
+using SharpPcap.LibPcap;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -18,7 +20,21 @@ namespace TestBuilder.Domain.Steps
         private const int IpHeaderLength = 20;
         private const int UdpHeaderLength = 8;
         private const int MinEthernetFrameLength = 64;
+        private const int EthernetFcsLength = 4;
+        private const int EthernetPreambleAndSfdLength = 8;
+        private const int EthernetInterPacketGapLength = 12;
+        private const int ProbePayloadOffset = EthernetHeaderLength + IpHeaderLength + UdpHeaderLength;
+        private const int ProbeIdentityLength = 16;
+        private const int MaximumSupportedBandwidthMbps = 100;
         private const int MaxPacketsPerBurst = 512;
+        private const int SendQueueChunkMs = 500;
+        private const int CaptureStartSettleMs = 100;
+        private const int WarmupDrainMs = 100;
+        private const int ReceiveDrainQuietMs = 75;
+        private const int ReceiveDrainMaxMs = 500;
+        private const int InfrastructureRetryCount = 1;
+
+        private static readonly byte[] ProbeMagic = { 0x54, 0x46, 0x44, 0x54 }; // "TFDT"
 
         private readonly ILogger _logger;
         private readonly string _mode;
@@ -31,6 +47,8 @@ namespace TestBuilder.Domain.Steps
         private readonly int _warmupMs;
         private readonly int _interPairDelayMs;
         private readonly double _allowedLossPercent;
+        private readonly double _allowedTxDeficitPercent;
+        private readonly bool _bidirectional;
         private readonly IReadOnlyList<DataTestPortConfig> _ports;
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
@@ -47,6 +65,8 @@ namespace TestBuilder.Domain.Steps
             int warmupMs,
             int interPairDelayMs,
             double allowedLossPercent,
+            double allowedTxDeficitPercent,
+            bool bidirectional,
             IEnumerable<DataTestPortConfig> ports,
             string outputVariableName,
             bool failOnError)
@@ -57,11 +77,13 @@ namespace TestBuilder.Domain.Steps
             _packetSizeBytes = Math.Max(MinEthernetFrameLength, packetSizeBytes);
             _udpPort = udpPort <= 0 ? 43962 : udpPort;
             _maxPortTestTimeMs = Math.Max(1, maxPortTestTimeMs);
-            _targetBandwidthMbps = Math.Clamp(targetBandwidthMbps, 1, 1000);
+            _targetBandwidthMbps = NormalizeBandwidth(targetBandwidthMbps);
             _durationMs = Math.Max(100, durationMs);
             _warmupMs = Math.Max(0, warmupMs);
             _interPairDelayMs = Math.Max(0, interPairDelayMs);
             _allowedLossPercent = Math.Clamp(allowedLossPercent, 0.0, 100.0);
+            _allowedTxDeficitPercent = Math.Clamp(allowedTxDeficitPercent, 0.0, 100.0);
+            _bidirectional = bidirectional;
             _ports = ports.ToList();
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "DataTest" : outputVariableName.Trim();
             _failOnError = failOnError;
@@ -81,6 +103,9 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{_outputVariableName}.WarmupMs", _warmupMs);
             context.SetVariable($"{_outputVariableName}.InterPairDelayMs", _interPairDelayMs);
             context.SetVariable($"{_outputVariableName}.AllowedLossPercent", _allowedLossPercent);
+            context.SetVariable($"{_outputVariableName}.AllowedTxDeficitPercent", _allowedTxDeficitPercent);
+            context.SetVariable($"{_outputVariableName}.Bidirectional", _bidirectional);
+            context.SetVariable($"{_outputVariableName}.BandwidthLimitMbps", MaximumSupportedBandwidthMbps);
 
             if (_ports.Count == 0)
             {
@@ -113,7 +138,9 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Info(
                 $"[ШАГ] DataTest: mode {_mode}, pairs {_ports.Count} sequentially, target {_targetBandwidthMbps} Mbps, " +
-                $"duration {_durationMs} ms, warmup {_warmupMs} ms, pause {_interPairDelayMs} ms, packet {_packetSizeBytes} bytes.");
+                $"duration {_durationMs} ms, warmup {_warmupMs} ms, pause {_interPairDelayMs} ms, packet {_packetSizeBytes} bytes, " +
+                $"directions {(_bidirectional ? "both" : "one")}, max loss {_allowedLossPercent:F3}%, " +
+                $"max TX deficit {_allowedTxDeficitPercent:F3}%.");
 
             var allPassed = true;
             var errors = new List<string>();
@@ -125,8 +152,8 @@ namespace TestBuilder.Domain.Steps
                 var port = _ports[i];
                 _logger.Info($"DataTest {port.Name} [{i + 1}/{_ports.Count}]: запуск отдельной пары.");
 
-                // SharpPcap injects every frame synchronously. Running the pair on a worker
-                // keeps the Avalonia UI responsive even at gigabit packet rates.
+                // Queue preparation and pcap injection are CPU/native-driver work. Running
+                // the pair on a worker keeps the Avalonia UI responsive during line-rate tests.
                 var result = await Task.Run(
                     () => RunPortPairAsync(i, port, devices, cancellationToken),
                     cancellationToken);
@@ -148,7 +175,7 @@ namespace TestBuilder.Domain.Steps
             return Finish(context, allPassed, string.Join("; ", errors));
         }
 
-        private async Task<DataTestPortResult> RunPortPairAsync(
+        private async Task<DataTestPairResult> RunPortPairAsync(
             int index,
             DataTestPortConfig port,
             IReadOnlyList<ILiveDevice> devices,
@@ -156,46 +183,181 @@ namespace TestBuilder.Domain.Steps
         {
             if (!IPAddress.TryParse(port.InIp, out var inIp) || inIp.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
             {
-                return DataTestPortResult.Fail($"Некорректный InIp '{port.InIp}'.");
+                return DataTestPairResult.Fail($"Некорректный InIp '{port.InIp}'.");
             }
 
             if (!IPAddress.TryParse(port.OutIp, out var outIp) || outIp.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
             {
-                return DataTestPortResult.Fail($"Некорректный OutIp '{port.OutIp}'.");
+                return DataTestPairResult.Fail($"Некорректный OutIp '{port.OutIp}'.");
             }
 
-            var receiveDevice = FindDeviceByIp(devices, inIp);
-            if (receiveDevice == null)
+            var inNetworkInterface = FindNetworkInterfaceByIp(inIp);
+            var outNetworkInterface = FindNetworkInterfaceByIp(outIp);
+            var inDevice = FindDeviceByNetworkInterface(devices, inNetworkInterface);
+            var outDevice = FindDeviceByNetworkInterface(devices, outNetworkInterface);
+
+            if (inDevice == null || inNetworkInterface == null)
             {
-                return DataTestPortResult.Fail($"Не найдена pcap-сетевая карта с IP {inIp}.");
+                return DataTestPairResult.Fail($"Не найдена pcap-сетевая карта с IP {inIp}.");
             }
 
-            var sendDevice = FindDeviceByIp(devices, outIp);
-            if (sendDevice == null)
+            if (outDevice == null || outNetworkInterface == null)
             {
-                return DataTestPortResult.Fail($"Не найдена pcap-сетевая карта с IP {outIp}.");
+                return DataTestPairResult.Fail($"Не найдена pcap-сетевая карта с IP {outIp}.");
             }
 
-            var receiveMac = GetMacBytes(receiveDevice.MacAddress);
-            if (receiveMac == null)
+            var inMac = GetMacBytes(inDevice.MacAddress);
+            if (inMac == null)
             {
-                return DataTestPortResult.Fail($"У карты {inIp} не найден MAC адрес.");
+                return DataTestPairResult.Fail($"У карты {inIp} не найден MAC адрес.");
             }
 
-            var sendMac = GetMacBytes(sendDevice.MacAddress);
-            if (sendMac == null)
+            var outMac = GetMacBytes(outDevice.MacAddress);
+            if (outMac == null)
             {
-                return DataTestPortResult.Fail($"У карты {outIp} не найден MAC адрес.");
+                return DataTestPairResult.Fail($"У карты {outIp} не найден MAC адрес.");
             }
 
-            var targetBandwidthMbps = Math.Clamp(port.TargetBandwidthMbps ?? _targetBandwidthMbps, 1, 1000);
-            var packet = BuildPacket(sendMac, receiveMac, outIp, inIp, _packetSizeBytes, _udpPort);
+            var requestedBandwidthMbps = port.TargetBandwidthMbps ?? _targetBandwidthMbps;
+            var targetBandwidthMbps = NormalizeBandwidth(requestedBandwidthMbps);
+
+            if (requestedBandwidthMbps != targetBandwidthMbps)
+            {
+                _logger.Warning(
+                    $"DataTest {port.Name}: target {requestedBandwidthMbps} Mbps ограничен до {targetBandwidthMbps} Mbps, " +
+                    $"потому что текущая нода предназначена для 100-Мбит портов.");
+            }
+
+            var linkError = ValidateLinkSpeed(inNetworkInterface, inIp, targetBandwidthMbps) ??
+                            ValidateLinkSpeed(outNetworkInterface, outIp, targetBandwidthMbps);
+            if (!string.IsNullOrEmpty(linkError))
+            {
+                return DataTestPairResult.Fail(linkError);
+            }
+
+            var forward = await RunDirectionWithRetryAsync(
+                index,
+                port.Name,
+                "Forward",
+                outDevice,
+                inDevice,
+                outNetworkInterface,
+                inNetworkInterface,
+                outIp,
+                inIp,
+                outMac,
+                inMac,
+                targetBandwidthMbps,
+                cancellationToken);
+
+            DataTestPortResult? reverse = null;
+            if (_bidirectional)
+            {
+                await Task.Delay(CaptureStartSettleMs, cancellationToken);
+                reverse = await RunDirectionWithRetryAsync(
+                    index,
+                    port.Name,
+                    "Reverse",
+                    inDevice,
+                    outDevice,
+                    inNetworkInterface,
+                    outNetworkInterface,
+                    inIp,
+                    outIp,
+                    inMac,
+                    outMac,
+                    targetBandwidthMbps,
+                    cancellationToken);
+            }
+
+            return DataTestPairResult.FromDirections(forward, reverse);
+        }
+
+        private async Task<DataTestPortResult> RunDirectionWithRetryAsync(
+            int index,
+            string pairName,
+            string direction,
+            ILiveDevice sendDevice,
+            ILiveDevice receiveDevice,
+            NetworkInterface sendNetworkInterface,
+            NetworkInterface receiveNetworkInterface,
+            IPAddress sourceIp,
+            IPAddress destinationIp,
+            byte[] sourceMac,
+            byte[] destinationMac,
+            int targetBandwidthMbps,
+            CancellationToken cancellationToken)
+        {
+            DataTestPortResult? lastResult = null;
+
+            for (var attempt = 0; attempt <= InfrastructureRetryCount; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(_maxPortTestTimeMs);
+
+                try
+                {
+                    lastResult = await RunDirectionAsync(
+                        index,
+                        pairName,
+                        direction,
+                        sendDevice,
+                        receiveDevice,
+                        sendNetworkInterface,
+                        receiveNetworkInterface,
+                        sourceIp,
+                        destinationIp,
+                        sourceMac,
+                        destinationMac,
+                        targetBandwidthMbps,
+                        timeoutCts.Token);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    lastResult = DataTestPortResult.Fail(
+                        $"Таймаут направления {sourceIp} -> {destinationIp} после {_maxPortTestTimeMs} мс.",
+                        infrastructureFailure: true);
+                }
+
+                lastResult = lastResult with { AttemptCount = attempt + 1 };
+                if (lastResult.Passed || !lastResult.InfrastructureFailure || attempt >= InfrastructureRetryCount)
+                {
+                    return lastResult;
+                }
+
+                _logger.Warning(
+                    $"DataTest {pairName} {direction}: инфраструктурная ошибка генератора/захвата, " +
+                    $"повтор {attempt + 2}/{InfrastructureRetryCount + 1}. {lastResult.Error}");
+                await Task.Delay(CaptureStartSettleMs, cancellationToken);
+            }
+
+            return lastResult ?? DataTestPortResult.Fail("Не удалось выполнить направление DataTest.");
+        }
+
+        private async Task<DataTestPortResult> RunDirectionAsync(
+            int index,
+            string pairName,
+            string direction,
+            ILiveDevice sendDevice,
+            ILiveDevice receiveDevice,
+            NetworkInterface sendNetworkInterface,
+            NetworkInterface receiveNetworkInterface,
+            IPAddress sourceIp,
+            IPAddress destinationIp,
+            byte[] sourceMac,
+            byte[] destinationMac,
+            int targetBandwidthMbps,
+            CancellationToken cancellationToken)
+        {
+            var packet = BuildPacket(sourceMac, destinationMac, sourceIp, destinationIp, _packetSizeBytes, _udpPort);
             var expectedPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _durationMs);
+            var receivedMarks = new int[expectedPackets];
             var receivedPackets = 0;
-            var firstPacketAt = Stopwatch.GetTimestamp();
-            var lastPacketAt = firstPacketAt;
-            var sawFirstPacket = false;
+            var duplicatePackets = 0;
+            var unexpectedPackets = 0;
             var countingEnabled = 0;
+            var runId = CreateRunId();
 
             void OnPacketArrival(object sender, PacketCapture capture)
             {
@@ -204,16 +366,20 @@ namespace TestBuilder.Domain.Steps
                     return;
                 }
 
-                var now = Stopwatch.GetTimestamp();
-
-                if (!sawFirstPacket)
+                if (!TryReadProbeSequence(capture.Data, runId, expectedPackets, out var sequence))
                 {
-                    firstPacketAt = now;
-                    sawFirstPacket = true;
+                    Interlocked.Increment(ref unexpectedPackets);
+                    return;
                 }
 
-                lastPacketAt = now;
-                Interlocked.Increment(ref receivedPackets);
+                if (Interlocked.Exchange(ref receivedMarks[sequence], 1) == 0)
+                {
+                    Interlocked.Increment(ref receivedPackets);
+                }
+                else
+                {
+                    Interlocked.Increment(ref duplicatePackets);
+                }
             }
 
             try
@@ -221,19 +387,27 @@ namespace TestBuilder.Domain.Steps
                 receiveDevice.Open(DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness, 100);
                 sendDevice.Open(DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness, 100);
 
-                receiveDevice.Filter = $"udp port {_udpPort} and ip dst host {inIp}";
+                receiveDevice.Filter = BuildCaptureFilter(sourceIp, destinationIp, sourceMac, destinationMac, _udpPort);
                 receiveDevice.OnPacketArrival += OnPacketArrival;
                 receiveDevice.StartCapture();
+                await Task.Delay(CaptureStartSettleMs, cancellationToken);
 
                 if (_warmupMs > 0)
                 {
-                    await SendPacedAsync(sendDevice, packet, targetBandwidthMbps, _warmupMs, cancellationToken);
+                    await SendPacedAsync(
+                        sendDevice,
+                        packet,
+                        targetBandwidthMbps,
+                        _warmupMs,
+                        CreateRunId(),
+                        cancellationToken);
+                    await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
 
+                var captureStatsBefore = ReadCaptureStatistics(receiveDevice);
                 Interlocked.Exchange(ref receivedPackets, 0);
-                firstPacketAt = Stopwatch.GetTimestamp();
-                lastPacketAt = firstPacketAt;
-                sawFirstPacket = false;
+                Interlocked.Exchange(ref duplicatePackets, 0);
+                Interlocked.Exchange(ref unexpectedPackets, 0);
                 Volatile.Write(ref countingEnabled, 1);
 
                 var sendResult = await SendPacedAsync(
@@ -241,48 +415,56 @@ namespace TestBuilder.Domain.Steps
                     packet,
                     targetBandwidthMbps,
                     _durationMs,
+                    runId,
                     cancellationToken);
                 var transmittedPackets = sendResult.SentPackets;
 
-                await Task.Delay(100, cancellationToken);
+                await WaitForCaptureDrainAsync(() => Volatile.Read(ref receivedPackets), cancellationToken);
                 Volatile.Write(ref countingEnabled, 0);
 
                 var received = Volatile.Read(ref receivedPackets);
-                var lostPackets = Math.Max(0, transmittedPackets - received);
-                var txDeficitPackets = Math.Max(0, expectedPackets - transmittedPackets);
-                var txDeficitPercent = expectedPackets > 0
-                    ? txDeficitPackets * 100.0 / expectedPackets
-                    : 100.0;
+                var captureStatsAfter = ReadCaptureStatistics(receiveDevice);
+                var captureDroppedPackets = CounterDelta(captureStatsBefore.DroppedPackets, captureStatsAfter.DroppedPackets);
+                var receivedForLoss = Math.Min(received, transmittedPackets);
+                var lostPackets = Math.Max(0, transmittedPackets - receivedForLoss);
                 var lossPercent = transmittedPackets > 0
                     ? lostPackets * 100.0 / transmittedPackets
                     : 100.0;
-                var passed = lossPercent <= _allowedLossPercent &&
-                             txDeficitPercent <= _allowedLossPercent;
-                var elapsedMs = GetElapsedMilliseconds(sawFirstPacket ? firstPacketAt : Stopwatch.GetTimestamp(), lastPacketAt);
-                var speedKbps = elapsedMs > 0 ? received * packet.Length * 8.0 / elapsedMs : 0.0;
+                var wireSizeBytes = CalculateWireSizeBytes(packet.Length);
                 var txMbps = sendResult.ElapsedMs > 0
-                    ? transmittedPackets * packet.Length * 8.0 / sendResult.ElapsedMs / 1000.0
+                    ? transmittedPackets * wireSizeBytes * 8.0 / sendResult.ElapsedMs / 1000.0
                     : 0.0;
+                var rxMbps = sendResult.ElapsedMs > 0
+                    ? receivedForLoss * wireSizeBytes * 8.0 / sendResult.ElapsedMs / 1000.0
+                    : 0.0;
+                var txDeficitPercent = CalculateTxDeficitPercent(targetBandwidthMbps, txMbps);
+                var infrastructureFailure = txDeficitPercent > _allowedTxDeficitPercent || captureDroppedPackets > 0;
+                var passed = lossPercent <= _allowedLossPercent && !infrastructureFailure;
                 var error = BuildFailureMessage(
                     passed,
                     lossPercent,
                     txDeficitPercent,
                     received,
                     transmittedPackets,
-                    expectedPackets);
+                    expectedPackets,
+                    captureDroppedPackets,
+                    sendResult.Engine);
 
                 _logger.Info(
-                    $"DataTest {port.Name} [{index}]: {outIp} -> {inIp}, target {targetBandwidthMbps} Mbps, " +
+                    $"DataTest {pairName} [{index}] {direction}: {sourceIp} -> {destinationIp}, target {targetBandwidthMbps} Mbps, " +
                     $"expected {expectedPackets}, TX {transmittedPackets}, RX {received}, loss {lossPercent:F3}%, " +
-                    $"tx deficit {txDeficitPercent:F3}%, tx speed {txMbps:F3} Mbps, rx speed {speedKbps / 1000.0:F3} Mbps, " +
+                    $"tx deficit {txDeficitPercent:F3}%, tx speed {txMbps:F3} Mbps, rx speed {rxMbps:F3} Mbps, " +
+                    $"capture drops {captureDroppedPackets}, duplicates {duplicatePackets}, unexpected {unexpectedPackets}, " +
+                    $"engine {sendResult.Engine}, " +
                     $"{(passed ? "OK" : "FAIL")}.");
 
                 return new DataTestPortResult(
                     passed,
                     transmittedPackets,
                     received,
-                    speedKbps,
+                    rxMbps * 1000.0,
                     txMbps,
+                    rxMbps,
                     targetBandwidthMbps,
                     _durationMs,
                     expectedPackets,
@@ -290,11 +472,19 @@ namespace TestBuilder.Domain.Steps
                     txDeficitPercent,
                     receiveDevice.Name,
                     sendDevice.Name,
+                    NetworkSpeedMbps(receiveNetworkInterface),
+                    NetworkSpeedMbps(sendNetworkInterface),
+                    captureDroppedPackets,
+                    duplicatePackets,
+                    unexpectedPackets,
+                    sendResult.Engine,
+                    infrastructureFailure,
+                    1,
                     error);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return DataTestPortResult.Fail(ex.Message);
+                return DataTestPortResult.Fail(ex.Message, infrastructureFailure: true);
             }
             finally
             {
@@ -373,9 +563,27 @@ namespace TestBuilder.Domain.Steps
             return Math.Max(1, (int)Math.Round(Math.Min(int.MaxValue, packets), MidpointRounding.AwayFromZero));
         }
 
+        public static int CalculateWireSizeBytes(int packetSizeBytes)
+        {
+            return Math.Max(MinEthernetFrameLength, packetSizeBytes) +
+                   EthernetFcsLength +
+                   EthernetPreambleAndSfdLength +
+                   EthernetInterPacketGapLength;
+        }
+
+        public static double CalculateTxDeficitPercent(double targetBandwidthMbps, double actualTxMbps)
+        {
+            if (targetBandwidthMbps <= 0)
+            {
+                return 100.0;
+            }
+
+            return Math.Clamp((targetBandwidthMbps - actualTxMbps) * 100.0 / targetBandwidthMbps, 0.0, 100.0);
+        }
+
         private static double CalculatePacketsPerSecond(int targetBandwidthMbps, int packetSizeBytes)
         {
-            return Math.Max(1, targetBandwidthMbps) * 1_000_000.0 / (Math.Max(MinEthernetFrameLength, packetSizeBytes) * 8.0);
+            return Math.Max(1, targetBandwidthMbps) * 1_000_000.0 / (CalculateWireSizeBytes(packetSizeBytes) * 8.0);
         }
 
         private static async Task<PacedSendResult> SendPacedAsync(
@@ -383,6 +591,121 @@ namespace TestBuilder.Domain.Steps
             byte[] packet,
             int targetBandwidthMbps,
             int durationMs,
+            ulong runId,
+            CancellationToken cancellationToken)
+        {
+            if (device is PcapDevice pcapDevice && IsNativeSendQueueAvailable())
+            {
+                return SendWithNpcapQueue(
+                    pcapDevice,
+                    packet,
+                    targetBandwidthMbps,
+                    durationMs,
+                    runId,
+                    cancellationToken);
+            }
+
+            return await SendIndividuallyAsync(
+                device,
+                packet,
+                targetBandwidthMbps,
+                durationMs,
+                runId,
+                cancellationToken);
+        }
+
+        private static PacedSendResult SendWithNpcapQueue(
+            PcapDevice device,
+            byte[] packet,
+            int targetBandwidthMbps,
+            int durationMs,
+            ulong runId,
+            CancellationToken cancellationToken)
+        {
+            var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
+            var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length);
+            var queues = new List<SendQueuePlan>();
+
+            try
+            {
+                for (var chunkStartMs = 0; chunkStartMs < durationMs; chunkStartMs += SendQueueChunkMs)
+                {
+                    var chunkEndMs = Math.Min(durationMs, chunkStartMs + SendQueueChunkMs);
+                    var startSequence = Math.Min(
+                        targetPackets,
+                        (int)Math.Round(packetsPerSecond * chunkStartMs / 1000.0, MidpointRounding.AwayFromZero));
+                    var endSequence = chunkEndMs >= durationMs
+                        ? targetPackets
+                        : Math.Min(
+                            targetPackets,
+                            (int)Math.Round(packetsPerSecond * chunkEndMs / 1000.0, MidpointRounding.AwayFromZero));
+                    var packetCount = Math.Max(0, endSequence - startSequence);
+
+                    if (packetCount == 0)
+                    {
+                        continue;
+                    }
+
+                    var queueCapacity = checked(packetCount * (packet.Length + 64));
+                    var queue = new SendQueue(queueCapacity);
+
+                    for (var sequence = startSequence; sequence < endSequence; sequence++)
+                    {
+                        WriteProbeIdentity(packet, runId, sequence);
+                        var relativeMicroseconds = (int)Math.Round(
+                            (sequence - startSequence) * 1_000_000.0 / packetsPerSecond,
+                            MidpointRounding.AwayFromZero);
+
+                        if (!queue.Add(
+                                packet,
+                                relativeMicroseconds / 1_000_000,
+                                relativeMicroseconds % 1_000_000))
+                        {
+                            queue.Dispose();
+                            throw new InvalidOperationException("Не удалось подготовить очередь Npcap для DataTest.");
+                        }
+                    }
+
+                    queues.Add(new SendQueuePlan(queue, packetCount));
+                }
+
+                var startTimestamp = Stopwatch.GetTimestamp();
+                var sent = 0;
+
+                foreach (var plan in queues)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
+                    var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
+                    var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
+                        ? plan.PacketCount
+                        : Math.Clamp(transmittedBytes / Math.Max(1, entrySize), 0, plan.PacketCount);
+                    sent += sentInQueue;
+
+                    if (sentInQueue < plan.PacketCount)
+                    {
+                        break;
+                    }
+                }
+
+                var elapsedMs = GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
+                return new PacedSendResult(sent, elapsedMs, "NpcapSendQueue");
+            }
+            finally
+            {
+                foreach (var plan in queues)
+                {
+                    plan.Queue.Dispose();
+                }
+            }
+        }
+
+        private static async Task<PacedSendResult> SendIndividuallyAsync(
+            IInjectionDevice device,
+            byte[] packet,
+            int targetBandwidthMbps,
+            int durationMs,
+            ulong runId,
             CancellationToken cancellationToken)
         {
             var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
@@ -411,6 +734,7 @@ namespace TestBuilder.Domain.Steps
 
                 while (sent < burstLimit)
                 {
+                    WriteProbeIdentity(packet, runId, sent);
                     device.SendPacket(packet, packet.Length);
                     sent++;
                 }
@@ -445,7 +769,129 @@ namespace TestBuilder.Domain.Steps
             }
 
             var elapsedMs = GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
-            return new PacedSendResult(sent, elapsedMs);
+            return new PacedSendResult(sent, elapsedMs, "SharpPcapSendPacket");
+        }
+
+        internal static void WriteProbeIdentity(byte[] packet, ulong runId, int sequence)
+        {
+            if (packet.Length < ProbePayloadOffset + ProbeIdentityLength)
+            {
+                throw new ArgumentException("Packet is too small for the DataTest identity.", nameof(packet));
+            }
+
+            ProbeMagic.CopyTo(packet, ProbePayloadOffset);
+            WriteUInt64(packet, ProbePayloadOffset + ProbeMagic.Length, runId);
+            WriteUInt32(packet, ProbePayloadOffset + ProbeMagic.Length + sizeof(ulong), (uint)sequence);
+        }
+
+        internal static bool TryReadProbeSequence(
+            ReadOnlySpan<byte> packet,
+            ulong expectedRunId,
+            int expectedPackets,
+            out int sequence)
+        {
+            sequence = -1;
+
+            if (packet.Length < ProbePayloadOffset + ProbeIdentityLength ||
+                !packet.Slice(ProbePayloadOffset, ProbeMagic.Length).SequenceEqual(ProbeMagic))
+            {
+                return false;
+            }
+
+            var runId = ReadUInt64(packet, ProbePayloadOffset + ProbeMagic.Length);
+            var rawSequence = ReadUInt32(packet, ProbePayloadOffset + ProbeMagic.Length + sizeof(ulong));
+
+            if (runId != expectedRunId || rawSequence >= expectedPackets)
+            {
+                return false;
+            }
+
+            sequence = (int)rawSequence;
+            return true;
+        }
+
+        private static bool IsNativeSendQueueAvailable()
+        {
+            try
+            {
+                return SendQueue.IsHardwareAccelerated;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static ulong CreateRunId()
+        {
+            Span<byte> bytes = stackalloc byte[sizeof(ulong)];
+            RandomNumberGenerator.Fill(bytes);
+            return BitConverter.ToUInt64(bytes);
+        }
+
+        private static string BuildCaptureFilter(
+            IPAddress sourceIp,
+            IPAddress destinationIp,
+            byte[] sourceMac,
+            byte[] destinationMac,
+            int udpPort)
+        {
+            return $"ether src {FormatMac(sourceMac)} and ether dst {FormatMac(destinationMac)} " +
+                   $"and udp src port {udpPort} and udp dst port {udpPort} " +
+                   $"and src host {sourceIp} and dst host {destinationIp}";
+        }
+
+        private static string FormatMac(byte[] mac)
+        {
+            return string.Join(":", mac.Select(value => value.ToString("x2")));
+        }
+
+        private static async Task WaitForCaptureDrainAsync(Func<int> readCount, CancellationToken cancellationToken)
+        {
+            var startedAt = Stopwatch.GetTimestamp();
+            var quietStartedAt = startedAt;
+            var lastCount = readCount();
+
+            while (GetElapsedMilliseconds(startedAt, Stopwatch.GetTimestamp()) < ReceiveDrainMaxMs)
+            {
+                await Task.Delay(25, cancellationToken);
+                var currentCount = readCount();
+
+                if (currentCount != lastCount)
+                {
+                    lastCount = currentCount;
+                    quietStartedAt = Stopwatch.GetTimestamp();
+                    continue;
+                }
+
+                if (GetElapsedMilliseconds(quietStartedAt, Stopwatch.GetTimestamp()) >= ReceiveDrainQuietMs)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static CaptureStatisticsSnapshot ReadCaptureStatistics(ILiveDevice device)
+        {
+            try
+            {
+                var statistics = device.Statistics;
+                if (statistics == null)
+                {
+                    return default;
+                }
+
+                return new CaptureStatisticsSnapshot(statistics.ReceivedPackets, statistics.DroppedPackets);
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
+        private static uint CounterDelta(uint before, uint after)
+        {
+            return after >= before ? after - before : uint.MaxValue - before + after + 1;
         }
 
         private string BuildFailureMessage(
@@ -454,7 +900,9 @@ namespace TestBuilder.Domain.Steps
             double txDeficitPercent,
             int receivedPackets,
             int transmittedPackets,
-            int expectedPackets)
+            int expectedPackets,
+            uint captureDroppedPackets,
+            string sendEngine)
         {
             if (passed)
             {
@@ -463,14 +911,21 @@ namespace TestBuilder.Domain.Steps
 
             var parts = new List<string>();
 
-            if (txDeficitPercent > _allowedLossPercent)
+            if (txDeficitPercent > _allowedTxDeficitPercent)
             {
-                parts.Add($"TX deficit {txDeficitPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%: sent {transmittedPackets} of expected {expectedPackets} packets");
+                parts.Add(
+                    $"TX deficit {txDeficitPercent:F3}% is greater than allowed {_allowedTxDeficitPercent:F3}%: " +
+                    $"generator {sendEngine}, sent {transmittedPackets} of expected {expectedPackets} packets");
             }
 
             if (lossPercent > _allowedLossPercent)
             {
                 parts.Add($"Loss {lossPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%: RX {receivedPackets}, TX {transmittedPackets}");
+            }
+
+            if (captureDroppedPackets > 0)
+            {
+                parts.Add($"PC/Npcap capture dropped {captureDroppedPackets} packets; DUT result is inconclusive");
             }
 
             return string.Join("; ", parts);
@@ -495,7 +950,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             int index,
             DataTestPortConfig port,
-            DataTestPortResult result)
+            DataTestPairResult result)
         {
             var prefix = $"{_outputVariableName}.Port{index}";
             context.SetVariable($"{prefix}.Name", port.Name);
@@ -506,6 +961,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.ReceivedPackets", result.ReceivedPackets);
             context.SetVariable($"{prefix}.SpeedKbps", result.SpeedKbps);
             context.SetVariable($"{prefix}.ActualTxMbps", result.ActualTxMbps);
+            context.SetVariable($"{prefix}.ActualRxMbps", result.ActualRxMbps);
             context.SetVariable($"{prefix}.TargetBandwidthMbps", result.TargetBandwidthMbps);
             context.SetVariable($"{prefix}.DurationMs", result.DurationMs);
             context.SetVariable($"{prefix}.ExpectedPackets", result.ExpectedPackets);
@@ -513,6 +969,36 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.TxDeficitPercent", result.TxDeficitPercent);
             context.SetVariable($"{prefix}.ReceiveDevice", result.ReceiveDeviceName);
             context.SetVariable($"{prefix}.SendDevice", result.SendDeviceName);
+            context.SetVariable($"{prefix}.CaptureDroppedPackets", result.CaptureDroppedPackets);
+            context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
+            context.SetVariable($"{prefix}.DirectionsTested", result.Reverse == null ? 1 : 2);
+            context.SetVariable($"{prefix}.Error", result.Error);
+
+            WriteDirectionResult(context, $"{prefix}.Forward", result.Forward);
+            if (result.Reverse != null)
+            {
+                WriteDirectionResult(context, $"{prefix}.Reverse", result.Reverse);
+            }
+        }
+
+        private static void WriteDirectionResult(TestContext context, string prefix, DataTestPortResult result)
+        {
+            context.SetVariable($"{prefix}.Passed", result.Passed);
+            context.SetVariable($"{prefix}.TransmittedPackets", result.TransmittedPackets);
+            context.SetVariable($"{prefix}.ReceivedPackets", result.ReceivedPackets);
+            context.SetVariable($"{prefix}.ExpectedPackets", result.ExpectedPackets);
+            context.SetVariable($"{prefix}.TargetBandwidthMbps", result.TargetBandwidthMbps);
+            context.SetVariable($"{prefix}.ActualTxMbps", result.ActualTxMbps);
+            context.SetVariable($"{prefix}.ActualRxMbps", result.ActualRxMbps);
+            context.SetVariable($"{prefix}.LossPercent", result.LossPercent);
+            context.SetVariable($"{prefix}.TxDeficitPercent", result.TxDeficitPercent);
+            context.SetVariable($"{prefix}.ReceiveLinkSpeedMbps", result.ReceiveLinkSpeedMbps);
+            context.SetVariable($"{prefix}.SendLinkSpeedMbps", result.SendLinkSpeedMbps);
+            context.SetVariable($"{prefix}.CaptureDroppedPackets", result.CaptureDroppedPackets);
+            context.SetVariable($"{prefix}.DuplicatePackets", result.DuplicatePackets);
+            context.SetVariable($"{prefix}.UnexpectedPackets", result.UnexpectedPackets);
+            context.SetVariable($"{prefix}.SendEngine", result.SendEngine);
+            context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
             context.SetVariable($"{prefix}.Error", result.Error);
         }
 
@@ -524,10 +1010,46 @@ namespace TestBuilder.Domain.Steps
                    mode.Equals("TYPE_SOFT_GEN", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static ILiveDevice? FindDeviceByIp(IEnumerable<ILiveDevice> devices, IPAddress ip)
+        public static int NormalizeBandwidth(int bandwidthMbps)
         {
-            var networkInterface = FindNetworkInterfaceByIp(ip);
+            return Math.Clamp(bandwidthMbps, 1, MaximumSupportedBandwidthMbps);
+        }
 
+        private static string? ValidateLinkSpeed(
+            NetworkInterface networkInterface,
+            IPAddress ip,
+            int targetBandwidthMbps)
+        {
+            if (networkInterface.OperationalStatus != OperationalStatus.Up)
+            {
+                return $"Сетевая карта {ip} не поднята (status {networkInterface.OperationalStatus}).";
+            }
+
+            var speedMbps = NetworkSpeedMbps(networkInterface);
+            if (speedMbps > 0 && speedMbps + 0.001 < targetBandwidthMbps)
+            {
+                return $"Сетевая карта {ip} согласовала только {speedMbps:F0} Mbps, target {targetBandwidthMbps} Mbps.";
+            }
+
+            return null;
+        }
+
+        private static double NetworkSpeedMbps(NetworkInterface networkInterface)
+        {
+            try
+            {
+                return networkInterface.Speed > 0 ? networkInterface.Speed / 1_000_000.0 : 0.0;
+            }
+            catch
+            {
+                return 0.0;
+            }
+        }
+
+        private static ILiveDevice? FindDeviceByNetworkInterface(
+            IEnumerable<ILiveDevice> devices,
+            NetworkInterface? networkInterface)
+        {
             if (networkInterface == null)
             {
                 return null;
@@ -611,6 +1133,34 @@ namespace TestBuilder.Domain.Steps
             buffer[offset + 1] = (byte)(value & 0xFF);
         }
 
+        private static void WriteUInt32(byte[] buffer, int offset, uint value)
+        {
+            buffer[offset] = (byte)(value >> 24);
+            buffer[offset + 1] = (byte)(value >> 16);
+            buffer[offset + 2] = (byte)(value >> 8);
+            buffer[offset + 3] = (byte)value;
+        }
+
+        private static void WriteUInt64(byte[] buffer, int offset, ulong value)
+        {
+            WriteUInt32(buffer, offset, (uint)(value >> 32));
+            WriteUInt32(buffer, offset + sizeof(uint), (uint)value);
+        }
+
+        private static uint ReadUInt32(ReadOnlySpan<byte> buffer, int offset)
+        {
+            return ((uint)buffer[offset] << 24) |
+                   ((uint)buffer[offset + 1] << 16) |
+                   ((uint)buffer[offset + 2] << 8) |
+                   buffer[offset + 3];
+        }
+
+        private static ulong ReadUInt64(ReadOnlySpan<byte> buffer, int offset)
+        {
+            return ((ulong)ReadUInt32(buffer, offset) << 32) |
+                   ReadUInt32(buffer, offset + sizeof(uint));
+        }
+
         private static ushort InternetChecksum(byte[] buffer, int offset, int length)
         {
             uint sum = 0;
@@ -638,7 +1188,11 @@ namespace TestBuilder.Domain.Steps
 
     public sealed record DataTestPortConfig(string Name, string InIp, string OutIp, int? TargetBandwidthMbps = null);
 
-    internal sealed record PacedSendResult(int SentPackets, long ElapsedMs);
+    internal sealed record SendQueuePlan(SendQueue Queue, int PacketCount);
+
+    internal readonly record struct CaptureStatisticsSnapshot(uint ReceivedPackets, uint DroppedPackets);
+
+    internal sealed record PacedSendResult(int SentPackets, long ElapsedMs, string Engine);
 
     internal sealed record DataTestPortResult(
         bool Passed,
@@ -646,6 +1200,7 @@ namespace TestBuilder.Domain.Steps
         int ReceivedPackets,
         double SpeedKbps,
         double ActualTxMbps,
+        double ActualRxMbps,
         int TargetBandwidthMbps,
         int DurationMs,
         int ExpectedPackets,
@@ -653,14 +1208,23 @@ namespace TestBuilder.Domain.Steps
         double TxDeficitPercent,
         string ReceiveDeviceName,
         string SendDeviceName,
+        double ReceiveLinkSpeedMbps,
+        double SendLinkSpeedMbps,
+        uint CaptureDroppedPackets,
+        int DuplicatePackets,
+        int UnexpectedPackets,
+        string SendEngine,
+        bool InfrastructureFailure,
+        int AttemptCount,
         string Error)
     {
-        public static DataTestPortResult Fail(string error) => new(
+        public static DataTestPortResult Fail(string error, bool infrastructureFailure = false) => new(
             false,
             0,
             0,
             0.0,
             0.0,
+            0.0,
             0,
             0,
             0,
@@ -668,6 +1232,76 @@ namespace TestBuilder.Domain.Steps
             100.0,
             string.Empty,
             string.Empty,
+            0.0,
+            0.0,
+            0,
+            0,
+            0,
+            string.Empty,
+            infrastructureFailure,
+            1,
             error);
+    }
+
+    internal sealed record DataTestPairResult(
+        bool Passed,
+        int TransmittedPackets,
+        int ReceivedPackets,
+        double SpeedKbps,
+        double ActualTxMbps,
+        double ActualRxMbps,
+        int TargetBandwidthMbps,
+        int DurationMs,
+        int ExpectedPackets,
+        double LossPercent,
+        double TxDeficitPercent,
+        string ReceiveDeviceName,
+        string SendDeviceName,
+        uint CaptureDroppedPackets,
+        int AttemptCount,
+        string Error,
+        DataTestPortResult Forward,
+        DataTestPortResult? Reverse)
+    {
+        public static DataTestPairResult FromDirections(DataTestPortResult forward, DataTestPortResult? reverse)
+        {
+            var directions = reverse == null ? new[] { forward } : new[] { forward, reverse };
+            var errors = new List<string>();
+
+            if (!forward.Passed)
+            {
+                errors.Add($"Forward: {forward.Error}");
+            }
+
+            if (reverse is { Passed: false })
+            {
+                errors.Add($"Reverse: {reverse.Error}");
+            }
+
+            return new DataTestPairResult(
+                directions.All(result => result.Passed),
+                directions.Sum(result => result.TransmittedPackets),
+                directions.Sum(result => result.ReceivedPackets),
+                directions.Min(result => result.SpeedKbps),
+                directions.Min(result => result.ActualTxMbps),
+                directions.Min(result => result.ActualRxMbps),
+                directions.Max(result => result.TargetBandwidthMbps),
+                directions.Sum(result => result.DurationMs),
+                directions.Sum(result => result.ExpectedPackets),
+                directions.Max(result => result.LossPercent),
+                directions.Max(result => result.TxDeficitPercent),
+                forward.ReceiveDeviceName,
+                forward.SendDeviceName,
+                directions.Aggregate(0u, (total, result) => total + result.CaptureDroppedPackets),
+                directions.Max(result => result.AttemptCount),
+                string.Join("; ", errors),
+                forward,
+                reverse);
+        }
+
+        public static DataTestPairResult Fail(string error)
+        {
+            return FromDirections(DataTestPortResult.Fail(error), null);
+        }
     }
 }

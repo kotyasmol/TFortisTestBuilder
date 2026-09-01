@@ -221,7 +221,7 @@ public class ProductionStepTests
     {
         var packets = RunDataTestStep.CalculateExpectedPackets(100, 1514, 5000);
 
-        Assert.Equal(41281, packets);
+        Assert.Equal(40637, packets);
     }
 
     [Fact]
@@ -229,7 +229,38 @@ public class ProductionStepTests
     {
         var packets = RunDataTestStep.CalculateExpectedPackets(1000, 1514, 5000);
 
-        Assert.Equal(412814, packets);
+        Assert.Equal(406372, packets);
+    }
+
+    [Fact]
+    public void RunDataTestStep_AccountsForEthernetWireOverhead()
+    {
+        Assert.Equal(1538, RunDataTestStep.CalculateWireSizeBytes(1514));
+    }
+
+    [Fact]
+    public void RunDataTestStep_CalculatesGeneratorDeficitFromActualWireSpeed()
+    {
+        Assert.Equal(36.5, RunDataTestStep.CalculateTxDeficitPercent(100, 63.5), precision: 3);
+    }
+
+    [Fact]
+    public void RunDataTestStep_RecognizesOnlyCurrentNumberedProbe()
+    {
+        var packet = RunDataTestStep.BuildPacket(
+            new byte[] { 0x10, 0xFF, 0xE0, 0x68, 0xFE, 0x24 },
+            new byte[] { 0x00, 0xFF, 0x03, 0x0A, 0xDC, 0x84 },
+            IPAddress.Parse("192.168.0.3"),
+            IPAddress.Parse("192.168.0.2"),
+            1514,
+            43962);
+
+        RunDataTestStep.WriteProbeIdentity(packet, 123456789UL, 42);
+
+        Assert.True(RunDataTestStep.TryReadProbeSequence(packet, 123456789UL, 100, out var sequence));
+        Assert.Equal(42, sequence);
+        Assert.False(RunDataTestStep.TryReadProbeSequence(packet, 987654321UL, 100, out _));
+        Assert.False(RunDataTestStep.TryReadProbeSequence(packet, 123456789UL, 40, out _));
     }
 
     [Fact]
@@ -248,6 +279,8 @@ public class ProductionStepTests
             500,
             5000,
             1.0,
+            2.0,
+            true,
             new[] { new DataTestPortConfig("port0-1", "192.168.0.2", "192.168.0.3") },
             "DataTest",
             failOnError: true);

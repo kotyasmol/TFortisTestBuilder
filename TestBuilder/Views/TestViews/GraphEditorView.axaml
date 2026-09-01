@@ -1404,7 +1404,7 @@
                       <TextBox Grid.Column="1" Text="{Binding UdpPort}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Target Mbps:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Target wire Mbps:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
@@ -1420,8 +1420,12 @@
                       <TextBox Grid.Column="1" Text="{Binding InterPairDelayMs}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Allowed fail %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Max loss %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Max TX deficit %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding AllowedTxDeficitPercent}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -1431,6 +1435,7 @@
                       <TextBlock Grid.Column="0" Text="Ports:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding PortsText}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="72" />
                     </Grid>
+                    <CheckBox Content="Test both directions" IsChecked="{Binding Bidirectional}" FontSize="12" />
                     <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
                   </StackPanel>
                 </nodify:Node>
