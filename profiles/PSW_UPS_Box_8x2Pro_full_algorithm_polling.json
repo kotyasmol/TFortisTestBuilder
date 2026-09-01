@@ -1765,14 +1765,14 @@
             "expectedValue": "1",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
+            "responseType": "Integer",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 30000,
+            "pollAction": "HttpGet",
+            "requestTimeoutMs": 5000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/api/getUpsStatus"
           },
           {
             "id": "6",
@@ -1963,14 +1963,14 @@
             "expectedValue": "0",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
+            "responseType": "Integer",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 30000,
+            "pollAction": "HttpGet",
+            "requestTimeoutMs": 5000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/api/getUpsStatus"
           },
           {
             "id": "4",

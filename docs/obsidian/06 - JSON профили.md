@@ -132,6 +132,12 @@ Deserializer также принимает часть русских и legacy-�
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
+В UPS-переходах рабочего профиля `Wait Variable Until` сохраняется как
+`pollAction: "HttpGet"`, `endpoint: "/api/getUpsStatus"`,
+`responseType: "Integer"`, request timeout `5000`, общий timeout `160000` и
+интервал `5000` мс. Исходные UPS-поля до переключения по-прежнему берутся одним
+`Selftest Check`.
+
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
 `arp`.

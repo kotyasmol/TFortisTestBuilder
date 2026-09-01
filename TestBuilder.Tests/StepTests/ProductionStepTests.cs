@@ -366,6 +366,36 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task WaitVariableUntilStep_HttpGetRetriesWhileDutIsBooting()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Failure("DUT unavailable", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.ups_rez",
+            "1",
+            VariableComparisonType.Number,
+            "HttpGet",
+            "http://192.168.0.1",
+            "/api/getUpsStatus",
+            HttpResponseValueType.Integer,
+            1000,
+            1000,
+            1,
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal(1, context.GetVariable<int>("Dut.ups_rez"));
+    }
+
+    [Fact]
     public async Task WaitVariableUntilStep_HttpGetDoesNotPassOnStaleExpectedValue()
     {
         var service = new CapturingHttpService(

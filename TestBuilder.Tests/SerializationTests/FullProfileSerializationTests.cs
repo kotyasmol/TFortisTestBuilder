@@ -141,11 +141,21 @@ public class FullProfileSerializationTests
 
         foreach (var wait in new[] { batteryWait, acWait })
         {
-            Assert.Equal("SelftestSnapshot", wait.PollAction);
-            Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
-            Assert.Equal(HttpResponseValueType.String, wait.ResponseType);
-            Assert.Equal(30000, wait.RequestTimeoutMs);
+            Assert.Equal("HttpGet", wait.PollAction);
+            Assert.Equal("/api/getUpsStatus", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.Integer, wait.ResponseType);
+            Assert.Equal(5000, wait.RequestTimeoutMs);
+            Assert.Equal(5000, wait.IntervalMs);
+            Assert.Equal(160000, wait.TimeoutMs);
             Assert.True(wait.FailOnTimeout);
         }
+
+        var batteryWrites = upsBatteryTransitionSubtest.BodyGraph.Nodes
+            .OfType<ModbusWriteNodeViewModel>()
+            .ToArray();
+        Assert.Single(batteryWrites, node => node.Address == 1204 && node.Value == 0);
+        var batteryDelay = Assert.Single(
+            upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<DelayNodeViewModel>());
+        Assert.Equal(2000, batteryDelay.Milliseconds);
     }
 }
