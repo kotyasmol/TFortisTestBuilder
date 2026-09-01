@@ -397,6 +397,50 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task WaitVariableUntilStep_SelftestSnapshotRefreshesPageUntilExpectedValue()
+    {
+        static string Snapshot(int upsResult) => $"""
+            <selftest>
+              <default_mac>00:11:22:33:44:55</default_mac>
+              <init_ok>1</init_ok>
+              <dev_type>0</dev_type>
+              <firmvare_vers>1119</firmvare_vers>
+              <boot_vers>0</boot_vers>
+              <ups_rez>{upsResult}</ups_rez>
+            </selftest>
+            """;
+
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, Snapshot(0), TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, Snapshot(1), TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.ups_rez", 1);
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.ups_rez",
+            "1",
+            VariableComparisonType.Number,
+            "SelftestSnapshot",
+            "http://192.168.0.1",
+            "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            HttpResponseValueType.String,
+            1000,
+            1000,
+            1,
+            true,
+            useBrowserForSelftest: false);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal("1", context.GetVariable<string>("Dut.ups_rez"));
+        Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
+    }
+
+    [Fact]
     public async Task GetUpsVoltageStep_ParsesDoubleResponse()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "24.7", TimeSpan.FromMilliseconds(1)));

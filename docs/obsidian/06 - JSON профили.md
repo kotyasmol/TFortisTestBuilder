@@ -207,6 +207,9 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 endpoint и тип ответа. Специализированные типы `Get UPS Status`,
 `Get UPS Voltage`, `Get IRP Status` также десериализуются, но новые графы должны
 использовать `Read HTTP Variable` и `Wait Variable Until` + `HttpGet`.
+Для прошивок без скалярного DUT API поддерживается `pollAction = SelftestSnapshot`:
+`endpoint` указывает на тестовую страницу, а каждая попытка обновляет все
+переменные указанного output prefix.
 
 ## Совместимость и риски
 

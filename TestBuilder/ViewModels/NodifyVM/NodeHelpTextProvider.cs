@@ -243,9 +243,9 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Variable - имя переменной.
                 Expected - ожидаемое значение.
                 Type - тип сравнения.
-                Poll action HttpGet выполняет универсальный GET; None проверяет уже существующую переменную.
+                Poll action SelftestSnapshot заново снимает тестовую страницу; HttpGet делает GET одного значения; None не обновляет переменную.
                 Base URL - адрес устройства для HTTP-опроса.
-                Endpoint - путь API или полный URL.
+                Endpoint - путь API/тестовой страницы или полный URL.
                 Response type - как разобрать ответ перед сравнением.
                 Request ms - лимит одного запроса.
                 Timeout ms - общий лимит ожидания.

@@ -24,7 +24,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private bool failOnTimeout = true;
 
         public IReadOnlyList<string> PollActions { get; } =
-            Array.AsReadOnly(new[] { "HttpGet", "None", "GetUpsStatus", "GetUpsVoltage", "GetIrpStatus" });
+            Array.AsReadOnly(new[] { "SelftestSnapshot", "HttpGet", "None", "GetUpsStatus", "GetUpsVoltage", "GetIrpStatus" });
 
         public IReadOnlyList<HttpResponseValueType> ResponseTypes { get; } =
             Array.AsReadOnly(Enum.GetValues<HttpResponseValueType>());

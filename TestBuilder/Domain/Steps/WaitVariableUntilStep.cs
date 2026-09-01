@@ -23,6 +23,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _timeoutMs;
         private readonly int _intervalMs;
         private readonly bool _failOnTimeout;
+        private readonly bool _useBrowserForSelftest;
 
         public WaitVariableUntilStep(
             IHttpRequestService httpRequestService,
@@ -37,7 +38,8 @@ namespace TestBuilder.Domain.Steps
             int requestTimeoutMs,
             int timeoutMs,
             int intervalMs,
-            bool failOnTimeout)
+            bool failOnTimeout,
+            bool useBrowserForSelftest = true)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -52,6 +54,7 @@ namespace TestBuilder.Domain.Steps
             _timeoutMs = Math.Max(1, timeoutMs);
             _intervalMs = Math.Max(1, intervalMs);
             _failOnTimeout = failOnTimeout;
+            _useBrowserForSelftest = useBrowserForSelftest;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -81,7 +84,8 @@ namespace TestBuilder.Domain.Steps
                     lastError = string.Empty;
                 }
 
-                if (context.Variables.TryGetValue(_variableName, out var actual))
+                if (string.IsNullOrWhiteSpace(pollResult) &&
+                    context.Variables.TryGetValue(_variableName, out var actual))
                 {
                     lastActual = ToInvariantString(actual);
 
@@ -125,6 +129,34 @@ namespace TestBuilder.Domain.Steps
             if (_pollAction.Equals("None", StringComparison.OrdinalIgnoreCase))
             {
                 return string.Empty;
+            }
+
+            if (_pollAction.Equals("SelftestSnapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Variables.Remove(_variableName);
+                var snapshotUrl = ReadHttpVariableStep.BuildUrl(_baseUrl, _endpoint);
+                var outputPrefix = GetVariablePrefix(_variableName);
+                var snapshotStep = new SelfTestCheckStep(
+                    _httpRequestService,
+                    _logger,
+                    snapshotUrl,
+                    _requestTimeoutMs,
+                    outputPrefix,
+                    SelfTestCheckStep.DefaultValidationRules,
+                    failOnError: false,
+                    useBrowser: _useBrowserForSelftest,
+                    pollIntervalMs: _intervalMs,
+                    enforceMinimumDeviceReadyTimeout: false);
+
+                var snapshotResult = await snapshotStep.ExecuteAsync(context, cancellationToken);
+                if (snapshotResult == StepResult.True)
+                {
+                    return string.Empty;
+                }
+
+                return context.Variables.TryGetValue("SelfTest.Error", out var error)
+                    ? ToInvariantString(error)
+                    : "Не удалось обновить selftest-снимок DUT.";
             }
 
             if (_pollAction.Equals("GetIrpStatus", StringComparison.OrdinalIgnoreCase))
@@ -187,6 +219,12 @@ namespace TestBuilder.Domain.Steps
             }
 
             return httpRead.Error;
+        }
+
+        private static string GetVariablePrefix(string variableName)
+        {
+            var separator = variableName.LastIndexOf('.');
+            return separator > 0 ? variableName[..separator] : SelfTestCheckStep.DefaultOutputPrefix;
         }
 
         private void SaveState(TestContext context, bool passed, int attempts, string actual, string error)

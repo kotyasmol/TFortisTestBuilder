@@ -62,12 +62,15 @@ namespace TestBuilder.Domain.Steps
             string validationRules,
             bool failOnError,
             bool useBrowser = true,
-            int pollIntervalMs = DefaultPollIntervalMs)
+            int pollIntervalMs = DefaultPollIntervalMs,
+            bool enforceMinimumDeviceReadyTimeout = true)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
-            _timeoutMs = NormalizeSelfTestTimeout(_url, timeoutMs);
+            _timeoutMs = enforceMinimumDeviceReadyTimeout
+                ? NormalizeSelfTestTimeout(_url, timeoutMs)
+                : Math.Max(1, timeoutMs);
             _outputPrefix = string.IsNullOrWhiteSpace(outputPrefix)
                 ? DefaultOutputPrefix
                 : outputPrefix.Trim().TrimEnd('.');

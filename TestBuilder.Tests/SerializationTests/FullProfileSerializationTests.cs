@@ -118,23 +118,21 @@ public class FullProfileSerializationTests
             upsPreparationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, selftestNode) &&
                           ReferenceEquals(connection.Target.Parent, irpCheckNode));
-        var httpReads = upsPreparationSubtest.BodyGraph.Nodes
-            .OfType<ReadHttpVariableNodeViewModel>()
-            .OrderBy(node => node.Endpoint)
-            .ToArray();
-        Assert.Equal(2, httpReads.Length);
+        Assert.Empty(upsPreparationSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>());
+        var voltageCheckNode = upsPreparationSubtest.BodyGraph.Nodes
+            .OfType<CheckVariableRangeNodeViewModel>()
+            .Single(node => node.VariableName == "Dut.akb_voltage");
+        var sourceCheckNode = upsPreparationSubtest.BodyGraph.Nodes
+            .OfType<CheckVariableEqualityNodeViewModel>()
+            .Single(node => node.VariableName == "Dut.ups_rez");
         Assert.Contains(
-            httpReads,
-            node => node.Endpoint == "/api/getUpsStatus" &&
-                    node.ResponseType == HttpResponseValueType.Integer &&
-                    node.OutputVariableName == "Dut.ups_rez" &&
-                    node.FailOnError);
+            upsPreparationSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, irpCheckNode) &&
+                          ReferenceEquals(connection.Target.Parent, voltageCheckNode));
         Assert.Contains(
-            httpReads,
-            node => node.Endpoint == "/api/getUpsVoltage" &&
-                    node.ResponseType == HttpResponseValueType.Number &&
-                    node.OutputVariableName == "Dut.akb_voltage" &&
-                    node.FailOnError);
+            upsPreparationSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, voltageCheckNode) &&
+                          ReferenceEquals(connection.Target.Parent, sourceCheckNode));
 
         var batteryWait = upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
         var acWait = upsAcTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
@@ -143,9 +141,10 @@ public class FullProfileSerializationTests
 
         foreach (var wait in new[] { batteryWait, acWait })
         {
-            Assert.Equal("HttpGet", wait.PollAction);
-            Assert.Equal("/api/getUpsStatus", wait.Endpoint);
-            Assert.Equal(HttpResponseValueType.Integer, wait.ResponseType);
+            Assert.Equal("SelftestSnapshot", wait.PollAction);
+            Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.String, wait.ResponseType);
+            Assert.Equal(30000, wait.RequestTimeoutMs);
             Assert.True(wait.FailOnTimeout);
         }
     }
