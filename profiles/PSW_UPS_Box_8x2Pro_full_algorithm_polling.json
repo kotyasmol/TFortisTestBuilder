@@ -1534,7 +1534,7 @@
       "y": 1040,
       "color": "blue",
       "name": "11. UPS: подготовка и детекция",
-      "description": "Один свежий selftest-снимок для детекции IRP, напряжения АКБ и исходного статуса питания",
+      "description": "Selftest для детекции IRP/АКБ и быстрый preflight /api/getUpsStatus=0 до снятия AC",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1619,7 +1619,7 @@
           {
             "id": "7",
             "type": "Check Variable Equality",
-            "x": 3408,
+            "x": 3904,
             "y": -240,
             "color": "blue",
             "expectedValue": "0",
@@ -1630,9 +1630,22 @@
           {
             "id": "8",
             "type": "End",
-            "x": 3952,
+            "x": 4448,
             "y": -160,
             "color": "blue"
+          },
+          {
+            "id": "9",
+            "type": "Read HTTP Variable",
+            "x": 3408,
+            "y": -144,
+            "color": "blue",
+            "baseUrl": "http://192.168.0.1",
+            "endpoint": "/api/getUpsStatus",
+            "responseType": "Integer",
+            "timeoutMs": 5000,
+            "outputVariableName": "Dut.ups_rez",
+            "failOnError": true
           }
         ],
         "connections": [
@@ -1674,6 +1687,12 @@
           },
           {
             "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "9",
             "sourceConnector": "True",
             "targetNodeId": "7",
             "targetConnector": "In"

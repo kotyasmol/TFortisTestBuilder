@@ -135,8 +135,9 @@ Deserializer также принимает часть русских и legacy-�
 В UPS-переходах рабочего профиля `Wait Variable Until` сохраняется как
 `pollAction: "HttpGet"`, `endpoint: "/api/getUpsStatus"`,
 `responseType: "Integer"`, request timeout `5000`, общий timeout `160000` и
-интервал `5000` мс. Исходные UPS-поля до переключения по-прежнему берутся одним
-`Selftest Check`.
+интервал `5000` мс. До переключения `ups_det` и `akb_voltage` берутся одним
+`Selftest Check`, а отдельный `Read HTTP Variable` проверяет доступность этого
+же status endpoint и свежее `Dut.ups_rez == 0`, пока AC ещё включён.
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен

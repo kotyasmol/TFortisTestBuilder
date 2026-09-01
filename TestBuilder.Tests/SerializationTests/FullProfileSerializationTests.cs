@@ -118,7 +118,14 @@ public class FullProfileSerializationTests
             upsPreparationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, selftestNode) &&
                           ReferenceEquals(connection.Target.Parent, irpCheckNode));
-        Assert.Empty(upsPreparationSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>());
+        var statusPreflightNode = upsPreparationSubtest.BodyGraph.Nodes
+            .OfType<ReadHttpVariableNodeViewModel>()
+            .Single();
+        Assert.Equal("/api/getUpsStatus", statusPreflightNode.Endpoint);
+        Assert.Equal(HttpResponseValueType.Integer, statusPreflightNode.ResponseType);
+        Assert.Equal(5000, statusPreflightNode.TimeoutMs);
+        Assert.Equal("Dut.ups_rez", statusPreflightNode.OutputVariableName);
+        Assert.True(statusPreflightNode.FailOnError);
         var voltageCheckNode = upsPreparationSubtest.BodyGraph.Nodes
             .OfType<CheckVariableRangeNodeViewModel>()
             .Single(node => node.VariableName == "Dut.akb_voltage");
@@ -132,6 +139,10 @@ public class FullProfileSerializationTests
         Assert.Contains(
             upsPreparationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, voltageCheckNode) &&
+                          ReferenceEquals(connection.Target.Parent, statusPreflightNode));
+        Assert.Contains(
+            upsPreparationSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, statusPreflightNode) &&
                           ReferenceEquals(connection.Target.Parent, sourceCheckNode));
 
         var batteryWait = upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
