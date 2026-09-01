@@ -16,7 +16,7 @@
       "color": "green",
       "name": "01. Подготовка стенда",
       "description": "Сброс питания/ключей/нагревателей, очистка ARP, фиксация параметров профиля",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -27,13 +27,13 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "purple"
           },
           {
             "id": "1",
             "type": "Label",
-            "x": 540,
-            "y": 120,
+            "x": 400,
+            "y": 112,
             "color": "blue",
             "text": "Профиль: PSW+UPS-Box 8x2Pro; start_delay=160s; AC1=true; AC2=false; PoE lines 0..15; data ports 0..9; UPS=true; heaters=true; print labels=4",
             "labelWidth": 300,
@@ -139,8 +139,8 @@
           {
             "id": "10",
             "type": "End",
-            "x": 4680,
-            "y": 120,
+            "x": 4784,
+            "y": 160,
             "color": "blue"
           }
         ],
@@ -213,10 +213,10 @@
       "type": "Subtest",
       "x": 1056,
       "y": 128,
-      "color": "blue",
+      "color": "green",
       "name": "02. Сброс PoE-нагрузок EL60v5",
       "description": "Безопасно выключить нагрузку на EL60v5 перед стартом",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -259,7 +259,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1420,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "2",
@@ -271,7 +271,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1421,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "3",
@@ -291,7 +291,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1414,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "5",
@@ -303,7 +303,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1415,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "6",
@@ -315,7 +315,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1412,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "7",
@@ -327,7 +327,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1413,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "8",
@@ -339,7 +339,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1430,
                   "value": 1,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "9",
@@ -359,7 +359,7 @@
                   "useCurrentSlaveId": true,
                   "address": 1430,
                   "value": 0,
-                  "verifyWrite": false
+                  "verifyWrite": true
                 },
                 {
                   "id": "11",
@@ -482,7 +482,7 @@
       "type": "Subtest",
       "x": 1552,
       "y": 128,
-      "color": "blue",
+      "color": "green",
       "name": "03. Подключение оператора",
       "description": "Оператор подключает разъемы/нагрузки перед тестом",
       "isEnabled": false,
@@ -535,10 +535,10 @@
       "type": "Subtest",
       "x": 2032,
       "y": 112,
-      "color": "blue",
+      "color": "green",
       "name": "04. Настройка PoE-нагрузок EL60v5",
       "description": "Мощность 15000 и включение обеих линий A/B для slave 1..15 шаг 2",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -746,7 +746,7 @@
       "type": "Subtest",
       "x": 496,
       "y": 528,
-      "color": "blue",
+      "color": "green",
       "name": "05. Подача питания DUT",
       "description": "Включить разряд/АКБ и AC1, AC2 выключен по профилю",
       "isEnabled": true,
@@ -881,7 +881,7 @@
       "type": "Subtest",
       "x": 976,
       "y": 624,
-      "color": "blue",
+      "color": "green",
       "name": "06. Ожидание загрузки DUT и selftest",
       "description": "Start delay 160s, очистка ARP, ожидание страницы selftest",
       "isEnabled": true,
@@ -906,7 +906,7 @@
             "milliseconds": 5000
           },
           {
-            "id": "3",
+            "id": "2",
             "type": "Clear ARP Cache",
             "x": 1460,
             "y": 120,
@@ -919,7 +919,7 @@
             "arguments": "-d *"
           },
           {
-            "id": "4",
+            "id": "3",
             "type": "Selftest Check",
             "x": 1920,
             "y": 120,
@@ -932,7 +932,7 @@
             "outputPrefix": "Dut"
           },
           {
-            "id": "5",
+            "id": "4",
             "type": "Delay",
             "x": 2380,
             "y": 120,
@@ -940,7 +940,7 @@
             "milliseconds": 2000
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "End",
             "x": 2840,
             "y": 120,
@@ -955,27 +955,27 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "3",
+            "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "4",
+            "targetNodeId": "3",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "4",
+            "sourceNodeId": "3",
             "sourceConnector": "True",
-            "targetNodeId": "5",
+            "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "5",
+            "sourceNodeId": "4",
             "sourceConnector": "Выход",
-            "targetNodeId": "6",
+            "targetNodeId": "5",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "1",
             "sourceConnector": "Выход",
-            "targetNodeId": "3",
+            "targetNodeId": "2",
             "targetConnector": "In"
           }
         ]
@@ -1482,7 +1482,7 @@
             "color": "blue"
           },
           {
-            "id": "2",
+            "id": "1",
             "type": "Run Data Test",
             "x": 1080,
             "y": 120,
@@ -1499,12 +1499,10 @@
             "warmupMs": 500,
             "interPairDelayMs": 5000,
             "allowedLossPercent": 1,
-            "allowedTxDeficitPercent": 2,
-            "bidirectional": true,
-            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,100"
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,1000\r\nport2-3,192.168.0.4,192.168.0.5,1000\r\nport4-5,192.168.0.6,192.168.0.7,1000\r\nport6-7,192.168.0.8,192.168.0.9,1000\r\nport8-9,192.168.0.10,192.168.0.11,1000"
           },
           {
-            "id": "3",
+            "id": "2",
             "type": "End",
             "x": 1760,
             "y": 120,
@@ -1513,15 +1511,15 @@
         ],
         "connections": [
           {
-            "sourceNodeId": "2",
+            "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "3",
+            "targetNodeId": "2",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "2",
+            "targetNodeId": "1",
             "targetConnector": "In"
           }
         ]
