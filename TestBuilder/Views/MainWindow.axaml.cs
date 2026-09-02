@@ -23,6 +23,7 @@ namespace TestBuilder.Views
 
             TestViewControl.DataContext = vm.TestVM;
             ModbusViewControl.DataContext = vm.ModbusVM;
+            SelfTestPageViewControl.DataContext = vm.SelfTestPageVM;
             SettingsViewControl.DataContext = vm.SettingsVM;
         }
 

@@ -28,6 +28,8 @@ namespace TestBuilder.Domain.Execution
 
         public Func<CancellationToken, Task>? WaitIfPausedAsync { get; set; }
 
+        public SelfTestPageState? SelfTestPageState { get; set; }
+
         public Dictionary<string, object> Variables { get; } = new();
 
         public TestContext(RegisterState registerState)

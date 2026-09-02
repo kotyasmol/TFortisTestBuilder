@@ -18,6 +18,7 @@ namespace TestBuilder.ViewModels
         // Вложенные VM для вкладок
         public TestViewModel TestVM { get; }
         public ModbusMonitoringViewModel ModbusVM { get; }
+        public SelfTestPageViewModel SelfTestPageVM { get; }
         public SettingsViewModel SettingsVM { get; }
 
         public MainWindowViewModel()
@@ -27,6 +28,7 @@ namespace TestBuilder.ViewModels
 
             TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
+            SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel();
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
@@ -41,6 +43,7 @@ namespace TestBuilder.ViewModels
         public void Dispose()
         {
             TestVM.PropertyChanged -= OnTestVmPropertyChanged;
+            SelfTestPageVM.Dispose();
             TestVM.Dispose();
             ModbusVM.Dispose();
         }

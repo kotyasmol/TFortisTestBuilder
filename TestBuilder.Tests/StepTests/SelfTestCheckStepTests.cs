@@ -19,7 +19,11 @@ public class SelfTestCheckStepTests
                 TimeSpan.FromMilliseconds(10)));
 
         var step = CreateStep(service, "init_ok=1..1\nfirmvare_vers=1000..2000");
-        var context = new TestContext(new RegisterState());
+        var pageState = new SelfTestPageState();
+        var context = new TestContext(new RegisterState())
+        {
+            SelfTestPageState = pageState
+        };
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
@@ -27,6 +31,10 @@ public class SelfTestCheckStepTests
         Assert.True(context.GetVariable<bool>("SelfTest.Ok"));
         Assert.Equal("1", context.GetVariable<string>("Dut.init_ok"));
         Assert.Equal("1021", context.GetVariable<string>("Dut.firmvare_vers"));
+        Assert.Equal(SelfTestPageLoadState.Loaded, pageState.Current.LoadState);
+        Assert.Equal("1", pageState.Current.Fields["init_ok"]);
+        Assert.Equal("1021", pageState.Current.Fields["firmvare_vers"]);
+        Assert.Equal("AC:CC:11:A6:00:00", pageState.Current.Fields["default_mac"]);
         Assert.Equal(1, service.Calls);
     }
 

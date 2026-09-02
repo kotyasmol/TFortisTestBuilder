@@ -25,6 +25,10 @@
         <views:ModbusMonitoringView x:Name="ModbusViewControl" />
       </TabItem>
 
+      <TabItem Header="Тестовая страница">
+        <views:SelfTestPageView x:Name="SelfTestPageViewControl" />
+      </TabItem>
+
       <TabItem Header="Настройки">
         <views:SettingsView x:Name="SettingsViewControl" />
       </TabItem>

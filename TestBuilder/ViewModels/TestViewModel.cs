@@ -56,6 +56,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public ILogger TestingLogger { get; }
 
+    public SelfTestPageState SelfTestPageState { get; } = new();
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConnectionButtonText))]
     private bool isConnected;
@@ -881,6 +883,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _pauseCompletion = CreateCompletedPauseCompletion();
         IsTestRunning = true;
         IsTestPaused = false;
+        SelfTestPageState.Reset();
         TestContext? context = null;
         var runCleanup = false;
 
@@ -905,6 +908,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 ProfileName = profileName,
                 ExecutionObserver = this,
                 WaitIfPausedAsync = WaitIfPausedAsync,
+                SelfTestPageState = SelfTestPageState,
                 OperatorPrompt = async message =>
                 {
                     return await Dispatcher.UIThread.InvokeAsync(async () =>

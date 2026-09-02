@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             x:Class="TestBuilder.Views.SelfTestPageView"
+             x:DataType="vm:SelfTestPageViewModel">
+
+  <Grid RowDefinitions="Auto,*"
+        Margin="14"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <Border Grid.Row="0"
+            Padding="16"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14"
+            BoxShadow="0 8 24 0 #100F172A">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="5">
+          <TextBlock Text="{Binding StatusTitle}"
+                     FontSize="17"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="{Binding StatusDetails}"
+                     TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+          <TextBlock Text="{Binding SourceUrl, StringFormat='Источник: {0}'}"
+                     IsVisible="{Binding HasSourceUrl}"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMutedBrush}" />
+        </StackPanel>
+
+        <Border Grid.Column="1"
+                Margin="16,0,0,0"
+                Padding="12,8"
+                VerticalAlignment="Top"
+                Background="{DynamicResource PrimarySoftBrush}"
+                BorderBrush="{DynamicResource NodeModbusBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                IsVisible="{Binding HasParameters}">
+          <TextBlock Text="{Binding Parameters.Count, StringFormat='Полей: {0}'}"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource PrimaryTextBrush}" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            Margin="0,12,0,0"
+            Padding="12"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14">
+      <Grid>
+        <DataGrid ItemsSource="{Binding Parameters}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  IsVisible="{Binding HasParameters}">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Параметр" Binding="{Binding Name}" Width="320" />
+            <DataGridTextColumn Header="Текущее значение" Binding="{Binding Value}" Width="*" />
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8"
+                    IsVisible="{Binding !HasParameters}">
+          <TextBlock Text="Нет данных тестовой страницы"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     HorizontalAlignment="Center"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="Таблица заполнится автоматически после получения XML от DUT."
+                     HorizontalAlignment="Center"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

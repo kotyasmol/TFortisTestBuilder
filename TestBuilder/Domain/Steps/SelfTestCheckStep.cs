@@ -110,11 +110,27 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
+            context.SelfTestPageState?.BeginLoading(_url, _outputPrefix);
 
-            var fetch = await WaitForSelfTestXmlAsync(
-                _url,
-                TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs)),
-                cancellationToken);
+            SelfTestFetchResult fetch;
+            try
+            {
+                fetch = await WaitForSelfTestXmlAsync(
+                    _url,
+                    TimeSpan.FromMilliseconds(Math.Max(1, _timeoutMs)),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                context.SelfTestPageState?.SetError(_url, _outputPrefix, "Загрузка отменена.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                context.SelfTestPageState?.SetError(_url, _outputPrefix, ex.Message);
+                throw;
+            }
+
             var result = fetch.Result;
 
             context.SetVariable("SelfTest.Url", _url);
@@ -126,6 +142,7 @@ namespace TestBuilder.Domain.Steps
             if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
             {
                 context.SetVariable(DefaultOutputVariableName, string.Empty);
+                context.SelfTestPageState?.SetError(_url, _outputPrefix, fetch.ErrorMessage);
                 return Fail(context, fetch.ErrorMessage);
             }
 
@@ -135,10 +152,12 @@ namespace TestBuilder.Domain.Steps
 
             if (!TryParseSelfTest(raw, out var document, out var parseError))
             {
+                context.SelfTestPageState?.SetError(_url, _outputPrefix, parseError);
                 return Fail(context, parseError);
             }
 
             var values = ExtractValues(document);
+            context.SelfTestPageState?.SetLoaded(_url, _outputPrefix, values);
             foreach (var item in values)
             {
                 context.SetVariable(BuildContextName(item.Key), item.Value);
