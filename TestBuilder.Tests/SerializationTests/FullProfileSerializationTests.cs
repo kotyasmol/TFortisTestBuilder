@@ -66,18 +66,9 @@ public class FullProfileSerializationTests
         var dataTestSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "10. DataTest портов 0..9");
-        var upsPreparationSubtest = viewModel.RootGraph.Nodes
+        var batterySubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "11. UPS: подготовка и детекция");
-        var upsBatteryTransitionSubtest = viewModel.RootGraph.Nodes
-            .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "12. UPS: переход на АКБ");
-        var upsBatteryConfirmationSubtest = viewModel.RootGraph.Nodes
-            .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "13. UPS: подтверждение питания от АКБ");
-        var upsAcTransitionSubtest = viewModel.RootGraph.Nodes
-            .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "14. UPS: возврат на AC1");
+            .Single(node => node.Name == "проверка акб (упс)");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
@@ -112,77 +103,68 @@ public class FullProfileSerializationTests
             connection => connection.Source.Parent is StartNodeViewModel &&
                           ReferenceEquals(connection.Target.Parent, dataTestNode));
 
-        Assert.DoesNotContain(upsPreparationSubtest.BodyGraph.Nodes, node => node is GetIrpStatusNodeViewModel);
-        var selftestNode = upsPreparationSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>().Single();
-        var irpCheckNode = upsPreparationSubtest.BodyGraph.Nodes
-            .OfType<CheckVariableEqualityNodeViewModel>()
-            .Single(node => node.VariableName == "Dut.ups_det");
-        Assert.Contains(
-            upsPreparationSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, selftestNode) &&
-                          ReferenceEquals(connection.Target.Parent, irpCheckNode));
-        Assert.Empty(upsPreparationSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>());
-        var voltageCheckNode = upsPreparationSubtest.BodyGraph.Nodes
-            .OfType<CheckVariableRangeNodeViewModel>()
-            .Single(node => node.VariableName == "Dut.akb_voltage");
-        var sourceCheckNode = upsPreparationSubtest.BodyGraph.Nodes
-            .OfType<CheckVariableEqualityNodeViewModel>()
-            .Single(node => node.VariableName == "Dut.ups_rez");
-        Assert.Contains(
-            upsPreparationSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, irpCheckNode) &&
-                          ReferenceEquals(connection.Target.Parent, voltageCheckNode));
-        Assert.Contains(
-            upsPreparationSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, voltageCheckNode) &&
-                          ReferenceEquals(connection.Target.Parent, sourceCheckNode));
+        var allSubtestNames = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Select(node => node.Name)
+            .ToArray();
+        Assert.DoesNotContain("12. UPS: переход на АКБ", allSubtestNames);
+        Assert.DoesNotContain("13. UPS: подтверждение питания от АКБ", allSubtestNames);
+        Assert.DoesNotContain("14. UPS: возврат на AC1", allSubtestNames);
 
-        var batteryWait = upsBatteryConfirmationSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
-        var acWait = upsAcTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
-        Assert.Equal("Dut.http_ready_on_battery", batteryWait.VariableName);
-        Assert.Equal("Dut.http_ready_on_ac", acWait.VariableName);
-
-        foreach (var wait in new[] { batteryWait, acWait })
+        var waits = batterySubtest.BodyGraph.Nodes
+            .OfType<WaitVariableUntilNodeViewModel>()
+            .ToArray();
+        Assert.Equal(new[] { "0", "1", "1", "1", "0" }, waits.Select(wait => wait.ExpectedValue).ToArray());
+        foreach (var wait in waits)
         {
-            Assert.Equal("true", wait.ExpectedValue);
-            Assert.Equal(VariableComparisonType.Boolean, wait.ComparisonType);
-            Assert.Equal("HttpReachable", wait.PollAction);
-            Assert.Equal("/", wait.Endpoint);
-            Assert.Equal(HttpResponseValueType.Boolean, wait.ResponseType);
-            Assert.Equal(5000, wait.RequestTimeoutMs);
+            Assert.Equal("Dut.akb_det", wait.VariableName);
+            Assert.Equal(VariableComparisonType.Number, wait.ComparisonType);
+            Assert.Equal("SelftestSnapshot", wait.PollAction);
+            Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.String, wait.ResponseType);
+            Assert.Equal(30000, wait.RequestTimeoutMs);
             Assert.Equal(5000, wait.IntervalMs);
             Assert.Equal(160000, wait.TimeoutMs);
             Assert.True(wait.FailOnTimeout);
-            Assert.Contains("HttpReachable", wait.PollActions);
         }
 
-        var batteryWrites = upsBatteryTransitionSubtest.BodyGraph.Nodes
+        var writes = batterySubtest.BodyGraph.Nodes
             .OfType<ModbusWriteNodeViewModel>()
             .ToArray();
-        Assert.Single(batteryWrites, node => node.Address == 1204 && node.Value == 0);
-        var batteryDelay = Assert.Single(
-            upsBatteryTransitionSubtest.BodyGraph.Nodes.OfType<DelayNodeViewModel>());
-        Assert.Equal(2000, batteryDelay.Milliseconds);
+        Assert.Equal(
+            new[]
+            {
+                (SlaveId: (byte)17, Address: (ushort)1706, Value: (ushort)1),
+                (SlaveId: (byte)23, Address: (ushort)1200, Value: (ushort)0),
+                (SlaveId: (byte)23, Address: (ushort)1200, Value: (ushort)1),
+                (SlaveId: (byte)17, Address: (ushort)1706, Value: (ushort)0)
+            },
+            writes.Select(write => (write.SlaveId, write.Address, write.Value)).ToArray());
+        Assert.All(writes, write => Assert.True(write.VerifyWrite));
+        Assert.Empty(batterySubtest.BodyGraph.Nodes.OfType<DelayNodeViewModel>());
 
-        var dischargeChecks = upsBatteryConfirmationSubtest.BodyGraph.Nodes
-            .OfType<CheckRegisterRangeNodeViewModel>()
-            .OrderBy(node => node.Address)
+        var executionNodes = batterySubtest.BodyGraph.Nodes
+            .Where(node => node is not StartNodeViewModel && node is not EndNodeViewModel)
             .ToArray();
-        Assert.Equal(new ushort[] { 1707, 1708 }, dischargeChecks.Select(node => node.Address).ToArray());
-        Assert.Equal(12000, dischargeChecks[0].Min);
-        Assert.Equal(27000, dischargeChecks[0].Max);
-        Assert.Equal(1, dischargeChecks[1].Min);
-        Assert.All(dischargeChecks, node => Assert.True(node.LiveRead));
+        Assert.Equal(9, executionNodes.Length);
+        for (var index = 0; index < executionNodes.Length - 1; index++)
+        {
+            var source = executionNodes[index];
+            var target = executionNodes[index + 1];
+            Assert.Contains(
+                batterySubtest.BodyGraph.Connections,
+                connection => ReferenceEquals(connection.Source.Parent, source) &&
+                              ReferenceEquals(connection.Target.Parent, target));
+        }
+
         Assert.Contains(
-            upsBatteryConfirmationSubtest.BodyGraph.Connections,
-            connection => ReferenceEquals(connection.Source.Parent, dischargeChecks[1]) &&
-                          ReferenceEquals(connection.Target.Parent, batteryWait));
-
-        var acDelays = upsAcTransitionSubtest.BodyGraph.Nodes
-            .OfType<DelayNodeViewModel>()
-            .Select(node => node.Milliseconds)
-            .OrderBy(value => value)
-            .ToArray();
-        Assert.Equal(new[] { 3000 }, acDelays);
+            viewModel.RootGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, dataTestSubtest) &&
+                          ReferenceEquals(connection.Target.Parent, batterySubtest));
+        Assert.Contains(
+            viewModel.RootGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, batterySubtest) &&
+                          connection.Target.Parent is SubtestNodeViewModel target &&
+                          target.Name == "15. Получение серийника и запись MAC");
     }
 }

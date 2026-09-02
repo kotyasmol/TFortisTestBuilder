@@ -132,14 +132,17 @@ Deserializer также принимает часть русских и legacy-�
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
-В UPS-переходах рабочего профиля `Wait Variable Until` сохраняется как
-`pollAction: "HttpReachable"`, `endpoint: "/"`, `responseType: "Boolean"`,
-request timeout `5000`, общий timeout `160000` и интервал `5000` мс. До
-переключения `ups_det`, `akb_voltage` и исходный `ups_rez` берутся одним
-`Selftest Check`. После снятия AC проверяются live-регистры SIMBAT24: напряжение
-`1707` в диапазоне `12000..27000` мВ и ток `1708 > 0`; затем подтверждается
-доступность web DUT. После возврата AC SIMBAT отключается и web проверяется
-повторно. Отсутствующие на фактической прошивке `/api/getUps*` не вызываются.
+Три прежних UPS-подтеста рабочего профиля заменены одним подтестом
+`проверка акб (упс)`. Он пять раз получает свежий selftest через
+`Wait Variable Until` + `SelftestSnapshot` и проверяет `Dut.akb_det` в
+последовательности `0 → 1 → 1 → 1 → 0`. Между снимками выполняются четыре
+проверяемые записи: SIMBAT `slave 17 / 1706 ← 1`, AC1
+`slave 23 / 1200 ← 0`, AC1 `1200 ← 1`, SIMBAT `1706 ← 0`.
+
+У каждого ожидания request timeout `30000`, общий timeout `160000`, интервал
+`5000` мс и `failOnTimeout: true`. Фиксированных задержек внутри подтеста нет:
+каждое новое состояние ожидается повторными свежими снимками. Старое значение
+`Dut.akb_det` удаляется перед каждой попыткой.
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен

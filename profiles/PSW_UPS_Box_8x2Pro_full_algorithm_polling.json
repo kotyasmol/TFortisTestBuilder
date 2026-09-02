@@ -1386,13 +1386,13 @@
       "x": 4864,
       "y": 464,
       "color": "blue",
-      "name": "12. UPS: переход на АКБ",
-      "description": "Отключение AC1 и нагревателей, затем 2 секунды на стабилизацию разряда",
+      "name": "проверка акб (упс)",
+      "description": "Проверка akb_det при подключении/отключении SIMBAT и переключении AC1",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "12. UPS: переход на АКБ",
+        "name": "проверка акб (упс)",
         "nodes": [
           {
             "id": "0",
@@ -1403,21 +1403,57 @@
           },
           {
             "id": "1",
-            "type": "Write Register",
+            "type": "Wait Variable Until",
             "x": 540,
             "y": 120,
             "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
+            "expectedValue": "0",
+            "timeoutMs": 160000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.akb_det",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 30000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           },
           {
             "id": "2",
             "type": "Write Register",
-            "x": 1008,
-            "y": 112,
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 1,
+            "verifyWrite": true
+          },
+          {
+            "id": "3",
+            "type": "Wait Variable Until",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "1",
+            "timeoutMs": 160000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.akb_det",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 30000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+          },
+          {
+            "id": "4",
+            "type": "Write Register",
+            "x": 1920,
+            "y": 120,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1426,42 +1462,88 @@
             "verifyWrite": true
           },
           {
-            "id": "3",
-            "type": "Write Register",
-            "x": 1488,
-            "y": 112,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1215,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 1968,
-            "y": 112,
-            "color": "green",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1220,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
             "id": "5",
-            "type": "Delay",
-            "x": 2464,
-            "y": -64,
+            "type": "Wait Variable Until",
+            "x": 2380,
+            "y": 120,
             "color": "blue",
-            "milliseconds": 2000
+            "expectedValue": "1",
+            "timeoutMs": 160000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.akb_det",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 30000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
           },
           {
             "id": "6",
+            "type": "Write Register",
+            "x": 2840,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true
+          },
+          {
+            "id": "7",
+            "type": "Wait Variable Until",
+            "x": 3300,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "1",
+            "timeoutMs": 160000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.akb_det",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 30000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+          },
+          {
+            "id": "8",
+            "type": "Write Register",
+            "x": 3760,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "9",
+            "type": "Wait Variable Until",
+            "x": 4220,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "0",
+            "timeoutMs": 160000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.akb_det",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 30000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+          },
+          {
+            "id": "10",
             "type": "End",
-            "x": 2800,
-            "y": 96,
+            "x": 4680,
+            "y": 120,
             "color": "blue"
           }
         ],
@@ -1470,19 +1552,7 @@
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
             "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "Выход",
-            "targetNodeId": "6",
-            "targetConnector": "Вход"
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "1",
@@ -1494,12 +1564,48 @@
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
             "sourceConnector": "True",
             "targetNodeId": "5",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "9",
+            "sourceConnector": "True",
+            "targetNodeId": "10",
             "targetConnector": "Вход"
           }
         ]
@@ -2201,266 +2307,6 @@
       "labelHeight": 120
     },
     {
-      "id": "19",
-      "type": "Subtest",
-      "x": 5792,
-      "y": 464,
-      "color": "blue",
-      "name": "14. UPS: возврат на AC1",
-      "description": "Включение AC1 и ожидание свежего selftest ups_rez=0 до 300 секунд",
-      "isEnabled": true,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "14. UPS: возврат на AC1",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": -112,
-            "y": 64,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Write Register",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1200,
-            "value": 1,
-            "verifyWrite": true
-          },
-          {
-            "id": "2",
-            "type": "Delay",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 3000
-          },
-          {
-            "id": "3",
-            "type": "Wait Variable Until",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "expectedValue": "0",
-            "timeoutMs": 300000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 300000,
-            "intervalMs": 5000,
-            "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 2032,
-            "y": 144,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "5",
-            "type": "Write Register",
-            "x": 2592,
-            "y": 192,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "6",
-            "type": "End",
-            "x": 3056,
-            "y": 192,
-            "color": "blue"
-          },
-          {
-            "id": "7",
-            "type": "Write Register",
-            "x": 64,
-            "y": 272,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "address": 1706,
-            "value": 0,
-            "verifyWrite": true
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "Выход",
-            "targetNodeId": "3",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "7",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "7",
-            "sourceConnector": "True",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "20",
-      "type": "Subtest",
-      "x": 5328,
-      "y": 464,
-      "color": "blue",
-      "name": "13. UPS: подтверждение питания от АКБ",
-      "description": "Live-проверка разряда SIMBAT24 и ожидание свежего selftest ups_rez=1 до 300 секунд",
-      "isEnabled": true,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "13. UPS: подтверждение питания от АКБ",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": 80,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Check Register Range",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "liveRead": true,
-            "address": 1707,
-            "min": 0,
-            "max": 65535
-          },
-          {
-            "id": "2",
-            "type": "Check Register Range",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "liveRead": true,
-            "address": 1708,
-            "min": 0,
-            "max": 65535
-          },
-          {
-            "id": "3",
-            "type": "End",
-            "x": 2040,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "4",
-            "type": "Wait Variable Until",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "expectedValue": "1",
-            "timeoutMs": 300000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 300000,
-            "intervalMs": 5000,
-            "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "21",
-      "type": "Label",
-      "x": 5296,
-      "y": 816,
-      "color": "blue",
-      "text": "заменить все 3 на 12 пункт из инструкции",
-      "labelWidth": 300,
-      "labelHeight": 120
-    },
-    {
       "id": "22",
       "type": "Label",
       "x": 6688,
@@ -2551,27 +2397,15 @@
       "targetConnector": "In"
     },
     {
-      "sourceNodeId": "20",
+      "sourceNodeId": "9",
       "sourceConnector": "Success",
-      "targetNodeId": "19",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "19",
-      "sourceConnector": "Success",
-      "targetNodeId": "11",
+      "targetNodeId": "10",
       "targetConnector": "In"
     },
     {
       "sourceNodeId": "10",
       "sourceConnector": "Success",
-      "targetNodeId": "20",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "9",
-      "sourceConnector": "Success",
-      "targetNodeId": "10",
+      "targetNodeId": "11",
       "targetConnector": "In"
     }
   ]
