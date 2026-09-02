@@ -1,9 +1,24 @@
 using TestBuilder.ViewModels;
+using TestBuilder.Domain.Execution;
 
 namespace TestBuilder.Tests.StepTests;
 
 public class SelfTestPageViewModelTests
 {
+    [Fact]
+    public void DefaultLayout_CollapsesOnlyPoeCategories()
+    {
+        using var viewModel = new SelfTestPageViewModel(new SelfTestPageState());
+
+        Assert.False(viewModel.Categories.Single(category => category.Key == SelfTestPageFieldCategorizer.PoeA).IsExpanded);
+        Assert.False(viewModel.Categories.Single(category => category.Key == SelfTestPageFieldCategorizer.PoeB).IsExpanded);
+        Assert.All(
+            viewModel.Categories.Where(category =>
+                category.Key != SelfTestPageFieldCategorizer.PoeA &&
+                category.Key != SelfTestPageFieldCategorizer.PoeB),
+            category => Assert.True(category.IsExpanded));
+    }
+
     [Theory]
     [InlineData("init_ok", SelfTestPageFieldCategorizer.Device)]
     [InlineData("link_12", SelfTestPageFieldCategorizer.Ethernet)]

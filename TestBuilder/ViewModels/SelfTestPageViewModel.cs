@@ -121,6 +121,7 @@ namespace TestBuilder.ViewModels
         private bool _isChanged;
 
         public string Name { get; }
+        public double DisplayWidth { get; }
 
         public string Value
         {
@@ -150,10 +151,11 @@ namespace TestBuilder.ViewModels
 
         internal DateTimeOffset HighlightUntil { get; private set; }
 
-        public SelfTestPageParameterViewModel(string name, string value)
+        public SelfTestPageParameterViewModel(string name, string value, double displayWidth = 207)
         {
             Name = name;
             _value = value;
+            DisplayWidth = displayWidth;
         }
 
         internal bool UpdateValue(string value, bool highlight, DateTimeOffset highlightUntil)
@@ -197,6 +199,8 @@ namespace TestBuilder.ViewModels
         public string Title { get; }
         public string Description { get; }
         public bool DefaultIsExpanded { get; }
+        public double CardWidth { get; }
+        public double ParameterWidth { get; }
         public ObservableCollection<SelfTestPageParameterViewModel> Parameters { get; } = new();
         public ICommand ToggleCommand { get; }
 
@@ -230,12 +234,16 @@ namespace TestBuilder.ViewModels
             string key,
             string title,
             string description,
-            bool isExpanded)
+            bool isExpanded,
+            double cardWidth,
+            double parameterWidth)
         {
             Key = key;
             Title = title;
             Description = description;
             DefaultIsExpanded = isExpanded;
+            CardWidth = cardWidth;
+            ParameterWidth = parameterWidth;
             _isExpanded = isExpanded;
             ToggleCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
 
@@ -281,6 +289,7 @@ namespace TestBuilder.ViewModels
 
         public ObservableCollection<SelfTestPageCategoryViewModel> Categories { get; } = new();
         public ICommand CollapseAllCommand { get; }
+        public ICommand ExpandAllCommand { get; }
         public ICommand ShowMainCommand { get; }
 
         public string StatusTitle
@@ -328,21 +337,26 @@ namespace TestBuilder.ViewModels
                 foreach (var category in Categories)
                     category.IsExpanded = false;
             });
+            ExpandAllCommand = new RelayCommand(() =>
+            {
+                foreach (var category in Categories)
+                    category.IsExpanded = true;
+            });
             ShowMainCommand = new RelayCommand(() =>
             {
                 foreach (var category in Categories)
                     category.IsExpanded = category.DefaultIsExpanded;
             });
 
-            AddCategory(SelfTestPageFieldCategorizer.Device, "Устройство", "Идентификаторы и версии", true);
-            AddCategory(SelfTestPageFieldCategorizer.Ethernet, "Ethernet", "Состояние физических портов", false);
-            AddCategory(SelfTestPageFieldCategorizer.PoeA, "PoE · канал A", "Состояние, напряжение и ток", false);
-            AddCategory(SelfTestPageFieldCategorizer.PoeB, "PoE · канал B", "Состояние, напряжение и ток", false);
-            AddCategory(SelfTestPageFieldCategorizer.Sfp, "SFP", "Присутствие, сигнал и идентификация", false);
-            AddCategory(SelfTestPageFieldCategorizer.Power, "Питание и UPS", "Внутренние линии, UPS и аккумулятор", true);
-            AddCategory(SelfTestPageFieldCategorizer.Inputs, "Входы и датчики", "Дискретные входы и сухие контакты", false);
-            AddCategory(SelfTestPageFieldCategorizer.Climate, "Климат", "Температура и влажность", true);
-            AddCategory(SelfTestPageFieldCategorizer.Other, "Прочее", "Поля новой или неизвестной прошивки", true);
+            AddCategory(SelfTestPageFieldCategorizer.Device, "Устройство", "Идентификаторы и версии", true, 440, 207);
+            AddCategory(SelfTestPageFieldCategorizer.Power, "Питание и UPS", "Внутренние линии, UPS и аккумулятор", true, 440, 207);
+            AddCategory(SelfTestPageFieldCategorizer.Climate, "Климат", "Температура и влажность", true, 360, 167);
+            AddCategory(SelfTestPageFieldCategorizer.Ethernet, "Ethernet", "Состояние физических портов", true, 440, 207);
+            AddCategory(SelfTestPageFieldCategorizer.Sfp, "SFP", "Присутствие, сигнал и идентификация", true, 440, 207);
+            AddCategory(SelfTestPageFieldCategorizer.Inputs, "Входы и датчики", "Дискретные входы и сухие контакты", true, 440, 207);
+            AddCategory(SelfTestPageFieldCategorizer.PoeA, "PoE · канал A", "Состояние, напряжение и ток", false, 360, 167);
+            AddCategory(SelfTestPageFieldCategorizer.PoeB, "PoE · канал B", "Состояние, напряжение и ток", false, 360, 167);
+            AddCategory(SelfTestPageFieldCategorizer.Other, "Прочее", "Поля новой или неизвестной прошивки", true, 360, 167);
 
             _categoriesByKey = Categories.ToDictionary(category => category.Key, StringComparer.Ordinal);
 
@@ -356,9 +370,21 @@ namespace TestBuilder.ViewModels
             ApplySnapshot(_state.Current);
         }
 
-        private void AddCategory(string key, string title, string description, bool isExpanded)
+        private void AddCategory(
+            string key,
+            string title,
+            string description,
+            bool isExpanded,
+            double cardWidth,
+            double parameterWidth)
         {
-            Categories.Add(new SelfTestPageCategoryViewModel(key, title, description, isExpanded));
+            Categories.Add(new SelfTestPageCategoryViewModel(
+                key,
+                title,
+                description,
+                isExpanded,
+                cardWidth,
+                parameterWidth));
         }
 
         private void OnSnapshotChanged(SelfTestPageSnapshot snapshot)
@@ -450,8 +476,12 @@ namespace TestBuilder.ViewModels
                 }
 
                 var categoryKey = SelfTestPageFieldCategorizer.GetCategoryKey(field.Key);
-                var parameter = new SelfTestPageParameterViewModel(field.Key, field.Value);
-                _categoriesByKey[categoryKey].InsertSorted(parameter);
+                var category = _categoriesByKey[categoryKey];
+                var parameter = new SelfTestPageParameterViewModel(
+                    field.Key,
+                    field.Value,
+                    category.ParameterWidth);
+                category.InsertSorted(parameter);
 
                 if (highlightChanges)
                 {
