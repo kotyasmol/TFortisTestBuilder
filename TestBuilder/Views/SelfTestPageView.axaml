@@ -4,42 +4,111 @@
              x:Class="TestBuilder.Views.SelfTestPageView"
              x:DataType="vm:SelfTestPageViewModel">
 
+  <UserControl.Styles>
+    <Style Selector="Button.compactAction">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Padding" Value="9,4" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="Button.categoryHeader">
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Border.categoryCard">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.18" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+        </Transitions>
+      </Setter>
+    </Style>
+
+    <Style Selector="Border.categoryCard.changed">
+      <Setter Property="BorderBrush" Value="{DynamicResource ChangedBorderBrush}" />
+    </Style>
+
+    <Style Selector="Border.parameterTile">
+      <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.2" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.2" />
+        </Transitions>
+      </Setter>
+    </Style>
+
+    <Style Selector="Border.parameterTile.changed">
+      <Setter Property="Background" Value="{DynamicResource ChangedSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ChangedBorderBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+
+    <Style Selector="Border.parameterTile.changed TextBlock.parameterValue">
+      <Setter Property="Foreground" Value="{DynamicResource ChangedTextBrush}" />
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="Auto,*"
-        Margin="14"
+        Margin="10"
         Background="{DynamicResource AppBackgroundBrush}">
     <Border Grid.Row="0"
-            Padding="16"
+            Padding="11,9"
             Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="14"
-            BoxShadow="0 8 24 0 #100F172A">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="5">
+            CornerRadius="12"
+            BoxShadow="0 6 18 0 #0D0F172A">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <StackPanel Spacing="2"
+                    ToolTip.Tip="{Binding SourceUrl}">
           <TextBlock Text="{Binding StatusTitle}"
-                     FontSize="17"
+                     FontSize="15"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Text="{Binding StatusDetails}"
-                     TextWrapping="Wrap"
-                     Foreground="{DynamicResource TextSecondaryBrush}" />
-          <TextBlock Text="{Binding SourceUrl, StringFormat='Источник: {0}'}"
-                     IsVisible="{Binding HasSourceUrl}"
-                     TextWrapping="Wrap"
+                     MaxLines="1"
+                     TextTrimming="CharacterEllipsis"
                      FontSize="12"
-                     Foreground="{DynamicResource TextMutedBrush}" />
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>
 
-        <Border Grid.Column="1"
-                Margin="16,0,0,0"
-                Padding="12,8"
-                VerticalAlignment="Top"
+        <StackPanel Grid.Column="1"
+                    Margin="8,0"
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding HasParameters}">
+          <Button Content="Основные"
+                  Classes="compactAction ghost"
+                  Command="{Binding ShowMainCommand}"
+                  ToolTip.Tip="Показать основные группы, скрыть объёмные" />
+          <Button Content="Свернуть всё"
+                  Classes="compactAction ghost"
+                  Command="{Binding CollapseAllCommand}" />
+        </StackPanel>
+
+        <Border Grid.Column="2"
+                Padding="10,5"
+                VerticalAlignment="Center"
                 Background="{DynamicResource PrimarySoftBrush}"
                 BorderBrush="{DynamicResource NodeModbusBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="7"
                 IsVisible="{Binding HasParameters}">
-          <TextBlock Text="{Binding Parameters.Count, StringFormat='Полей: {0}'}"
+          <TextBlock Text="{Binding ParameterCount, StringFormat='Всего: {0}'}"
+                     FontSize="12"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource PrimaryTextBrush}" />
         </Border>
@@ -47,38 +116,155 @@
     </Border>
 
     <Border Grid.Row="1"
-            Margin="0,12,0,0"
-            Padding="12"
-            Background="{DynamicResource SurfaceBrush}"
+            Margin="0,8,0,0"
+            Padding="5"
+            Background="{DynamicResource SurfaceMutedBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="14">
+            CornerRadius="12">
       <Grid>
-        <DataGrid ItemsSource="{Binding Parameters}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  GridLinesVisibility="Horizontal"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource BorderBrush}"
-                  CanUserResizeColumns="True"
-                  CanUserSortColumns="True"
-                  IsVisible="{Binding HasParameters}">
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="Параметр" Binding="{Binding Name}" Width="320" />
-            <DataGridTextColumn Header="Текущее значение" Binding="{Binding Value}" Width="*" />
-          </DataGrid.Columns>
-        </DataGrid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      IsVisible="{Binding HasParameters}">
+          <ItemsControl ItemsSource="{Binding Categories}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SelfTestPageCategoryViewModel">
+                <Border Width="360"
+                        Margin="4"
+                        Classes="categoryCard"
+                        Classes.changed="{Binding HasRecentChanges}"
+                        IsVisible="{Binding HasItems}"
+                        VerticalAlignment="Top">
+                  <Grid RowDefinitions="Auto,Auto">
+                    <Button Grid.Row="0"
+                            Classes="categoryHeader"
+                            Command="{Binding ToggleCommand}">
+                      <Grid ColumnDefinitions="24,*,Auto,Auto">
+                        <Border Width="22"
+                                Height="22"
+                                CornerRadius="6"
+                                Background="{DynamicResource SurfaceMutedBrush}"
+                                VerticalAlignment="Center">
+                          <TextBlock Text="{Binding ToggleIcon}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     FontSize="16"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Margin="7,0"
+                                    Spacing="0">
+                          <TextBlock Text="{Binding Title}"
+                                     FontSize="13"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding Description}"
+                                     FontSize="10"
+                                     MaxLines="1"
+                                     TextTrimming="CharacterEllipsis"
+                                     Foreground="{DynamicResource TextMutedBrush}" />
+                        </StackPanel>
+
+                        <Border Grid.Column="2"
+                                Margin="0,0,7,0"
+                                Padding="6,2"
+                                CornerRadius="8"
+                                Background="{DynamicResource ChangedSoftBrush}"
+                                BorderBrush="{DynamicResource ChangedBorderBrush}"
+                                BorderThickness="1"
+                                IsVisible="{Binding HasRecentChanges}"
+                                VerticalAlignment="Center">
+                          <TextBlock Text="{Binding RecentChangeCount, StringFormat='изменено: {0}'}"
+                                     FontSize="9"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource ChangedTextBrush}" />
+                        </Border>
+
+                        <TextBlock Grid.Column="3"
+                                   Text="{Binding CountLabel}"
+                                   FontSize="10"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                      </Grid>
+                    </Button>
+
+                    <ItemsControl Grid.Row="1"
+                                  ItemsSource="{Binding Parameters}"
+                                  IsVisible="{Binding IsExpanded}"
+                                  Margin="5,0,5,6">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelfTestPageParameterViewModel">
+                          <Border Width="169"
+                                  Height="31"
+                                  Margin="2"
+                                  Padding="6,4"
+                                  Classes="parameterTile"
+                                  Classes.changed="{Binding IsChanged}"
+                                  ToolTip.Tip="{Binding Value}">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                              <TextBlock Text="{Binding Name}"
+                                         FontSize="10"
+                                         MaxLines="1"
+                                         TextTrimming="CharacterEllipsis"
+                                         VerticalAlignment="Center"
+                                         Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                              <Border Grid.Column="1"
+                                      Margin="5,0"
+                                      Width="6"
+                                      Height="6"
+                                      CornerRadius="3"
+                                      Background="{DynamicResource ChangedBorderBrush}"
+                                      IsVisible="{Binding IsChanged}"
+                                      ToolTip.Tip="{Binding ChangeDescription}"
+                                      VerticalAlignment="Center" />
+
+                              <TextBlock Grid.Column="2"
+                                         Classes="parameterValue"
+                                         Text="{Binding Value}"
+                                         MaxWidth="78"
+                                         MaxLines="1"
+                                         TextTrimming="CharacterEllipsis"
+                                         FontSize="12"
+                                         FontWeight="SemiBold"
+                                         VerticalAlignment="Center"
+                                         Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
 
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Spacing="8"
+                    Spacing="6"
                     IsVisible="{Binding !HasParameters}">
           <TextBlock Text="Нет данных тестовой страницы"
-                     FontSize="18"
+                     FontSize="17"
                      FontWeight="SemiBold"
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <TextBlock Text="Таблица заполнится автоматически после получения XML от DUT."
+          <TextBlock Text="Панель заполнится автоматически после получения XML от DUT."
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>

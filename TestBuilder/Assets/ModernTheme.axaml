@@ -33,6 +33,9 @@
           <SolidColorBrush x:Key="DangerBorderBrush" Color="#FECACA" />
           <SolidColorBrush x:Key="DangerTextBrush" Color="#991B1B" />
           <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B" />
+          <SolidColorBrush x:Key="ChangedSoftBrush" Color="#FFF4CC" />
+          <SolidColorBrush x:Key="ChangedBorderBrush" Color="#F59E0B" />
+          <SolidColorBrush x:Key="ChangedTextBrush" Color="#92400E" />
           <SolidColorBrush x:Key="SidebarDarkBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="SidebarBorderBrush" Color="#D7DFEC" />
@@ -98,6 +101,9 @@
           <SolidColorBrush x:Key="DangerBorderBrush" Color="#7F2A36" />
           <SolidColorBrush x:Key="DangerTextBrush" Color="#FCA5A5" />
           <SolidColorBrush x:Key="WarningBrush" Color="#FBBF24" />
+          <SolidColorBrush x:Key="ChangedSoftBrush" Color="#493512" />
+          <SolidColorBrush x:Key="ChangedBorderBrush" Color="#FBBF24" />
+          <SolidColorBrush x:Key="ChangedTextBrush" Color="#FDE68A" />
           <SolidColorBrush x:Key="SidebarDarkBrush" Color="#182235" />
           <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#182235" />
           <SolidColorBrush x:Key="SidebarBorderBrush" Color="#334158" />
