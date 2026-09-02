@@ -9,6 +9,7 @@ using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.Tests.StepTests;
 
+[Collection(AppSettingsTestCollection.Name)]
 public class ProductionStepTests
 {
     [Fact]
@@ -396,6 +397,38 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task WaitVariableUntilStep_HttpReachableRetriesUntilEndpointReturns2xx()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(503, "starting", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "<html>ready</html>", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.http_ready",
+            "true",
+            VariableComparisonType.Boolean,
+            "HttpReachable",
+            "http://192.168.0.1",
+            "/",
+            HttpResponseValueType.Boolean,
+            1000,
+            1000,
+            1,
+            true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.True(context.GetVariable<bool>("Dut.http_ready"));
+        Assert.Equal(200, context.GetVariable<int>("WaitVariable.StatusCode"));
+        Assert.True(context.GetVariable<bool>("WaitVariable.Success"));
+    }
+
+    [Fact]
     public async Task WaitVariableUntilStep_HttpGetDoesNotPassOnStaleExpectedValue()
     {
         var service = new CapturingHttpService(
@@ -639,4 +672,10 @@ public class ProductionStepTests
             return Task.FromResult(_results.Dequeue());
         }
     }
+}
+
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class AppSettingsTestCollection
+{
+    public const string Name = "AppSettings-dependent tests";
 }

@@ -131,6 +131,11 @@ namespace TestBuilder.Domain.Steps
                 return string.Empty;
             }
 
+            if (_pollAction.Equals("HttpReachable", StringComparison.OrdinalIgnoreCase))
+            {
+                return await PollHttpReachableAsync(context, cancellationToken);
+            }
+
             if (_pollAction.Equals("SelftestSnapshot", StringComparison.OrdinalIgnoreCase))
             {
                 context.Variables.Remove(_variableName);
@@ -219,6 +224,50 @@ namespace TestBuilder.Domain.Steps
             }
 
             return httpRead.Error;
+        }
+
+        private async Task<string> PollHttpReachableAsync(
+            TestContext context,
+            CancellationToken cancellationToken)
+        {
+            context.Variables.Remove(_variableName);
+            var url = ReadHttpVariableStep.BuildUrl(_baseUrl, _endpoint);
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return "Endpoint HTTP-проверки доступности не задан.";
+            }
+
+            _logger.Info($"[HTTP] Reachability GET {url}.");
+            var result = await _httpRequestService.GetAsync(
+                url,
+                TimeSpan.FromMilliseconds(_requestTimeoutMs),
+                cancellationToken);
+            var raw = result.Body.Trim().TrimStart('\uFEFF').Trim();
+            var elapsedMs = (int)Math.Clamp(result.Elapsed.TotalMilliseconds, 0, int.MaxValue);
+            var error = !string.IsNullOrWhiteSpace(result.ErrorMessage)
+                ? result.ErrorMessage
+                : !result.IsSuccessStatusCode
+                    ? $"HTTP {result.StatusCode ?? 0}: endpoint недоступен."
+                    : string.Empty;
+            var success = string.IsNullOrWhiteSpace(error);
+
+            context.SetVariable("WaitVariable.Url", url);
+            context.SetVariable("WaitVariable.StatusCode", result.StatusCode ?? 0);
+            context.SetVariable("WaitVariable.ElapsedMs", elapsedMs);
+            context.SetVariable("WaitVariable.RawResponse", raw);
+            context.SetVariable("WaitVariable.OutputVariable", _variableName);
+            context.SetVariable("WaitVariable.ResponseType", HttpResponseValueType.Boolean.ToString());
+            context.SetVariable("WaitVariable.Success", success);
+            context.SetVariable("WaitVariable.Error", error);
+
+            if (!success)
+            {
+                return error;
+            }
+
+            context.SetVariable(_variableName, true);
+            _logger.Info($"[OK] HTTP endpoint доступен: {url}, status {result.StatusCode}, {elapsedMs} мс.");
+            return string.Empty;
         }
 
         private static string GetVariablePrefix(string variableName)

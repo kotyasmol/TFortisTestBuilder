@@ -139,18 +139,21 @@ public class FullProfileSerializationTests
 
         var batteryWait = upsBatteryConfirmationSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
         var acWait = upsAcTransitionSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
-        Assert.Equal("1", batteryWait.ExpectedValue);
-        Assert.Equal("0", acWait.ExpectedValue);
+        Assert.Equal("Dut.http_ready_on_battery", batteryWait.VariableName);
+        Assert.Equal("Dut.http_ready_on_ac", acWait.VariableName);
 
         foreach (var wait in new[] { batteryWait, acWait })
         {
-            Assert.Equal("SelftestSnapshot", wait.PollAction);
-            Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
-            Assert.Equal(HttpResponseValueType.String, wait.ResponseType);
-            Assert.Equal(300000, wait.RequestTimeoutMs);
+            Assert.Equal("true", wait.ExpectedValue);
+            Assert.Equal(VariableComparisonType.Boolean, wait.ComparisonType);
+            Assert.Equal("HttpReachable", wait.PollAction);
+            Assert.Equal("/", wait.Endpoint);
+            Assert.Equal(HttpResponseValueType.Boolean, wait.ResponseType);
+            Assert.Equal(5000, wait.RequestTimeoutMs);
             Assert.Equal(5000, wait.IntervalMs);
-            Assert.Equal(300000, wait.TimeoutMs);
+            Assert.Equal(160000, wait.TimeoutMs);
             Assert.True(wait.FailOnTimeout);
+            Assert.Contains("HttpReachable", wait.PollActions);
         }
 
         var batteryWrites = upsBatteryTransitionSubtest.BodyGraph.Nodes
@@ -165,11 +168,21 @@ public class FullProfileSerializationTests
             .OfType<CheckRegisterRangeNodeViewModel>()
             .OrderBy(node => node.Address)
             .ToArray();
-        Assert.Equal(new ushort[] { 1707, 1708 }, dischargeChecks.Select(node => node.Address));
+        Assert.Equal(new ushort[] { 1707, 1708 }, dischargeChecks.Select(node => node.Address).ToArray());
+        Assert.Equal(12000, dischargeChecks[0].Min);
+        Assert.Equal(27000, dischargeChecks[0].Max);
+        Assert.Equal(1, dischargeChecks[1].Min);
         Assert.All(dischargeChecks, node => Assert.True(node.LiveRead));
         Assert.Contains(
             upsBatteryConfirmationSubtest.BodyGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, dischargeChecks[1]) &&
                           ReferenceEquals(connection.Target.Parent, batteryWait));
+
+        var acDelays = upsAcTransitionSubtest.BodyGraph.Nodes
+            .OfType<DelayNodeViewModel>()
+            .Select(node => node.Milliseconds)
+            .OrderBy(value => value)
+            .ToArray();
+        Assert.Equal(new[] { 3000 }, acDelays);
     }
 }

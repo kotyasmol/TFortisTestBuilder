@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-01
+updated: 2026-09-02
 ---
 
 # JSON профили
@@ -133,11 +133,13 @@ Deserializer также принимает часть русских и legacy-�
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
 В UPS-переходах рабочего профиля `Wait Variable Until` сохраняется как
-`pollAction: "SelftestSnapshot"`, `responseType: "String"`, request и общий
-timeout `300000`, интервал `5000` мс. До переключения `ups_det`, `akb_voltage`
-и исходный `ups_rez` берутся одним `Selftest Check`. После снятия AC перед
-browser-ожиданием выполняются `liveRead`-проверки регистров SIMBAT24 `1707` и
-`1708`; отсутствующие на фактической прошивке `/api/getUps*` не вызываются.
+`pollAction: "HttpReachable"`, `endpoint: "/"`, `responseType: "Boolean"`,
+request timeout `5000`, общий timeout `160000` и интервал `5000` мс. До
+переключения `ups_det`, `akb_voltage` и исходный `ups_rez` берутся одним
+`Selftest Check`. После снятия AC проверяются live-регистры SIMBAT24: напряжение
+`1707` в диапазоне `12000..27000` мВ и ток `1708 > 0`; затем подтверждается
+доступность web DUT. После возврата AC SIMBAT отключается и web проверяется
+повторно. Отсутствующие на фактической прошивке `/api/getUps*` не вызываются.
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
