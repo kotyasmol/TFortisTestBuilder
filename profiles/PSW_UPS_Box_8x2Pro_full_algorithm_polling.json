@@ -12,11 +12,11 @@
       "id": "1",
       "type": "Subtest",
       "x": 560,
-      "y": 120,
-      "color": "green",
+      "y": 128,
+      "color": "purple",
       "name": "01. Подготовка стенда",
       "description": "Сброс питания/ключей/нагревателей, очистка ARP, фиксация параметров профиля",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -66,32 +66,8 @@
           {
             "id": "4",
             "type": "Write Register",
-            "x": 1920,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "5",
-            "type": "Write Register",
-            "x": 2380,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "6",
-            "type": "Write Register",
-            "x": 2840,
-            "y": 120,
+            "x": 1968,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -100,10 +76,10 @@
             "verifyWrite": true
           },
           {
-            "id": "7",
+            "id": "5",
             "type": "Write Register",
-            "x": 3300,
-            "y": 120,
+            "x": 2432,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -112,10 +88,10 @@
             "verifyWrite": true
           },
           {
-            "id": "8",
+            "id": "6",
             "type": "Write Register",
-            "x": 3760,
-            "y": 120,
+            "x": 2896,
+            "y": 112,
             "color": "blue",
             "slaveId": 17,
             "useCurrentSlaveId": false,
@@ -124,10 +100,10 @@
             "verifyWrite": true
           },
           {
-            "id": "9",
+            "id": "7",
             "type": "Clear ARP Cache",
-            "x": 4220,
-            "y": 120,
+            "x": 3584,
+            "y": -96,
             "color": "blue",
             "timeoutMs": 5000,
             "failOnError": false,
@@ -137,11 +113,23 @@
             "arguments": "-d *"
           },
           {
-            "id": "10",
+            "id": "8",
             "type": "End",
-            "x": 4784,
-            "y": 160,
+            "x": 4128,
+            "y": -48,
             "color": "blue"
+          },
+          {
+            "id": "9",
+            "type": "Write Register",
+            "x": 3392,
+            "y": 320,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true
           }
         ],
         "connections": [
@@ -164,12 +152,6 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "3",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "4",
             "sourceConnector": "True",
             "targetNodeId": "5",
@@ -182,28 +164,28 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "6",
-            "sourceConnector": "True",
-            "targetNodeId": "7",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "7",
             "sourceConnector": "True",
             "targetNodeId": "8",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "8",
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
             "sourceConnector": "True",
             "targetNodeId": "9",
-            "targetConnector": "In"
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "9",
             "sourceConnector": "True",
-            "targetNodeId": "10",
-            "targetConnector": "Вход"
+            "targetNodeId": "7",
+            "targetConnector": "In"
           }
         ]
       }
@@ -213,10 +195,10 @@
       "type": "Subtest",
       "x": 1040,
       "y": 128,
-      "color": "green",
+      "color": "orange",
       "name": "02. Сброс PoE-нагрузок EL60v5",
       "description": "Безопасно выключить нагрузку на EL60v5 перед стартом",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -225,15 +207,15 @@
           {
             "id": "0",
             "type": "Start",
-            "x": 80,
-            "y": 120,
+            "x": 48,
+            "y": 112,
             "color": "blue"
           },
           {
             "id": "1",
             "type": "For Slaves",
-            "x": 540,
-            "y": 120,
+            "x": 352,
+            "y": 112,
             "color": "blue",
             "fromSlaveId": 1,
             "toSlaveId": 15,
@@ -331,29 +313,17 @@
                 },
                 {
                   "id": "8",
-                  "type": "Write Register",
-                  "x": 3760,
-                  "y": 120,
-                  "color": "blue",
-                  "slaveId": 0,
-                  "useCurrentSlaveId": true,
-                  "address": 1430,
-                  "value": 1,
-                  "verifyWrite": true
-                },
-                {
-                  "id": "9",
                   "type": "Delay",
-                  "x": 4220,
-                  "y": 120,
+                  "x": 3808,
+                  "y": 112,
                   "color": "blue",
                   "milliseconds": 1000
                 },
                 {
-                  "id": "10",
+                  "id": "9",
                   "type": "Write Register",
-                  "x": 4680,
-                  "y": 120,
+                  "x": 4272,
+                  "y": 112,
                   "color": "blue",
                   "slaveId": 0,
                   "useCurrentSlaveId": true,
@@ -362,18 +332,18 @@
                   "verifyWrite": true
                 },
                 {
-                  "id": "11",
+                  "id": "10",
                   "type": "Delay",
-                  "x": 5140,
-                  "y": 120,
+                  "x": 4736,
+                  "y": 112,
                   "color": "blue",
                   "milliseconds": 2000
                 },
                 {
-                  "id": "12",
+                  "id": "11",
                   "type": "Body End",
-                  "x": 5600,
-                  "y": 120,
+                  "x": 5200,
+                  "y": 112,
                   "color": "blue"
                 }
               ],
@@ -421,33 +391,27 @@
                   "targetConnector": "Вход"
                 },
                 {
-                  "sourceNodeId": "7",
-                  "sourceConnector": "True",
-                  "targetNodeId": "8",
-                  "targetConnector": "Вход"
-                },
-                {
                   "sourceNodeId": "8",
-                  "sourceConnector": "True",
+                  "sourceConnector": "Выход",
                   "targetNodeId": "9",
                   "targetConnector": "Вход"
                 },
                 {
                   "sourceNodeId": "9",
-                  "sourceConnector": "Выход",
+                  "sourceConnector": "True",
                   "targetNodeId": "10",
                   "targetConnector": "Вход"
                 },
                 {
                   "sourceNodeId": "10",
-                  "sourceConnector": "True",
+                  "sourceConnector": "Выход",
                   "targetNodeId": "11",
                   "targetConnector": "Вход"
                 },
                 {
-                  "sourceNodeId": "11",
-                  "sourceConnector": "Выход",
-                  "targetNodeId": "12",
+                  "sourceNodeId": "7",
+                  "sourceConnector": "True",
+                  "targetNodeId": "8",
                   "targetConnector": "Вход"
                 }
               ]
@@ -456,8 +420,8 @@
           {
             "id": "2",
             "type": "End",
-            "x": 1000,
-            "y": 120,
+            "x": 768,
+            "y": 112,
             "color": "blue"
           }
         ],
@@ -480,62 +444,9 @@
     {
       "id": "3",
       "type": "Subtest",
-      "x": 1552,
+      "x": 1520,
       "y": 128,
-      "color": "green",
-      "name": "03. Подключение оператора",
-      "description": "Оператор подключает разъемы/нагрузки перед тестом",
-      "isEnabled": false,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "03. Подключение оператора",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": 80,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Operator Action",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "text": "Подключите разъемы DUT, PoE-нагрузки, АКБ/БП. После проверки нажмите Продолжить."
-          },
-          {
-            "id": "2",
-            "type": "End",
-            "x": 1000,
-            "y": 120,
-            "color": "blue"
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "Продолжить",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "4",
-      "type": "Subtest",
-      "x": 2032,
-      "y": 112,
-      "color": "green",
+      "color": "orange",
       "name": "04. Настройка PoE-нагрузок EL60v5",
       "description": "Мощность 15000 и включение обеих линий A/B для slave 1..15 шаг 2",
       "isEnabled": false,
@@ -742,13 +653,13 @@
       }
     },
     {
-      "id": "5",
+      "id": "4",
       "type": "Subtest",
-      "x": 496,
-      "y": 528,
-      "color": "green",
+      "x": 1984,
+      "y": 128,
+      "color": "purple",
       "name": "05. Подача питания DUT",
-      "description": "Включить разряд/АКБ и AC1, AC2 выключен по профилю",
+      "description": "Включить  AC1, AC2 выключен ",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -758,43 +669,15 @@
           {
             "id": "0",
             "type": "Start",
-            "x": -240,
-            "y": 208,
+            "x": 1232,
+            "y": 112,
             "color": "blue"
           },
           {
             "id": "1",
             "type": "Write Register",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 1,
-            "verifyWrite": true
-          },
-          {
-            "id": "2",
-            "type": "Delay",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 300
-          },
-          {
-            "id": "3",
-            "type": "Delay",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 500
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 1920,
-            "y": 120,
+            "x": 1520,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -803,11 +686,11 @@
             "verifyWrite": true
           },
           {
-            "id": "5",
+            "id": "2",
             "type": "Write Register",
-            "x": 2380,
-            "y": 120,
-            "color": "blue",
+            "x": 1968,
+            "y": 112,
+            "color": "yellow",
             "slaveId": 23,
             "useCurrentSlaveId": false,
             "address": 1201,
@@ -815,31 +698,11 @@
             "verifyWrite": true
           },
           {
-            "id": "6",
-            "type": "Delay",
-            "x": 2840,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 200
-          },
-          {
-            "id": "7",
+            "id": "3",
             "type": "End",
-            "x": 3300,
-            "y": 120,
+            "x": 2432,
+            "y": 128,
             "color": "blue"
-          },
-          {
-            "id": "8",
-            "type": "Write Register",
-            "x": 80,
-            "y": 64,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "address": 1706,
-            "value": 1,
-            "verifyWrite": false
           }
         ],
         "connections": [
@@ -850,56 +713,26 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "2",
-            "sourceConnector": "Выход",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Выход",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "6",
-            "sourceConnector": "Выход",
-            "targetNodeId": "7",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "8",
+            "targetNodeId": "1",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "8",
+            "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "1",
+            "targetNodeId": "3",
             "targetConnector": "Вход"
           }
         ]
       }
     },
     {
-      "id": "6",
+      "id": "5",
       "type": "Subtest",
-      "x": 976,
-      "y": 624,
-      "color": "green",
+      "x": 2496,
+      "y": 128,
+      "color": "purple",
       "name": "06. Ожидание загрузки DUT и selftest",
       "description": "Start delay 160s, очистка ARP, ожидание страницы selftest",
       "isEnabled": true,
@@ -1000,10 +833,10 @@
       }
     },
     {
-      "id": "7",
+      "id": "6",
       "type": "Subtest",
-      "x": 1504,
-      "y": 608,
+      "x": 2944,
+      "y": 128,
       "color": "blue",
       "name": "07. Проверка selftest DUT",
       "description": "Базовые проверки selftest/deviceinfo",
@@ -1161,11 +994,11 @@
       }
     },
     {
-      "id": "8",
+      "id": "7",
       "type": "Subtest",
-      "x": 2080,
-      "y": 576,
-      "color": "blue",
+      "x": 3456,
+      "y": 128,
+      "color": "purple",
       "name": "08. Проверка нагревателя 1",
       "description": "Ток нагревателя 1: до включения 0..50, после включения 150..1000",
       "isEnabled": true,
@@ -1184,8 +1017,8 @@
           {
             "id": "1",
             "type": "Check Register Range",
-            "x": 540,
-            "y": 120,
+            "x": 336,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1197,20 +1030,8 @@
           {
             "id": "2",
             "type": "Write Register",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1215,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "3",
-            "type": "Write Register",
-            "x": 1460,
-            "y": 120,
+            "x": 784,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1219,18 +1040,18 @@
             "verifyWrite": true
           },
           {
-            "id": "4",
+            "id": "3",
             "type": "Delay",
-            "x": 1920,
-            "y": 120,
+            "x": 1248,
+            "y": 96,
             "color": "blue",
             "milliseconds": 5000
           },
           {
-            "id": "5",
+            "id": "4",
             "type": "Check Register Range",
-            "x": 2368,
-            "y": 208,
+            "x": 1664,
+            "y": 96,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1240,10 +1061,10 @@
             "max": 1500
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "Write Register",
-            "x": 2840,
-            "y": 120,
+            "x": 2128,
+            "y": 96,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1252,19 +1073,32 @@
             "verifyWrite": true
           },
           {
-            "id": "7",
+            "id": "6",
             "type": "Delay",
-            "x": 3300,
-            "y": 120,
+            "x": 2576,
+            "y": 96,
             "color": "blue",
             "milliseconds": 2000
           },
           {
-            "id": "8",
+            "id": "7",
             "type": "End",
-            "x": 3760,
-            "y": 120,
+            "x": 3392,
+            "y": 96,
             "color": "blue"
+          },
+          {
+            "id": "8",
+            "type": "Check Register Range",
+            "x": 2960,
+            "y": 96,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "liveRead": true,
+            "address": 1216,
+            "min": 0,
+            "max": 1500
           }
         ],
         "connections": [
@@ -1275,12 +1109,6 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
@@ -1288,13 +1116,13 @@
           },
           {
             "sourceNodeId": "3",
-            "sourceConnector": "True",
+            "sourceConnector": "Выход",
             "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
@@ -1305,13 +1133,19 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "6",
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
             "sourceConnector": "True",
             "targetNodeId": "7",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "7",
+            "sourceNodeId": "6",
             "sourceConnector": "Выход",
             "targetNodeId": "8",
             "targetConnector": "Вход"
@@ -1320,11 +1154,11 @@
       }
     },
     {
-      "id": "9",
+      "id": "8",
       "type": "Subtest",
-      "x": 544,
-      "y": 960,
-      "color": "blue",
+      "x": 3936,
+      "y": 128,
+      "color": "purple",
       "name": "09. Проверка нагревателя 2",
       "description": "Ток нагревателя 2: до включения 0..50, после включения 150..1000",
       "isEnabled": true,
@@ -1356,20 +1190,8 @@
           {
             "id": "2",
             "type": "Write Register",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1220,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "3",
-            "type": "Write Register",
-            "x": 1460,
-            "y": 120,
+            "x": 992,
+            "y": 128,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1378,18 +1200,18 @@
             "verifyWrite": true
           },
           {
-            "id": "4",
+            "id": "3",
             "type": "Delay",
-            "x": 1920,
-            "y": 120,
+            "x": 1440,
+            "y": 128,
             "color": "blue",
             "milliseconds": 3000
           },
           {
-            "id": "5",
+            "id": "4",
             "type": "Check Register Range",
-            "x": 2380,
-            "y": 120,
+            "x": 1840,
+            "y": 128,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1399,10 +1221,10 @@
             "max": 1000
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "Write Register",
-            "x": 2840,
-            "y": 120,
+            "x": 2288,
+            "y": 128,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1411,19 +1233,32 @@
             "verifyWrite": true
           },
           {
-            "id": "7",
+            "id": "6",
             "type": "Delay",
-            "x": 3300,
-            "y": 120,
+            "x": 2752,
+            "y": 128,
             "color": "blue",
             "milliseconds": 2000
           },
           {
-            "id": "8",
+            "id": "7",
             "type": "End",
-            "x": 3760,
-            "y": 120,
+            "x": 3616,
+            "y": 128,
             "color": "blue"
+          },
+          {
+            "id": "8",
+            "type": "Check Register Range",
+            "x": 3168,
+            "y": 128,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "liveRead": true,
+            "address": 1221,
+            "min": 0,
+            "max": 50
           }
         ],
         "connections": [
@@ -1434,12 +1269,6 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
@@ -1447,13 +1276,13 @@
           },
           {
             "sourceNodeId": "3",
-            "sourceConnector": "True",
+            "sourceConnector": "Выход",
             "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
@@ -1464,26 +1293,32 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "6",
+            "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "7",
+            "targetNodeId": "2",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "7",
+            "sourceNodeId": "6",
             "sourceConnector": "Выход",
             "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
             "targetConnector": "Вход"
           }
         ]
       }
     },
     {
-      "id": "10",
+      "id": "9",
       "type": "Subtest",
-      "x": 1056,
-      "y": 1040,
-      "color": "yellow",
+      "x": 4384,
+      "y": 128,
+      "color": "purple",
       "name": "10. DataTest портов 0..9",
       "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
       "isEnabled": false,
@@ -1546,170 +1381,10 @@
       }
     },
     {
-      "id": "11",
+      "id": "10",
       "type": "Subtest",
-      "x": 1536,
-      "y": 1040,
-      "color": "blue",
-      "name": "11. UPS: подготовка и детекция",
-      "description": "Один свежий selftest-снимок для детекции IRP, напряжения АКБ и исходного ups_rez=0",
-      "isEnabled": true,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "11. UPS: подготовка и детекция",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": 80,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Write Register",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1219,
-            "value": 1,
-            "verifyWrite": false
-          },
-          {
-            "id": "2",
-            "type": "Write Register",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1215,
-            "value": 1,
-            "verifyWrite": true
-          },
-          {
-            "id": "3",
-            "type": "Delay",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 15000
-          },
-          {
-            "id": "4",
-            "type": "Selftest Check",
-            "x": 1920,
-            "y": 120,
-            "color": "blue",
-            "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 300000,
-            "pollIntervalMs": 5000,
-            "validationRules": "",
-            "failOnError": true,
-            "outputPrefix": "Dut"
-          },
-          {
-            "id": "5",
-            "type": "Check Variable Equality",
-            "x": 2400,
-            "y": -48,
-            "color": "blue",
-            "expectedValue": "1",
-            "variableName": "Dut.ups_det",
-            "comparisonType": "Number",
-            "failMessage": "UPS/IRP должен быть обнаружен"
-          },
-          {
-            "id": "6",
-            "type": "Check Variable Range",
-            "x": 2912,
-            "y": -144,
-            "color": "blue",
-            "min": 12,
-            "max": 27,
-            "variableName": "Dut.akb_voltage",
-            "failMessage": "Напряжение АКБ должно быть 12..27 В",
-            "inclusive": true
-          },
-          {
-            "id": "7",
-            "type": "Check Variable Equality",
-            "x": 3408,
-            "y": -240,
-            "color": "blue",
-            "expectedValue": "0",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "failMessage": "Перед отключением AC устройство должно быть от сети: ups_rez=0"
-          },
-          {
-            "id": "8",
-            "type": "End",
-            "x": 3952,
-            "y": -160,
-            "color": "blue"
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Выход",
-            "targetNodeId": "4",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "6",
-            "sourceConnector": "True",
-            "targetNodeId": "7",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "7",
-            "sourceConnector": "True",
-            "targetNodeId": "8",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "12",
-      "type": "Subtest",
-      "x": 2016,
-      "y": 1040,
+      "x": 4864,
+      "y": 464,
       "color": "blue",
       "name": "12. UPS: переход на АКБ",
       "description": "Отключение AC1 и нагревателей, затем 2 секунды на стабилизацию разряда",
@@ -1831,261 +1506,11 @@
       }
     },
     {
-      "id": "13",
+      "id": "11",
       "type": "Subtest",
-      "x": 544,
-      "y": 1408,
-      "color": "blue",
-      "name": "13. UPS: подтверждение питания от АКБ",
-      "description": "Live-проверка разряда SIMBAT24 и ожидание свежего selftest ups_rez=1 до 300 секунд",
-      "isEnabled": true,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "13. UPS: подтверждение питания от АКБ",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": 80,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Check Register Range",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "liveRead": true,
-            "address": 1707,
-            "min": 0,
-            "max": 65535
-          },
-          {
-            "id": "2",
-            "type": "Check Register Range",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "liveRead": true,
-            "address": 1708,
-            "min": 0,
-            "max": 65535
-          },
-          {
-            "id": "3",
-            "type": "End",
-            "x": 2040,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "4",
-            "type": "Wait Variable Until",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "expectedValue": "1",
-            "timeoutMs": 300000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 300000,
-            "intervalMs": 5000,
-            "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "14",
-      "type": "Subtest",
-      "x": 1056,
-      "y": 1520,
-      "color": "blue",
-      "name": "14. UPS: возврат на AC1",
-      "description": "Включение AC1 и ожидание свежего selftest ups_rez=0 до 300 секунд",
-      "isEnabled": true,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "name": "14. UPS: возврат на AC1",
-        "nodes": [
-          {
-            "id": "0",
-            "type": "Start",
-            "x": -112,
-            "y": 64,
-            "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Write Register",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1200,
-            "value": 1,
-            "verifyWrite": true
-          },
-          {
-            "id": "2",
-            "type": "Delay",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 3000
-          },
-          {
-            "id": "3",
-            "type": "Wait Variable Until",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "expectedValue": "0",
-            "timeoutMs": 300000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
-            "variableName": "Dut.ups_rez",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 300000,
-            "intervalMs": 5000,
-            "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 2032,
-            "y": 144,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "5",
-            "type": "Write Register",
-            "x": 2592,
-            "y": 192,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "6",
-            "type": "End",
-            "x": 3056,
-            "y": 192,
-            "color": "blue"
-          },
-          {
-            "id": "7",
-            "type": "Write Register",
-            "x": 64,
-            "y": 272,
-            "color": "blue",
-            "slaveId": 17,
-            "useCurrentSlaveId": false,
-            "address": 1706,
-            "value": 0,
-            "verifyWrite": true
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "Выход",
-            "targetNodeId": "3",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "7",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "7",
-            "sourceConnector": "True",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          }
-        ]
-      }
-    },
-    {
-      "id": "15",
-      "type": "Subtest",
-      "x": 1552,
-      "y": 1520,
-      "color": "blue",
+      "x": 6272,
+      "y": 464,
+      "color": "red",
       "name": "15. Получение серийника и запись MAC",
       "description": "Получить serial, вычислить MAC, отправить UDP set MAC, перезагрузить DUT и проверить MAC",
       "isEnabled": true,
@@ -2349,11 +1774,11 @@
       }
     },
     {
-      "id": "16",
+      "id": "12",
       "type": "Subtest",
-      "x": 2064,
-      "y": 1520,
-      "color": "blue",
+      "x": 6704,
+      "y": 464,
+      "color": "red",
       "name": "16. Печать этикеток",
       "description": "Печать 4 этикеток Zebra",
       "isEnabled": true,
@@ -2412,11 +1837,11 @@
       }
     },
     {
-      "id": "17",
+      "id": "13",
       "type": "Subtest",
-      "x": 544,
-      "y": 1888,
-      "color": "blue",
+      "x": 7136,
+      "y": 464,
+      "color": "red",
       "name": "17. Финальная статистика и отчет",
       "description": "Финальный selftest, сбор JSON-отчета, отправка на сервер и локальная копия",
       "isEnabled": true,
@@ -2511,11 +1936,11 @@
       }
     },
     {
-      "id": "18",
+      "id": "14",
       "type": "Subtest",
-      "x": 1056,
-      "y": 2016,
-      "color": "blue",
+      "x": 7616,
+      "y": 128,
+      "color": "purple",
       "name": "18. Безопасное выключение стенда",
       "description": "Финальный StandOff",
       "isEnabled": true,
@@ -2527,8 +1952,8 @@
           {
             "id": "0",
             "type": "Start",
-            "x": 80,
-            "y": 120,
+            "x": 256,
+            "y": 112,
             "color": "blue"
           },
           {
@@ -2546,32 +1971,8 @@
           {
             "id": "2",
             "type": "Write Register",
-            "x": 1000,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "3",
-            "type": "Write Register",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 1920,
-            "y": 120,
+            "x": 992,
+            "y": 128,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -2580,10 +1981,10 @@
             "verifyWrite": true
           },
           {
-            "id": "5",
+            "id": "3",
             "type": "Write Register",
-            "x": 2380,
-            "y": 120,
+            "x": 1440,
+            "y": 128,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -2592,11 +1993,23 @@
             "verifyWrite": true
           },
           {
-            "id": "6",
+            "id": "4",
             "type": "End",
-            "x": 2840,
-            "y": 120,
+            "x": 2336,
+            "y": 128,
             "color": "blue"
+          },
+          {
+            "id": "5",
+            "type": "Write Register",
+            "x": 1872,
+            "y": 128,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true
           }
         ],
         "connections": [
@@ -2607,25 +2020,19 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "3",
+            "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "4",
+            "targetNodeId": "2",
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "4",
+            "sourceNodeId": "3",
             "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
@@ -2633,21 +2040,21 @@
           {
             "sourceNodeId": "5",
             "sourceConnector": "True",
-            "targetNodeId": "6",
+            "targetNodeId": "4",
             "targetConnector": "Вход"
           }
         ]
       }
     },
     {
-      "id": "19",
+      "id": "15",
       "type": "End",
-      "x": 1776,
-      "y": 2160,
+      "x": 8080,
+      "y": 128,
       "color": "blue"
     },
     {
-      "id": "20",
+      "id": "16",
       "type": "Subtest",
       "x": 272,
       "y": -304,
@@ -2664,14 +2071,14 @@
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120,
+            "y": 96,
             "color": "blue"
           },
           {
             "id": "1",
             "type": "Label",
-            "x": 540,
-            "y": 120,
+            "x": 368,
+            "y": 112,
             "color": "blue",
             "text": "Аварийный cleanup: выключить питание, разряд, заряд, нагреватели и PoE-нагрузки",
             "labelWidth": 300,
@@ -2680,8 +2087,8 @@
           {
             "id": "2",
             "type": "Write Register",
-            "x": 1000,
-            "y": 120,
+            "x": 912,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -2692,32 +2099,8 @@
           {
             "id": "3",
             "type": "Write Register",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1210,
-            "value": 0,
-            "verifyWrite": false
-          },
-          {
-            "id": "4",
-            "type": "Write Register",
-            "x": 1920,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 23,
-            "useCurrentSlaveId": false,
-            "address": 1204,
-            "value": 0,
-            "verifyWrite": false
-          },
-          {
-            "id": "5",
-            "type": "Write Register",
-            "x": 2380,
-            "y": 120,
+            "x": 1344,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -2726,10 +2109,10 @@
             "verifyWrite": false
           },
           {
-            "id": "6",
+            "id": "4",
             "type": "Write Register",
-            "x": 2840,
-            "y": 120,
+            "x": 1792,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -2738,121 +2121,23 @@
             "verifyWrite": false
           },
           {
-            "id": "7",
-            "type": "For Slaves",
-            "x": 3300,
-            "y": 120,
-            "color": "blue",
-            "fromSlaveId": 1,
-            "toSlaveId": 15,
-            "step": 2,
-            "stopOnError": false,
-            "body": {
-              "name": "???? ????? For Slaves",
-              "nodes": [
-                {
-                  "id": "0",
-                  "type": "Body Start",
-                  "x": 80,
-                  "y": 120,
-                  "color": "blue"
-                },
-                {
-                  "id": "1",
-                  "type": "Write Register",
-                  "x": 540,
-                  "y": 120,
-                  "color": "blue",
-                  "slaveId": 0,
-                  "useCurrentSlaveId": true,
-                  "address": 1414,
-                  "value": 0,
-                  "verifyWrite": false
-                },
-                {
-                  "id": "2",
-                  "type": "Write Register",
-                  "x": 1000,
-                  "y": 120,
-                  "color": "blue",
-                  "slaveId": 0,
-                  "useCurrentSlaveId": true,
-                  "address": 1415,
-                  "value": 0,
-                  "verifyWrite": false
-                },
-                {
-                  "id": "3",
-                  "type": "Write Register",
-                  "x": 1460,
-                  "y": 120,
-                  "color": "blue",
-                  "slaveId": 0,
-                  "useCurrentSlaveId": true,
-                  "address": 1412,
-                  "value": 0,
-                  "verifyWrite": false
-                },
-                {
-                  "id": "4",
-                  "type": "Write Register",
-                  "x": 1920,
-                  "y": 120,
-                  "color": "blue",
-                  "slaveId": 0,
-                  "useCurrentSlaveId": true,
-                  "address": 1413,
-                  "value": 0,
-                  "verifyWrite": false
-                },
-                {
-                  "id": "5",
-                  "type": "Body End",
-                  "x": 2380,
-                  "y": 120,
-                  "color": "blue"
-                }
-              ],
-              "connections": [
-                {
-                  "sourceNodeId": "0",
-                  "sourceConnector": "Выход",
-                  "targetNodeId": "1",
-                  "targetConnector": "Вход"
-                },
-                {
-                  "sourceNodeId": "1",
-                  "sourceConnector": "True",
-                  "targetNodeId": "2",
-                  "targetConnector": "Вход"
-                },
-                {
-                  "sourceNodeId": "2",
-                  "sourceConnector": "True",
-                  "targetNodeId": "3",
-                  "targetConnector": "Вход"
-                },
-                {
-                  "sourceNodeId": "3",
-                  "sourceConnector": "True",
-                  "targetNodeId": "4",
-                  "targetConnector": "Вход"
-                },
-                {
-                  "sourceNodeId": "4",
-                  "sourceConnector": "True",
-                  "targetNodeId": "5",
-                  "targetConnector": "Вход"
-                }
-              ]
-            }
+            "id": "5",
+            "type": "End",
+            "x": 2704,
+            "y": 112,
+            "color": "blue"
           },
           {
-            "id": "8",
-            "type": "End",
-            "x": 3760,
-            "y": 120,
-            "color": "blue"
+            "id": "6",
+            "type": "Write Register",
+            "x": 2240,
+            "y": 112,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": false
           }
         ],
         "connections": [
@@ -2869,10 +2154,167 @@
             "targetConnector": "Вход"
           },
           {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17",
+      "type": "Label",
+      "x": 2464,
+      "y": -80,
+      "color": "blue",
+      "text": "ожидание запуска коммутатора можно запустить параллельно с  проверкой нагревателей (08 и 09) разобраться с асинхронщиной тут",
+      "labelWidth": 300,
+      "labelHeight": 120
+    },
+    {
+      "id": "18",
+      "type": "Label",
+      "x": 4336,
+      "y": -80,
+      "color": "blue",
+      "text": "100мбит тесты ок, но гигабит не проверялся пока.  надо? ",
+      "labelWidth": 300,
+      "labelHeight": 120
+    },
+    {
+      "id": "19",
+      "type": "Subtest",
+      "x": 5792,
+      "y": 464,
+      "color": "blue",
+      "name": "14. UPS: возврат на AC1",
+      "description": "Включение AC1 и ожидание свежего selftest ups_rez=0 до 300 секунд",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "14. UPS: возврат на AC1",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": -112,
+            "y": 64,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true
+          },
+          {
+            "id": "2",
+            "type": "Delay",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "milliseconds": 3000
+          },
+          {
+            "id": "3",
+            "type": "Wait Variable Until",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "0",
+            "timeoutMs": 300000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.ups_rez",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 300000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+          },
+          {
+            "id": "4",
+            "type": "Write Register",
+            "x": 2032,
+            "y": 144,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1210,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "5",
+            "type": "Write Register",
+            "x": 2592,
+            "y": 192,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1204,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "6",
+            "type": "End",
+            "x": 3056,
+            "y": 192,
+            "color": "blue"
+          },
+          {
+            "id": "7",
+            "type": "Write Register",
+            "x": 64,
+            "y": 272,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "Выход",
+            "targetNodeId": "3",
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "3",
@@ -2893,19 +2335,140 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "6",
-            "sourceConnector": "True",
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
             "targetNodeId": "7",
-            "targetConnector": "In"
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "7",
             "sourceConnector": "True",
-            "targetNodeId": "8",
+            "targetNodeId": "1",
             "targetConnector": "Вход"
           }
         ]
       }
+    },
+    {
+      "id": "20",
+      "type": "Subtest",
+      "x": 5328,
+      "y": 464,
+      "color": "blue",
+      "name": "13. UPS: подтверждение питания от АКБ",
+      "description": "Live-проверка разряда SIMBAT24 и ожидание свежего selftest ups_rez=1 до 300 секунд",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "13. UPS: подтверждение питания от АКБ",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Check Register Range",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "liveRead": true,
+            "address": 1707,
+            "min": 0,
+            "max": 65535
+          },
+          {
+            "id": "2",
+            "type": "Check Register Range",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "liveRead": true,
+            "address": 1708,
+            "min": 0,
+            "max": 65535
+          },
+          {
+            "id": "3",
+            "type": "End",
+            "x": 2040,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "4",
+            "type": "Wait Variable Until",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "expectedValue": "1",
+            "timeoutMs": 300000,
+            "baseUrl": "http://192.168.0.1",
+            "responseType": "String",
+            "variableName": "Dut.ups_rez",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "requestTimeoutMs": 300000,
+            "intervalMs": 5000,
+            "failOnTimeout": true,
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21",
+      "type": "Label",
+      "x": 5296,
+      "y": 816,
+      "color": "blue",
+      "text": "заменить все 3 на 12 пункт из инструкции",
+      "labelWidth": 300,
+      "labelHeight": 120
+    },
+    {
+      "id": "22",
+      "type": "Label",
+      "x": 6688,
+      "y": 784,
+      "color": "blue",
+      "text": "не проверялось\r\nнужна либа фортов\r\nнужен принтер",
+      "labelWidth": 300,
+      "labelHeight": 120
     }
   ],
   "connections": [
@@ -2919,12 +2482,6 @@
       "sourceNodeId": "1",
       "sourceConnector": "Success",
       "targetNodeId": "2",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "2",
-      "sourceConnector": "Success",
-      "targetNodeId": "3",
       "targetConnector": "In"
     },
     {
@@ -2964,18 +2521,6 @@
       "targetConnector": "In"
     },
     {
-      "sourceNodeId": "9",
-      "sourceConnector": "Success",
-      "targetNodeId": "10",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "10",
-      "sourceConnector": "Success",
-      "targetNodeId": "11",
-      "targetConnector": "In"
-    },
-    {
       "sourceNodeId": "11",
       "sourceConnector": "Success",
       "targetNodeId": "12",
@@ -2997,31 +2542,37 @@
       "sourceNodeId": "14",
       "sourceConnector": "Success",
       "targetNodeId": "15",
-      "targetConnector": "In"
+      "targetConnector": "Вход"
     },
     {
-      "sourceNodeId": "15",
+      "sourceNodeId": "2",
       "sourceConnector": "Success",
-      "targetNodeId": "16",
+      "targetNodeId": "3",
       "targetConnector": "In"
     },
     {
-      "sourceNodeId": "16",
-      "sourceConnector": "Success",
-      "targetNodeId": "17",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "17",
-      "sourceConnector": "Success",
-      "targetNodeId": "18",
-      "targetConnector": "In"
-    },
-    {
-      "sourceNodeId": "18",
+      "sourceNodeId": "20",
       "sourceConnector": "Success",
       "targetNodeId": "19",
-      "targetConnector": "Вход"
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "19",
+      "sourceConnector": "Success",
+      "targetNodeId": "11",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "10",
+      "sourceConnector": "Success",
+      "targetNodeId": "20",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "9",
+      "sourceConnector": "Success",
+      "targetNodeId": "10",
+      "targetConnector": "In"
     }
   ]
 }
