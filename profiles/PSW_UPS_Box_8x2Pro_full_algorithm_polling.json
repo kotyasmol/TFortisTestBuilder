@@ -758,8 +758,8 @@
           {
             "id": "0",
             "type": "Start",
-            "x": 80,
-            "y": 120,
+            "x": -240,
+            "y": 208,
             "color": "blue"
           },
           {
@@ -828,15 +828,21 @@
             "x": 3300,
             "y": 120,
             "color": "blue"
+          },
+          {
+            "id": "8",
+            "type": "Write Register",
+            "x": 80,
+            "y": 64,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 1,
+            "verifyWrite": false
           }
         ],
         "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
@@ -871,6 +877,18 @@
             "sourceNodeId": "6",
             "sourceConnector": "Выход",
             "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "1",
             "targetConnector": "Вход"
           }
         ]
@@ -1468,7 +1486,7 @@
       "color": "yellow",
       "name": "10. DataTest портов 0..9",
       "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1568,7 +1586,7 @@
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
-            "address": 1210,
+            "address": 1215,
             "value": 1,
             "verifyWrite": true
           },
@@ -1757,7 +1775,7 @@
             "verifyWrite": true
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "Delay",
             "x": 2464,
             "y": -64,
@@ -1765,7 +1783,7 @@
             "milliseconds": 2000
           },
           {
-            "id": "7",
+            "id": "6",
             "type": "End",
             "x": 2800,
             "y": 96,
@@ -1786,9 +1804,9 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "6",
+            "sourceNodeId": "5",
             "sourceConnector": "Выход",
-            "targetNodeId": "7",
+            "targetNodeId": "6",
             "targetConnector": "Вход"
           },
           {
@@ -1806,7 +1824,7 @@
           {
             "sourceNodeId": "4",
             "sourceConnector": "True",
-            "targetNodeId": "6",
+            "targetNodeId": "5",
             "targetConnector": "Вход"
           }
         ]
@@ -1843,7 +1861,7 @@
             "useCurrentSlaveId": false,
             "liveRead": true,
             "address": 1707,
-            "min": 1,
+            "min": 0,
             "max": 65535
           },
           {
@@ -1856,7 +1874,7 @@
             "useCurrentSlaveId": false,
             "liveRead": true,
             "address": 1708,
-            "min": 1,
+            "min": 0,
             "max": 65535
           },
           {
@@ -1930,8 +1948,8 @@
           {
             "id": "0",
             "type": "Start",
-            "x": 80,
-            "y": 120,
+            "x": -112,
+            "y": 64,
             "color": "blue"
           },
           {
@@ -1975,8 +1993,8 @@
           {
             "id": "4",
             "type": "Write Register",
-            "x": 1920,
-            "y": 120,
+            "x": 2032,
+            "y": 144,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1987,8 +2005,8 @@
           {
             "id": "5",
             "type": "Write Register",
-            "x": 2380,
-            "y": 120,
+            "x": 2592,
+            "y": 192,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1999,18 +2017,24 @@
           {
             "id": "6",
             "type": "End",
-            "x": 2840,
-            "y": 120,
+            "x": 3056,
+            "y": 192,
             "color": "blue"
+          },
+          {
+            "id": "7",
+            "type": "Write Register",
+            "x": 64,
+            "y": 272,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true
           }
         ],
         "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
@@ -2039,6 +2063,18 @@
             "sourceNodeId": "5",
             "sourceConnector": "True",
             "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "1",
             "targetConnector": "Вход"
           }
         ]
@@ -2083,8 +2119,8 @@
           {
             "id": "2",
             "type": "Check Variable Range",
-            "x": 1000,
-            "y": 120,
+            "x": 1008,
+            "y": 592,
             "color": "blue",
             "min": 3200000,
             "max": 3299999,
@@ -2095,8 +2131,8 @@
           {
             "id": "3",
             "type": "Build MAC From Serial",
-            "x": 1460,
-            "y": 120,
+            "x": 1536,
+            "y": 464,
             "color": "blue",
             "failOnError": true,
             "serialOffset": 3200000,
@@ -2108,8 +2144,8 @@
           {
             "id": "4",
             "type": "Send UDP Set MAC",
-            "x": 1920,
-            "y": 120,
+            "x": 2032,
+            "y": 384,
             "color": "blue",
             "timeoutMs": 1000,
             "targetIp": "192.168.0.1",
