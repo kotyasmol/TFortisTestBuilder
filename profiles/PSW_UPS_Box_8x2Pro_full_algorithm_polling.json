@@ -11,12 +11,12 @@
     {
       "id": "1",
       "type": "Subtest",
-      "x": 560,
-      "y": 128,
-      "color": "purple",
+      "x": 544,
+      "y": 496,
+      "color": "orange",
       "name": "01. Подготовка стенда",
       "description": "Сброс питания/ключей/нагревателей, очистка ARP, фиксация параметров профиля",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -193,12 +193,12 @@
     {
       "id": "2",
       "type": "Subtest",
-      "x": 1040,
-      "y": 128,
+      "x": 1024,
+      "y": 496,
       "color": "orange",
       "name": "02. Сброс PoE-нагрузок EL60v5",
       "description": "Безопасно выключить нагрузку на EL60v5 перед стартом",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -446,7 +446,7 @@
       "type": "Subtest",
       "x": 1520,
       "y": 128,
-      "color": "orange",
+      "color": "purple",
       "name": "04. Настройка PoE-нагрузок EL60v5",
       "description": "Мощность 15000 и включение обеих линий A/B для slave 1..15 шаг 2",
       "isEnabled": false,
@@ -730,7 +730,7 @@
     {
       "id": "5",
       "type": "Subtest",
-      "x": 2496,
+      "x": 2448,
       "y": 128,
       "color": "purple",
       "name": "06. Ожидание загрузки DUT и selftest",
@@ -835,7 +835,7 @@
     {
       "id": "6",
       "type": "Subtest",
-      "x": 2944,
+      "x": 2912,
       "y": 128,
       "color": "blue",
       "name": "07. Проверка selftest DUT",
@@ -1383,8 +1383,8 @@
     {
       "id": "10",
       "type": "Subtest",
-      "x": 4864,
-      "y": 464,
+      "x": 4896,
+      "y": 128,
       "color": "blue",
       "name": "проверка акб (упс)",
       "description": "Проверка akb_det при подключении/отключении SIMBAT и переключении AC1",
@@ -1404,8 +1404,8 @@
           {
             "id": "1",
             "type": "Wait Variable Until",
-            "x": 540,
-            "y": 120,
+            "x": 432,
+            "y": 112,
             "color": "blue",
             "expectedValue": "0",
             "timeoutMs": 160000,
@@ -1452,8 +1452,8 @@
           {
             "id": "4",
             "type": "Write Register",
-            "x": 1920,
-            "y": 120,
+            "x": 2112,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1464,8 +1464,8 @@
           {
             "id": "5",
             "type": "Wait Variable Until",
-            "x": 2380,
-            "y": 120,
+            "x": 2640,
+            "y": 112,
             "color": "blue",
             "expectedValue": "1",
             "timeoutMs": 160000,
@@ -1482,8 +1482,8 @@
           {
             "id": "6",
             "type": "Write Register",
-            "x": 2840,
-            "y": 120,
+            "x": 3104,
+            "y": 112,
             "color": "blue",
             "slaveId": 23,
             "useCurrentSlaveId": false,
@@ -1494,8 +1494,8 @@
           {
             "id": "7",
             "type": "Wait Variable Until",
-            "x": 3300,
-            "y": 120,
+            "x": 3568,
+            "y": 112,
             "color": "blue",
             "expectedValue": "1",
             "timeoutMs": 160000,
@@ -1512,8 +1512,8 @@
           {
             "id": "8",
             "type": "Write Register",
-            "x": 3760,
-            "y": 120,
+            "x": 4032,
+            "y": 112,
             "color": "blue",
             "slaveId": 17,
             "useCurrentSlaveId": false,
@@ -1524,8 +1524,8 @@
           {
             "id": "9",
             "type": "Wait Variable Until",
-            "x": 4220,
-            "y": 120,
+            "x": 4480,
+            "y": 112,
             "color": "blue",
             "expectedValue": "0",
             "timeoutMs": 160000,
@@ -1542,8 +1542,8 @@
           {
             "id": "10",
             "type": "End",
-            "x": 4680,
-            "y": 120,
+            "x": 4944,
+            "y": 112,
             "color": "blue"
           }
         ],
@@ -1614,8 +1614,8 @@
     {
       "id": "11",
       "type": "Subtest",
-      "x": 6272,
-      "y": 464,
+      "x": 5424,
+      "y": 480,
       "color": "red",
       "name": "15. Получение серийника и запись MAC",
       "description": "Получить serial, вычислить MAC, отправить UDP set MAC, перезагрузить DUT и проверить MAC",
@@ -1882,8 +1882,8 @@
     {
       "id": "12",
       "type": "Subtest",
-      "x": 6704,
-      "y": 464,
+      "x": 5856,
+      "y": 480,
       "color": "red",
       "name": "16. Печать этикеток",
       "description": "Печать 4 этикеток Zebra",
@@ -1945,8 +1945,8 @@
     {
       "id": "13",
       "type": "Subtest",
-      "x": 7136,
-      "y": 464,
+      "x": 6288,
+      "y": 480,
       "color": "red",
       "name": "17. Финальная статистика и отчет",
       "description": "Финальный selftest, сбор JSON-отчета, отправка на сервер и локальная копия",
@@ -2044,8 +2044,8 @@
     {
       "id": "14",
       "type": "Subtest",
-      "x": 7616,
-      "y": 128,
+      "x": 6768,
+      "y": 144,
       "color": "purple",
       "name": "18. Безопасное выключение стенда",
       "description": "Финальный StandOff",
@@ -2155,8 +2155,8 @@
     {
       "id": "15",
       "type": "End",
-      "x": 8080,
-      "y": 128,
+      "x": 7232,
+      "y": 144,
       "color": "blue"
     },
     {
@@ -2289,7 +2289,7 @@
     {
       "id": "17",
       "type": "Label",
-      "x": 2464,
+      "x": 2400,
       "y": -80,
       "color": "blue",
       "text": "ожидание запуска коммутатора можно запустить параллельно с  проверкой нагревателей (08 и 09) разобраться с асинхронщиной тут",
@@ -2307,12 +2307,22 @@
       "labelHeight": 120
     },
     {
-      "id": "22",
+      "id": "19",
       "type": "Label",
-      "x": 6688,
-      "y": 784,
+      "x": 5840,
+      "y": 800,
       "color": "blue",
       "text": "не проверялось\r\nнужна либа фортов\r\nнужен принтер",
+      "labelWidth": 300,
+      "labelHeight": 120
+    },
+    {
+      "id": "20",
+      "type": "Label",
+      "x": 768,
+      "y": 832,
+      "color": "blue",
+      "text": "вынести в самое начало в момент подключения к стенду",
       "labelWidth": 300,
       "labelHeight": 120
     }
