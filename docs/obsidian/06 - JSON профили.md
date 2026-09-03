@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-02
+updated: 2026-09-03
 ---
 
 # JSON профили
@@ -132,17 +132,18 @@ Deserializer также принимает часть русских и legacy-�
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
-Три прежних UPS-подтеста рабочего профиля заменены одним подтестом
-`проверка акб (упс)`. Он пять раз получает свежий selftest через
-`Wait Variable Until` + `SelftestSnapshot` и проверяет `Dut.akb_det` в
-последовательности `0 → 1 → 1 → 1 → 0`. Между снимками выполняются четыре
-проверяемые записи: SIMBAT `slave 17 / 1706 ← 1`, AC1
-`slave 23 / 1200 ← 0`, AC1 `1200 ← 1`, SIMBAT `1706 ← 0`.
+Рабочий подтест `проверка акб (упс)` не использует `akb_det`: на фактической
+прошивке поле не меняется после включения SIMBAT. Подтест выполняет четыре
+проверяемые записи: `slave 17 / 1706 ← 1`, `slave 23 / 1200 ← 0`,
+`1200 ← 1`, `slave 17 / 1706 ← 0`. Пока SIMBAT подключён, после первых трёх
+управляющих действий `Wait Variable Until` + `SelftestSnapshot` ждёт
+`Dut.akb_voltage` в включительном диапазоне `20..27` В.
 
-У каждого ожидания request timeout `30000`, общий timeout `160000`, интервал
-`5000` мс и `failOnTimeout: true`. Фиксированных задержек внутри подтеста нет:
-каждое новое состояние ожидается повторными свежими снимками. Старое значение
-`Dut.akb_det` удаляется перед каждой попыткой.
+Диапазон хранится как `comparisonType: "Number"` и
+`expectedValue: "20..27"`. У каждого ожидания request timeout `30000`, общий
+timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Проверка после
+`1706 ← 0` не выполняется, поскольку допустимый диапазон напряжения при
+отключённом имитаторе не задан; отключение подтверждается Modbus read-back.
 
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен

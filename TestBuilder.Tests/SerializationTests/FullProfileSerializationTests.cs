@@ -114,10 +114,11 @@ public class FullProfileSerializationTests
         var waits = batterySubtest.BodyGraph.Nodes
             .OfType<WaitVariableUntilNodeViewModel>()
             .ToArray();
-        Assert.Equal(new[] { "0", "1", "1", "1", "0" }, waits.Select(wait => wait.ExpectedValue).ToArray());
+        Assert.Equal(3, waits.Length);
         foreach (var wait in waits)
         {
-            Assert.Equal("Dut.akb_det", wait.VariableName);
+            Assert.Equal("20..27", wait.ExpectedValue);
+            Assert.Equal("Dut.akb_voltage", wait.VariableName);
             Assert.Equal(VariableComparisonType.Number, wait.ComparisonType);
             Assert.Equal("SelftestSnapshot", wait.PollAction);
             Assert.Contains("/cgi-bin/luci/admin/statistics/deviceinfo", wait.Endpoint);
@@ -127,6 +128,9 @@ public class FullProfileSerializationTests
             Assert.Equal(160000, wait.TimeoutMs);
             Assert.True(wait.FailOnTimeout);
         }
+        Assert.DoesNotContain(
+            batterySubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>(),
+            wait => wait.VariableName == "Dut.akb_det");
 
         var writes = batterySubtest.BodyGraph.Nodes
             .OfType<ModbusWriteNodeViewModel>()
@@ -146,7 +150,7 @@ public class FullProfileSerializationTests
         var executionNodes = batterySubtest.BodyGraph.Nodes
             .Where(node => node is not StartNodeViewModel && node is not EndNodeViewModel)
             .ToArray();
-        Assert.Equal(9, executionNodes.Length);
+        Assert.Equal(7, executionNodes.Length);
         for (var index = 0; index < executionNodes.Length - 1; index++)
         {
             var source = executionNodes[index];

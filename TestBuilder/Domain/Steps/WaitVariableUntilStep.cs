@@ -295,11 +295,32 @@ namespace TestBuilder.Domain.Steps
         {
             return comparisonType switch
             {
-                VariableComparisonType.Number => ParseDouble(actual) == ParseDouble(expected),
+                VariableComparisonType.Number => CompareNumber(actual, expected),
                 VariableComparisonType.String => string.Equals(ToInvariantString(actual), expected, StringComparison.Ordinal),
                 VariableComparisonType.Boolean => ParseBoolean(actual) == ParseBoolean(expected),
                 _ => string.Equals(ToInvariantString(actual), expected, StringComparison.Ordinal)
             };
+        }
+
+        private static bool CompareNumber(object actual, string expected)
+        {
+            var actualNumber = ParseDouble(actual);
+            if (!expected.Contains("..", StringComparison.Ordinal))
+            {
+                return actualNumber == ParseDouble(expected);
+            }
+
+            var bounds = expected.Split(new[] { ".." }, StringSplitOptions.None);
+            if (bounds.Length != 2 ||
+                !double.TryParse(bounds[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var min) ||
+                !double.TryParse(bounds[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var max) ||
+                min > max)
+            {
+                throw new FormatException(
+                    $"Диапазон '{expected}' должен иметь формат min..max, например 20..27.");
+            }
+
+            return actualNumber >= min && actualNumber <= max;
         }
 
         private static double ParseDouble(object value)

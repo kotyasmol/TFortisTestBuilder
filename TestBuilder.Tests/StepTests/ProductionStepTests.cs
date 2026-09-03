@@ -504,6 +504,49 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task WaitVariableUntilStep_SelftestSnapshotWaitsUntilNumberEntersRange()
+    {
+        static string Snapshot(string batteryVoltage) => $"""
+            <selftest>
+              <default_mac>00:11:22:33:44:55</default_mac>
+              <init_ok>1</init_ok>
+              <dev_type>0</dev_type>
+              <firmvare_vers>1119</firmvare_vers>
+              <boot_vers>0</boot_vers>
+              <akb_voltage>{batteryVoltage}</akb_voltage>
+            </selftest>
+            """;
+
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, Snapshot("19.9"), TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, Snapshot("24.5"), TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.akb_voltage",
+            "20..27",
+            VariableComparisonType.Number,
+            "SelftestSnapshot",
+            "http://192.168.0.1",
+            "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            HttpResponseValueType.String,
+            1000,
+            1000,
+            1,
+            true,
+            useBrowserForSelftest: false);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal("24.5", context.GetVariable<string>("Dut.akb_voltage"));
+        Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
+    }
+
+    [Fact]
     public async Task GetUpsVoltageStep_ParsesDoubleResponse()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "24.7", TimeSpan.FromMilliseconds(1)));
