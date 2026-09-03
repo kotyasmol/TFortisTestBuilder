@@ -38,6 +38,9 @@ public class ProductionStepTests
         Assert.Equal(12345, context.GetVariable<int>("NetTest.SerialNumber"));
         Assert.Equal("12345", context.GetVariable<string>("SerialNumberText"));
         Assert.True(context.GetVariable<bool>("SerialNumberReceived"));
+        Assert.Equal(1, context.GetVariable<int>("SerialNumberAttempts"));
+        Assert.Equal(200, context.GetVariable<int>("SerialNumberStatusCode"));
+        Assert.Equal("CPU 1", context.GetVariable<string>("SerialNumberCpuId"));
         Assert.Contains("devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
         Assert.Contains("cpuId=CPU%201", service.LastUrl);
     }
@@ -53,7 +56,7 @@ public class ProductionStepTests
             NullLogger.Instance,
             "stand-server.local",
             "PSW+UPS-Box 8x2Pro",
-            "Dut.cpu_id",
+            string.Empty,
             1000,
             0,
             0,
@@ -65,6 +68,88 @@ public class ProductionStepTests
         Assert.Equal(StepResult.True, result);
         Assert.Equal(321, context.GetVariable<int>("SerialNumber"));
         Assert.Equal("http://stand-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_RequiresConfiguredCpuIdVariable()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "321", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", 999);
+
+        var step = CreateSerialStep(service, cpuIdVariableName: "Dut.cpu_id");
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, service.Calls);
+        Assert.False(context.Variables.ContainsKey("SerialNumber"));
+        Assert.False(context.GetVariable<bool>("SerialNumberReceived"));
+        Assert.Contains("CPU ID", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_ResolvesCpuIdCaseInsensitively()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "3200001", TimeSpan.FromMilliseconds(2)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.CPU_ID", "ABC/123");
+
+        var step = CreateSerialStep(service, cpuIdVariableName: "Dut.cpu_id");
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(3200001, context.GetVariable<int>("SerialNumber"));
+        Assert.Contains("cpuId=ABC%2F123", service.LastUrl);
+    }
+
+    [Theory]
+    [InlineData("http://server/api", "http://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro")]
+    [InlineData("http://server/api/Api.svc", "http://server/api/Api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro")]
+    [InlineData("http://server/api/api.svc/getSerialNum/", "http://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro")]
+    public async Task GetSerialNumberFromServerStep_AcceptsCommonServerUrlForms(
+        string serverUrl,
+        string expectedUrl)
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "3200002", TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = CreateSerialStep(service, serverUrl, cpuIdVariableName: string.Empty);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(expectedUrl, service.LastUrl);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_RetriesAndSavesLastHttpDiagnostics()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(503, "temporarily unavailable", TimeSpan.FromMilliseconds(12)),
+            HttpRequestResult.Success(200, "\"3200003\"", TimeSpan.FromMilliseconds(7)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-42");
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            "http://server",
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            1,
+            0,
+            "SerialNumber",
+            failOnError: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(3200003, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal(2, context.GetVariable<int>("SerialNumberAttempts"));
+        Assert.Equal(200, context.GetVariable<int>("SerialNumberStatusCode"));
+        Assert.Equal(7, context.GetVariable<int>("SerialNumberElapsedMs"));
+        Assert.Equal(2, service.RequestedUrls.Count);
     }
 
     [Fact]
@@ -130,6 +215,7 @@ public class ProductionStepTests
             AppSettings.Instance.ServerBaseUrl = "serial-server.local";
             var service = new CapturingHttpService(HttpRequestResult.Success(200, "777", TimeSpan.FromMilliseconds(1)));
             var context = new TestContext(new RegisterState());
+            context.SetVariable("Dut.cpu_id", "CPU-777");
             var node = new GetSerialNumberFromServerNodeViewModel
             {
                 ServerBaseUrl = "http://SERVER_BASE_URL",
@@ -142,13 +228,61 @@ public class ProductionStepTests
 
             Assert.Equal(StepResult.True, result);
             Assert.Equal(777, context.GetVariable<int>("SerialNumber"));
-            Assert.Equal("http://serial-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
+            Assert.Equal(
+                "http://serial-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=CPU-777",
+                service.LastUrl);
         }
         finally
         {
             AppSettings.Instance.ServerBaseUrl = previousServerBaseUrl;
         }
     }
+
+    [Fact]
+    public async Task GetSerialNumberNode_ExecutesRealHttpRequestServicePipeline()
+    {
+        var handler = new RecordingHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("3200004")
+            });
+        using var client = new HttpClient(handler);
+        using var service = new HttpRequestService(client);
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU 4");
+        var node = new GetSerialNumberFromServerNodeViewModel
+        {
+            ServerBaseUrl = "http://serial-server.local/api/Api.svc",
+            RetryCount = 0
+        };
+
+        var result = await node
+            .CreateStep(service, NullLogger.Instance)
+            .ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(3200004, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "http://serial-server.local/api/Api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=CPU%204",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    private static GetSerialNumberFromServerStep CreateSerialStep(
+        IHttpRequestService service,
+        string serverUrl = "http://server",
+        string cpuIdVariableName = "Dut.cpu_id") =>
+        new(
+            service,
+            NullLogger.Instance,
+            serverUrl,
+            "PSW+UPS-Box 8x2Pro",
+            cpuIdVariableName,
+            1000,
+            0,
+            0,
+            "SerialNumber",
+            failOnError: true);
 
     [Fact]
     public async Task GetUpsStatusStep_ParsesIntegerResponse()
@@ -713,6 +847,26 @@ public class ProductionStepTests
         {
             RequestedUrls.Add(url);
             return Task.FromResult(_results.Dequeue());
+        }
+    }
+
+    private sealed class RecordingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly HttpResponseMessage _response;
+
+        public RecordingHttpMessageHandler(HttpResponseMessage response)
+        {
+            _response = response;
+        }
+
+        public HttpRequestMessage? LastRequest { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult(_response);
         }
     }
 }

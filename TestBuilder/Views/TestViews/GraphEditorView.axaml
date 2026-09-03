@@ -621,7 +621,7 @@
                       <TextBox Grid.Column="1"
                                Text="{Binding ServerBaseUrl}"
                                FontSize="12"
-                               Watermark="192.168.0.10 или http://server" />
+                               Watermark="пусто = Server base URL из Настроек" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">

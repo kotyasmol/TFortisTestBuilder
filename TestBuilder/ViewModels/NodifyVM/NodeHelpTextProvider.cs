@@ -150,9 +150,10 @@ namespace TestBuilder.ViewModels.NodifyVM
 
             [typeof(GetSerialNumberFromServerNodeViewModel)] = """
                 Запрашивает серийный номер устройства с сервера.
-                Server - базовый адрес сервера.
+                Server - хост, /api, /api/Api.svc или полный endpoint; пустое значение берется из Настроек.
                 Device - тип устройства для запроса.
-                CPU var - имя переменной с CPU ID, который уже должен быть в контексте.
+                CPU var - имя переменной с CPU ID после Selftest Check; если имя задано, пустой CPU ID блокирует запрос.
+                Очисти CPU var только если сервер действительно допускает выдачу номера без CPU ID.
                 Output - имя переменной, куда сохранить серийный номер.
                 Timeout - лимит одного запроса.
                 Retry - количество повторов и задержка между ними.

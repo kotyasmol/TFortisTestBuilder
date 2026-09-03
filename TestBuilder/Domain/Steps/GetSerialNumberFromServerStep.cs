@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -54,27 +55,37 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
+            ResetResult(context);
+
             string url;
+            string cpuId;
             try
             {
-                url = BuildUrl(context);
+                url = BuildUrl(context, out cpuId);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is UriFormatException)
             {
                 return Fail(context, ex.Message, string.Empty, string.Empty);
             }
 
+            context.SetVariable("SerialNumberDeviceType", _deviceType);
+            context.SetVariable("SerialNumberCpuId", cpuId);
+            context.SetVariable("SerialNumberRequestUrl", url);
+
             var timeout = TimeSpan.FromMilliseconds(_timeoutMs);
             var attempts = _retryCount + 1;
             string lastError = string.Empty;
             string raw = string.Empty;
 
-            _logger.Info($"[STEP] Serial number request: {url}");
+            _logger.Info(
+                $"[ШАГ] Запрос серийного номера: device={_deviceType}, cpuId={cpuId}, " +
+                $"timeout={_timeoutMs} мс, попыток={attempts}, url={url}");
 
             for (var attempt = 1; attempt <= attempts; attempt++)
             {
                 var result = await _httpRequestService.GetAsync(url, timeout, cancellationToken);
                 raw = result.Body.Trim();
+                SaveAttemptDiagnostics(context, attempt, result, raw);
 
                 if (TryParseSerial(raw, out var serial) &&
                     string.IsNullOrWhiteSpace(result.ErrorMessage) &&
@@ -89,7 +100,9 @@ namespace TestBuilder.Domain.Steps
 
                 if (attempt < attempts && _retryDelayMs > 0)
                 {
-                    _logger.Warning($"Serial number was not received: {lastError}. Retry in {_retryDelayMs} ms.");
+                    _logger.Warning(
+                        $"Серийный номер не получен (попытка {attempt}/{attempts}): {lastError}. " +
+                        $"Повтор через {_retryDelayMs} мс.");
                     await Task.Delay(_retryDelayMs, cancellationToken);
                 }
             }
@@ -121,11 +134,41 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberRequestUrl", url);
             context.SetVariable("SerialNumberError", error);
 
-            _logger.Warning($"[ERROR] Serial number was not received: {error}");
+            _logger.Warning($"[ОШИБКА] Серийный номер не получен: {error}");
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
-        private string BuildUrl(TestContext context)
+        private void ResetResult(TestContext context)
+        {
+            context.Variables.Remove(_outputVariableName);
+            context.Variables.Remove("SerialNumber");
+            context.Variables.Remove("NetTest.SerialNumber");
+            context.Variables.Remove("SerialNumberText");
+
+            context.SetVariable("SerialNumberReceived", false);
+            context.SetVariable("SerialNumberRawResponse", string.Empty);
+            context.SetVariable("SerialNumberRequestUrl", string.Empty);
+            context.SetVariable("SerialNumberError", string.Empty);
+            context.SetVariable("SerialNumberAttempts", 0);
+            context.SetVariable("SerialNumberStatusCode", 0);
+            context.SetVariable("SerialNumberElapsedMs", 0);
+            context.SetVariable("SerialNumberDeviceType", _deviceType);
+            context.SetVariable("SerialNumberCpuId", string.Empty);
+        }
+
+        private static void SaveAttemptDiagnostics(
+            TestContext context,
+            int attempt,
+            HttpRequestResult result,
+            string raw)
+        {
+            context.SetVariable("SerialNumberAttempts", attempt);
+            context.SetVariable("SerialNumberStatusCode", result.StatusCode ?? 0);
+            context.SetVariable("SerialNumberElapsedMs", (int)result.Elapsed.TotalMilliseconds);
+            context.SetVariable("SerialNumberRawResponse", raw);
+        }
+
+        private string BuildUrl(TestContext context, out string cpuId)
         {
             var baseUrl = NormalizeServerBaseUrl(_serverBaseUrl);
 
@@ -135,12 +178,19 @@ namespace TestBuilder.Domain.Steps
                     "ServerBaseUrl не задан. Укажи адрес сервера серийников в ноде или во вкладке Настройки.");
             }
 
-            var cpuId = ResolveCpuId(context);
+            if (string.IsNullOrWhiteSpace(_deviceType))
+            {
+                throw new InvalidOperationException("DeviceType не задан для запроса серийного номера.");
+            }
+
+            cpuId = ResolveCpuId(context);
 
             if (LooksLikeGetSerialEndpoint(baseUrl))
             {
-                var endpointBuilder = new UriBuilder(baseUrl)
+                var endpointUri = new Uri(baseUrl, UriKind.Absolute);
+                var endpointBuilder = new UriBuilder(endpointUri)
                 {
+                    Path = endpointUri.AbsolutePath.TrimEnd('/'),
                     Query = BuildQuery(cpuId)
                 };
 
@@ -150,7 +200,7 @@ namespace TestBuilder.Domain.Steps
             var baseUri = new Uri(baseUrl, UriKind.Absolute);
             var builder = new UriBuilder(baseUri)
             {
-                Path = CombinePath(baseUri.AbsolutePath, "api/api.svc/getSerialNum"),
+                Path = BuildEndpointPath(baseUri.AbsolutePath),
                 Query = BuildQuery(cpuId)
             };
 
@@ -159,13 +209,28 @@ namespace TestBuilder.Domain.Steps
 
         private string ResolveCpuId(TestContext context)
         {
-            if (!string.IsNullOrWhiteSpace(_cpuIdVariableName) &&
-                context.Variables.TryGetValue(_cpuIdVariableName, out var cpuIdValue))
+            if (string.IsNullOrWhiteSpace(_cpuIdVariableName))
             {
-                return cpuIdValue?.ToString()?.Trim() ?? string.Empty;
+                return string.Empty;
             }
 
-            return string.Empty;
+            if (!context.Variables.TryGetValue(_cpuIdVariableName, out var cpuIdValue))
+            {
+                cpuIdValue = context.Variables
+                    .FirstOrDefault(item =>
+                        string.Equals(item.Key, _cpuIdVariableName, StringComparison.OrdinalIgnoreCase))
+                    .Value;
+            }
+
+            var cpuId = cpuIdValue?.ToString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(cpuId))
+            {
+                throw new InvalidOperationException(
+                    $"CPU ID не найден в переменной '{_cpuIdVariableName}'. " +
+                    "Сначала выполни Selftest Check или очисти поле CPU var, если сервер допускает запрос без CPU ID.");
+            }
+
+            return cpuId;
         }
 
         private string BuildQuery(string cpuId)
@@ -188,31 +253,65 @@ namespace TestBuilder.Domain.Steps
         private static bool LooksLikeGetSerialEndpoint(string baseUrl)
         {
             return Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) &&
-                   uri.AbsolutePath.EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase);
+                   uri.AbsolutePath.TrimEnd('/').EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string CombinePath(string basePath, string relativePath)
+        private static string BuildEndpointPath(string basePath)
         {
             var normalizedBase = string.IsNullOrWhiteSpace(basePath) || basePath == "/"
                 ? string.Empty
                 : basePath.TrimEnd('/');
 
-            return $"{normalizedBase}/{relativePath.TrimStart('/')}";
+            if (normalizedBase.EndsWith("/api/api.svc", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{normalizedBase}/getSerialNum";
+            }
+
+            if (normalizedBase.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{normalizedBase}/api.svc/getSerialNum";
+            }
+
+            return $"{normalizedBase}/api/api.svc/getSerialNum";
         }
 
         private static bool TryParseSerial(string raw, out int serial)
         {
             serial = 0;
+            var normalized = (raw ?? string.Empty)
+                .Trim()
+                .TrimStart('\uFEFF')
+                .Trim();
 
-            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
+            if (int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
                 serial > 0)
             {
                 return true;
             }
 
-            var digits = new string(raw.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
-            return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
-                   serial > 0;
+            try
+            {
+                using var document = JsonDocument.Parse(normalized);
+                var root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Number && root.TryGetInt32(out serial))
+                {
+                    return serial > 0;
+                }
+
+                if (root.ValueKind == JsonValueKind.String &&
+                    int.TryParse(root.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out serial))
+                {
+                    return serial > 0;
+                }
+            }
+            catch (JsonException)
+            {
+                // Legacy API returns plain text. Invalid JSON is handled by the normal error path below.
+            }
+
+            serial = 0;
+            return false;
         }
 
         private static string BuildError(HttpRequestResult result, string raw)
