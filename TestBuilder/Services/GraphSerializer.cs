@@ -187,11 +187,14 @@ namespace TestBuilder.Services
                         n.RetryDelayMs = s.RetryDelayMs;
                         n.OutputVariableName = s.OutputVariableName;
                         n.FailOnError = s.FailOnError;
+                        n.UseFixedSerialNumber = s.UseFixedSerialNumber;
+                        n.FixedSerialNumber = s.FixedSerialNumber;
                         break;
 
                     case SendUdpSetMacPacketNodeViewModel u:
                         n.TargetIp = u.TargetIp;
                         n.TargetPort = u.TargetPort;
+                        n.LocalPort = u.LocalPort;
                         n.MacVariableName = u.MacVariableName;
                         n.TimeoutMs = u.TimeoutMs;
                         n.RepeatCount = u.RepeatCount;
@@ -463,7 +466,9 @@ namespace TestBuilder.Services
                         RetryCount = n.RetryCount ?? 1,
                         RetryDelayMs = n.RetryDelayMs ?? 1000,
                         OutputVariableName = n.OutputVariableName ?? "SerialNumber",
-                        FailOnError = n.FailOnError ?? true
+                        FailOnError = n.FailOnError ?? true,
+                        UseFixedSerialNumber = n.UseFixedSerialNumber ?? false,
+                        FixedSerialNumber = n.FixedSerialNumber ?? 3200428
                     },
 
                     "Send UDP Set MAC" or "SEND_UDP_SET_MAC_PACKET" or "UDP установка MAC" => new SendUdpSetMacPacketNodeViewModel
@@ -471,6 +476,7 @@ namespace TestBuilder.Services
                         Location = location,
                         TargetIp = n.TargetIp ?? "192.168.0.1",
                         TargetPort = n.TargetPort ?? 43962,
+                        LocalPort = n.LocalPort ?? 6123,
                         MacVariableName = n.MacVariableName ?? "Dut.NewMac",
                         TimeoutMs = n.TimeoutMs ?? 1000,
                         RepeatCount = n.RepeatCount ?? 1,

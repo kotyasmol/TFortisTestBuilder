@@ -181,6 +181,12 @@ XML-тегом `CPU_ID`. Запрос без `cpuId` остается досту
 Для диагностики сохраняются URL, CPU ID, число попыток, последний HTTP status,
 elapsed, raw response и текст ошибки.
 
+Для стендовой отладки есть явный режим `UseFixedSerialNumber`. В нём серверный
+endpoint не вызывается ни при каких условиях, а в `SerialNumber` и
+`NetTest.SerialNumber` записывается `FixedSerialNumber`. В рабочем PSW-профиле
+режим включён со значением `3200428`; источник виден в
+`SerialNumberSource = FixedDebug`.
+
 ## UDP Set MAC
 
 `SendUdpSetMacPacketStep` отправляет legacy UDP-пакет на устройство.
@@ -195,6 +201,12 @@ elapsed, raw response и текст ошибки.
 | `18` | ASCII `Kr2` |
 
 Длина пакета - 21 байт.
+
+Сокет перед отправкой привязывается к локальному UDP-порту `6123`, затем пакет
+уходит на `192.168.0.1:43962`. Так делает `QTstand_old`
+(`QUdpSocket::bind(..., PSW_PORT)`), тогда как прежняя новая реализация
+использовала случайный исходящий порт. Лог не содержит ответа DUT на UDP,
+поэтому влияние порта окончательно подтверждается повторным стендовым прогоном.
 
 MAC принимается в разных форматах, потому что parser оставляет только hex-символы:
 
@@ -214,6 +226,9 @@ MAC принимается в разных форматах, потому что
 Старое значение аргументов `-d` нормализуется в `-d *`.
 На Windows перехваченные stdout/stderr читаются в OEM-кодировке текущей
 системы, а не как UTF-8; русский stderr `arpd.bat` попадает в лог без mojibake.
+Непустой stderr считается ошибкой даже при exit code `0`, поэтому отсутствие
+прав администратора больше не сопровождается ложным сообщением об успешной
+очистке. При `FailOnError = false` ошибка по-прежнему только диагностическая.
 
 ## DataTest через SharpPcap
 
@@ -353,13 +368,19 @@ session=true=<session-id>
 {LocalReportsDirectory}/result-yyyyMMdd-HHmmss-fff.txt
 ```
 
-4. Делает POST multipart form-data:
+4. Делает POST с побайтно совместимым multipart-телом `QTstand_old`:
 
 ```text
 field: action (empty)
 field: updatefile; filename: result.json; content-type: application/octet-stream
 field: result; filename: result.json (empty)
 ```
+
+Legacy-тело намеренно сохраняет двойную строку boundary перед полем `result` и
+не добавляет стандартный закрывающий суффикс `--`: именно такие байты формирует
+старый `MainWindow::set_test_result`. Стандартный `MultipartFormDataContent`
+давал тот же набор полей, но сервер фактически отвечал `HTTP 200` с текстом
+`error`.
 
 5. Успех: HTTP 2xx и response начинается с `Ok`.
 6. При ошибке делает retry.

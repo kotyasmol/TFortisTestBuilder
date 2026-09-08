@@ -249,6 +249,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? CpuIdVariableName { get; set; }
 
+        [JsonPropertyName("useFixedSerialNumber")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseFixedSerialNumber { get; set; }
+
+        [JsonPropertyName("fixedSerialNumber")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? FixedSerialNumber { get; set; }
+
         // --- UDP set MAC ---
         [JsonPropertyName("targetIp")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -257,6 +265,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("targetPort")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? TargetPort { get; set; }
+
+        [JsonPropertyName("localPort")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? LocalPort { get; set; }
 
         [JsonPropertyName("macVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

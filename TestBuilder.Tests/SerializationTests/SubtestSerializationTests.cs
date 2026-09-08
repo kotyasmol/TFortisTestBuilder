@@ -11,6 +11,41 @@ namespace TestBuilder.Tests.SerializationTests;
 public class SubtestSerializationTests
 {
     [Fact]
+    public void SerializeAndDeserialize_PreservesSafeSerialAndUdpPorts()
+    {
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        vm.RootGraph.Clear();
+        vm.RootGraph.Nodes.Add(new GetSerialNumberFromServerNodeViewModel
+        {
+            UseFixedSerialNumber = true,
+            FixedSerialNumber = 3200428
+        });
+        vm.RootGraph.Nodes.Add(new SendUdpSetMacPacketNodeViewModel
+        {
+            TargetPort = 43962,
+            LocalPort = 6123
+        });
+
+        var json = GraphSerializer.Serialize(vm, "Profile");
+
+        Assert.Contains("\"useFixedSerialNumber\": true", json);
+        Assert.Contains("\"fixedSerialNumber\": 3200428", json);
+        Assert.Contains("\"localPort\": 6123", json);
+
+        using var loadedModbus = new ModbusService();
+        var loadedVm = new TestViewModel(loadedModbus, new SlaveManager(loadedModbus));
+        GraphSerializer.Deserialize(json, loadedVm);
+
+        var serialNode = loadedVm.RootGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single();
+        var setMacNode = loadedVm.RootGraph.Nodes.OfType<SendUdpSetMacPacketNodeViewModel>().Single();
+        Assert.True(serialNode.UseFixedSerialNumber);
+        Assert.Equal(3200428, serialNode.FixedSerialNumber);
+        Assert.Equal(43962, setMacNode.TargetPort);
+        Assert.Equal(6123, setMacNode.LocalPort);
+    }
+
+    [Fact]
     public void SerializeAndDeserialize_PreservesSubtestBodyGraph()
     {
         using var modbus = new ModbusService();

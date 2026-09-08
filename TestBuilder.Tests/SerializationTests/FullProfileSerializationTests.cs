@@ -115,12 +115,16 @@ public class FullProfileSerializationTests
         Assert.Equal("TestReportText", failureBuildReport.ReportVariableName);
         Assert.Equal("TestReportText", failureSendReport.ReportVariableName);
         Assert.Equal("https://iccid.fort-telecom.ru", failureSendReport.ServerBaseUrl);
-        Assert.Equal(
-            "https://iccid.fort-telecom.ru",
-            serialSubtest.BodyGraph.Nodes
-                .OfType<GetSerialNumberFromServerNodeViewModel>()
-                .Single()
-                .ServerBaseUrl);
+        var serialNode = serialSubtest.BodyGraph.Nodes
+            .OfType<GetSerialNumberFromServerNodeViewModel>()
+            .Single();
+        Assert.Equal("https://iccid.fort-telecom.ru", serialNode.ServerBaseUrl);
+        Assert.True(serialNode.UseFixedSerialNumber);
+        Assert.Equal(3200428, serialNode.FixedSerialNumber);
+        var setMacNode = serialSubtest.BodyGraph.Nodes
+            .OfType<SendUdpSetMacPacketNodeViewModel>()
+            .Single();
+        Assert.Equal(6123, setMacNode.LocalPort);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

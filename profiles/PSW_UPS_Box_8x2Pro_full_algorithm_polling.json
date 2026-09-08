@@ -1597,7 +1597,9 @@
             "failOnError": true,
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "deviceType": "PSW+UPS-Box 8x2Pro",
-            "cpuIdVariableName": "Dut.cpu_id"
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": true,
+            "fixedSerialNumber": 3200428
           },
           {
             "id": "2",
@@ -1633,6 +1635,7 @@
             "timeoutMs": 1000,
             "targetIp": "192.168.0.1",
             "targetPort": 43962,
+            "localPort": 6123,
             "macVariableName": "Dut.NewMac",
             "repeatCount": 1,
             "delayBetweenRepeatsMs": 200,

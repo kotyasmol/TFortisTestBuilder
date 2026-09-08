@@ -123,8 +123,8 @@ Deserializer также принимает часть русских и legacy-�
 | Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `sampleCount`, `liveRead` |
 | Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
-| Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
-| UDP | `targetIp`, `targetPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
+| Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
+| UDP | `targetIp`, `targetPort`, `localPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
@@ -148,6 +148,12 @@ timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Про�
 Для `Clear ARP Cache` дефолтный `arguments` - `-d *`. Старые профили с
 `arguments: "-d"` при выполнении нормализуются в `-d *`, если `command` равен
 `arp`.
+
+В рабочем PSW-профиле `Get Serial Number` содержит
+`useFixedSerialNumber: true` и `fixedSerialNumber: 3200428`. Это защитный режим
+стендовой отладки: endpoint выдачи номеров не вызывается. Для возврата к
+production-выдаче нужно явно снять флаг в ноде. `Send UDP Set MAC` хранит
+`localPort: 6123`, соответствующий исходному `PSW_PORT` Qt-стенда.
 
 В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` `Run Data Test` использует
 пять постоянных пар: `.2/.3`, `.4/.5`, `.6/.7`, `.8/.9`, `.10/.11` в сети

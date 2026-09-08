@@ -18,6 +18,8 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int retryDelayMs = 1000;
         [ObservableProperty] private string outputVariableName = "SerialNumber";
         [ObservableProperty] private bool failOnError = true;
+        [ObservableProperty] private bool useFixedSerialNumber;
+        [ObservableProperty] private int fixedSerialNumber = 3200428;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -45,7 +47,8 @@ namespace TestBuilder.ViewModels.StepVM
                 RetryCount,
                 RetryDelayMs,
                 OutputVariableName,
-                FailOnError);
+                FailOnError,
+                UseFixedSerialNumber ? FixedSerialNumber : null);
 
         public override NodeViewModel Clone() => new GetSerialNumberFromServerNodeViewModel
         {
@@ -56,7 +59,9 @@ namespace TestBuilder.ViewModels.StepVM
             RetryCount = RetryCount,
             RetryDelayMs = RetryDelayMs,
             OutputVariableName = OutputVariableName,
-            FailOnError = FailOnError
+            FailOnError = FailOnError,
+            UseFixedSerialNumber = UseFixedSerialNumber,
+            FixedSerialNumber = FixedSerialNumber
         };
     }
 }

@@ -71,6 +71,39 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task GetSerialNumberFromServerStep_FixedDebugSerialSkipsServerRequest()
+    {
+        var service = new CapturingHttpService(
+            HttpRequestResult.Failure("HTTP request must not run", TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-DEBUG");
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            string.Empty,
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            1,
+            0,
+            "SerialNumber",
+            failOnError: true,
+            fixedSerialNumber: 3200428);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(0, service.Calls);
+        Assert.Equal(3200428, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal(3200428, context.GetVariable<int>("NetTest.SerialNumber"));
+        Assert.Equal("FixedDebug", context.GetVariable<string>("SerialNumberSource"));
+        Assert.Equal("CPU-DEBUG", context.GetVariable<string>("SerialNumberCpuId"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("SerialNumberRequestUrl"));
+        Assert.Equal(0, context.GetVariable<int>("SerialNumberAttempts"));
+        Assert.Equal(0, context.GetVariable<int>("SerialNumberStatusCode"));
+    }
+
+    [Fact]
     public async Task GetSerialNumberFromServerStep_RequiresConfiguredCpuIdVariable()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "321", TimeSpan.FromMilliseconds(1)));
@@ -370,13 +403,28 @@ public class ProductionStepTests
         Assert.Equal(StepResult.True, result);
         Assert.Equal(HttpMethod.Post, handler.Method);
         Assert.Equal("http://report-server.local/api/Api.svc/result.json", handler.Url);
-        Assert.StartsWith("multipart/form-data", handler.ContentType);
+        const string boundary = "---------------------------723690991551375881941828858";
+        Assert.Equal($"multipart/form-data; boundary={boundary}", handler.ContentType);
         Assert.Contains("name=action", multipart);
         Assert.Contains("name=updatefile; filename=result.json", multipart);
         Assert.Contains("Content-Type: application/octet-stream", multipart);
         Assert.Contains("test_result=true=1\r\nserial_num=true=3200123\r\n", handler.Body);
         Assert.Contains("name=result; filename=result.json", multipart);
         Assert.DoesNotContain("name=file", multipart);
+        Assert.Equal(
+            $"--{boundary}\r\n" +
+            "Content-Disposition: form-data; name=\"action\"\r\n\r\n" +
+            "\r\n" +
+            $"--{boundary}\r\n" +
+            "Content-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\n" +
+            "Content-Type: application/octet-stream;\r\n\r\n" +
+            "test_result=true=1\r\nserial_num=true=3200123\r\n" +
+            "\r\n" +
+            $"--{boundary}\r\n" +
+            $"--{boundary}\r\n" +
+            "Content-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n" +
+            "\r\n",
+            handler.Body);
         Assert.True(context.GetVariable<bool>("SendReport.Success"));
         Assert.Equal("Ok saved", context.GetVariable<string>("SendReport.RawResponse"));
     }

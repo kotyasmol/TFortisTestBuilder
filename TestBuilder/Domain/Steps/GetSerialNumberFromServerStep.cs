@@ -23,6 +23,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _retryDelayMs;
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
+        private readonly int? _fixedSerialNumber;
 
         public GetSerialNumberFromServerStep(
             IHttpRequestService httpRequestService,
@@ -34,7 +35,8 @@ namespace TestBuilder.Domain.Steps
             int retryCount,
             int retryDelayMs,
             string outputVariableName,
-            bool failOnError)
+            bool failOnError,
+            int? fixedSerialNumber = null)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -46,6 +48,7 @@ namespace TestBuilder.Domain.Steps
             _retryDelayMs = Math.Max(0, retryDelayMs);
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "SerialNumber" : outputVariableName.Trim();
             _failOnError = failOnError;
+            _fixedSerialNumber = fixedSerialNumber;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -56,6 +59,11 @@ namespace TestBuilder.Domain.Steps
             }
 
             ResetResult(context);
+
+            if (_fixedSerialNumber.HasValue)
+            {
+                return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
+            }
 
             string url;
             string cpuId;
@@ -71,6 +79,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", cpuId);
             context.SetVariable("SerialNumberRequestUrl", url);
+            context.SetVariable("SerialNumberSource", "Server");
 
             var timeout = TimeSpan.FromMilliseconds(_timeoutMs);
             var attempts = _retryCount + 1;
@@ -108,6 +117,31 @@ namespace TestBuilder.Domain.Steps
             }
 
             return Fail(context, lastError, raw, url);
+        }
+
+        private StepResult UseFixedSerialNumber(TestContext context, int serial)
+        {
+            if (serial <= 0)
+            {
+                return Fail(
+                    context,
+                    $"Фиксированный отладочный серийный номер должен быть положительным, получено {serial}.",
+                    string.Empty,
+                    string.Empty);
+            }
+
+            var cpuId = ResolveCpuIdForDiagnostics(context);
+            var raw = serial.ToString(CultureInfo.InvariantCulture);
+
+            context.SetVariable("SerialNumberDeviceType", _deviceType);
+            context.SetVariable("SerialNumberCpuId", cpuId);
+            context.SetVariable("SerialNumberSource", "FixedDebug");
+            SaveSerial(context, serial, raw, string.Empty);
+
+            _logger.Info(
+                $"[ОТЛАДКА] Используется фиксированный серийный номер {serial}; " +
+                "запрос к серверу серийников не выполнялся.");
+            return StepResult.True;
         }
 
         private void SaveSerial(TestContext context, int serial, string raw, string url)
@@ -154,6 +188,25 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberElapsedMs", 0);
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", string.Empty);
+            context.SetVariable("SerialNumberSource", string.Empty);
+        }
+
+        private string ResolveCpuIdForDiagnostics(TestContext context)
+        {
+            if (string.IsNullOrWhiteSpace(_cpuIdVariableName))
+            {
+                return string.Empty;
+            }
+
+            if (!context.Variables.TryGetValue(_cpuIdVariableName, out var cpuIdValue))
+            {
+                cpuIdValue = context.Variables
+                    .FirstOrDefault(item =>
+                        string.Equals(item.Key, _cpuIdVariableName, StringComparison.OrdinalIgnoreCase))
+                    .Value;
+            }
+
+            return cpuIdValue?.ToString()?.Trim() ?? string.Empty;
         }
 
         private static void SaveAttemptDiagnostics(

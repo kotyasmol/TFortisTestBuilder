@@ -15,6 +15,7 @@ namespace TestBuilder.Domain.Steps
         private readonly ILogger _logger;
         private readonly string _targetIp;
         private readonly int _targetPort;
+        private readonly int _localPort;
         private readonly string _macVariableName;
         private readonly int _timeoutMs;
         private readonly int _repeatCount;
@@ -25,6 +26,7 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             string targetIp,
             int targetPort,
+            int localPort,
             string macVariableName,
             int timeoutMs,
             int repeatCount,
@@ -34,6 +36,7 @@ namespace TestBuilder.Domain.Steps
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _targetIp = string.IsNullOrWhiteSpace(targetIp) ? "192.168.0.1" : targetIp.Trim();
             _targetPort = targetPort <= 0 ? 43962 : targetPort;
+            _localPort = localPort is > 0 and <= 65535 ? localPort : 6123;
             _macVariableName = string.IsNullOrWhiteSpace(macVariableName) ? "Dut.NewMac" : macVariableName.Trim();
             _timeoutMs = Math.Max(1, timeoutMs);
             _repeatCount = Math.Max(1, repeatCount);
@@ -59,7 +62,8 @@ namespace TestBuilder.Domain.Steps
 
             try
             {
-                using var client = new UdpClient();
+                using var client = new UdpClient(AddressFamily.InterNetwork);
+                client.Client.Bind(new IPEndPoint(IPAddress.Any, _localPort));
                 client.Client.SendTimeout = _timeoutMs;
                 var endpoint = new IPEndPoint(IPAddress.Parse(_targetIp), _targetPort);
 
@@ -77,10 +81,13 @@ namespace TestBuilder.Domain.Steps
                 context.SetVariable("SetMac.PacketSent", true);
                 context.SetVariable("SetMac.TargetIp", _targetIp);
                 context.SetVariable("SetMac.TargetPort", _targetPort);
+                context.SetVariable("SetMac.LocalPort", _localPort);
                 context.SetVariable("SetMac.Mac", normalizedMac);
                 context.SetVariable("SetMac.PacketHex", packetHex);
                 context.SetVariable("SetMac.Error", string.Empty);
-                _logger.Info($"[OK] UDP set MAC packet отправлен на {_targetIp}:{_targetPort}, MAC {normalizedMac}.");
+                _logger.Info(
+                    $"[OK] UDP set MAC packet отправлен с локального порта {_localPort} " +
+                    $"на {_targetIp}:{_targetPort}, MAC {normalizedMac}.");
                 return StepResult.True;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -127,6 +134,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SetMac.PacketSent", false);
             context.SetVariable("SetMac.TargetIp", _targetIp);
             context.SetVariable("SetMac.TargetPort", _targetPort);
+            context.SetVariable("SetMac.LocalPort", _localPort);
             context.SetVariable("SetMac.Error", error);
             _logger.Warning($"[ОШИБКА] UDP set MAC packet не отправлен: {error}");
             return _failOnSendError ? StepResult.False : StepResult.True;

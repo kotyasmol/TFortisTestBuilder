@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -185,21 +184,32 @@ namespace TestBuilder.Domain.Steps
             return Path.GetFullPath(path);
         }
 
-        private static MultipartFormDataContent CreateLegacyMultipart(string report)
+        private static HttpContent CreateLegacyMultipart(string report)
         {
-            var form = new MultipartFormDataContent(
-                "---------------------------723690991551375881941828858");
+            const string boundary = "---------------------------723690991551375881941828858";
 
-            form.Add(new ByteArrayContent(Array.Empty<byte>()), "action");
+            // Reproduce the byte layout from QTstand_old exactly, including the
+            // duplicated boundary before the empty result part and the missing
+            // conventional closing "--" suffix.
+            var body =
+                $"--{boundary}\r\n" +
+                "Content-Disposition: form-data; name=\"action\"\r\n\r\n" +
+                "\r\n" +
+                $"--{boundary}\r\n" +
+                "Content-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\n" +
+                "Content-Type: application/octet-stream;\r\n\r\n" +
+                report +
+                "\r\n" +
+                $"--{boundary}\r\n" +
+                $"--{boundary}\r\n" +
+                "Content-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n" +
+                "\r\n";
 
-            var reportContent = new ByteArrayContent(Encoding.UTF8.GetBytes(report));
-            reportContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            form.Add(reportContent, "updatefile", "result.json");
-
-            var resultContent = new ByteArrayContent(Array.Empty<byte>());
-            form.Add(resultContent, "result", "result.json");
-
-            return form;
+            var content = new ByteArrayContent(Encoding.UTF8.GetBytes(body));
+            content.Headers.TryAddWithoutValidation(
+                "Content-Type",
+                $"multipart/form-data; boundary={boundary}");
+            return content;
         }
 
         private string BuildUrl()

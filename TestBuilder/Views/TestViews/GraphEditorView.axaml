@@ -648,6 +648,18 @@
                                Watermark="SerialNumber" />
                     </Grid>
 
+                    <CheckBox Content="Отладка: не обращаться к серверу"
+                              IsChecked="{Binding UseFixedSerialNumber}"
+                              FontSize="12" />
+
+                    <Grid ColumnDefinitions="96,*">
+                      <TextBlock Grid.Column="0" Text="Debug serial:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1"
+                               Text="{Binding FixedSerialNumber}"
+                               IsEnabled="{Binding UseFixedSerialNumber}"
+                               FontSize="12" />
+                    </Grid>
+
                     <Grid ColumnDefinitions="96,*">
                       <TextBlock Grid.Column="0" Text="Timeout:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
@@ -1345,6 +1357,10 @@
                     <Grid ColumnDefinitions="104,*">
                       <TextBlock Grid.Column="0" Text="Target port:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TargetPort}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="104,*">
+                      <TextBlock Grid.Column="0" Text="Local port:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding LocalPort}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
                       <TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />

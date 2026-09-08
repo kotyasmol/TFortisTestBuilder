@@ -29,4 +29,14 @@ public class ClearArpCacheStepTests
 
         Assert.Equal(Encoding.UTF8.CodePage, encoding.CodePage);
     }
+
+    [Fact]
+    public void IsSuccessfulProcess_DoesNotIgnoreElevationErrorWithZeroExitCode()
+    {
+        Assert.False(ClearArpCacheStep.IsSuccessfulProcess(
+            0,
+            "Сбой удаления записи таблицы ARP: Запрошенная операция требует повышения."));
+        Assert.True(ClearArpCacheStep.IsSuccessfulProcess(0, string.Empty));
+        Assert.False(ClearArpCacheStep.IsSuccessfulProcess(1, string.Empty));
+    }
 }

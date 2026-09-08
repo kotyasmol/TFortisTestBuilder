@@ -47,18 +47,32 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Info("[ШАГ] Очистка ARP-таблицы.");
 
+            ProcessRunResult? bat = null;
             if (_runArpdBat)
             {
-                var bat = await RunProcessAsync(ResolveConfiguredPath(_arpdBatPath), string.Empty, cancellationToken);
-                _logger.Info($"arpd.bat: exit {bat.ExitCode}, stdout: {bat.StdOut}, stderr: {bat.StdErr}");
+                bat = await RunProcessAsync(ResolveConfiguredPath(_arpdBatPath), string.Empty, cancellationToken);
+                var batMessage = $"arpd.bat: exit {bat.ExitCode}, stdout: {bat.StdOut}, stderr: {bat.StdErr}";
+                if (IsSuccessfulProcess(bat.ExitCode, bat.StdErr))
+                {
+                    _logger.Info(batMessage);
+                }
+                else
+                {
+                    _logger.Warning($"[ОШИБКА] {batMessage}");
+                }
             }
 
             var result = await RunProcessAsync(_command, _arguments, cancellationToken);
-            var success = result.ExitCode == 0;
+            var batSuccess = bat == null || IsSuccessfulProcess(bat.ExitCode, bat.StdErr);
+            var commandSuccess = IsSuccessfulProcess(result.ExitCode, result.StdErr);
+            var success = batSuccess && commandSuccess;
 
             context.SetVariable("ArpClear.ExitCode", result.ExitCode);
             context.SetVariable("ArpClear.StdOut", result.StdOut);
             context.SetVariable("ArpClear.StdErr", result.StdErr);
+            context.SetVariable("ArpClear.BatExitCode", bat?.ExitCode ?? 0);
+            context.SetVariable("ArpClear.BatStdOut", bat?.StdOut ?? string.Empty);
+            context.SetVariable("ArpClear.BatStdErr", bat?.StdErr ?? string.Empty);
             context.SetVariable("ArpClear.Success", success);
 
             if (success)
@@ -67,9 +81,16 @@ namespace TestBuilder.Domain.Steps
                 return StepResult.True;
             }
 
-            var error = $"Очистка ARP завершилась с кодом {result.ExitCode}. stderr: {result.StdErr}";
+            var error = batSuccess
+                ? $"Очистка ARP завершилась с кодом {result.ExitCode}. stderr: {result.StdErr}"
+                : $"arpd.bat не очистил ARP (код {bat!.ExitCode}). stderr: {bat.StdErr}";
             _logger.Warning($"[ОШИБКА] {error}");
             return _failOnError ? StepResult.False : StepResult.True;
+        }
+
+        internal static bool IsSuccessfulProcess(int exitCode, string? stdErr)
+        {
+            return exitCode == 0 && string.IsNullOrWhiteSpace(stdErr);
         }
 
         private async Task<ProcessRunResult> RunProcessAsync(string fileName, string arguments, CancellationToken cancellationToken)
