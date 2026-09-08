@@ -48,6 +48,18 @@
                    Opacity="0.6"
                    TextWrapping="Wrap"/>
 
+        <TextBlock Text="Stand ID:"
+                   FontSize="14"/>
+
+        <TextBox Text="{Binding StandId}"
+                 Watermark="Например APK03-01"
+                 VerticalContentAlignment="Center"/>
+
+        <TextBlock Text="Обязательное поле stand_id в производственном отчёте. Session ID берётся из первого аргумента запуска программы."
+                   FontSize="12"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"/>
+
         <Separator Margin="0,8"/>
 
         <TextBlock Text="Тема оформления:"

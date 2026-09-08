@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -8,11 +9,9 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class BuildTestReportNodeViewModel : NodeViewModel
     {
-        [ObservableProperty] private string reportVariableName = "TestReportJson";
-        [ObservableProperty] private string deviceName = "PSW+UPS-Box 8x2Pro";
-        [ObservableProperty] private int deviceType = 32;
-        [ObservableProperty] private string serialVariableName = "SerialShort";
-        [ObservableProperty] private string macVariableName = "Dut.NewMac";
+        [ObservableProperty] private string reportVariableName = "TestReportText";
+        [ObservableProperty] private string serialVariableName = "SerialNumber";
+        [ObservableProperty] private string testType = "production";
         [ObservableProperty] private bool includeAllVariables = true;
 
         public ConnectorViewModel In { get; }
@@ -36,19 +35,17 @@ namespace TestBuilder.ViewModels.StepVM
             new BuildTestReportStep(
                 logger,
                 ReportVariableName,
-                DeviceName,
-                DeviceType,
+                AppSettings.Instance.StandId,
                 SerialVariableName,
-                MacVariableName,
+                App.StartupSessionId,
+                TestType,
                 IncludeAllVariables);
 
         public override NodeViewModel Clone() => new BuildTestReportNodeViewModel
         {
             ReportVariableName = ReportVariableName,
-            DeviceName = DeviceName,
-            DeviceType = DeviceType,
             SerialVariableName = SerialVariableName,
-            MacVariableName = MacVariableName,
+            TestType = TestType,
             IncludeAllVariables = IncludeAllVariables
         };
     }

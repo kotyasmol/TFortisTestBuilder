@@ -386,6 +386,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? IncludeAllVariables { get; set; }
 
+        [JsonPropertyName("testType")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TestType { get; set; }
+
         // --- For Slaves ---
         [JsonPropertyName("fromSlaveId")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

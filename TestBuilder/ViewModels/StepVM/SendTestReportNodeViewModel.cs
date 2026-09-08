@@ -10,7 +10,7 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class SendTestReportNodeViewModel : NodeViewModel
     {
         [ObservableProperty] private string serverBaseUrl = "http://server-address";
-        [ObservableProperty] private string reportVariableName = "TestReportJson";
+        [ObservableProperty] private string reportVariableName = "TestReportText";
         [ObservableProperty] private string endpoint = "/api/Api.svc/result.json";
         [ObservableProperty] private int timeoutMs = 10000;
         [ObservableProperty] private int retryCount = 1;

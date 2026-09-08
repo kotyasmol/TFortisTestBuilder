@@ -218,4 +218,35 @@ public class SubtestSerializationTests
         Assert.Equal("/api/getUpsVoltage", wait.Endpoint);
         Assert.Equal(HttpResponseValueType.Number, wait.ResponseType);
     }
+
+    [Fact]
+    public void Deserialize_LegacyReportMigratesShortSerialToFullServerSerial()
+    {
+        const string json = """
+            {
+              "name": "Legacy report",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Build Test Report",
+                  "x": 0,
+                  "y": 0,
+                  "reportVariableName": "TestReportJson",
+                  "serialVariableName": "SerialShort"
+                }
+              ],
+              "connections": []
+            }
+            """;
+
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+
+        GraphSerializer.Deserialize(json, vm);
+
+        var report = vm.RootGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Single();
+        Assert.Equal("SerialNumber", report.SerialVariableName);
+        Assert.Equal("TestReportJson", report.ReportVariableName);
+        Assert.Equal("production", report.TestType);
+    }
 }

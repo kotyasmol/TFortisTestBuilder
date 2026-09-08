@@ -32,6 +32,8 @@ namespace TestBuilder.Domain.Execution
 
         public Dictionary<string, object> Variables { get; } = new();
 
+        public List<TestReportEntry> ReportEntries { get; } = new();
+
         public TestContext(RegisterState registerState)
         {
             RegisterState = registerState;
@@ -48,6 +50,14 @@ namespace TestBuilder.Domain.Execution
         public void SetVariable(string name, object value)
         {
             Variables[name] = value;
+        }
+
+        public void AddReportEntry(string name, bool isSuccess, string value)
+        {
+            ReportEntries.Add(new TestReportEntry(
+                name?.Trim() ?? string.Empty,
+                isSuccess,
+                value ?? string.Empty));
         }
 
         public Task WaitWhilePausedAsync(CancellationToken cancellationToken)

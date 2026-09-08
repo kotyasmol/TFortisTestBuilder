@@ -285,6 +285,133 @@ public class ProductionStepTests
             failOnError: true);
 
     [Fact]
+    public async Task BuildTestReportStep_BuildsOriginalQtstandTextFormat()
+    {
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", 3200123);
+        context.SetVariable("SerialShort", 123);
+        context.SetVariable("Dut.akb_voltage", 24.5);
+        context.SetVariable("LastCheck.Passed", false);
+        context.AddReportEntry("самотестирование", true, "true");
+
+        var step = new BuildTestReportStep(
+            NullLogger.Instance,
+            "TestReportText",
+            "APK03-01",
+            "SerialNumber",
+            "session-42",
+            "production",
+            includeAllVariables: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+        var report = context.GetVariable<string>("TestReportText");
+
+        Assert.Equal(StepResult.True, result);
+        Assert.NotNull(report);
+        Assert.StartsWith(
+            "test_result=true=1\r\n" +
+            "stand_id=true=APK03-01\r\n" +
+            "serial_num=true=3200123\r\n" +
+            "session=true=session-42\r\n" +
+            "Тип проверки=true=production\r\n",
+            report);
+        Assert.Contains("самотестирование=true=true\r\n", report);
+        Assert.Contains("Dut.akb_voltage=true=24.5\r\n", report);
+        Assert.Contains("LastCheck.Passed=false=false\r\n", report);
+        Assert.DoesNotContain("serial_num=true=123\r\n", report);
+        Assert.True(context.GetVariable<bool>("BuildReport.Success"));
+    }
+
+    [Fact]
+    public async Task BuildTestReportStep_RejectsMissingStandIdAndStaleReport()
+    {
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", 3200123);
+        context.SetVariable("TestReportText", "stale");
+        var step = new BuildTestReportStep(
+            NullLogger.Instance,
+            "TestReportText",
+            string.Empty,
+            "SerialNumber",
+            string.Empty,
+            "production",
+            includeAllVariables: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.False(context.Variables.ContainsKey("TestReportText"));
+        Assert.False(context.GetVariable<bool>("BuildReport.Success"));
+        Assert.Contains("Stand ID", context.GetVariable<string>("BuildReport.Error"));
+    }
+
+    [Fact]
+    public async Task SendTestReportStep_UsesOriginalQtstandMultipartFields()
+    {
+        var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok saved");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "test_result=true=1\r\nserial_num=true=3200123\r\n");
+        var step = new SendTestReportStep(
+            NullLogger.Instance,
+            "http://report-server.local",
+            "TestReportText",
+            "/api/Api.svc/result.json",
+            1000,
+            0,
+            0,
+            false,
+            "reports",
+            true,
+            () => new HttpClient(handler, disposeHandler: false));
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+        var multipart = handler.Body.Replace("\"", string.Empty, StringComparison.Ordinal);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(HttpMethod.Post, handler.Method);
+        Assert.Equal("http://report-server.local/api/Api.svc/result.json", handler.Url);
+        Assert.StartsWith("multipart/form-data", handler.ContentType);
+        Assert.Contains("name=action", multipart);
+        Assert.Contains("name=updatefile; filename=result.json", multipart);
+        Assert.Contains("Content-Type: application/octet-stream", multipart);
+        Assert.Contains("test_result=true=1\r\nserial_num=true=3200123\r\n", handler.Body);
+        Assert.Contains("name=result; filename=result.json", multipart);
+        Assert.DoesNotContain("name=file", multipart);
+        Assert.True(context.GetVariable<bool>("SendReport.Success"));
+        Assert.Equal("Ok saved", context.GetVariable<string>("SendReport.RawResponse"));
+    }
+
+    [Fact]
+    public async Task SendTestReportStep_RetriesOnceAndAcceptsOnlyOkResponse()
+    {
+        var handler = new SequencedReportHandler(
+            (HttpStatusCode.InternalServerError, "failed"),
+            (HttpStatusCode.OK, "Ok saved"));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "test_result=true=1\r\n");
+        var step = new SendTestReportStep(
+            NullLogger.Instance,
+            "http://report-server.local",
+            "TestReportText",
+            "/api/Api.svc/result.json",
+            1000,
+            1,
+            0,
+            false,
+            "reports",
+            true,
+            () => new HttpClient(handler, disposeHandler: false));
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, handler.Calls);
+        Assert.Equal(2, context.GetVariable<int>("SendReport.Attempts"));
+        Assert.Equal(200, context.GetVariable<int>("SendReport.StatusCode"));
+        Assert.Equal("Ok saved", context.GetVariable<string>("SendReport.RawResponse"));
+    }
+
+    [Fact]
     public async Task GetUpsStatusStep_ParsesIntegerResponse()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "1", TimeSpan.FromMilliseconds(1)));
@@ -867,6 +994,64 @@ public class ProductionStepTests
         {
             LastRequest = request;
             return Task.FromResult(_response);
+        }
+    }
+
+    private sealed class RecordingReportHandler : HttpMessageHandler
+    {
+        private readonly HttpStatusCode _statusCode;
+        private readonly string _responseBody;
+
+        public RecordingReportHandler(HttpStatusCode statusCode, string responseBody)
+        {
+            _statusCode = statusCode;
+            _responseBody = responseBody;
+        }
+
+        public HttpMethod? Method { get; private set; }
+        public string Url { get; private set; } = string.Empty;
+        public string ContentType { get; private set; } = string.Empty;
+        public string Body { get; private set; } = string.Empty;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Method = request.Method;
+            Url = request.RequestUri?.AbsoluteUri ?? string.Empty;
+            ContentType = request.Content?.Headers.ContentType?.ToString() ?? string.Empty;
+            Body = request.Content == null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+
+            return new HttpResponseMessage(_statusCode)
+            {
+                Content = new StringContent(_responseBody)
+            };
+        }
+    }
+
+    private sealed class SequencedReportHandler : HttpMessageHandler
+    {
+        private readonly Queue<(HttpStatusCode StatusCode, string Body)> _responses;
+
+        public SequencedReportHandler(params (HttpStatusCode StatusCode, string Body)[] responses)
+        {
+            _responses = new Queue<(HttpStatusCode StatusCode, string Body)>(responses);
+        }
+
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+            var response = _responses.Dequeue();
+            return Task.FromResult(new HttpResponseMessage(response.StatusCode)
+            {
+                Content = new StringContent(response.Body)
+            });
         }
     }
 }

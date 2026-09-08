@@ -5,7 +5,7 @@ tags:
   - network
   - reports
   - printing
-updated: 2026-09-03
+updated: 2026-09-08
 ---
 
 # HTTP, сеть, отчеты и печать
@@ -313,45 +313,50 @@ port8-9,192.168.0.10,192.168.0.11,100
 
 ## Сбор отчета
 
-`BuildTestReportStep` собирает JSON:
+`BuildTestReportStep` повторяет формат `QTstand_old`:
 
-```json
-{
-  "test_result": 1,
-  "profile": "profile name",
-  "device_name": "PSW+UPS-Box 8x2Pro",
-  "device_type": 32,
-  "serial_num": "12345",
-  "mac": "C0:11:A6:20:00:01",
-  "created_at": "2026-06-30T...",
-  "variables": {}
-}
+```text
+test_result=true=1
+stand_id=true=APK03-01
+serial_num=true=3200123
+session=true=<session-id>
+Тип проверки=true=production
+самотестирование=true=true
+напряжение АКБ=true=24.5
 ```
 
 `test_result` зависит от `context.HasCriticalError`.
+`stand_id` читается из `AppSettings.StandId`, а `session` — из первого аргумента
+запуска приложения и пропускается, если аргумент отсутствует. `serial_num` —
+полный серверный `SerialNumber`, не короткий номер этикетки.
 
-Если `IncludeAllVariables = true`, в отчет попадает отсортированная копия всех переменных контекста. Это удобно для диагностики, но может сделать отчет большим.
+Каждая строка имеет формат `name=true|false=value\r\n`. `SubtestStep` сохраняет
+исход составного подтеста в `TestContext.ReportEntries`. Если
+`IncludeAllVariables = true`, в отчет также попадает отсортированная копия
+диагностических переменных контекста.
 
-`BuildTestReportStep` не отправляет отчет и не пишет файл; он только формирует JSON-строку в переменной. Отправка и локальная копия выполняются отдельной нодой `Send Test Report`.
+`BuildTestReportStep` не отправляет отчет и не пишет файл; он только формирует
+текст в переменной. Отправка и локальная копия выполняются отдельной нодой
+`Send Test Report`.
 
 ## Отправка отчета
 
 `SendTestReportStep`:
 
-1. Читает JSON из `ReportVariableName`.
+1. Читает построчный отчет из `ReportVariableName`.
 2. Строит URL `ServerBaseUrl + Endpoint`.
 3. Если `SaveLocalCopy = true`, пишет файл:
 
 ```text
-{LocalReportsDirectory}/result-yyyyMMdd-HHmmss-fff.json
+{LocalReportsDirectory}/result-yyyyMMdd-HHmmss-fff.txt
 ```
 
 4. Делает POST multipart form-data:
 
 ```text
-field name: file
-file name: result.json
-content-type: application/json
+field: action (empty)
+field: updatefile; filename: result.json; content-type: application/octet-stream
+field: result; filename: result.json (empty)
 ```
 
 5. Успех: HTTP 2xx и response начинается с `Ok`.

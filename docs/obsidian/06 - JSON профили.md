@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-03
+updated: 2026-09-08
 ---
 
 # JSON профили
@@ -127,7 +127,7 @@ Deserializer также принимает часть русских и legacy-�
 | UDP | `targetIp`, `targetPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
-| Report | `reportVariableName`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
+| Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
@@ -157,6 +157,12 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 строки `portsText` ограничиваются диапазоном `1..100`; это автоматически мигрирует
 ошибочные legacy-значения `1000` на `100`. Для старых профилей без новых полей
 используются `allowedTxDeficitPercent = 2.0` и `bidirectional = true`.
+
+`Build Test Report` сохраняет `testType` (`production` по умолчанию) и строит
+построчный отчет протокола `QTstand_old`, а не JSON. В рабочем профиле общий
+`reportVariableName` у сборки и отправки — `TestReportText`. Старые профили со
+значением `serialVariableName: "SerialShort"` автоматически переключаются на
+полный `SerialNumber`, требуемый сервером отчетов.
 
 ## Вложенные графы
 

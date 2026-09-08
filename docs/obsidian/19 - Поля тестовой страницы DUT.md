@@ -5,7 +5,7 @@ tags:
   - dut
   - variables
   - reference
-updated: 2026-09-03
+updated: 2026-09-08
 ---
 
 # Поля тестовой страницы DUT
@@ -267,7 +267,7 @@ Ethernet-трафика.
 - `Dut.NewMac`, `SerialNumber`, `SerialShort`;
 - `LastCheck.*`, `WaitVariable.*`, `HttpRead.*`, `GetIrpStatus.*`;
 - `DataTest.*`;
-- `TestReportJson`, `BuildReport.*`, `SendReport.*`, `PrintLabel.*`;
+- `TestReportText`, `BuildReport.*`, `SendReport.*`, `PrintLabel.*`;
 - `Execution.*` и прочие служебные результаты шагов.
 
 ## Как получить точный список с реального DUT

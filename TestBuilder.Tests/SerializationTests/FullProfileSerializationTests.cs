@@ -69,10 +69,47 @@ public class FullProfileSerializationTests
         var batterySubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "проверка акб (упс)");
+        var reportSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "17. Финальная статистика и отчет");
+        var emergencyShutdownSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "Аварийное выключение стенда");
+        var failureReportSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "Отчёт при ошибке");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetIrpStatusNodeViewModel);
+        Assert.False(reportSubtest.RunOnFailure);
+        Assert.True(emergencyShutdownSubtest.RunOnFailure);
+        Assert.True(failureReportSubtest.RunOnFailure);
+        Assert.True(
+            viewModel.RootGraph.Nodes.IndexOf(emergencyShutdownSubtest) <
+            viewModel.RootGraph.Nodes.IndexOf(failureReportSubtest));
+        var buildReport = reportSubtest.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Single();
+        var sendReport = reportSubtest.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single();
+        Assert.Equal("SerialNumber", buildReport.SerialVariableName);
+        Assert.Equal("TestReportText", buildReport.ReportVariableName);
+        Assert.Equal("production", buildReport.TestType);
+        Assert.Equal("TestReportText", sendReport.ReportVariableName);
+        Assert.Contains(
+            reportSubtest.BodyGraph.Connections,
+            connection => connection.Source.Parent is SelfTestCheckNodeViewModel &&
+                          connection.Source.Title == "False" &&
+                          ReferenceEquals(connection.Target.Parent, buildReport));
+
+        Assert.Empty(failureReportSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
+        var failureBuildReport = failureReportSubtest.BodyGraph.Nodes
+            .OfType<BuildTestReportNodeViewModel>()
+            .Single();
+        var failureSendReport = failureReportSubtest.BodyGraph.Nodes
+            .OfType<SendTestReportNodeViewModel>()
+            .Single();
+        Assert.Equal("SerialNumber", failureBuildReport.SerialVariableName);
+        Assert.Equal("TestReportText", failureBuildReport.ReportVariableName);
+        Assert.Equal("TestReportText", failureSendReport.ReportVariableName);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

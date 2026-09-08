@@ -54,6 +54,7 @@ namespace TestBuilder.Domain.Steps
             {
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
                 _logger.Warning(message);
+                context.AddReportEntry(_name, false, ex.Message);
 
                 if (_stopOnError)
                     context.HasCriticalError = true;
@@ -64,11 +65,13 @@ namespace TestBuilder.Domain.Steps
             if (status == ExecutionStatus.Completed)
             {
                 _logger.Info($"[OK] Подтест '{_name}' завершён.");
+                context.AddReportEntry(_name, true, "true");
                 return StepResult.True;
             }
 
             var failureMessage = $"[ОШИБКА] Подтест '{_name}' завершился с результатом {status}.";
             _logger.Warning(failureMessage);
+            context.AddReportEntry(_name, false, status.ToString());
 
             if (_stopOnError)
                 context.HasCriticalError = true;

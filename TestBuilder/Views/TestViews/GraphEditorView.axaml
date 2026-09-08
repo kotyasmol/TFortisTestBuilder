@@ -1565,10 +1565,8 @@
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Report var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Device name:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding DeviceName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Device type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding DeviceType}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Test type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TestType}" FontSize="12" /></Grid>
                     <CheckBox Content="Include all variables" IsChecked="{Binding IncludeAllVariables}" FontSize="12" />
                   </StackPanel>
                 </nodify:Node>

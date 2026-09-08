@@ -1901,7 +1901,7 @@
       "y": 480,
       "color": "red",
       "name": "17. Финальная статистика и отчет",
-      "description": "Финальный selftest, сбор JSON-отчета, отправка на сервер и локальная копия",
+      "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1934,11 +1934,9 @@
             "x": 1000,
             "y": 120,
             "color": "blue",
-            "deviceType": 32,
-            "macVariableName": "Dut.NewMac",
-            "deviceName": "PSW+UPS-Box 8x2Pro",
-            "serialVariableName": "SerialShort",
-            "reportVariableName": "TestReportJson",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "testType": "production",
             "includeAllVariables": true
           },
           {
@@ -1952,7 +1950,7 @@
             "retryDelayMs": 1000,
             "failOnError": false,
             "serverBaseUrl": "http://SERVER_BASE_URL",
-            "reportVariableName": "TestReportJson",
+            "reportVariableName": "TestReportText",
             "endpoint": "/api/Api.svc/result.json",
             "saveLocalCopy": true,
             "localReportsDirectory": "reports"
@@ -1975,6 +1973,12 @@
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
@@ -2277,6 +2281,90 @@
       "text": "вынести в самое начало в момент подключения к стенду",
       "labelWidth": 300,
       "labelHeight": 120
+    },
+    {
+      "id": "21",
+      "type": "Subtest",
+      "x": 768,
+      "y": -304,
+      "color": "red",
+      "name": "Отчёт при ошибке",
+      "description": "Автоматически собирает и отправляет отчёт после аварийного выключения стенда; не подключать в основную цепочку",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": true,
+      "bodyGraph": {
+        "name": "Отчёт при ошибке",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Build Test Report",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "testType": "production",
+            "includeAllVariables": true
+          },
+          {
+            "id": "2",
+            "type": "Send Test Report",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 10000,
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": false,
+            "serverBaseUrl": "http://SERVER_BASE_URL",
+            "reportVariableName": "TestReportText",
+            "endpoint": "/api/Api.svc/result.json",
+            "saveLocalCopy": true,
+            "localReportsDirectory": "reports"
+          },
+          {
+            "id": "3",
+            "type": "End",
+            "x": 1460,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     }
   ],
   "connections": [

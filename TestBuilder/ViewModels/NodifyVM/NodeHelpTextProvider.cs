@@ -255,12 +255,12 @@ namespace TestBuilder.ViewModels.NodifyVM
                 """,
 
             [typeof(BuildTestReportNodeViewModel)] = """
-                Собирает отчет по результатам теста в переменную.
+                Собирает построчный отчет в формате оригинального QTstand.
                 Report var - имя переменной отчета.
-                Device name и Device type - данные устройства для отчета.
-                Serial var - переменная с серийным номером.
-                MAC var - переменная с MAC-адресом.
-                Include all variables - добавить в отчет все переменные контекста.
+                Serial var - переменная с полным серверным серийным номером.
+                Test type - production или repair.
+                Stand ID берется из настроек приложения, session - из первого аргумента запуска.
+                Include all variables - добавить диагностические переменные строками name=result=value.
                 """,
 
             [typeof(PrintLabelNodeViewModel)] = """
@@ -277,10 +277,10 @@ namespace TestBuilder.ViewModels.NodifyVM
                 """,
 
             [typeof(SendTestReportNodeViewModel)] = """
-                Отправляет отчет на сервер и при необходимости сохраняет копию.
+                Отправляет отчет на сервер по multipart-протоколу оригинального QTstand.
                 Server URL - базовый адрес сервера.
-                Report var - переменная с готовым отчетом.
-                Endpoint - путь API для отправки.
+                Report var - переменная с построчным отчетом.
+                Endpoint - обычно /api/Api.svc/result.json.
                 Timeout ms - лимит одного запроса.
                 Retry count и Retry delay ms - повторы отправки.
                 Save local copy - сохранять отчет локально.

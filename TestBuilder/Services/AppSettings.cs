@@ -29,6 +29,9 @@ namespace TestBuilder.Services
         [JsonPropertyName("serverBaseUrl")]
         public string ServerBaseUrl { get; set; } = string.Empty;
 
+        [JsonPropertyName("standId")]
+        public string StandId { get; set; } = string.Empty;
+
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Light";
 

@@ -279,10 +279,8 @@ namespace TestBuilder.Services
 
                     case BuildTestReportNodeViewModel br:
                         n.ReportVariableName = br.ReportVariableName;
-                        n.DeviceName = br.DeviceName;
-                        n.DeviceType = br.DeviceType;
                         n.SerialVariableName = br.SerialVariableName;
-                        n.MacVariableName = br.MacVariableName;
+                        n.TestType = br.TestType;
                         n.IncludeAllVariables = br.IncludeAllVariables;
                         break;
 
@@ -579,11 +577,14 @@ namespace TestBuilder.Services
                     "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
                     {
                         Location = location,
-                        ReportVariableName = n.ReportVariableName ?? "TestReportJson",
-                        DeviceName = n.DeviceName ?? "PSW+UPS-Box 8x2Pro",
-                        DeviceType = GetObjectAsInt(n.DeviceType, 32),
-                        SerialVariableName = n.SerialVariableName ?? "SerialShort",
-                        MacVariableName = n.MacVariableName ?? "Dut.NewMac",
+                        ReportVariableName = n.ReportVariableName ?? "TestReportText",
+                        SerialVariableName = string.Equals(
+                            n.SerialVariableName,
+                            "SerialShort",
+                            StringComparison.OrdinalIgnoreCase)
+                                ? "SerialNumber"
+                                : n.SerialVariableName ?? "SerialNumber",
+                        TestType = n.TestType ?? "production",
                         IncludeAllVariables = n.IncludeAllVariables ?? true
                     },
 
@@ -607,7 +608,7 @@ namespace TestBuilder.Services
                     {
                         Location = location,
                         ServerBaseUrl = n.ServerBaseUrl ?? "http://server-address",
-                        ReportVariableName = n.ReportVariableName ?? "TestReportJson",
+                        ReportVariableName = n.ReportVariableName ?? "TestReportText",
                         Endpoint = n.Endpoint ?? "/api/Api.svc/result.json",
                         TimeoutMs = n.TimeoutMs ?? 10000,
                         RetryCount = n.RetryCount ?? 1,

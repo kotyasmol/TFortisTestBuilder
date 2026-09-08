@@ -27,11 +27,15 @@ public class SubtestStepTests
     {
         var bodyStep = new CountingStep(StepResult.Next);
         var step = CreateSubtestStep(isEnabled: true, stopOnError: true, bodyStep);
+        var context = CreateContext();
 
-        var result = await step.ExecuteAsync(CreateContext(), CancellationToken.None);
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, bodyStep.ExecuteCount);
+        var reportEntry = Assert.Single(context.ReportEntries);
+        Assert.Equal("Selftest", reportEntry.Name);
+        Assert.True(reportEntry.IsSuccess);
     }
 
     [Fact]
@@ -58,6 +62,9 @@ public class SubtestStepTests
         Assert.Equal(StepResult.False, result);
         Assert.True(context.HasCriticalError);
         Assert.Equal(1, bodyStep.ExecuteCount);
+        var reportEntry = Assert.Single(context.ReportEntries);
+        Assert.Equal("Selftest", reportEntry.Name);
+        Assert.False(reportEntry.IsSuccess);
     }
 
     private static SubtestStep CreateSubtestStep(
