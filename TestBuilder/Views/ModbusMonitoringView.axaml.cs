@@ -53,6 +53,19 @@ public partial class ModbusMonitoringView : UserControl
         await dialog.ShowDialog(TopLevel.GetTopLevel(this) as Window ?? throw new Exception("No window"));
     }
 
+    private async void OnCopyLogs(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not ModbusMonitoringViewModel vm || vm.TestingLogger.Entries.Count == 0)
+            return;
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard == null)
+            return;
+
+        var text = string.Join(Environment.NewLine, vm.TestingLogger.Entries);
+        await clipboard.SetTextAsync(text);
+    }
+
     public ModbusMonitoringViewModel? ViewModel
     {
         get => DataContext as ModbusMonitoringViewModel;

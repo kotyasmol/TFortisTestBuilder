@@ -177,23 +177,37 @@
               Padding="12"
               ClipToBounds="True">
         <Grid RowDefinitions="Auto,*">
-          <TextBlock Grid.Row="0"
-                     Text="Логи Modbus"
-                     FontWeight="SemiBold"
-                     FontSize="14"
-                     Foreground="{DynamicResource SidebarTextBrush}"
-                     Margin="0,0,0,8" />
+          <Grid Grid.Row="0"
+                ColumnDefinitions="*,Auto"
+                Margin="0,0,0,8">
+            <TextBlock Grid.Column="0"
+                       Text="Логи Modbus"
+                       FontWeight="SemiBold"
+                       FontSize="14"
+                       Foreground="{DynamicResource SidebarTextBrush}"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Click="OnCopyLogs"
+                    Classes="ghost"
+                    Height="28"
+                    MinHeight="28"
+                    Padding="8,0"
+                    FontSize="12"
+                    Foreground="{DynamicResource SidebarTextMutedBrush}"
+                    Content="Копировать"
+                    ToolTip.Tip="Копировать все логи в буфер обмена" />
+          </Grid>
 
           <ScrollViewer Grid.Row="1">
             <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <TextBlock Text="{Binding}"
-                             FontFamily="Consolas"
-                             FontSize="11"
-                             Foreground="{DynamicResource SidebarTextMutedBrush}"
-                             Margin="2,2"
-                             TextWrapping="Wrap" />
+                  <SelectableTextBlock Text="{Binding}"
+                                       FontFamily="Consolas"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SidebarTextMutedBrush}"
+                                       Margin="2,2"
+                                       TextWrapping="Wrap" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

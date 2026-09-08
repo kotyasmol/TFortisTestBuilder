@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -150,6 +152,9 @@ namespace TestBuilder.Domain.Steps
         private static ProcessStartInfo CreateStartInfo(string fileName, string arguments)
         {
             var extension = Path.GetExtension(fileName);
+            var outputEncoding = ResolveProcessOutputEncoding(
+                OperatingSystem.IsWindows(),
+                CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
 
             if (string.Equals(extension, ".bat", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(extension, ".cmd", StringComparison.OrdinalIgnoreCase))
@@ -165,6 +170,8 @@ namespace TestBuilder.Domain.Steps
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
+                    StandardOutputEncoding = outputEncoding,
+                    StandardErrorEncoding = outputEncoding,
                     CreateNoWindow = true
                 };
             }
@@ -176,8 +183,32 @@ namespace TestBuilder.Domain.Steps
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = outputEncoding,
+                StandardErrorEncoding = outputEncoding,
                 CreateNoWindow = true
             };
+        }
+
+        internal static Encoding ResolveProcessOutputEncoding(bool isWindows, int oemCodePage)
+        {
+            if (!isWindows)
+            {
+                return Encoding.UTF8;
+            }
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            try
+            {
+                return Encoding.GetEncoding(
+                    oemCodePage,
+                    EncoderFallback.ReplacementFallback,
+                    DecoderFallback.ReplacementFallback);
+            }
+            catch (ArgumentException)
+            {
+                return Encoding.UTF8;
+            }
         }
 
         private sealed record ProcessRunResult(int ExitCode, string StdOut, string StdErr);
