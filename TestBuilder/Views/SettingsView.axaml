@@ -52,7 +52,7 @@
                    FontSize="14"/>
 
         <TextBox Text="{Binding StandId}"
-                 Watermark="Например APK03-01"
+                 Watermark="123"
                  VerticalContentAlignment="Center"/>
 
         <TextBlock Text="Обязательное поле stand_id в производственном отчёте. Session ID берётся из первого аргумента запуска программы."

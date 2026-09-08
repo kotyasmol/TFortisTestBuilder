@@ -78,6 +78,9 @@ public class FullProfileSerializationTests
         var failureReportSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "Отчёт при ошибке");
+        var serialSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "15. Получение серийника и запись MAC");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
@@ -94,6 +97,7 @@ public class FullProfileSerializationTests
         Assert.Equal("TestReportText", buildReport.ReportVariableName);
         Assert.Equal("production", buildReport.TestType);
         Assert.Equal("TestReportText", sendReport.ReportVariableName);
+        Assert.Equal("https://iccid.fort-telecom.ru", sendReport.ServerBaseUrl);
         Assert.Contains(
             reportSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is SelfTestCheckNodeViewModel &&
@@ -110,6 +114,13 @@ public class FullProfileSerializationTests
         Assert.Equal("SerialNumber", failureBuildReport.SerialVariableName);
         Assert.Equal("TestReportText", failureBuildReport.ReportVariableName);
         Assert.Equal("TestReportText", failureSendReport.ReportVariableName);
+        Assert.Equal("https://iccid.fort-telecom.ru", failureSendReport.ServerBaseUrl);
+        Assert.Equal(
+            "https://iccid.fort-telecom.ru",
+            serialSubtest.BodyGraph.Nodes
+                .OfType<GetSerialNumberFromServerNodeViewModel>()
+                .Single()
+                .ServerBaseUrl);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

@@ -317,7 +317,7 @@ port8-9,192.168.0.10,192.168.0.11,100
 
 ```text
 test_result=true=1
-stand_id=true=APK03-01
+stand_id=true=123
 serial_num=true=3200123
 session=true=<session-id>
 Тип проверки=true=production
@@ -326,7 +326,7 @@ session=true=<session-id>
 ```
 
 `test_result` зависит от `context.HasCriticalError`.
-`stand_id` читается из `AppSettings.StandId`, а `session` — из первого аргумента
+`stand_id` читается из `AppSettings.StandId` (дефолт `123`), а `session` — из первого аргумента
 запуска приложения и пропускается, если аргумент отсутствует. `serial_num` —
 полный серверный `SerialNumber`, не короткий номер этикетки.
 

@@ -11,6 +11,9 @@ namespace TestBuilder.Services
     /// </summary>
     public class AppSettings
     {
+        public const string DefaultServerBaseUrl = "https://iccid.fort-telecom.ru";
+        public const string DefaultStandId = "123";
+
         private static readonly string SettingsPath = Path.Combine(
             AppContext.BaseDirectory, "testbuilder.settings");
 
@@ -27,10 +30,10 @@ namespace TestBuilder.Services
         public string GraphsFolder { get; set; } = string.Empty;
 
         [JsonPropertyName("serverBaseUrl")]
-        public string ServerBaseUrl { get; set; } = string.Empty;
+        public string ServerBaseUrl { get; set; } = DefaultServerBaseUrl;
 
         [JsonPropertyName("standId")]
-        public string StandId { get; set; } = string.Empty;
+        public string StandId { get; set; } = DefaultStandId;
 
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Light";
@@ -62,6 +65,16 @@ namespace TestBuilder.Services
                 !Directory.Exists(settings.GraphsFolder))
             {
                 settings.GraphsFolder = ProfileDirectoryLocator.Resolve();
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.ServerBaseUrl))
+            {
+                settings.ServerBaseUrl = DefaultServerBaseUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.StandId))
+            {
+                settings.StandId = DefaultStandId;
             }
 
             return settings;
