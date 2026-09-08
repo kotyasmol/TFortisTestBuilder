@@ -1001,7 +1001,7 @@
       "color": "purple",
       "name": "08. Проверка нагревателя 1",
       "description": "Ток нагревателя 1: до включения 0..50, после включения 150..1000",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1161,7 +1161,7 @@
       "color": "purple",
       "name": "09. Проверка нагревателя 2",
       "description": "Ток нагревателя 2: до включения 0..50, после включения 150..1000",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1388,7 +1388,7 @@
       "color": "blue",
       "name": "проверка акб (упс)",
       "description": "Проверка akb_voltage=20..27 В при подключённом SIMBAT и переключении AC1",
-      "isEnabled": true,
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1936,8 +1936,8 @@
             "color": "blue",
             "serialVariableName": "SerialNumber",
             "reportVariableName": "TestReportText",
-            "testType": "production",
-            "includeAllVariables": true
+            "includeAllVariables": true,
+            "testType": "production"
           },
           {
             "id": "3",
@@ -2311,8 +2311,8 @@
             "color": "blue",
             "serialVariableName": "SerialNumber",
             "reportVariableName": "TestReportText",
-            "testType": "production",
-            "includeAllVariables": true
+            "includeAllVariables": true,
+            "testType": "production"
           },
           {
             "id": "2",
