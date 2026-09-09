@@ -48,9 +48,17 @@ namespace TestBuilder.Domain.Steps
             _failOnSendError = failOnSendError;
         }
 
-        public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
+        public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken) =>
+            ExecuteAsync(context, static (client, token) => client.ReceiveAsync(token), cancellationToken);
+
+        // Keep the Windows-specific receive error path testable on other platforms.
+        internal async Task<StepResult> ExecuteAsync(
+            TestContext context,
+            Func<UdpClient, CancellationToken, ValueTask<UdpReceiveResult>> receiveAsync,
+            CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(receiveAsync);
             ResetResult(context);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -115,7 +123,28 @@ namespace TestBuilder.Domain.Steps
 
                         while (true)
                         {
-                            var reply = await client.ReceiveAsync(attemptCts.Token);
+                            UdpReceiveResult reply;
+                            try
+                            {
+                                reply = await receiveAsync(client, attemptCts.Token);
+                            }
+                            catch (SocketException ex) when (
+                                ex.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionRefused)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                // On a UDP receive, WSAECONNRESET reports ICMP Port Unreachable
+                                // for a preceding datagram. It is not a TCP disconnect or an mr.
+                                var receiveError =
+                                    $"При ожидании ответа от {endpoint} получено уведомление о недоступности UDP-порта " +
+                                    $"(ICMP Port Unreachable; {ex.SocketErrorCode}, native={ex.NativeErrorCode}). " +
+                                    "Возможны неработающий UDP-сервис устройства или отклонение пакета сетевым фильтром.";
+                                context.SetVariable("SetMac.ReceiveError", receiveError);
+                                context.SetVariable("SetMac.ReceiveSocketError", ex.SocketErrorCode.ToString());
+                                context.SetVariable("SetMac.ReceiveNativeErrorCode", ex.NativeErrorCode);
+                                _logger.Warning($"UDP set MAC: попытка {attempt}/{_repeatCount}. {receiveError} Подтверждение mr не получено.");
+                                break;
+                            }
+
                             var responseHex = Convert.ToHexString(reply.Buffer.AsSpan(0, Math.Min(reply.Buffer.Length, 256)));
                             context.SetVariable("SetMac.ResponseHex", responseHex);
                             context.SetVariable("SetMac.ResponseEndpoint", reply.RemoteEndPoint.ToString());
@@ -152,6 +181,11 @@ namespace TestBuilder.Domain.Steps
                     $"DUT не подтвердил запись MAC: нет ответа mr после {_repeatCount} попыток " +
                     $"по маршруту {localEndpoint} → {endpoint}. " +
                     "Проверьте Local IP сетевой карты стенда, доступность UDP-порта и поддержку команды прошивкой.";
+                var lastReceiveError = context.GetVariable<string>("SetMac.ReceiveError");
+                if (!string.IsNullOrWhiteSpace(lastReceiveError))
+                {
+                    acknowledgementError += $" Последняя ошибка приёма: {lastReceiveError}";
+                }
                 if (!context.GetVariable<bool>("SetMac.PacketSent"))
                 {
                     return Fail(context, acknowledgementError);
@@ -228,6 +262,9 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SetMac.PacketHex", string.Empty);
             context.SetVariable("SetMac.ResponseHex", string.Empty);
             context.SetVariable("SetMac.ResponseEndpoint", string.Empty);
+            context.SetVariable("SetMac.ReceiveError", string.Empty);
+            context.SetVariable("SetMac.ReceiveSocketError", string.Empty);
+            context.SetVariable("SetMac.ReceiveNativeErrorCode", 0);
             context.SetVariable("SetMac.Error", string.Empty);
         }
 

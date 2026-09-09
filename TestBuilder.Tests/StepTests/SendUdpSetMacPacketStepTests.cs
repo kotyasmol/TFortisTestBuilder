@@ -108,6 +108,126 @@ public class SendUdpSetMacPacketStepTests
     }
 
     [Theory]
+    [InlineData(SocketError.ConnectionReset, true)]
+    [InlineData(SocketError.ConnectionReset, false)]
+    [InlineData(SocketError.ConnectionRefused, true)]
+    [InlineData(SocketError.ConnectionRefused, false)]
+    public async Task ExecuteAsync_PortUnreachableOnReceiveRetriesAndContinuesToReadback(
+        SocketError socketError,
+        bool failOnSendError)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var device = CreateDevice();
+        var context = CreateContext();
+        var step = CreateStep(GetPort(device), repeatCount: 3, failOnSendError: failOnSendError);
+        var receiveError = new SocketException((int)socketError);
+        var receiveCalls = 0;
+
+        var execution = step.ExecuteAsync(context, (_, _) =>
+        {
+            receiveCalls++;
+            return ValueTask.FromException<UdpReceiveResult>(receiveError);
+        }, deadline.Token);
+
+        IPEndPoint? source = null;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var request = await device.ReceiveAsync(deadline.Token);
+            Assert.Equal(Convert.FromHexString(PacketHex), request.Buffer);
+            source ??= request.RemoteEndPoint;
+            Assert.Equal(source, request.RemoteEndPoint);
+        }
+
+        Assert.Equal(StepResult.True, await execution);
+        Assert.Equal(3, receiveCalls);
+        Assert.Equal(3, context.GetVariable<int>("SetMac.Attempts"));
+        Assert.True(context.GetVariable<bool>("SetMac.PacketSent"));
+        Assert.False(context.GetVariable<bool>("SetMac.Acknowledged"));
+        Assert.False(context.GetVariable<bool>("SetMac.Success"));
+        Assert.Equal(socketError.ToString(), context.GetVariable<string>("SetMac.ReceiveSocketError"));
+        Assert.Equal(receiveError.NativeErrorCode, context.GetVariable<int>("SetMac.ReceiveNativeErrorCode"));
+        Assert.Contains("ICMP Port Unreachable", context.GetVariable<string>("SetMac.ReceiveError"));
+        Assert.Contains("ICMP Port Unreachable", context.GetVariable<string>("SetMac.Error"));
+    }
+
+    [Theory]
+    [InlineData(SocketError.ConnectionReset)]
+    [InlineData(SocketError.ConnectionRefused)]
+    public async Task ExecuteAsync_AcknowledgesRetryAfterReceivePortUnreachable(SocketError socketError)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var device = CreateDevice();
+        var context = CreateContext();
+        var step = CreateStep(GetPort(device), repeatCount: 3);
+        var receiveCalls = 0;
+        var execution = step.ExecuteAsync(context, (client, token) =>
+            ++receiveCalls == 1
+                ? ValueTask.FromException<UdpReceiveResult>(new SocketException((int)socketError))
+                : client.ReceiveAsync(token), deadline.Token);
+
+        var firstRequest = await device.ReceiveAsync(deadline.Token);
+        var retry = await device.ReceiveAsync(deadline.Token);
+        Assert.Equal(firstRequest.Buffer, retry.Buffer);
+        Assert.Equal(firstRequest.RemoteEndPoint, retry.RemoteEndPoint);
+        await device.SendAsync(CreateAcknowledgement(), retry.RemoteEndPoint, deadline.Token);
+
+        Assert.Equal(StepResult.True, await execution);
+        Assert.Equal(2, context.GetVariable<int>("SetMac.Attempts"));
+        Assert.True(context.GetVariable<bool>("SetMac.Acknowledged"));
+        Assert.True(context.GetVariable<bool>("SetMac.Success"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.Error"));
+        // Preserve the transient error for diagnostics even if a later attempt succeeds.
+        Assert.Equal(socketError.ToString(), context.GetVariable<string>("SetMac.ReceiveSocketError"));
+    }
+
+    [Theory]
+    [InlineData(true, StepResult.False)]
+    [InlineData(false, StepResult.True)]
+    public async Task ExecuteAsync_OtherReceiveSocketErrorStillHonorsFailOnSendError(
+        bool failOnSendError,
+        StepResult expectedResult)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var device = CreateDevice();
+        var context = CreateContext();
+        var step = CreateStep(GetPort(device), repeatCount: 3, failOnSendError: failOnSendError);
+        var receiveCalls = 0;
+        var execution = step.ExecuteAsync(context, (_, _) =>
+        {
+            receiveCalls++;
+            return ValueTask.FromException<UdpReceiveResult>(new SocketException((int)SocketError.AccessDenied));
+        }, deadline.Token);
+        await device.ReceiveAsync(deadline.Token);
+
+        Assert.Equal(expectedResult, await execution);
+        Assert.Equal(1, receiveCalls);
+        Assert.True(context.GetVariable<bool>("SetMac.PacketSent"));
+        Assert.False(context.GetVariable<bool>("SetMac.Success"));
+        Assert.False(context.GetVariable<bool>("SetMac.Acknowledged"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.ReceiveSocketError"));
+        Assert.False(string.IsNullOrWhiteSpace(context.GetVariable<string>("SetMac.Error")));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CancellationTakesPriorityOverReceivePortUnreachable()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var device = CreateDevice();
+        var context = CreateContext();
+        var step = CreateStep(GetPort(device));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => step.ExecuteAsync(context, (_, _) =>
+        {
+            cancellation.Cancel();
+            return ValueTask.FromException<UdpReceiveResult>(new SocketException((int)SocketError.ConnectionReset));
+        }, cancellation.Token));
+
+        Assert.True(context.GetVariable<bool>("SetMac.PacketSent"));
+        Assert.False(context.GetVariable<bool>("SetMac.Acknowledged"));
+        Assert.False(context.GetVariable<bool>("SetMac.Success"));
+    }
+
+    [Theory]
     [InlineData(true, StepResult.False)]
     [InlineData(false, StepResult.True)]
     public async Task ExecuteAsync_OccupiedLocalPortHonorsFailOnSendError(
@@ -190,6 +310,9 @@ public class SendUdpSetMacPacketStepTests
         context.SetVariable("SetMac.Mac", Mac);
         context.SetVariable("SetMac.ResponseHex", "previous response");
         context.SetVariable("SetMac.ResponseEndpoint", "previous endpoint");
+        context.SetVariable("SetMac.ReceiveError", "previous receive error");
+        context.SetVariable("SetMac.ReceiveSocketError", "ConnectionReset");
+        context.SetVariable("SetMac.ReceiveNativeErrorCode", 10054);
 
         var result = await CreateStep(43962).ExecuteAsync(context, CancellationToken.None);
 
@@ -202,6 +325,9 @@ public class SendUdpSetMacPacketStepTests
         Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.Mac"));
         Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.ResponseHex"));
         Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.ResponseEndpoint"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.ReceiveError"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("SetMac.ReceiveSocketError"));
+        Assert.Equal(0, context.GetVariable<int>("SetMac.ReceiveNativeErrorCode"));
         Assert.False(string.IsNullOrWhiteSpace(context.GetVariable<string>("SetMac.Error")));
     }
 
