@@ -24,7 +24,8 @@ public class SubtestSerializationTests
         vm.RootGraph.Nodes.Add(new SendUdpSetMacPacketNodeViewModel
         {
             TargetPort = 43962,
-            LocalPort = 6123
+            LocalPort = 6123,
+            LocalIp = "192.168.0.2"
         });
 
         var json = GraphSerializer.Serialize(vm, "Profile");
@@ -32,6 +33,7 @@ public class SubtestSerializationTests
         Assert.Contains("\"useFixedSerialNumber\": true", json);
         Assert.Contains("\"fixedSerialNumber\": 3200428", json);
         Assert.Contains("\"localPort\": 6123", json);
+        Assert.Contains("\"localIp\": \"192.168.0.2\"", json);
 
         using var loadedModbus = new ModbusService();
         var loadedVm = new TestViewModel(loadedModbus, new SlaveManager(loadedModbus));
@@ -43,6 +45,8 @@ public class SubtestSerializationTests
         Assert.Equal(3200428, serialNode.FixedSerialNumber);
         Assert.Equal(43962, setMacNode.TargetPort);
         Assert.Equal(6123, setMacNode.LocalPort);
+        Assert.Equal("192.168.0.2", setMacNode.LocalIp);
+        Assert.Equal("192.168.0.2", ((SendUdpSetMacPacketNodeViewModel)setMacNode.Clone()).LocalIp);
     }
 
     [Fact]

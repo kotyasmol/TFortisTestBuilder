@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # JSON профили
@@ -124,7 +124,7 @@ Deserializer также принимает часть русских и legacy-�
 | Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName` |
-| UDP | `targetIp`, `targetPort`, `localPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
+| UDP | `targetIp`, `targetPort`, `localIp`, `localPort`, `repeatCount`, `delayBetweenRepeatsMs`, `failOnSendError` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
@@ -153,7 +153,13 @@ timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Про�
 `useFixedSerialNumber: true` и `fixedSerialNumber: 3200428`. Это защитный режим
 стендовой отладки: endpoint выдачи номеров не вызывается. Для возврата к
 production-выдаче нужно явно снять флаг в ноде. `Send UDP Set MAC` хранит
-`localPort: 6123`, соответствующий исходному `PSW_PORT` Qt-стенда.
+`localPort: 6123`, соответствующий исходному `PSW_PORT` Qt-стенда, и
+`localIp: "192.168.0.2"` — адрес карты порта 0 по схеме стенда. Профиль не
+назначает этот адрес системе: он должен быть настроен в Windows. Заданы
+`repeatCount: 3` и `timeoutMs: 3000` — до трёх попыток с ожиданием ответа `mr`
+до трёх секунд каждая. В старых JSON без `localIp` используется пустая строка
+(исходящий адрес по маршруту ОС); загрузка, сохранение и клонирование
+сохраняют явно заданный IP.
 
 В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` `Run Data Test` использует
 пять постоянных пар: `.2/.3`, `.4/.5`, `.6/.7`, `.8/.9`, `.10/.11` в сети

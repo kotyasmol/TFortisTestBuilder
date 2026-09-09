@@ -270,6 +270,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? LocalPort { get; set; }
 
+        [JsonPropertyName("localIp")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? LocalIp { get; set; }
+
         [JsonPropertyName("macVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? MacVariableName { get; set; }

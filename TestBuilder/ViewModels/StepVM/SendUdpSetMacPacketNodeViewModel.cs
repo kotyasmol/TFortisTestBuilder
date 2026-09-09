@@ -11,6 +11,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string targetIp = "192.168.0.1";
         [ObservableProperty] private int targetPort = 43962;
         [ObservableProperty] private int localPort = 6123;
+        [ObservableProperty] private string localIp = string.Empty;
         [ObservableProperty] private string macVariableName = "Dut.NewMac";
         [ObservableProperty] private int timeoutMs = 1000;
         [ObservableProperty] private int repeatCount = 1;
@@ -33,13 +34,14 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) =>
-            new SendUdpSetMacPacketStep(logger, TargetIp, TargetPort, LocalPort, MacVariableName, TimeoutMs, RepeatCount, DelayBetweenRepeatsMs, FailOnSendError);
+            new SendUdpSetMacPacketStep(logger, TargetIp, TargetPort, LocalPort, MacVariableName, TimeoutMs, RepeatCount, DelayBetweenRepeatsMs, FailOnSendError, LocalIp);
 
         public override NodeViewModel Clone() => new SendUdpSetMacPacketNodeViewModel
         {
             TargetIp = TargetIp,
             TargetPort = TargetPort,
             LocalPort = LocalPort,
+            LocalIp = LocalIp,
             MacVariableName = MacVariableName,
             TimeoutMs = TimeoutMs,
             RepeatCount = RepeatCount,

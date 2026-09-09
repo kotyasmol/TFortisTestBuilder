@@ -125,6 +125,9 @@ public class FullProfileSerializationTests
             .OfType<SendUdpSetMacPacketNodeViewModel>()
             .Single();
         Assert.Equal(6123, setMacNode.LocalPort);
+        Assert.Equal("192.168.0.2", setMacNode.LocalIp);
+        Assert.Equal(3, setMacNode.RepeatCount);
+        Assert.Equal(3000, setMacNode.TimeoutMs);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

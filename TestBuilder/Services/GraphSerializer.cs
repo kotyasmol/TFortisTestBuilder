@@ -195,6 +195,7 @@ namespace TestBuilder.Services
                         n.TargetIp = u.TargetIp;
                         n.TargetPort = u.TargetPort;
                         n.LocalPort = u.LocalPort;
+                        n.LocalIp = u.LocalIp;
                         n.MacVariableName = u.MacVariableName;
                         n.TimeoutMs = u.TimeoutMs;
                         n.RepeatCount = u.RepeatCount;
@@ -477,6 +478,7 @@ namespace TestBuilder.Services
                         TargetIp = n.TargetIp ?? "192.168.0.1",
                         TargetPort = n.TargetPort ?? 43962,
                         LocalPort = n.LocalPort ?? 6123,
+                        LocalIp = n.LocalIp ?? string.Empty,
                         MacVariableName = n.MacVariableName ?? "Dut.NewMac",
                         TimeoutMs = n.TimeoutMs ?? 1000,
                         RepeatCount = n.RepeatCount ?? 1,

@@ -1363,6 +1363,10 @@
                       <TextBox Grid.Column="1" Text="{Binding LocalPort}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
+                      <TextBlock Grid.Column="0" Text="Local IP:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding LocalIp}" Watermark="IP карты стенда; пусто = маршрут ОС" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="104,*">
                       <TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" />
                     </Grid>
@@ -1371,7 +1375,7 @@
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Repeats:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Attempts:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding RepeatCount}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
