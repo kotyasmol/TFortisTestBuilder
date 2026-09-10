@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/stand.png</file>
+        <file>images/rpsstand.png</file>
+        <file>images/fail.png</file>
+        <file>images/sucess.png</file>
+        <file>images/loading.gif</file>
+        <file>images/start_black.png</file>
+        <file>images/start_white.png</file>
+        <file>images/restart_black.png</file>
+        <file>images/restart_white.png</file>
+    </qresource>
+</RCC>
