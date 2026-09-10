@@ -122,12 +122,12 @@ public class FullProfileSerializationTests
         Assert.True(serialNode.UseFixedSerialNumber);
         Assert.Equal(3200428, serialNode.FixedSerialNumber);
         var setMacNode = serialSubtest.BodyGraph.Nodes
-            .OfType<SendUdpSetMacPacketNodeViewModel>()
+            .OfType<SetProMacNodeViewModel>()
             .Single();
-        Assert.Equal(6123, setMacNode.LocalPort);
-        Assert.Equal("192.168.0.2", setMacNode.LocalIp);
-        Assert.Equal(3, setMacNode.RepeatCount);
-        Assert.Equal(3000, setMacNode.TimeoutMs);
+        Assert.Equal("set_mac_pro.bat", setMacNode.BatchPath);
+        Assert.Equal("PSW+UPS-Box 8x2Pro", setMacNode.BoardVersion);
+        Assert.Equal("Dut.NewMac", setMacNode.MacVariableName);
+        Assert.Equal(60000, setMacNode.TimeoutMs);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

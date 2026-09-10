@@ -1570,7 +1570,7 @@
       "y": 480,
       "color": "red",
       "name": "15. Получение серийника и запись MAC",
-      "description": "Получить serial, вычислить MAC, отправить UDP set MAC, перезагрузить DUT и проверить MAC",
+      "description": "Получить serial, вычислить MAC, записать его через set_mac_pro.bat, перезагрузить DUT и проверить MAC",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1628,19 +1628,15 @@
           },
           {
             "id": "4",
-            "type": "Send UDP Set MAC",
+            "type": "Set Pro MAC",
             "x": 2032,
             "y": 384,
             "color": "blue",
-            "timeoutMs": 3000,
-            "targetIp": "192.168.0.1",
-            "targetPort": 43962,
-            "localPort": 6123,
-            "localIp": "192.168.0.2",
+            "timeoutMs": 60000,
+            "failOnError": true,
+            "batchPath": "set_mac_pro.bat",
             "macVariableName": "Dut.NewMac",
-            "repeatCount": 3,
-            "delayBetweenRepeatsMs": 200,
-            "failOnSendError": true
+            "boardVersion": "PSW+UPS-Box 8x2Pro"
           },
           {
             "id": "5",

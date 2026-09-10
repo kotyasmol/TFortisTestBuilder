@@ -102,7 +102,7 @@ namespace TestBuilder.Services
                 CheckVariableRangeNodeViewModel variableRange => variableRange.CreateStep(_logger),
                 ClearArpCacheNodeViewModel clearArp => clearArp.CreateStep(_logger),
                 GetSerialNumberFromServerNodeViewModel serial => serial.CreateStep(_httpRequestService, _logger),
-                SendUdpSetMacPacketNodeViewModel setMac => setMac.CreateStep(_logger),
+                SetProMacNodeViewModel setMac => setMac.CreateStep(_logger),
                 RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
                 GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
@@ -251,7 +251,7 @@ namespace TestBuilder.Services
                     BindTrueFalse(sourceConnector, source, target, serialVm.TrueOut, serialVm.FalseOut);
                     break;
 
-                case SendUdpSetMacPacketNodeViewModel setMacVm:
+                case SetProMacNodeViewModel setMacVm:
                     BindTrueFalse(sourceConnector, source, target, setMacVm.TrueOut, setMacVm.FalseOut);
                     break;
 

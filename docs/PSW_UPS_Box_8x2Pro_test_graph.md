@@ -1181,17 +1181,15 @@ pair4: port8-port9, CARD_IP_8, CARD_IP_9, speed=1000
 
 - `Text`: `НЕДОСТАЕТ НОДЫ Build MAC from Serial. Нужно вычислить SerialShort = SerialNumber - 3200000; Dut.NewMac = C0:11:A6:20:XX:XX, где XX:XX это SerialShort в двух байтах.`
 
-Шаг 3: добавить ноду `Send UDP Set MAC`.
+Шаг 3: добавить ноду `Set Pro MAC`.
 
 В GUI:
 
-- `TargetIp`: `192.168.0.1`
-- `TargetPort`: `43962`
+- `BatchPath`: `set_mac_pro.bat`
 - `MacVariableName`: `Dut.NewMac`
-- `TimeoutMs`: `1000`
-- `RepeatCount`: `1`
-- `DelayBetweenRepeatsMs`: `200`
-- `FailOnSendError`: `true`
+- `BoardVersion`: `PSW+UPS-Box 8x2Pro`
+- `TimeoutMs`: `60000`
+- `FailOnError`: `true`
 
 Шаг 4: добавить ноду `Задержка`.
 
@@ -1465,4 +1463,3 @@ pair4: port8-port9, CARD_IP_8, CARD_IP_9, speed=1000
 5. `BuildTestReportStep`.
 6. `CompareVariablesStep`.
 7. `DirectReadRegisterStep` или исправить `PollRegisterStep`, чтобы он сам читал Modbus, а не только `RegisterState`.
-

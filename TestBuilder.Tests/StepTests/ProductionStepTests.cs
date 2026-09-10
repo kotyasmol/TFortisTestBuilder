@@ -870,18 +870,6 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public void SendUdpSetMacPacketStep_BuildsLegacyPacket()
-    {
-        Assert.True(SendUdpSetMacPacketStep.TryParseMac("AA:BB:CC:DD:EE:FF", out var mac, out var normalized));
-
-        var packet = SendUdpSetMacPacketStep.BuildPacket(mac);
-
-        Assert.Equal("AA:BB:CC:DD:EE:FF", normalized);
-        Assert.Equal(21, packet.Length);
-        Assert.Equal("434F4E464947000000006D77AABBCCDDEEFF4B7232", Convert.ToHexString(packet));
-    }
-
-    [Fact]
     public void RunDataTestStep_BuildsLegacyEthernetUdpPacket()
     {
         var sourceMac = new byte[] { 0x10, 0xFF, 0xE0, 0x68, 0xFE, 0x24 };

@@ -11,7 +11,7 @@ namespace TestBuilder.Tests.SerializationTests;
 public class SubtestSerializationTests
 {
     [Fact]
-    public void SerializeAndDeserialize_PreservesSafeSerialAndUdpPorts()
+    public void SerializeAndDeserialize_PreservesSafeSerialAndProMacSettings()
     {
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -21,32 +21,69 @@ public class SubtestSerializationTests
             UseFixedSerialNumber = true,
             FixedSerialNumber = 3200428
         });
-        vm.RootGraph.Nodes.Add(new SendUdpSetMacPacketNodeViewModel
+        vm.RootGraph.Nodes.Add(new SetProMacNodeViewModel
         {
-            TargetPort = 43962,
-            LocalPort = 6123,
-            LocalIp = "192.168.0.2"
+            BatchPath = @"C:\TFortisStandNew\set_mac_pro.bat",
+            BoardVersion = "PSW+UPS-Box 8x2Pro",
+            TimeoutMs = 45000,
+            FailOnError = true
         });
 
         var json = GraphSerializer.Serialize(vm, "Profile");
 
         Assert.Contains("\"useFixedSerialNumber\": true", json);
         Assert.Contains("\"fixedSerialNumber\": 3200428", json);
-        Assert.Contains("\"localPort\": 6123", json);
-        Assert.Contains("\"localIp\": \"192.168.0.2\"", json);
+        Assert.Contains("\"type\": \"Set Pro MAC\"", json);
+        Assert.Contains("\"batchPath\": \"C:\\\\TFortisStandNew\\\\set_mac_pro.bat\"", json);
+        Assert.Contains("\"boardVersion\": \"PSW+UPS-Box 8x2Pro\"", json);
 
         using var loadedModbus = new ModbusService();
         var loadedVm = new TestViewModel(loadedModbus, new SlaveManager(loadedModbus));
         GraphSerializer.Deserialize(json, loadedVm);
 
         var serialNode = loadedVm.RootGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single();
-        var setMacNode = loadedVm.RootGraph.Nodes.OfType<SendUdpSetMacPacketNodeViewModel>().Single();
+        var setMacNode = loadedVm.RootGraph.Nodes.OfType<SetProMacNodeViewModel>().Single();
         Assert.True(serialNode.UseFixedSerialNumber);
         Assert.Equal(3200428, serialNode.FixedSerialNumber);
-        Assert.Equal(43962, setMacNode.TargetPort);
-        Assert.Equal(6123, setMacNode.LocalPort);
-        Assert.Equal("192.168.0.2", setMacNode.LocalIp);
-        Assert.Equal("192.168.0.2", ((SendUdpSetMacPacketNodeViewModel)setMacNode.Clone()).LocalIp);
+        Assert.Equal(@"C:\TFortisStandNew\set_mac_pro.bat", setMacNode.BatchPath);
+        Assert.Equal("PSW+UPS-Box 8x2Pro", setMacNode.BoardVersion);
+        Assert.Equal(45000, setMacNode.TimeoutMs);
+        Assert.Equal(@"C:\TFortisStandNew\set_mac_pro.bat", ((SetProMacNodeViewModel)setMacNode.Clone()).BatchPath);
+    }
+
+    [Fact]
+    public void Deserialize_LegacyUdpMacNode_MigratesToProMacNode()
+    {
+        const string json = """
+            {
+              "name": "Legacy",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Send UDP Set MAC",
+                  "x": 10,
+                  "y": 20,
+                  "targetIp": "192.168.0.1",
+                  "targetPort": 43962,
+                  "localPort": 6123,
+                  "macVariableName": "Dut.NewMac",
+                  "timeoutMs": 3000
+                }
+              ],
+              "connections": []
+            }
+            """;
+
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+
+        GraphSerializer.Deserialize(json, vm);
+
+        var node = vm.RootGraph.Nodes.OfType<SetProMacNodeViewModel>().Single();
+        Assert.Equal("set_mac_pro.bat", node.BatchPath);
+        Assert.Equal("Dut.NewMac", node.MacVariableName);
+        Assert.Equal("PSW+UPS-Box 8x2Pro", node.BoardVersion);
+        Assert.Equal(60000, node.TimeoutMs);
     }
 
     [Fact]

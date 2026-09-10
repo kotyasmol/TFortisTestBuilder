@@ -1327,8 +1327,8 @@
               </DataTemplate>
             </views:NodeTemplateSelector.ClearArpCacheTemplate>
 
-            <views:NodeTemplateSelector.SendUdpSetMacTemplate>
-              <DataTemplate x:DataType="stepvm:SendUdpSetMacPacketNodeViewModel">
+            <views:NodeTemplateSelector.SetProMacTemplate>
+              <DataTemplate x:DataType="stepvm:SetProMacNodeViewModel">
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
@@ -1349,44 +1349,28 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
+                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Target IP:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TargetIp}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Target port:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TargetPort}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Local port:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding LocalPort}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Local IP:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding LocalIp}" Watermark="IP карты стенда; пусто = маршрут ОС" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Batch path:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding BatchPath}" Watermark="set_mac_pro.bat" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
                       <TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
+                      <TextBlock Grid.Column="0" Text="Board version:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding BoardVersion}" FontSize="12" />
+                    </Grid>
+                    <Grid ColumnDefinitions="104,*">
                       <TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
                     </Grid>
-                    <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Attempts:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding RepeatCount}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Repeat delay:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding DelayBetweenRepeatsMs}" FontSize="12" />
-                    </Grid>
-                    <CheckBox Content="Fail on send error" IsChecked="{Binding FailOnSendError}" FontSize="12" />
+                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
-            </views:NodeTemplateSelector.SendUdpSetMacTemplate>
+            </views:NodeTemplateSelector.SetProMacTemplate>
 
             <views:NodeTemplateSelector.RunDataTestTemplate>
               <DataTemplate x:DataType="stepvm:RunDataTestNodeViewModel">

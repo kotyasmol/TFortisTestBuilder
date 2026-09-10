@@ -43,7 +43,7 @@ namespace TestBuilder.Services
             CheckVariableRangeNodeViewModel => "Check Variable Range",
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
             GetSerialNumberFromServerNodeViewModel => "Get Serial Number",
-            SendUdpSetMacPacketNodeViewModel => "Send UDP Set MAC",
+            SetProMacNodeViewModel => "Set Pro MAC",
             RunDataTestNodeViewModel => "Run Data Test",
             GetUpsStatusNodeViewModel => "Get UPS Status",
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
@@ -191,16 +191,12 @@ namespace TestBuilder.Services
                         n.FixedSerialNumber = s.FixedSerialNumber;
                         break;
 
-                    case SendUdpSetMacPacketNodeViewModel u:
-                        n.TargetIp = u.TargetIp;
-                        n.TargetPort = u.TargetPort;
-                        n.LocalPort = u.LocalPort;
-                        n.LocalIp = u.LocalIp;
-                        n.MacVariableName = u.MacVariableName;
-                        n.TimeoutMs = u.TimeoutMs;
-                        n.RepeatCount = u.RepeatCount;
-                        n.DelayBetweenRepeatsMs = u.DelayBetweenRepeatsMs;
-                        n.FailOnSendError = u.FailOnSendError;
+                    case SetProMacNodeViewModel proMac:
+                        n.BatchPath = proMac.BatchPath;
+                        n.MacVariableName = proMac.MacVariableName;
+                        n.BoardVersion = proMac.BoardVersion;
+                        n.TimeoutMs = proMac.TimeoutMs;
+                        n.FailOnError = proMac.FailOnError;
                         break;
 
                     case RunDataTestNodeViewModel d:
@@ -472,18 +468,15 @@ namespace TestBuilder.Services
                         FixedSerialNumber = n.FixedSerialNumber ?? 3200428
                     },
 
-                    "Send UDP Set MAC" or "SEND_UDP_SET_MAC_PACKET" or "UDP установка MAC" => new SendUdpSetMacPacketNodeViewModel
+                    "Set Pro MAC" or "SET_PRO_MAC" or "Запись MAC Pro" or
+                    "Send UDP Set MAC" or "SEND_UDP_SET_MAC_PACKET" or "UDP установка MAC" => new SetProMacNodeViewModel
                     {
                         Location = location,
-                        TargetIp = n.TargetIp ?? "192.168.0.1",
-                        TargetPort = n.TargetPort ?? 43962,
-                        LocalPort = n.LocalPort ?? 6123,
-                        LocalIp = n.LocalIp ?? string.Empty,
+                        BatchPath = n.BatchPath ?? "set_mac_pro.bat",
                         MacVariableName = n.MacVariableName ?? "Dut.NewMac",
-                        TimeoutMs = n.TimeoutMs ?? 1000,
-                        RepeatCount = n.RepeatCount ?? 1,
-                        DelayBetweenRepeatsMs = n.DelayBetweenRepeatsMs ?? 200,
-                        FailOnSendError = n.FailOnSendError ?? true
+                        BoardVersion = n.BoardVersion ?? GetObjectAsString(n.DeviceType, "PSW+UPS-Box 8x2Pro"),
+                        TimeoutMs = n.TimeoutMs is >= 10000 ? n.TimeoutMs.Value : 60000,
+                        FailOnError = n.FailOnError ?? true
                     },
 
                     "Run Data Test" or "RUN_DATA_TEST" or "Тест передачи данных" => new RunDataTestNodeViewModel

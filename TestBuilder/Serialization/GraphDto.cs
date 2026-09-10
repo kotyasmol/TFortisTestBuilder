@@ -257,38 +257,18 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? FixedSerialNumber { get; set; }
 
-        // --- UDP set MAC ---
-        [JsonPropertyName("targetIp")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? TargetIp { get; set; }
-
-        [JsonPropertyName("targetPort")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? TargetPort { get; set; }
-
-        [JsonPropertyName("localPort")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? LocalPort { get; set; }
-
-        [JsonPropertyName("localIp")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? LocalIp { get; set; }
-
+        // --- Set Pro MAC / Build MAC / Print Label ---
         [JsonPropertyName("macVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? MacVariableName { get; set; }
 
-        [JsonPropertyName("repeatCount")]
+        [JsonPropertyName("batchPath")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? RepeatCount { get; set; }
+        public string? BatchPath { get; set; }
 
-        [JsonPropertyName("delayBetweenRepeatsMs")]
+        [JsonPropertyName("boardVersion")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? DelayBetweenRepeatsMs { get; set; }
-
-        [JsonPropertyName("failOnSendError")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? FailOnSendError { get; set; }
+        public string? BoardVersion { get; set; }
 
         // --- Data Test ---
         [JsonPropertyName("mode")]

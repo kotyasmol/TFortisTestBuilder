@@ -28,7 +28,7 @@ namespace TestBuilder.Views
 
         public IDataTemplate? GetSerialNumberTemplate { get; set; }
 
-        public IDataTemplate? SendUdpSetMacTemplate { get; set; }
+        public IDataTemplate? SetProMacTemplate { get; set; }
 
         public IDataTemplate? RunDataTestTemplate { get; set; }
 
@@ -80,7 +80,7 @@ namespace TestBuilder.Views
                 CheckVariableRangeNodeViewModel => CheckVariableRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ClearArpCacheNodeViewModel => ClearArpCacheTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetSerialNumberFromServerNodeViewModel => GetSerialNumberTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                SendUdpSetMacPacketNodeViewModel => SendUdpSetMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                SetProMacNodeViewModel => SetProMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

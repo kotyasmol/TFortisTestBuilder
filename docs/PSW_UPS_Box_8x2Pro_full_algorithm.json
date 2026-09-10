@@ -2090,16 +2090,14 @@
                                                       },
                                                       {
                                                           "id":  "4",
-                                                          "type":  "Send UDP Set MAC",
+                                                          "type":  "Set Pro MAC",
                                                           "x":  1920,
                                                           "y":  120,
-                                                          "targetIp":  "192.168.0.1",
-                                                          "targetPort":  43962,
+                                                          "batchPath":  "set_mac_pro.bat",
                                                           "macVariableName":  "Dut.NewMac",
-                                                          "timeoutMs":  1000,
-                                                          "repeatCount":  1,
-                                                          "delayBetweenRepeatsMs":  200,
-                                                          "failOnSendError":  true
+                                                          "boardVersion":  "PSW+UPS-Box 8x2Pro",
+                                                          "timeoutMs":  60000,
+                                                          "failOnError":  true
                                                       },
                                                       {
                                                           "id":  "5",
