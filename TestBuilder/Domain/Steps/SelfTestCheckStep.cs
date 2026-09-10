@@ -52,7 +52,6 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _failOnError;
         private readonly bool _useBrowser;
         private readonly int _pollIntervalMs;
-        private readonly HeadlessBrowserAttemptRunner _browserAttemptRunner;
 
         public SelfTestCheckStep(
             IHttpRequestService httpRequestService,
@@ -68,7 +67,6 @@ namespace TestBuilder.Domain.Steps
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _browserAttemptRunner = new HeadlessBrowserAttemptRunner(_logger);
             _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
             _timeoutMs = enforceMinimumDeviceReadyTimeout
                 ? NormalizeSelfTestTimeout(_url, timeoutMs)
@@ -504,19 +502,20 @@ namespace TestBuilder.Domain.Steps
                 return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
             }
 
-            _logger.Info(
-                $"[INFO] Selftest: браузерная попытка; после загрузки страницы ожидание {BrowserDomSettleDelayMs} мс перед чтением данных.");
+            var browserPath = FindBrowserExecutable();
+            if (string.IsNullOrWhiteSpace(browserPath))
+            {
+                return HttpRequestResult.Failure(
+                    "Headless Chrome/Edge was not found.",
+                    TimeSpan.Zero);
+            }
 
-            return await _browserAttemptRunner.RunAsync(
-                (token, reportStage) =>
-                {
-                    token.ThrowIfCancellationRequested();
-                    reportStage("поиск Chrome/Edge");
-                    var browserPath = FindBrowserExecutable();
-                    return string.IsNullOrWhiteSpace(browserPath)
-                        ? Task.FromResult(HttpRequestResult.Failure("Headless Chrome/Edge was not found.", TimeSpan.Zero))
-                        : GetPageWithBrowserAsync(browserPath, url, timeout, token, reportStage);
-                },
+            _logger.Info(
+                $"[INFO] Selftest opens one headless browser, waits for page load and then waits {BrowserDomSettleDelayMs} ms before one PageSource snapshot.");
+
+            return await GetPageWithBrowserAsync(
+                browserPath,
+                url,
                 timeout,
                 cancellationToken);
         }
@@ -525,18 +524,15 @@ namespace TestBuilder.Domain.Steps
             string browserPath,
             string url,
             TimeSpan timeout,
-            CancellationToken cancellationToken,
-            Action<string> reportStage)
+            CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
             var userDataDir = Path.Combine(Path.GetTempPath(), "TestBuilderHeadlessChrome_" + Guid.NewGuid().ToString("N"));
+            var debuggingPort = GetAvailableTcpPort();
             Process? process = null;
 
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                reportStage("создание временного профиля и запуск браузера");
-                var debuggingPort = GetAvailableTcpPort();
                 Directory.CreateDirectory(userDataDir);
 
                 process = new Process();
@@ -558,14 +554,11 @@ namespace TestBuilder.Domain.Steps
                 process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
                 process.StartInfo.ArgumentList.Add(url);
 
-                cancellationToken.ThrowIfCancellationRequested();
                 process.Start();
-                cancellationToken.ThrowIfCancellationRequested();
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(timeout);
 
-                reportStage("подключение к браузеру");
                 var webSocketUrl = await WaitForPageWebSocketUrlAsync(
                     debuggingPort,
                     GetRemainingTimeout(timeout, stopwatch.Elapsed),
@@ -573,8 +566,7 @@ namespace TestBuilder.Domain.Steps
 
                 var pageSource = await ReadPageSourceLikeLegacyHelperAsync(
                     webSocketUrl,
-                    timeoutCts.Token,
-                    reportStage);
+                    timeoutCts.Token);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -601,28 +593,10 @@ namespace TestBuilder.Domain.Steps
                 // Keep the extracted XML in TestContext, not in browser state or files.
                 if (process != null)
                 {
-                    reportStage("закрытие браузера");
-                    try
-                    {
-                        TryKill(process);
-                        using var exitCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                        await process.WaitForExitAsync(exitCts.Token);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // Process.Start may have failed before a process was associated.
-                    }
-                    catch (Exception ex)
-                    {
-                        reportStage($"браузер не подтвердил завершение: {ex.Message}");
-                    }
-                    finally
-                    {
-                        process.Dispose();
-                    }
+                    TryKill(process);
+                    process.Dispose();
                 }
 
-                reportStage("удаление временного профиля браузера");
                 TryDeleteDirectory(userDataDir);
             }
         }
@@ -723,13 +697,11 @@ namespace TestBuilder.Domain.Steps
 
         private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
             string webSocketUrl,
-            CancellationToken cancellationToken,
-            Action<string> reportStage)
+            CancellationToken cancellationToken)
         {
             using var socket = new ClientWebSocket();
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
 
-            reportStage("ожидание загрузки страницы");
             var commandId = 1;
             while (true)
             {
@@ -757,10 +729,8 @@ namespace TestBuilder.Domain.Steps
 
             // Match the legacy helper: Selenium GoToUrl waits for page load,
             // then the program sleeps for a full ten seconds before PageSource.
-            reportStage($"ожидание данных страницы {BrowserDomSettleDelayMs} мс");
             await Task.Delay(BrowserDomSettleDelayMs, cancellationToken);
 
-            reportStage("чтение содержимого страницы");
             return await EvaluateStringAsync(
                 socket,
                 commandId,
