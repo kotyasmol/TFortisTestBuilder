@@ -132,6 +132,15 @@ public class FullProfileSerializationTests
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&
                           connection.Target.Parent is ClearArpCacheNodeViewModel);
+        var startupDelay = startupSubtest.BodyGraph.Nodes
+            .OfType<DelayNodeViewModel>()
+            .Single(node => node.Milliseconds == 5000);
+        var startupSelftest = startupSubtest.BodyGraph.Nodes
+            .OfType<SelfTestCheckNodeViewModel>()
+            .Single();
+        Assert.Equal(5000, startupDelay.Milliseconds);
+        Assert.Equal(180000, startupSelftest.TimeoutMs);
+        Assert.Equal(5000, startupSelftest.PollIntervalMs);
 
         var dataTestNode = dataTestSubtest.BodyGraph.Nodes
             .OfType<RunDataTestNodeViewModel>()

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
@@ -26,7 +27,7 @@ namespace TestBuilder.Domain.Steps
         public const string DefaultUrl =
             "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
 
-        public const int DefaultTimeoutMs = 300000;
+        public const int DefaultTimeoutMs = 180000;
         public const int DefaultPollIntervalMs = 5000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
@@ -37,8 +38,9 @@ namespace TestBuilder.Domain.Steps
             "boot_vers=0..65535";
 
         private const int MinimumPollIntervalMs = 100;
-        private const int LegacyShortTimeoutMs = 240000;
-        private const int MinimumDeviceReadyTimeoutMs = 300000;
+        private const int LegacyShortTimeoutMs = 160000;
+        private const int MinimumDeviceReadyTimeoutMs = 180000;
+        private const int MaxEndpointProbeTimeoutMs = 1000;
         private const int MaxPageAttemptTimeoutMs = 30000;
         private const int BrowserDomSettleDelayMs = 10000;
         private const int MaxExtractionCandidates = 64;
@@ -52,6 +54,8 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _failOnError;
         private readonly bool _useBrowser;
         private readonly int _pollIntervalMs;
+        private readonly Func<string, TimeSpan, CancellationToken, Task<bool>> _endpointProbe;
+        private readonly Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>> _browserPageLoader;
 
         public SelfTestCheckStep(
             IHttpRequestService httpRequestService,
@@ -64,6 +68,35 @@ namespace TestBuilder.Domain.Steps
             bool useBrowser = true,
             int pollIntervalMs = DefaultPollIntervalMs,
             bool enforceMinimumDeviceReadyTimeout = true)
+            : this(
+                httpRequestService,
+                logger,
+                url,
+                timeoutMs,
+                outputPrefix,
+                validationRules,
+                failOnError,
+                useBrowser,
+                pollIntervalMs,
+                enforceMinimumDeviceReadyTimeout,
+                ProbeWebEndpointAsync,
+                browserPageLoader: null)
+        {
+        }
+
+        internal SelfTestCheckStep(
+            IHttpRequestService httpRequestService,
+            ILogger logger,
+            string url,
+            int timeoutMs,
+            string outputPrefix,
+            string validationRules,
+            bool failOnError,
+            bool useBrowser,
+            int pollIntervalMs,
+            bool enforceMinimumDeviceReadyTimeout,
+            Func<string, TimeSpan, CancellationToken, Task<bool>> endpointProbe,
+            Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>>? browserPageLoader)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -80,6 +113,8 @@ namespace TestBuilder.Domain.Steps
             _failOnError = failOnError;
             _useBrowser = useBrowser;
             _pollIntervalMs = NormalizePollInterval(pollIntervalMs);
+            _endpointProbe = endpointProbe ?? throw new ArgumentNullException(nameof(endpointProbe));
+            _browserPageLoader = browserPageLoader ?? LoadPageWithBrowserAsync;
         }
 
         private static int NormalizeSelfTestTimeout(string url, int timeoutMs)
@@ -137,6 +172,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.StatusCode", result.StatusCode ?? 0);
             context.SetVariable("SelfTest.ElapsedMs", (int)fetch.Elapsed.TotalMilliseconds);
             context.SetVariable("SelfTest.Attempts", fetch.Attempts);
+            context.SetVariable("SelfTest.ProbeAttempts", fetch.ProbeAttempts);
             context.SetVariable("SelfTest.PollIntervalMs", _pollIntervalMs);
 
             if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
@@ -397,6 +433,7 @@ namespace TestBuilder.Domain.Steps
         {
             var stopwatch = Stopwatch.StartNew();
             var attempts = 0;
+            var probeAttempts = 0;
             var lastError = "Selftest page was not requested.";
             HttpRequestResult lastResult = HttpRequestResult.Failure(lastError, TimeSpan.Zero);
 
@@ -408,6 +445,33 @@ namespace TestBuilder.Domain.Steps
                 if (remaining <= TimeSpan.Zero)
                 {
                     break;
+                }
+
+                if (_useBrowser)
+                {
+                    probeAttempts++;
+                    var probeTimeout = GetEndpointProbeTimeout(remaining);
+                    if (!await _endpointProbe(url, probeTimeout, cancellationToken))
+                    {
+                        lastError = $"DUT web endpoint is not reachable after probe {probeAttempts}.";
+                        _logger.Info(
+                            $"[INFO] Selftest waits for DUT web endpoint " +
+                            $"(probe {probeAttempts}, timeout {(int)probeTimeout.TotalMilliseconds} ms).");
+
+                        var unavailableDelay = GetRetryDelay(timeout - stopwatch.Elapsed);
+                        if (unavailableDelay <= TimeSpan.Zero)
+                        {
+                            break;
+                        }
+
+                        _logger.Info(
+                            $"Selftest next DUT availability probe in {(int)unavailableDelay.TotalMilliseconds} ms.");
+                        await Task.Delay(unavailableDelay, cancellationToken);
+                        continue;
+                    }
+
+                    _logger.Info(
+                        $"[INFO] DUT web endpoint is reachable on probe {probeAttempts}; opening browser.");
                 }
 
                 attempts++;
@@ -438,6 +502,7 @@ namespace TestBuilder.Domain.Steps
                         lastResult,
                         raw,
                         attempts,
+                        probeAttempts,
                         stopwatch.Elapsed,
                         string.Empty);
                 }
@@ -459,8 +524,10 @@ namespace TestBuilder.Domain.Steps
                 lastResult,
                 string.Empty,
                 attempts,
+                probeAttempts,
                 stopwatch.Elapsed,
-                $"{lastError} Attempts: {attempts}, elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.");
+                $"{lastError} Browser attempts: {attempts}, availability probes: {probeAttempts}, " +
+                $"elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.");
         }
 
         private static bool IsDeviceSelfTestUrl(string url)
@@ -479,6 +546,12 @@ namespace TestBuilder.Domain.Steps
         {
             var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
             return TimeSpan.FromMilliseconds(Math.Min(remainingMs, MaxPageAttemptTimeoutMs));
+        }
+
+        private static TimeSpan GetEndpointProbeTimeout(TimeSpan remaining)
+        {
+            var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
+            return TimeSpan.FromMilliseconds(Math.Min(remainingMs, MaxEndpointProbeTimeoutMs));
         }
 
         private TimeSpan GetRetryDelay(TimeSpan remaining)
@@ -502,6 +575,14 @@ namespace TestBuilder.Domain.Steps
                 return await _httpRequestService.GetAsync(url, timeout, cancellationToken);
             }
 
+            return await _browserPageLoader(url, timeout, cancellationToken);
+        }
+
+        private async Task<HttpRequestResult> LoadPageWithBrowserAsync(
+            string url,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
             var browserPath = FindBrowserExecutable();
             if (string.IsNullOrWhiteSpace(browserPath))
             {
@@ -513,11 +594,109 @@ namespace TestBuilder.Domain.Steps
             _logger.Info(
                 $"[INFO] Selftest opens one headless browser, waits for page load and then waits {BrowserDomSettleDelayMs} ms before one PageSource snapshot.");
 
-            return await GetPageWithBrowserAsync(
-                browserPath,
-                url,
-                timeout,
-                cancellationToken);
+            var work = Task.Run(
+                () => GetPageWithBrowserAsync(browserPath, url, timeout, cancellationToken),
+                CancellationToken.None);
+
+            try
+            {
+                return await work.WaitAsync(timeout, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _ = ObserveLateBrowserAttemptAsync(work);
+                throw;
+            }
+            catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
+            {
+                _ = ObserveLateBrowserAttemptAsync(work);
+                return HttpRequestResult.Failure(
+                    $"Headless browser attempt exceeded {(int)timeout.TotalMilliseconds} ms; cleanup continues in background.",
+                    timeout);
+            }
+        }
+
+        private static async Task ObserveLateBrowserAttemptAsync(Task<HttpRequestResult> work)
+        {
+            try
+            {
+                await work.ConfigureAwait(false);
+            }
+            catch
+            {
+                // The timed-out attempt is no longer awaited by the execution loop.
+            }
+        }
+
+        private static async Task<bool> ProbeWebEndpointAsync(
+            string url,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                return true;
+            }
+
+            var port = uri.IsDefaultPort
+                ? uri.Scheme == Uri.UriSchemeHttps ? 443 : 80
+                : uri.Port;
+
+            var icmpProbe = ProbeIcmpAsync(uri.Host, timeout, cancellationToken);
+            var tcpProbe = ProbeTcpAsync(uri.Host, port, timeout, cancellationToken);
+            var results = await Task.WhenAll(icmpProbe, tcpProbe).ConfigureAwait(false);
+            return results.Any(result => result);
+        }
+
+        private static async Task<bool> ProbeIcmpAsync(
+            string host,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            using var ping = new Ping();
+
+            try
+            {
+                var timeoutMs = Math.Max(1, (int)timeout.TotalMilliseconds);
+                var reply = await ping.SendPingAsync(host, timeoutMs)
+                    .WaitAsync(timeout, cancellationToken)
+                    .ConfigureAwait(false);
+                return reply.Status == IPStatus.Success;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> ProbeTcpAsync(
+            string host,
+            int port,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(timeout);
+            using var client = new TcpClient();
+
+            try
+            {
+                await client.ConnectAsync(host, port, timeoutCts.Token).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static async Task<HttpRequestResult> GetPageWithBrowserAsync(
@@ -547,12 +726,15 @@ namespace TestBuilder.Domain.Steps
                 process.StartInfo.ArgumentList.Add("--disable-gpu");
                 process.StartInfo.ArgumentList.Add("--no-sandbox");
                 process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
+                process.StartInfo.ArgumentList.Add("--no-first-run");
+                process.StartInfo.ArgumentList.Add("--no-default-browser-check");
+                process.StartInfo.ArgumentList.Add("--no-proxy-server");
                 process.StartInfo.ArgumentList.Add("--window-size=1920,1080");
                 process.StartInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
                 process.StartInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
                 process.StartInfo.ArgumentList.Add("--remote-allow-origins=*");
                 process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
-                process.StartInfo.ArgumentList.Add(url);
+                process.StartInfo.ArgumentList.Add("about:blank");
 
                 process.Start();
 
@@ -566,6 +748,7 @@ namespace TestBuilder.Domain.Steps
 
                 var pageSource = await ReadPageSourceLikeLegacyHelperAsync(
                     webSocketUrl,
+                    url,
                     timeoutCts.Token);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
@@ -697,12 +880,14 @@ namespace TestBuilder.Domain.Steps
 
         private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
             string webSocketUrl,
+            string url,
             CancellationToken cancellationToken)
         {
             using var socket = new ClientWebSocket();
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
 
             var commandId = 1;
+            await NavigateToUrlAsync(socket, commandId++, url, cancellationToken);
             while (true)
             {
                 try
@@ -736,6 +921,39 @@ namespace TestBuilder.Domain.Steps
                 commandId,
                 "document.documentElement.outerHTML",
                 cancellationToken);
+        }
+
+        private static async Task NavigateToUrlAsync(
+            ClientWebSocket socket,
+            int commandId,
+            string url,
+            CancellationToken cancellationToken)
+        {
+            await SendDevToolsCommandAsync(
+                socket,
+                commandId,
+                "Page.navigate",
+                new Dictionary<string, object> { ["url"] = url },
+                cancellationToken);
+
+            var response = await ReceiveDevToolsResponseAsync(socket, commandId, cancellationToken);
+            using var document = JsonDocument.Parse(response);
+            var root = document.RootElement;
+
+            if (root.TryGetProperty("error", out var error))
+            {
+                throw new InvalidOperationException(error.ToString());
+            }
+
+            if (root.TryGetProperty("result", out var result) &&
+                result.TryGetProperty("errorText", out var errorTextProperty))
+            {
+                var errorText = errorTextProperty.GetString();
+                if (!string.IsNullOrWhiteSpace(errorText))
+                {
+                    throw new InvalidOperationException($"Headless browser navigation failed: {errorText}");
+                }
+            }
         }
 
         private static async Task<string> EvaluateStringAsync(
@@ -1108,6 +1326,7 @@ namespace TestBuilder.Domain.Steps
             HttpRequestResult Result,
             string RawXml,
             int Attempts,
+            int ProbeAttempts,
             TimeSpan Elapsed,
             string ErrorMessage);
 

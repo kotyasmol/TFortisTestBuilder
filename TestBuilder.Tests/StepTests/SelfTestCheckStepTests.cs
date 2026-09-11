@@ -119,6 +119,47 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public async Task SelfTestCheckStep_ProbesDutBeforeStartingBrowser()
+    {
+        var probeResults = new Queue<bool>(new[] { false, false, true });
+        var probeCalls = 0;
+        var browserCalls = 0;
+        var step = new SelfTestCheckStep(
+            new QueueHttpRequestService(),
+            NullLogger.Instance,
+            SelfTestCheckStep.DefaultUrl,
+            timeoutMs: 2000,
+            SelfTestCheckStep.DefaultOutputPrefix,
+            "init_ok=1..1",
+            failOnError: true,
+            useBrowser: true,
+            pollIntervalMs: 100,
+            enforceMinimumDeviceReadyTimeout: false,
+            endpointProbe: (_, _, _) =>
+            {
+                probeCalls++;
+                return Task.FromResult(probeResults.Dequeue());
+            },
+            browserPageLoader: (_, _, _) =>
+            {
+                browserCalls++;
+                return Task.FromResult(HttpRequestResult.Success(
+                    0,
+                    "<selftest><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>",
+                    TimeSpan.FromMilliseconds(10)));
+            });
+        var context = new TestContext(new RegisterState());
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(3, probeCalls);
+        Assert.Equal(1, browserCalls);
+        Assert.Equal(3, context.GetVariable<int>("SelfTest.ProbeAttempts"));
+        Assert.Equal(1, context.GetVariable<int>("SelfTest.Attempts"));
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_WhenSelfTestIsHtmlEscapedInDom()
     {
         var service = new QueueHttpRequestService(
