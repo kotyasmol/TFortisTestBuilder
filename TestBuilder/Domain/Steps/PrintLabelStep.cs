@@ -30,6 +30,8 @@ namespace TestBuilder.Domain.Steps
         private readonly ILogger _logger;
         private readonly string _printerName;
         private readonly string _serialVariableName;
+        private readonly bool _useManualSerialNumber;
+        private readonly string _manualSerialNumber;
         private readonly int _copies;
         private readonly bool _failOnPrinterError;
         private readonly IRawLabelPrinter _printer;
@@ -39,12 +41,16 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             string printerName,
             string serialVariableName,
+            bool useManualSerialNumber,
+            string manualSerialNumber,
             int copies,
             bool failOnPrinterError)
             : this(
                 logger,
                 printerName,
                 serialVariableName,
+                useManualSerialNumber,
+                manualSerialNumber,
                 copies,
                 failOnPrinterError,
                 new WindowsRawLabelPrinter(),
@@ -56,6 +62,8 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             string printerName,
             string serialVariableName,
+            bool useManualSerialNumber,
+            string manualSerialNumber,
             int copies,
             bool failOnPrinterError,
             IRawLabelPrinter printer,
@@ -66,6 +74,8 @@ namespace TestBuilder.Domain.Steps
             _serialVariableName = string.IsNullOrWhiteSpace(serialVariableName)
                 ? "SerialNumber"
                 : serialVariableName.Trim();
+            _useManualSerialNumber = useManualSerialNumber;
+            _manualSerialNumber = manualSerialNumber?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
@@ -84,15 +94,41 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 3, "Имя принтера не задано.");
             }
 
-            if (!context.Variables.TryGetValue(_serialVariableName, out var rawSerial))
+            string serial;
+            string serialSource;
+
+            if (_useManualSerialNumber)
             {
-                return Fail(context, 6, $"Переменная серийного номера '{_serialVariableName}' не найдена.");
+                if (string.IsNullOrWhiteSpace(_manualSerialNumber))
+                {
+                    return Fail(context, 6, "Введите серийный номер в поле 'Серийник вручную'.");
+                }
+
+                serial = _manualSerialNumber;
+                serialSource = "Manual";
+            }
+            else
+            {
+                if (!context.Variables.TryGetValue(_serialVariableName, out var rawSerial))
+                {
+                    return Fail(
+                        context,
+                        6,
+                        $"Переменная серийного номера '{_serialVariableName}' не найдена.");
+                }
+
+                serial = rawSerial?.ToString()?.Trim() ?? string.Empty;
+                serialSource = _serialVariableName;
             }
 
-            var serial = EscapeEpl(rawSerial?.ToString() ?? string.Empty);
             if (string.IsNullOrWhiteSpace(serial))
             {
-                return Fail(context, 6, $"Серийный номер в переменной '{_serialVariableName}' пуст.");
+                return Fail(context, 6, "Серийный номер для печати пуст.");
+            }
+
+            if (!serial.All(character => character is >= '0' and <= '9'))
+            {
+                return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
             var singleLabel = BuildEpl(serial);
@@ -100,6 +136,7 @@ namespace TestBuilder.Domain.Steps
             var bytes = GetPrinterEncoding().GetBytes(printData);
 
             context.SetVariable("PrintLabel.Serial", serial);
+            context.SetVariable("PrintLabel.SerialSource", serialSource);
             context.SetVariable("PrintLabel.Language", "EPL");
             context.SetVariable("PrintLabel.SingleCommand", singleLabel);
             context.SetVariable("PrintLabel.Epl", printData);
@@ -194,6 +231,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Copies", 0);
             context.SetVariable("PrintLabel.PrinterName", string.Empty);
             context.SetVariable("PrintLabel.Serial", string.Empty);
+            context.SetVariable("PrintLabel.SerialSource", string.Empty);
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.TimedOut", false);
             context.SetVariable("PrintLabel.ErrorCode", 0);
@@ -215,11 +253,6 @@ namespace TestBuilder.Domain.Steps
 
             return builder.ToString();
         }
-
-        private static string EscapeEpl(string value) =>
-            new(value
-                .Where(character => !char.IsControl(character) && character != '"')
-                .ToArray());
 
         private static Encoding GetPrinterEncoding()
         {

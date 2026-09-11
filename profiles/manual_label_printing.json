@@ -1,0 +1,46 @@
+{
+  "name": "Ручная печать 4 этикеток",
+  "nodes": [
+    {
+      "id": "0",
+      "type": "Start",
+      "x": 80,
+      "y": 160,
+      "color": "blue"
+    },
+    {
+      "id": "1",
+      "type": "Print Label",
+      "x": 500,
+      "y": 120,
+      "color": "blue",
+      "printerName": "TSC TE310",
+      "serialVariableName": "SerialNumber",
+      "useManualSerialNumber": true,
+      "manualSerialNumber": "",
+      "copies": 4,
+      "failOnPrinterError": true
+    },
+    {
+      "id": "2",
+      "type": "End",
+      "x": 940,
+      "y": 160,
+      "color": "blue"
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "True",
+      "targetNodeId": "2",
+      "targetConnector": "Вход"
+    }
+  ]
+}

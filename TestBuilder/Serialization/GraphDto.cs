@@ -332,6 +332,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? SerialVariableName { get; set; }
 
+        [JsonPropertyName("useManualSerialNumber")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseManualSerialNumber { get; set; }
+
+        [JsonPropertyName("manualSerialNumber")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ManualSerialNumber { get; set; }
+
         [JsonPropertyName("copies")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Copies { get; set; }

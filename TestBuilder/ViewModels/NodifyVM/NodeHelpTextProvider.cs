@@ -267,6 +267,7 @@ namespace TestBuilder.ViewModels.NodifyVM
             [typeof(PrintLabelNodeViewModel)] = """
                 Печатает серийный номер текстом и Code128-штрихкодом по макету RTL_v2.
                 Printer - имя RAW-принтера Windows, по умолчанию TSC TE310.
+                Ввести серийник вручную - печатать цифры из поля ноды вместо переменной.
                 Serial var - переменная с полным серийным номером.
                 Copies - количество одинаковых этикеток, по умолчанию 4.
                 Fail on printer error - считать ошибку печати провалом теста.

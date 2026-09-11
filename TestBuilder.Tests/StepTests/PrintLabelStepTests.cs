@@ -35,9 +35,41 @@ public class PrintLabelStepTests
         Assert.Equal(4, CountOccurrences(printer.GetText(), "P1,1"));
         Assert.Equal(4, context.GetVariable<int>("PrintLabel.Copies"));
         Assert.Equal("3200428", context.GetVariable<string>("PrintLabel.Serial"));
+        Assert.Equal("SerialNumber", context.GetVariable<string>("PrintLabel.SerialSource"));
         Assert.Equal("EPL", context.GetVariable<string>("PrintLabel.Language"));
         Assert.True(context.GetVariable<bool>("PrintLabel.Success"));
         Assert.False(context.GetVariable<bool>("PrintLabel.TimedOut"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PrintsManualSerialWithoutContextVariable()
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(printer, copies: 4, manualSerial: "3200999");
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(1, printer.Calls);
+        Assert.Equal(8, CountOccurrences(printer.GetText(), "\"3200999\""));
+        Assert.Equal(4, CountOccurrences(printer.GetText(), "P1,1"));
+        Assert.Equal("3200999", context.GetVariable<string>("PrintLabel.Serial"));
+        Assert.Equal("Manual", context.GetVariable<string>("PrintLabel.SerialSource"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RejectsNonNumericManualSerial()
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(printer, copies: 4, manualSerial: "320A999");
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, printer.Calls);
+        Assert.Contains("только цифры", context.GetVariable<string>("PrintLabel.Error"));
     }
 
     [Fact]
@@ -89,11 +121,14 @@ public class PrintLabelStepTests
     private static PrintLabelStep CreateStep(
         IRawLabelPrinter printer,
         int copies,
-        int timeoutMs = 1000) =>
+        int timeoutMs = 1000,
+        string manualSerial = "") =>
         new(
             NullLogger.Instance,
             "TSC TE310",
             "SerialNumber",
+            !string.IsNullOrEmpty(manualSerial),
+            manualSerial,
             copies,
             failOnPrinterError: true,
             printer,

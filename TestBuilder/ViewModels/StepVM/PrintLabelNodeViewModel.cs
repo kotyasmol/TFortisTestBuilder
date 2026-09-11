@@ -10,6 +10,8 @@ namespace TestBuilder.ViewModels.StepVM
     {
         [ObservableProperty] private string printerName = "TSC TE310";
         [ObservableProperty] private string serialVariableName = "SerialNumber";
+        [ObservableProperty] private bool useManualSerialNumber;
+        [ObservableProperty] private string manualSerialNumber = string.Empty;
         [ObservableProperty] private int copies = 4;
         [ObservableProperty] private bool failOnPrinterError = true;
 
@@ -29,12 +31,28 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) =>
-            new PrintLabelStep(logger, PrinterName, SerialVariableName, Copies, FailOnPrinterError);
+            new PrintLabelStep(
+                logger,
+                PrinterName,
+                SerialVariableName,
+                UseManualSerialNumber,
+                ManualSerialNumber,
+                Copies,
+                FailOnPrinterError);
+
+        public bool IsVariableSerialMode => !UseManualSerialNumber;
+
+        partial void OnUseManualSerialNumberChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsVariableSerialMode));
+        }
 
         public override NodeViewModel Clone() => new PrintLabelNodeViewModel
         {
             PrinterName = PrinterName,
             SerialVariableName = SerialVariableName,
+            UseManualSerialNumber = UseManualSerialNumber,
+            ManualSerialNumber = ManualSerialNumber,
             Copies = Copies,
             FailOnPrinterError = FailOnPrinterError
         };

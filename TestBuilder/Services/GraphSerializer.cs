@@ -287,6 +287,8 @@ namespace TestBuilder.Services
                     case PrintLabelNodeViewModel pl:
                         n.PrinterName = pl.PrinterName;
                         n.SerialVariableName = pl.SerialVariableName;
+                        n.UseManualSerialNumber = pl.UseManualSerialNumber;
+                        n.ManualSerialNumber = pl.ManualSerialNumber;
                         n.Copies = pl.Copies;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
@@ -587,6 +589,8 @@ namespace TestBuilder.Services
                         Location = location,
                         PrinterName = n.PrinterName ?? "TSC TE310",
                         SerialVariableName = n.SerialVariableName ?? "SerialNumber",
+                        UseManualSerialNumber = n.UseManualSerialNumber ?? false,
+                        ManualSerialNumber = n.ManualSerialNumber ?? string.Empty,
                         Copies = n.Copies ?? 4,
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },

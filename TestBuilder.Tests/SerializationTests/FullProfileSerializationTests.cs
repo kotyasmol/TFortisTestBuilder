@@ -1,6 +1,7 @@
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
+using TestBuilder.Services.Graph;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.StepVM;
@@ -60,6 +61,7 @@ public class FullProfileSerializationTests
         var profileName = GraphSerializer.Deserialize(json, viewModel);
 
         Assert.Equal("PSW_UPS_Box_8x2Pro_full_algorithm_polling", profileName);
+        Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
         var startupSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "06. Ожидание загрузки DUT и selftest");
@@ -136,6 +138,8 @@ public class FullProfileSerializationTests
             .Single();
         Assert.Equal("TSC TE310", printNode.PrinterName);
         Assert.Equal("SerialNumber", printNode.SerialVariableName);
+        Assert.False(printNode.UseManualSerialNumber);
+        Assert.Equal(string.Empty, printNode.ManualSerialNumber);
         Assert.Equal(4, printNode.Copies);
         Assert.True(printNode.FailOnPrinterError);
         Assert.Contains(

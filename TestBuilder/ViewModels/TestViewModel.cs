@@ -868,15 +868,20 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
-        if (!IsConnected)
+        var requiresStandConnection = GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+        if (!IsConnected && requiresStandConnection)
         {
-            StatusMessage = "Перед запуском графа необходимо подключиться к стенду.";
+            StatusMessage = "Этот граф содержит Modbus-ноды. Перед запуском необходимо подключиться к стенду.";
             return;
         }
 
         var profileName = SelectedProfile?.Name ?? "без профиля";
 
         TestingLogger.Info($"Запуск теста: {profileName}");
+        if (!IsConnected)
+        {
+            TestingLogger.Info("Автономный запуск: граф не содержит Modbus-нод, подключение к стенду не требуется.");
+        }
 
         _testRunCts?.Dispose();
         _testRunCts = new CancellationTokenSource();

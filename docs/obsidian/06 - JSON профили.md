@@ -125,7 +125,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
-| Print Label | `printerName`, `serialVariableName`, `copies`, `failOnPrinterError` |
+| Print Label | `printerName`, `serialVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `copies`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
@@ -228,7 +228,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |
-| `Print Label` | `printerName`, `serialVariableName`, `copies` | `TSC TE310`, `SerialNumber`, `4` |
+| `Print Label` | `printerName`, `serialVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `copies` | `TSC TE310`, `SerialNumber`, `false`, `""`, `4` |
 | `For Slaves` | `fromSlaveId`, `toSlaveId`, `step` | `1`, `20`, `1` |
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
 | `Subtest` | `runOnFailure` | `false` |
@@ -243,6 +243,12 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 актуальной ноды.
 При следующем сохранении эти legacy-поля исчезнут. Если старый профиль не
 содержит `serialVariableName`, используется полный `SerialNumber`.
+
+Поставляемый `manual_label_printing.json` содержит только структурные
+`Start`/`End` и один исполняемый `Print Label`. В нём
+`useManualSerialNumber: true`, пустое `manualSerialNumber` заполняется оператором
+в UI перед запуском, а `copies: 4`. Поскольку Modbus-нод нет, профиль разрешено
+запускать без подключения к стенду.
 
 Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
 `GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние
