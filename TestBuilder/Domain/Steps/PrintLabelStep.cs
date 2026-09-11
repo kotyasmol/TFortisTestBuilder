@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -26,6 +27,9 @@ namespace TestBuilder.Domain.Steps
     {
         private const int DefaultPrinterTimeoutMs = 10000;
         private const int LabelWidthDots = 354;
+        private const string PswUpsBox8x2ProName = "PSW+UPS-Box 8x2Pro";
+        private const int PswUpsBox8x2ProDeviceType = 32;
+        private const int PswUpsBox8x2ProSerialOffset = 3200000;
 
         private readonly ILogger _logger;
         private readonly string _printerName;
@@ -33,6 +37,7 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _useManualSerialNumber;
         private readonly string _manualSerialNumber;
         private readonly int _copies;
+        private readonly bool _useQtProZplFormat;
         private readonly bool _failOnPrinterError;
         private readonly IRawLabelPrinter _printer;
         private readonly int _printerTimeoutMs;
@@ -44,6 +49,7 @@ namespace TestBuilder.Domain.Steps
             bool useManualSerialNumber,
             string manualSerialNumber,
             int copies,
+            bool useQtProZplFormat,
             bool failOnPrinterError)
             : this(
                 logger,
@@ -52,6 +58,7 @@ namespace TestBuilder.Domain.Steps
                 useManualSerialNumber,
                 manualSerialNumber,
                 copies,
+                useQtProZplFormat,
                 failOnPrinterError,
                 new WindowsRawLabelPrinter(),
                 DefaultPrinterTimeoutMs)
@@ -65,6 +72,7 @@ namespace TestBuilder.Domain.Steps
             bool useManualSerialNumber,
             string manualSerialNumber,
             int copies,
+            bool useQtProZplFormat,
             bool failOnPrinterError,
             IRawLabelPrinter printer,
             int printerTimeoutMs)
@@ -77,6 +85,7 @@ namespace TestBuilder.Domain.Steps
             _useManualSerialNumber = useManualSerialNumber;
             _manualSerialNumber = manualSerialNumber?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
+            _useQtProZplFormat = useQtProZplFormat;
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
             _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
@@ -88,6 +97,8 @@ namespace TestBuilder.Domain.Steps
             ResetDiagnostics(context);
             context.SetVariable("PrintLabel.Copies", _copies);
             context.SetVariable("PrintLabel.PrinterName", _printerName);
+            context.SetVariable("PrintLabel.Language", _useQtProZplFormat ? "ZPL" : "EPL");
+            context.SetVariable("PrintLabel.Template", _useQtProZplFormat ? "PswUpsBox8x2Pro" : "SerialOnlyEpl");
 
             if (string.IsNullOrWhiteSpace(_printerName))
             {
@@ -131,19 +142,52 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
-            var singleLabel = BuildEpl(serial);
+            string singleLabel;
+            string language;
+            string logDescription;
+
+            if (_useQtProZplFormat)
+            {
+                if (!TryResolvePswUpsBox8x2ProSerial(serial, out var fullSerial, out var shortSerial, out var serialError))
+                {
+                    return Fail(context, 6, serialError);
+                }
+
+                var mac = BuildPswUpsBox8x2ProMac(shortSerial);
+                var barcode = $"{PswUpsBox8x2ProDeviceType:D3}{shortSerial:D5}";
+                singleLabel = BuildPswUpsBox8x2ProZpl(shortSerial, mac);
+                language = "ZPL";
+                logDescription =
+                    $"этикеток {PswUpsBox8x2ProName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
+
+                context.SetVariable("PrintLabel.Template", "PswUpsBox8x2Pro");
+                context.SetVariable("PrintLabel.FullSerial", fullSerial);
+                context.SetVariable("PrintLabel.SerialShort", shortSerial);
+                context.SetVariable("PrintLabel.DeviceName", PswUpsBox8x2ProName);
+                context.SetVariable("PrintLabel.DeviceType", PswUpsBox8x2ProDeviceType);
+                context.SetVariable("PrintLabel.Mac", mac);
+                context.SetVariable("PrintLabel.Barcode", barcode);
+            }
+            else
+            {
+                singleLabel = BuildEpl(serial);
+                language = "EPL";
+                logDescription = $"серийного номера {serial}";
+            }
+
             var printData = Repeat(singleLabel, _copies);
             var bytes = GetPrinterEncoding().GetBytes(printData);
 
             context.SetVariable("PrintLabel.Serial", serial);
             context.SetVariable("PrintLabel.SerialSource", serialSource);
-            context.SetVariable("PrintLabel.Language", "EPL");
+            context.SetVariable("PrintLabel.Language", language);
             context.SetVariable("PrintLabel.SingleCommand", singleLabel);
-            context.SetVariable("PrintLabel.Epl", printData);
+            context.SetVariable("PrintLabel.Epl", language == "EPL" ? printData : string.Empty);
+            context.SetVariable("PrintLabel.Zpl", language == "ZPL" ? printData : string.Empty);
             context.SetVariable("PrintLabel.RawData", printData);
             context.SetVariable("PrintLabel.Bytes", bytes.Length);
 
-            _logger.Info($"[ШАГ] Печать серийного номера {serial} на '{_printerName}', экземпляров: {_copies}.");
+            _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
 
             var printTask = Task.Run(
                 () => _printer.Print(_printerName, bytes),
@@ -198,6 +242,74 @@ namespace TestBuilder.Domain.Steps
                 "P1,1\r\n");
         }
 
+        internal static string BuildPswUpsBox8x2ProZpl(int shortSerial, string mac)
+        {
+            if (shortSerial is < 0 or > 0xFFFF)
+            {
+                throw new ArgumentOutOfRangeException(nameof(shortSerial), "Короткий серийный номер должен быть в диапазоне 0..65535.");
+            }
+
+            var nameOffset = (int)(640 - PswUpsBox8x2ProName.Length * 9 * 0.9);
+            var barcode = $"{PswUpsBox8x2ProDeviceType:D3}{shortSerial:D5}";
+
+            return string.Concat(
+                "^XA^MD10^FO",
+                nameOffset.ToString(CultureInfo.InvariantCulture),
+                ",35^A0,36,25^FD",
+                PswUpsBox8x2ProName,
+                "^FS^FO510,70^A0,25,20^FDMAC: ",
+                mac,
+                "^FS^FO510,95^A0,25,20^FDSN: ",
+                shortSerial.ToString("D5", CultureInfo.InvariantCulture),
+                "^FS^FO510,117^BY2^BCN,50,N,N,N^FD>:",
+                barcode,
+                "^FS^XZ ");
+        }
+
+        private static bool TryResolvePswUpsBox8x2ProSerial(
+            string serial,
+            out int fullSerial,
+            out int shortSerial,
+            out string error)
+        {
+            fullSerial = 0;
+            shortSerial = 0;
+            error = string.Empty;
+
+            if (!int.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+            {
+                error = $"Серийный номер '{serial}' слишком большой или имеет неверный формат.";
+                return false;
+            }
+
+            if (parsed <= 0xFFFF)
+            {
+                shortSerial = parsed;
+                fullSerial = PswUpsBox8x2ProSerialOffset + shortSerial;
+                return true;
+            }
+
+            shortSerial = parsed - PswUpsBox8x2ProSerialOffset;
+            if (shortSerial is < 0 or > 0xFFFF)
+            {
+                error =
+                    $"Для {PswUpsBox8x2ProName} введите полный серийник " +
+                    $"{PswUpsBox8x2ProSerialOffset}..{PswUpsBox8x2ProSerialOffset + 0xFFFF} " +
+                    "или короткий номер 0..65535.";
+                return false;
+            }
+
+            fullSerial = parsed;
+            return true;
+        }
+
+        private static string BuildPswUpsBox8x2ProMac(int shortSerial)
+        {
+            var high = (shortSerial >> 8) & 0xFF;
+            var low = shortSerial & 0xFF;
+            return $"C0:11:A6:{PswUpsBox8x2ProDeviceType:X2}:{high:X2}:{low:X2}";
+        }
+
         private static int CalculateBarcodeWidth(string serial)
         {
             var baseWidth = serial.Length switch
@@ -232,13 +344,21 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.PrinterName", string.Empty);
             context.SetVariable("PrintLabel.Serial", string.Empty);
             context.SetVariable("PrintLabel.SerialSource", string.Empty);
+            context.SetVariable("PrintLabel.Template", string.Empty);
+            context.SetVariable("PrintLabel.FullSerial", 0);
+            context.SetVariable("PrintLabel.SerialShort", 0);
+            context.SetVariable("PrintLabel.DeviceName", string.Empty);
+            context.SetVariable("PrintLabel.DeviceType", 0);
+            context.SetVariable("PrintLabel.Mac", string.Empty);
+            context.SetVariable("PrintLabel.Barcode", string.Empty);
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.TimedOut", false);
             context.SetVariable("PrintLabel.ErrorCode", 0);
             context.SetVariable("PrintLabel.Error", string.Empty);
-            context.SetVariable("PrintLabel.Language", "EPL");
+            context.SetVariable("PrintLabel.Language", string.Empty);
             context.SetVariable("PrintLabel.SingleCommand", string.Empty);
             context.SetVariable("PrintLabel.Epl", string.Empty);
+            context.SetVariable("PrintLabel.Zpl", string.Empty);
             context.SetVariable("PrintLabel.RawData", string.Empty);
             context.SetVariable("PrintLabel.Bytes", 0);
         }

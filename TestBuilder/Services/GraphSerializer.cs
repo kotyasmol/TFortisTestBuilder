@@ -290,6 +290,7 @@ namespace TestBuilder.Services
                         n.UseManualSerialNumber = pl.UseManualSerialNumber;
                         n.ManualSerialNumber = pl.ManualSerialNumber;
                         n.Copies = pl.Copies;
+                        n.UseQtProZplFormat = pl.UseQtProZplFormat;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
 
@@ -592,6 +593,7 @@ namespace TestBuilder.Services
                         UseManualSerialNumber = n.UseManualSerialNumber ?? false,
                         ManualSerialNumber = n.ManualSerialNumber ?? string.Empty,
                         Copies = n.Copies ?? 4,
+                        UseQtProZplFormat = n.UseQtProZplFormat ?? false,
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 

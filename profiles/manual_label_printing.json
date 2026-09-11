@@ -1,5 +1,5 @@
 {
-  "name": "Ручная печать 4 этикеток",
+  "name": "Ручная печать 4 этикеток PSW+UPS-Box 8x2Pro",
   "nodes": [
     {
       "id": "0",
@@ -19,6 +19,7 @@
       "useManualSerialNumber": true,
       "manualSerialNumber": "",
       "copies": 4,
+      "useQtProZplFormat": true,
       "failOnPrinterError": true
     },
     {

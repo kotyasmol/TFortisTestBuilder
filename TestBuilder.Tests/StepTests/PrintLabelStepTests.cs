@@ -58,6 +58,59 @@ public class PrintLabelStepTests
         Assert.Equal("Manual", context.GetVariable<string>("PrintLabel.SerialSource"));
     }
 
+    [Theory]
+    [InlineData("3200428")]
+    [InlineData("00428")]
+    public async Task ExecuteAsync_PrintsQtProZplLabelFourTimes(string serial)
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(
+            printer,
+            copies: 4,
+            manualSerial: serial,
+            useQtProZplFormat: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        const string singleLabel =
+            "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
+            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
+            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
+            "^FO510,117^BY2^BCN,50,N,N,N^FD>:03200428^FS^XZ ";
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(1, printer.Calls);
+        Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
+        Assert.Equal(4, CountOccurrences(printer.GetText(), "^XZ"));
+        Assert.Equal("ZPL", context.GetVariable<string>("PrintLabel.Language"));
+        Assert.Equal("PswUpsBox8x2Pro", context.GetVariable<string>("PrintLabel.Template"));
+        Assert.Equal(3200428, context.GetVariable<int>("PrintLabel.FullSerial"));
+        Assert.Equal(428, context.GetVariable<int>("PrintLabel.SerialShort"));
+        Assert.Equal("C0:11:A6:20:01:AC", context.GetVariable<string>("PrintLabel.Mac"));
+        Assert.Equal("03200428", context.GetVariable<string>("PrintLabel.Barcode"));
+        Assert.Equal(string.Empty, context.GetVariable<string>("PrintLabel.Epl"));
+        Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), context.GetVariable<string>("PrintLabel.Zpl"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RejectsQtProSerialOutsideMacRange()
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(
+            printer,
+            copies: 4,
+            manualSerial: "3299999",
+            useQtProZplFormat: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, printer.Calls);
+        Assert.Equal("ZPL", context.GetVariable<string>("PrintLabel.Language"));
+        Assert.Contains("3200000..3265535", context.GetVariable<string>("PrintLabel.Error"));
+    }
+
     [Fact]
     public async Task ExecuteAsync_RejectsNonNumericManualSerial()
     {
@@ -122,7 +175,8 @@ public class PrintLabelStepTests
         IRawLabelPrinter printer,
         int copies,
         int timeoutMs = 1000,
-        string manualSerial = "") =>
+        string manualSerial = "",
+        bool useQtProZplFormat = false) =>
         new(
             NullLogger.Instance,
             "TSC TE310",
@@ -130,6 +184,7 @@ public class PrintLabelStepTests
             !string.IsNullOrEmpty(manualSerial),
             manualSerial,
             copies,
+            useQtProZplFormat,
             failOnPrinterError: true,
             printer,
             timeoutMs);

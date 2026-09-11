@@ -27,7 +27,7 @@ public class ManualLabelProfileTests
 
         var profileName = GraphSerializer.Deserialize(json, viewModel);
 
-        Assert.Equal("Ручная печать 4 этикеток", profileName);
+        Assert.Equal("Ручная печать 4 этикеток PSW+UPS-Box 8x2Pro", profileName);
         Assert.Equal(3, viewModel.RootGraph.Nodes.Count);
         Assert.Equal(2, viewModel.RootGraph.Connections.Count);
         Assert.Single(viewModel.RootGraph.Nodes.OfType<StartNodeViewModel>());
@@ -38,6 +38,7 @@ public class ManualLabelProfileTests
         Assert.True(printNode.UseManualSerialNumber);
         Assert.Equal(string.Empty, printNode.ManualSerialNumber);
         Assert.Equal(4, printNode.Copies);
+        Assert.True(printNode.UseQtProZplFormat);
         Assert.True(printNode.FailOnPrinterError);
         Assert.False(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
 
@@ -51,6 +52,7 @@ public class ManualLabelProfileTests
             reloadedViewModel.RootGraph.Nodes.OfType<PrintLabelNodeViewModel>());
         Assert.True(reloadedPrintNode.UseManualSerialNumber);
         Assert.Equal("3200999", reloadedPrintNode.ManualSerialNumber);
+        Assert.True(reloadedPrintNode.UseQtProZplFormat);
     }
 
     [Fact]

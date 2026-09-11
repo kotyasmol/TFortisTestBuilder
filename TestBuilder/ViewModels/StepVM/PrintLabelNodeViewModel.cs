@@ -13,6 +13,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private bool useManualSerialNumber;
         [ObservableProperty] private string manualSerialNumber = string.Empty;
         [ObservableProperty] private int copies = 4;
+        [ObservableProperty] private bool useQtProZplFormat;
         [ObservableProperty] private bool failOnPrinterError = true;
 
         public ConnectorViewModel In { get; }
@@ -38,6 +39,7 @@ namespace TestBuilder.ViewModels.StepVM
                 UseManualSerialNumber,
                 ManualSerialNumber,
                 Copies,
+                UseQtProZplFormat,
                 FailOnPrinterError);
 
         public bool IsVariableSerialMode => !UseManualSerialNumber;
@@ -54,6 +56,7 @@ namespace TestBuilder.ViewModels.StepVM
             UseManualSerialNumber = UseManualSerialNumber,
             ManualSerialNumber = ManualSerialNumber,
             Copies = Copies,
+            UseQtProZplFormat = UseQtProZplFormat,
             FailOnPrinterError = FailOnPrinterError
         };
     }

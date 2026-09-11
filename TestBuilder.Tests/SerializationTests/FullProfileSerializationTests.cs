@@ -141,6 +141,7 @@ public class FullProfileSerializationTests
         Assert.False(printNode.UseManualSerialNumber);
         Assert.Equal(string.Empty, printNode.ManualSerialNumber);
         Assert.Equal(4, printNode.Copies);
+        Assert.False(printNode.UseQtProZplFormat);
         Assert.True(printNode.FailOnPrinterError);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,

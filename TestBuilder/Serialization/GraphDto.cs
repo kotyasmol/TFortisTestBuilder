@@ -344,6 +344,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Copies { get; set; }
 
+        [JsonPropertyName("useQtProZplFormat")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseQtProZplFormat { get; set; }
+
         [JsonPropertyName("failOnPrinterError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? FailOnPrinterError { get; set; }
