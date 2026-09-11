@@ -160,6 +160,23 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public void SelfTestCheckStep_StartsBrowserOnRequestedUrlUsingNormalNetworkSettings()
+    {
+        const string url =
+            "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
+
+        var startInfo = SelfTestCheckStep.CreateBrowserStartInfo(
+            "chrome.exe",
+            url,
+            debuggingPort: 9222,
+            userDataDir: @"C:\Temp\TestBuilderHeadlessChrome_test");
+
+        Assert.Equal(url, startInfo.ArgumentList[^1]);
+        Assert.DoesNotContain("about:blank", startInfo.ArgumentList);
+        Assert.DoesNotContain("--no-proxy-server", startInfo.ArgumentList);
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_WhenSelfTestIsHtmlEscapedInDom()
     {
         var service = new QueueHttpRequestService(

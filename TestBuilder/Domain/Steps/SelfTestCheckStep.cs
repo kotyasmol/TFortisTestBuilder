@@ -600,19 +600,16 @@ namespace TestBuilder.Domain.Steps
 
             try
             {
-                return await work.WaitAsync(timeout, cancellationToken);
+                // GetPageWithBrowserAsync already enforces the attempt timeout. Await its
+                // cleanup before the polling loop is allowed to start another Chrome.
+                // The whole lifecycle stays on the worker thread so process shutdown and
+                // profile deletion cannot block the Avalonia UI thread.
+                return await work.WaitAsync(cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 _ = ObserveLateBrowserAttemptAsync(work);
                 throw;
-            }
-            catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
-            {
-                _ = ObserveLateBrowserAttemptAsync(work);
-                return HttpRequestResult.Failure(
-                    $"Headless browser attempt exceeded {(int)timeout.TotalMilliseconds} ms; cleanup continues in background.",
-                    timeout);
             }
         }
 
@@ -624,7 +621,7 @@ namespace TestBuilder.Domain.Steps
             }
             catch
             {
-                // The timed-out attempt is no longer awaited by the execution loop.
+                // A cancelled test no longer awaits this worker; observe a late fault.
             }
         }
 
@@ -715,26 +712,11 @@ namespace TestBuilder.Domain.Steps
                 Directory.CreateDirectory(userDataDir);
 
                 process = new Process();
-                process.StartInfo = new ProcessStartInfo
-                {
-                    FileName = browserPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                process.StartInfo.ArgumentList.Add("--headless");
-                process.StartInfo.ArgumentList.Add("--disable-gpu");
-                process.StartInfo.ArgumentList.Add("--no-sandbox");
-                process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
-                process.StartInfo.ArgumentList.Add("--no-first-run");
-                process.StartInfo.ArgumentList.Add("--no-default-browser-check");
-                process.StartInfo.ArgumentList.Add("--no-proxy-server");
-                process.StartInfo.ArgumentList.Add("--window-size=1920,1080");
-                process.StartInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-                process.StartInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
-                process.StartInfo.ArgumentList.Add("--remote-allow-origins=*");
-                process.StartInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
-                process.StartInfo.ArgumentList.Add("about:blank");
+                process.StartInfo = CreateBrowserStartInfo(
+                    browserPath,
+                    url,
+                    debuggingPort,
+                    userDataDir);
 
                 process.Start();
 
@@ -748,7 +730,6 @@ namespace TestBuilder.Domain.Steps
 
                 var pageSource = await ReadPageSourceLikeLegacyHelperAsync(
                     webSocketUrl,
-                    url,
                     timeoutCts.Token);
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
@@ -782,6 +763,32 @@ namespace TestBuilder.Domain.Steps
 
                 TryDeleteDirectory(userDataDir);
             }
+        }
+
+        internal static ProcessStartInfo CreateBrowserStartInfo(
+            string browserPath,
+            string url,
+            int debuggingPort,
+            string userDataDir)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = browserPath,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            startInfo.ArgumentList.Add("--headless");
+            startInfo.ArgumentList.Add("--disable-gpu");
+            startInfo.ArgumentList.Add("--no-sandbox");
+            startInfo.ArgumentList.Add("--disable-dev-shm-usage");
+            startInfo.ArgumentList.Add("--window-size=1920,1080");
+            startInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+            startInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
+            startInfo.ArgumentList.Add("--remote-allow-origins=*");
+            startInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
+            startInfo.ArgumentList.Add(url);
+            return startInfo;
         }
 
         private static TimeSpan GetRemainingTimeout(TimeSpan timeout, TimeSpan elapsed)
@@ -880,14 +887,12 @@ namespace TestBuilder.Domain.Steps
 
         private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
             string webSocketUrl,
-            string url,
             CancellationToken cancellationToken)
         {
             using var socket = new ClientWebSocket();
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
 
             var commandId = 1;
-            await NavigateToUrlAsync(socket, commandId++, url, cancellationToken);
             while (true)
             {
                 try
@@ -921,39 +926,6 @@ namespace TestBuilder.Domain.Steps
                 commandId,
                 "document.documentElement.outerHTML",
                 cancellationToken);
-        }
-
-        private static async Task NavigateToUrlAsync(
-            ClientWebSocket socket,
-            int commandId,
-            string url,
-            CancellationToken cancellationToken)
-        {
-            await SendDevToolsCommandAsync(
-                socket,
-                commandId,
-                "Page.navigate",
-                new Dictionary<string, object> { ["url"] = url },
-                cancellationToken);
-
-            var response = await ReceiveDevToolsResponseAsync(socket, commandId, cancellationToken);
-            using var document = JsonDocument.Parse(response);
-            var root = document.RootElement;
-
-            if (root.TryGetProperty("error", out var error))
-            {
-                throw new InvalidOperationException(error.ToString());
-            }
-
-            if (root.TryGetProperty("result", out var result) &&
-                result.TryGetProperty("errorText", out var errorTextProperty))
-            {
-                var errorText = errorTextProperty.GetString();
-                if (!string.IsNullOrWhiteSpace(errorText))
-                {
-                    throw new InvalidOperationException($"Headless browser navigation failed: {errorText}");
-                }
-            }
         }
 
         private static async Task<string> EvaluateStringAsync(
