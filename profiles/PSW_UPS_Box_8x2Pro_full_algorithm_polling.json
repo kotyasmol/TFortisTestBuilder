@@ -449,7 +449,7 @@
       "color": "purple",
       "name": "04. Настройка PoE-нагрузок EL60v5",
       "description": "Мощность 15000 и включение обеих линий A/B для slave 1..15 шаг 2",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1634,8 +1634,8 @@
             "color": "blue",
             "timeoutMs": 60000,
             "failOnError": true,
-            "batchPath": "set_mac_pro.bat",
             "macVariableName": "Dut.NewMac",
+            "batchPath": "set_mac_pro.bat",
             "boardVersion": "PSW+UPS-Box 8x2Pro"
           },
           {
