@@ -261,7 +261,7 @@ namespace TestBuilder.Domain.Steps
                 mac,
                 "^FS^FO510,95^A0,25,20^FDSN: ",
                 shortSerial.ToString("D5", CultureInfo.InvariantCulture),
-                "^FS^FO510,117^BY2^BCN,50,N,N,N^FD>:",
+                "^FS^FO480,117^BY2^BCN,50,N,N,N^FD>:",
                 barcode,
                 "^FS^XZ ");
         }
