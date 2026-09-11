@@ -18,6 +18,9 @@
 		<None Include="set_mac_pro.bat"
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />
+		<None Update="WinSCP\**\*"
+		      CopyToOutputDirectory="PreserveNewest"
+		      CopyToPublishDirectory="PreserveNewest" />
 		<Content Include="..\profiles\*.json"
 		         Link="profiles\%(Filename)%(Extension)"
 		         CopyToOutputDirectory="PreserveNewest"
