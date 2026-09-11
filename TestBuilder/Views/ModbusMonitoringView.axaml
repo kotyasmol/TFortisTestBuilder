@@ -198,9 +198,18 @@
                     ToolTip.Tip="Копировать все логи в буфер обмена" />
           </Grid>
 
-          <ScrollViewer Grid.Row="1">
-            <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-              <ItemsControl.ItemTemplate>
+          <ListBox Grid.Row="1" ItemsSource="{Binding TestingLogger.Entries}"
+                   Background="Transparent" BorderThickness="0" Padding="0">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                  <Setter Property="Padding" Value="0" />
+                  <Setter Property="MinHeight" Value="0" />
+                </Style>
+              </ListBox.Styles>
+              <ListBox.ItemTemplate>
                 <DataTemplate>
                   <SelectableTextBlock Text="{Binding}"
                                        FontFamily="Consolas"
@@ -209,9 +218,8 @@
                                        Margin="2,2"
                                        TextWrapping="Wrap" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+              </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
       </Border>
     </Grid>

@@ -73,11 +73,21 @@
               Padding="8"
               ClipToBounds="True">
         <Grid>
-          <ScrollViewer x:Name="LogScrollViewer"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding TestingLogger.Entries}">
-              <ItemsControl.ItemTemplate>
+          <ListBox x:Name="LogList"
+                   ItemsSource="{Binding TestingLogger.Entries}"
+                   Background="Transparent" BorderThickness="0" Padding="0"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                  <Setter Property="Padding" Value="0" />
+                  <Setter Property="MinHeight" Value="0" />
+                </Style>
+              </ListBox.Styles>
+              <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="logging:LogEntry">
                   <SelectableTextBlock Text="{Binding}"
                                        Margin="2"
@@ -86,9 +96,8 @@
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="11" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+              </ListBox.ItemTemplate>
+          </ListBox>
 
           <StackPanel HorizontalAlignment="Center"
                       VerticalAlignment="Center"

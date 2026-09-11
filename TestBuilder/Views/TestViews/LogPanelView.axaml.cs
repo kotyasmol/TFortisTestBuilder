@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using System;
 using System.Collections.Specialized;
@@ -12,11 +13,12 @@ public partial class LogPanelView : UserControl, IDisposable
     private TestViewModel? _currentVm;
     private bool _shouldAutoScroll = true;
     private bool _isProgrammaticScroll;
+    private bool _scrollPending;
 
     public LogPanelView()
     {
         InitializeComponent();
-        LogScrollViewer.ScrollChanged += OnLogScrollChanged;
+        LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
     }
 
     private void OnClearLogs(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -60,36 +62,43 @@ public partial class LogPanelView : UserControl, IDisposable
 
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_shouldAutoScroll)
-            Dispatcher.UIThread.Post(ScrollToBottom, DispatcherPriority.Background);
+        if (_shouldAutoScroll && !_scrollPending)
+        {
+            _scrollPending = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _scrollPending = false;
+                if (_shouldAutoScroll)
+                    ScrollToBottom();
+            }, DispatcherPriority.Background);
+        }
     }
 
     private void OnLogScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (_isProgrammaticScroll)
+        if (_isProgrammaticScroll || e.Source is not ScrollViewer viewer)
             return;
 
-        _shouldAutoScroll = IsScrolledToBottom();
-    }
-
-    private bool IsScrolledToBottom()
-    {
-        var maxOffset = Math.Max(0, LogScrollViewer.Extent.Height - LogScrollViewer.Viewport.Height);
-        return maxOffset - LogScrollViewer.Offset.Y <= BottomThreshold;
+        // New rows change the extent without the operator scrolling up.
+        if (e.ExtentDelta.Y == 0 && e.OffsetDelta.Y != 0)
+        {
+            var maxOffset = Math.Max(0, viewer.Extent.Height - viewer.Viewport.Height);
+            _shouldAutoScroll = maxOffset - viewer.Offset.Y <= BottomThreshold;
+        }
     }
 
     private void ScrollToBottom()
     {
-        var maxOffset = Math.Max(0, LogScrollViewer.Extent.Height - LogScrollViewer.Viewport.Height);
         _isProgrammaticScroll = true;
-        LogScrollViewer.Offset = LogScrollViewer.Offset.WithY(maxOffset);
+        if (_currentVm is { TestingLogger.Entries.Count: > 0 } vm)
+            LogList.ScrollIntoView(vm.TestingLogger.Entries[^1]);
         _isProgrammaticScroll = false;
         _shouldAutoScroll = true;
     }
 
     public void Dispose()
     {
-        LogScrollViewer.ScrollChanged -= OnLogScrollChanged;
+        LogList.RemoveHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged);
 
         if (_currentVm != null)
             _currentVm.TestingLogger.Entries.CollectionChanged -= OnLogEntriesChanged;

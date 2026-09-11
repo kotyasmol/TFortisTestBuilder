@@ -177,6 +177,62 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
+    public async Task SelfTestCheckStep_DoesNotStartBrowserIfProbeExhaustedDeadline()
+    {
+        var browserCalls = 0;
+        var step = new SelfTestCheckStep(
+            new QueueHttpRequestService(), NullLogger.Instance,
+            SelfTestCheckStep.DefaultUrl, timeoutMs: 100, "Dut", "init_ok=1..1",
+            failOnError: true, useBrowser: true, pollIntervalMs: 100,
+            enforceMinimumDeviceReadyTimeout: false,
+            endpointProbe: async (_, timeout, token) =>
+            {
+                await Task.Delay(timeout + TimeSpan.FromMilliseconds(20), token);
+                return true;
+            },
+            browserPageLoader: (_, _, _) =>
+            {
+                browserCalls++;
+                return Task.FromResult(HttpRequestResult.Failure("Unexpected browser", TimeSpan.Zero));
+            });
+        var context = new TestContext(new RegisterState());
+
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(0, browserCalls);
+        Assert.Equal(0, context.GetVariable<int>("SelfTest.Attempts"));
+    }
+
+    [Fact]
+    public async Task BrowserAttempt_CancelledBeforeStartDoesNotTouchBrowser()
+    {
+        using var stop = new CancellationTokenSource();
+        stop.Cancel();
+        var stages = new List<string>();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SelfTestCheckStep.GetPageWithBrowserAsync(
+            "nonexistent-browser.exe", SelfTestCheckStep.DefaultUrl,
+            TimeSpan.FromSeconds(1), stop.Token, stages.Add));
+
+        Assert.Empty(stages);
+    }
+
+    [Fact]
+    public async Task BrowserAttempt_StartFailurePreservesErrorInsteadOfRunningCleanupOnUnstartedProcess()
+    {
+        // Deliberately nonexistent path: this test never starts Chrome or contacts the DUT.
+        var missingBrowser = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing-browser.exe");
+        var stages = new List<string>();
+
+        var result = await SelfTestCheckStep.GetPageWithBrowserAsync(
+            missingBrowser, SelfTestCheckStep.DefaultUrl, TimeSpan.FromSeconds(1),
+            CancellationToken.None, stages.Add);
+
+        Assert.Contains("missing-browser.exe", result.ErrorMessage);
+        Assert.Contains("starting Chrome", result.ErrorMessage);
+        Assert.DoesNotContain(stages, stage => stage.Contains("closing Chrome", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_WhenSelfTestIsHtmlEscapedInDom()
     {
         var service = new QueueHttpRequestService(
