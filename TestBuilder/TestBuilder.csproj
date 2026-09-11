@@ -12,7 +12,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="arpd.bat" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="arpd.bat"
+		      CopyToOutputDirectory="PreserveNewest"
+		      CopyToPublishDirectory="PreserveNewest" />
+		<None Include="set_mac_pro.bat"
+		      CopyToOutputDirectory="PreserveNewest"
+		      CopyToPublishDirectory="PreserveNewest" />
 		<Content Include="..\profiles\*.json"
 		         Link="profiles\%(Filename)%(Extension)"
 		         CopyToOutputDirectory="PreserveNewest"
