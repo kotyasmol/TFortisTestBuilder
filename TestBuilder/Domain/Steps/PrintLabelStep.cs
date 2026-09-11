@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -8,112 +9,175 @@ using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
 {
+    internal readonly record struct RawLabelPrintResult(bool Success, int ErrorCode, string Error)
+    {
+        public static RawLabelPrintResult Ok() => new(true, 0, string.Empty);
+
+        public static RawLabelPrintResult Fail(int errorCode, string error) =>
+            new(false, errorCode, error);
+    }
+
+    internal interface IRawLabelPrinter
+    {
+        RawLabelPrintResult Print(string printerName, byte[] bytes);
+    }
+
     public sealed class PrintLabelStep : ITestStep
     {
+        private const int DefaultPrinterTimeoutMs = 10000;
+        private const int LabelWidthDots = 354;
+
         private readonly ILogger _logger;
         private readonly string _printerName;
-        private readonly string _deviceName;
-        private readonly int _deviceType;
         private readonly string _serialVariableName;
-        private readonly string _macVariableName;
         private readonly int _copies;
-        private readonly bool _includeMac;
-        private readonly bool _equipmentFieldUse;
-        private readonly int _equipmentType;
-        private readonly string _equipmentText;
         private readonly bool _failOnPrinterError;
+        private readonly IRawLabelPrinter _printer;
+        private readonly int _printerTimeoutMs;
 
         public PrintLabelStep(
             ILogger logger,
             string printerName,
-            string deviceName,
-            int deviceType,
             string serialVariableName,
-            string macVariableName,
             int copies,
-            bool includeMac,
-            bool equipmentFieldUse,
-            int equipmentType,
-            string equipmentText,
             bool failOnPrinterError)
+            : this(
+                logger,
+                printerName,
+                serialVariableName,
+                copies,
+                failOnPrinterError,
+                new WindowsRawLabelPrinter(),
+                DefaultPrinterTimeoutMs)
+        {
+        }
+
+        internal PrintLabelStep(
+            ILogger logger,
+            string printerName,
+            string serialVariableName,
+            int copies,
+            bool failOnPrinterError,
+            IRawLabelPrinter printer,
+            int printerTimeoutMs)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
-            _deviceName = deviceName?.Trim() ?? string.Empty;
-            _deviceType = deviceType;
-            _serialVariableName = string.IsNullOrWhiteSpace(serialVariableName) ? "SerialShort" : serialVariableName.Trim();
-            _macVariableName = string.IsNullOrWhiteSpace(macVariableName) ? "Dut.NewMac" : macVariableName.Trim();
+            _serialVariableName = string.IsNullOrWhiteSpace(serialVariableName)
+                ? "SerialNumber"
+                : serialVariableName.Trim();
             _copies = Math.Max(1, copies);
-            _includeMac = includeMac;
-            _equipmentFieldUse = equipmentFieldUse;
-            _equipmentType = equipmentType;
-            _equipmentText = equipmentText ?? string.Empty;
             _failOnPrinterError = failOnPrinterError;
+            _printer = printer ?? throw new ArgumentNullException(nameof(printer));
+            _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
         }
 
-        public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
+        public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var serial = GetVariableText(context, _serialVariableName);
-            var mac = _includeMac ? GetVariableText(context, _macVariableName) : string.Empty;
-            var zpl = BuildZpl(serial, mac);
-            var fullZpl = Repeat(zpl, _copies);
-
+            ResetDiagnostics(context);
             context.SetVariable("PrintLabel.Copies", _copies);
             context.SetVariable("PrintLabel.PrinterName", _printerName);
-            context.SetVariable("PrintLabel.Zpl", fullZpl);
 
             if (string.IsNullOrWhiteSpace(_printerName))
             {
-                return Task.FromResult(Fail(context, 3, "Имя принтера не задано."));
+                return Fail(context, 3, "Имя принтера не задано.");
             }
 
+            if (!context.Variables.TryGetValue(_serialVariableName, out var rawSerial))
+            {
+                return Fail(context, 6, $"Переменная серийного номера '{_serialVariableName}' не найдена.");
+            }
+
+            var serial = EscapeEpl(rawSerial?.ToString() ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(serial))
+            {
+                return Fail(context, 6, $"Серийный номер в переменной '{_serialVariableName}' пуст.");
+            }
+
+            var singleLabel = BuildEpl(serial);
+            var printData = Repeat(singleLabel, _copies);
+            var bytes = GetPrinterEncoding().GetBytes(printData);
+
+            context.SetVariable("PrintLabel.Serial", serial);
+            context.SetVariable("PrintLabel.Language", "EPL");
+            context.SetVariable("PrintLabel.SingleCommand", singleLabel);
+            context.SetVariable("PrintLabel.Epl", printData);
+            context.SetVariable("PrintLabel.RawData", printData);
+            context.SetVariable("PrintLabel.Bytes", bytes.Length);
+
+            _logger.Info($"[ШАГ] Печать серийного номера {serial} на '{_printerName}', экземпляров: {_copies}.");
+
+            var printTask = Task.Run(
+                () => _printer.Print(_printerName, bytes),
+                CancellationToken.None);
+            var timeoutTask = Task.Delay(_printerTimeoutMs, cancellationToken);
+            var completed = await Task.WhenAny(printTask, timeoutTask).ConfigureAwait(false);
+
+            if (completed != printTask)
+            {
+                ObserveLatePrintTask(printTask);
+                cancellationToken.ThrowIfCancellationRequested();
+                context.SetVariable("PrintLabel.TimedOut", true);
+                return Fail(context, 5, $"Принтер не ответил за {_printerTimeoutMs} мс.");
+            }
+
+            RawLabelPrintResult printResult;
             try
             {
-                var bytes = Encoding.ASCII.GetBytes(fullZpl);
-
-                if (!RawPrinterHelper.SendBytesToPrinter(_printerName, bytes, out var errorCode, out var error))
-                {
-                    return Task.FromResult(Fail(context, errorCode, error));
-                }
-
-                context.SetVariable("PrintLabel.Success", true);
-                context.SetVariable("PrintLabel.ErrorCode", 0);
-                context.SetVariable("PrintLabel.Error", string.Empty);
-                _logger.Info($"[OK] Этикетка отправлена на принтер '{_printerName}', копий {_copies}.");
-                return Task.FromResult(StepResult.True);
+                printResult = await printTask.ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                return Task.FromResult(Fail(context, 3, ex.Message));
+                return Fail(context, 3, ex.Message);
             }
+
+            if (!printResult.Success)
+            {
+                return Fail(context, printResult.ErrorCode, printResult.Error);
+            }
+
+            context.SetVariable("PrintLabel.Success", true);
+            context.SetVariable("PrintLabel.ErrorCode", 0);
+            context.SetVariable("PrintLabel.Error", string.Empty);
+            _logger.Info($"[OK] В очередь принтера '{_printerName}' отправлено этикеток: {_copies}.");
+            return StepResult.True;
         }
 
-        private string BuildZpl(string serial, string mac)
+        internal static string BuildEpl(string serial)
         {
-            var sn = _equipmentFieldUse
-                ? $"{serial}-{_equipmentType}{_equipmentText}"
-                : serial;
-            var barcode = _includeMac
-                ? $"{_deviceType};{sn};{mac}"
-                : $"{_deviceType};{sn}";
+            var barcodeWidth = CalculateBarcodeWidth(serial);
+            var barcodeX = Math.Max(0, LabelWidthDots / 2 - barcodeWidth / 2);
+            var textWidth = 20 * serial.Length;
+            var textX = Math.Max(0, LabelWidthDots / 2 - textWidth / 2);
 
-            var builder = new StringBuilder();
-            builder.AppendLine("^XA");
-            builder.AppendLine("^PW600");
-            builder.AppendLine("^LL320");
-            builder.AppendLine($"^FO30,30^A0N,34,34^FD{EscapeZpl(_deviceName)}^FS");
-            builder.AppendLine($"^FO30,85^A0N,28,28^FDSN: {EscapeZpl(sn)}^FS");
+            return string.Concat(
+                "\r\n",
+                "N\r\n",
+                $"q{LabelWidthDots}\r\n",
+                "I8,C,001\r\n",
+                $"B{barcodeX},24,0,1,2,1,47,N,\"{serial}\"\r\n",
+                $"A{textX},94,0,3,1,1,N,\"{serial}\"\r\n",
+                "P1,1\r\n");
+        }
 
-            if (_includeMac)
+        private static int CalculateBarcodeWidth(string serial)
+        {
+            var baseWidth = serial.Length switch
             {
-                builder.AppendLine($"^FO30,125^A0N,28,28^FDMAC: {EscapeZpl(mac)}^FS");
+                12 or 14 => 17.0,
+                19 => 16.3,
+                15 => 17.7,
+                20 => 15.0,
+                _ => 20.0
+            };
+            var nonDigits = serial.Count(character => !char.IsDigit(character));
+            if (serial.Length == 14 && nonDigits == 8)
+            {
+                return 370;
             }
 
-            builder.AppendLine($"^FO30,180^BY2^BCN,80,Y,N,N^FD{EscapeZpl(barcode)}^FS");
-            builder.AppendLine("^XZ");
-            return builder.ToString();
+            return (int)(serial.Length * baseWidth + nonDigits * 1.7 * baseWidth);
         }
 
         private StepResult Fail(TestContext context, int errorCode, string error)
@@ -121,22 +185,30 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.ErrorCode", errorCode);
             context.SetVariable("PrintLabel.Error", error);
-            _logger.Warning($"[ОШИБКА] Этикетка не напечатана: {error}");
+            _logger.Warning($"[ОШИБКА] Этикетки не напечатаны: {error}");
             return _failOnPrinterError ? StepResult.False : StepResult.True;
         }
 
-        private static string GetVariableText(TestContext context, string variableName)
+        private static void ResetDiagnostics(TestContext context)
         {
-            return context.Variables.TryGetValue(variableName, out var value)
-                ? value?.ToString() ?? string.Empty
-                : string.Empty;
+            context.SetVariable("PrintLabel.Copies", 0);
+            context.SetVariable("PrintLabel.PrinterName", string.Empty);
+            context.SetVariable("PrintLabel.Serial", string.Empty);
+            context.SetVariable("PrintLabel.Success", false);
+            context.SetVariable("PrintLabel.TimedOut", false);
+            context.SetVariable("PrintLabel.ErrorCode", 0);
+            context.SetVariable("PrintLabel.Error", string.Empty);
+            context.SetVariable("PrintLabel.Language", "EPL");
+            context.SetVariable("PrintLabel.SingleCommand", string.Empty);
+            context.SetVariable("PrintLabel.Epl", string.Empty);
+            context.SetVariable("PrintLabel.RawData", string.Empty);
+            context.SetVariable("PrintLabel.Bytes", 0);
         }
 
         private static string Repeat(string value, int count)
         {
-            var builder = new StringBuilder();
-
-            for (var i = 0; i < count; i++)
+            var builder = new StringBuilder(value.Length * count);
+            for (var index = 0; index < count; index++)
             {
                 builder.Append(value);
             }
@@ -144,111 +216,124 @@ namespace TestBuilder.Domain.Steps
             return builder.ToString();
         }
 
-        private static string EscapeZpl(string value)
+        private static string EscapeEpl(string value) =>
+            new(value
+                .Where(character => !char.IsControl(character) && character != '"')
+                .ToArray());
+
+        private static Encoding GetPrinterEncoding()
         {
-            return value.Replace("^", string.Empty).Replace("~", string.Empty);
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding(1251);
         }
 
-        private static class RawPrinterHelper
+        private static void ObserveLatePrintTask(Task<RawLabelPrintResult> task)
         {
-            [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
-            private static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+            _ = task.ContinueWith(
+                completed => _ = completed.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+    }
 
-            [DllImport("winspool.drv", SetLastError = true)]
-            private static extern bool ClosePrinter(IntPtr hPrinter);
+    internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
+    {
+        [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
 
-            [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
-            private static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In] DOC_INFO_1 docInfo);
+        [DllImport("winspool.drv", SetLastError = true)]
+        private static extern bool ClosePrinter(IntPtr hPrinter);
 
-            [DllImport("winspool.drv", SetLastError = true)]
-            private static extern bool EndDocPrinter(IntPtr hPrinter);
+        [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In] DocInfo1 docInfo);
 
-            [DllImport("winspool.drv", SetLastError = true)]
-            private static extern bool StartPagePrinter(IntPtr hPrinter);
+        [DllImport("winspool.drv", SetLastError = true)]
+        private static extern bool EndDocPrinter(IntPtr hPrinter);
 
-            [DllImport("winspool.drv", SetLastError = true)]
-            private static extern bool EndPagePrinter(IntPtr hPrinter);
+        [DllImport("winspool.drv", SetLastError = true)]
+        private static extern bool StartPagePrinter(IntPtr hPrinter);
 
-            [DllImport("winspool.drv", SetLastError = true)]
-            private static extern bool WritePrinter(IntPtr hPrinter, byte[] bytes, int count, out int written);
+        [DllImport("winspool.drv", SetLastError = true)]
+        private static extern bool EndPagePrinter(IntPtr hPrinter);
 
-            public static bool SendBytesToPrinter(string printerName, byte[] bytes, out int errorCode, out string error)
+        [DllImport("winspool.drv", SetLastError = true)]
+        private static extern bool WritePrinter(IntPtr hPrinter, byte[] bytes, int count, out int written);
+
+        public RawLabelPrintResult Print(string printerName, byte[] bytes)
+        {
+            if (!OperatingSystem.IsWindows())
             {
-                errorCode = 0;
-                error = string.Empty;
+                return RawLabelPrintResult.Fail(3, "RAW-печать поддерживается только в Windows.");
+            }
 
-                if (!OperatingSystem.IsWindows())
-                {
-                    errorCode = 3;
-                    error = "RAW-печать поддерживается только в Windows.";
-                    return false;
-                }
+            if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
+            {
+                var win32Error = Marshal.GetLastWin32Error();
+                return RawLabelPrintResult.Fail(3, $"Не удалось открыть принтер '{printerName}' (Win32 {win32Error}).");
+            }
 
-                if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
+            try
+            {
+                var document = new DocInfo1
                 {
-                    errorCode = 3;
-                    error = $"could not open printer: {Marshal.GetLastWin32Error()}";
-                    return false;
+                    DocumentName = "TFortis labels",
+                    DataType = "RAW"
+                };
+
+                if (!StartDocPrinter(printer, 1, document))
+                {
+                    return RawLabelPrintResult.Fail(2, $"Не удалось создать задание печати (Win32 {Marshal.GetLastWin32Error()}).");
                 }
 
                 try
                 {
-                    var doc = new DOC_INFO_1
+                    if (!StartPagePrinter(printer))
                     {
-                        pDocName = "TFortis label",
-                        pDataType = "RAW"
-                    };
-
-                    if (!StartDocPrinter(printer, 1, doc))
-                    {
-                        errorCode = 2;
-                        error = $"couldn't create job: {Marshal.GetLastWin32Error()}";
-                        return false;
+                        return RawLabelPrintResult.Fail(1, $"Не удалось начать RAW-страницу (Win32 {Marshal.GetLastWin32Error()}).");
                     }
 
                     try
                     {
-                        if (!StartPagePrinter(printer))
+                        if (!WritePrinter(printer, bytes, bytes.Length, out var written))
                         {
-                            errorCode = 1;
-                            error = $"could not start printer: {Marshal.GetLastWin32Error()}";
-                            return false;
+                            return RawLabelPrintResult.Fail(4, $"WritePrinter завершился ошибкой Win32 {Marshal.GetLastWin32Error()}.");
                         }
 
-                        try
+                        if (written != bytes.Length)
                         {
-                            if (!WritePrinter(printer, bytes, bytes.Length, out var written) || written != bytes.Length)
-                            {
-                                errorCode = 4;
-                                error = $"wrong number of bytes: {written}/{bytes.Length}";
-                                return false;
-                            }
-                        }
-                        finally
-                        {
-                            EndPagePrinter(printer);
+                            return RawLabelPrintResult.Fail(4, $"Принтер принял {written} из {bytes.Length} байт.");
                         }
                     }
                     finally
                     {
-                        EndDocPrinter(printer);
+                        EndPagePrinter(printer);
                     }
-
-                    return true;
                 }
                 finally
                 {
-                    ClosePrinter(printer);
+                    EndDocPrinter(printer);
                 }
-            }
 
-            [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-            private sealed class DOC_INFO_1
-            {
-                public string pDocName = string.Empty;
-                public string pOutputFile = string.Empty;
-                public string pDataType = string.Empty;
+                return RawLabelPrintResult.Ok();
             }
+            finally
+            {
+                ClosePrinter(printer);
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private sealed class DocInfo1
+        {
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string DocumentName = string.Empty;
+
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string? OutputFile;
+
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string DataType = string.Empty;
         }
     }
 }

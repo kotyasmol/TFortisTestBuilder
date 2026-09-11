@@ -286,15 +286,8 @@ namespace TestBuilder.Services
 
                     case PrintLabelNodeViewModel pl:
                         n.PrinterName = pl.PrinterName;
-                        n.DeviceName = pl.DeviceName;
-                        n.DeviceType = pl.DeviceType;
                         n.SerialVariableName = pl.SerialVariableName;
-                        n.MacVariableName = pl.MacVariableName;
                         n.Copies = pl.Copies;
-                        n.IncludeMac = pl.IncludeMac;
-                        n.EquipmentFieldUse = pl.EquipmentFieldUse;
-                        n.EquipmentType = pl.EquipmentType;
-                        n.EquipmentText = pl.EquipmentText;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
 
@@ -592,16 +585,9 @@ namespace TestBuilder.Services
                     "Print Label" or "PRINT_LABEL" or "Печать этикетки" => new PrintLabelNodeViewModel
                     {
                         Location = location,
-                        PrinterName = n.PrinterName ?? "Zebra",
-                        DeviceName = n.DeviceName ?? "PSW+UPS-Box 8x2Pro",
-                        DeviceType = GetObjectAsInt(n.DeviceType, 32),
-                        SerialVariableName = n.SerialVariableName ?? "SerialShort",
-                        MacVariableName = n.MacVariableName ?? "Dut.NewMac",
+                        PrinterName = n.PrinterName ?? "TSC TE310",
+                        SerialVariableName = n.SerialVariableName ?? "SerialNumber",
                         Copies = n.Copies ?? 4,
-                        IncludeMac = n.IncludeMac ?? true,
-                        EquipmentFieldUse = n.EquipmentFieldUse ?? false,
-                        EquipmentType = n.EquipmentType ?? 0,
-                        EquipmentText = n.EquipmentText ?? string.Empty,
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 

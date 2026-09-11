@@ -125,7 +125,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
-| Print Label | `printerName`, `deviceName`, `copies`, `includeMac`, `equipmentFieldUse`, `equipmentType`, `equipmentText`, `failOnPrinterError` |
+| Print Label | `printerName`, `serialVariableName`, `copies`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
@@ -228,7 +228,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |
-| `Print Label` | `copies` | `4` |
+| `Print Label` | `printerName`, `serialVariableName`, `copies` | `TSC TE310`, `SerialNumber`, `4` |
 | `For Slaves` | `fromSlaveId`, `toSlaveId`, `step` | `1`, `20`, `1` |
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
 | `Subtest` | `runOnFailure` | `false` |
@@ -236,6 +236,13 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | Любая нода | `color` | `blue` |
 
 Полный список дефолтов описан в [[05 - Справочник нод]].
+
+У старых `Print Label` допустимы лишние поля `deviceName`, `deviceType`,
+`macVariableName`, `includeMac`, `equipmentFieldUse`, `equipmentType` и
+`equipmentText`: JSON-deserializer проигнорирует их как неизвестные для
+актуальной ноды.
+При следующем сохранении эти legacy-поля исчезнут. Если старый профиль не
+содержит `serialVariableName`, используется полный `SerialNumber`.
 
 Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
 `GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние

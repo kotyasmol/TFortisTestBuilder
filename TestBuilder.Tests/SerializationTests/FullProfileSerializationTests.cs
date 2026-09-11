@@ -81,6 +81,9 @@ public class FullProfileSerializationTests
         var serialSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "15. Получение серийника и запись MAC");
+        var printSubtest = viewModel.RootGraph.Nodes
+            .OfType<SubtestNodeViewModel>()
+            .Single(node => node.Name == "16. Печать этикеток");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
@@ -128,6 +131,13 @@ public class FullProfileSerializationTests
         Assert.Equal("PSW+UPS-Box 8x2Pro", setMacNode.BoardVersion);
         Assert.Equal("Dut.NewMac", setMacNode.MacVariableName);
         Assert.Equal(60000, setMacNode.TimeoutMs);
+        var printNode = printSubtest.BodyGraph.Nodes
+            .OfType<PrintLabelNodeViewModel>()
+            .Single();
+        Assert.Equal("TSC TE310", printNode.PrinterName);
+        Assert.Equal("SerialNumber", printNode.SerialVariableName);
+        Assert.Equal(4, printNode.Copies);
+        Assert.True(printNode.FailOnPrinterError);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is DelayNodeViewModel &&

@@ -1584,15 +1584,8 @@
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
                     <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Printer:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding PrinterName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Device name:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding DeviceName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Device type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding DeviceType}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Copies:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Copies}" FontSize="12" /></Grid>
-                    <CheckBox Content="Include MAC" IsChecked="{Binding IncludeMac}" FontSize="12" />
-                    <CheckBox Content="Use equipment field" IsChecked="{Binding EquipmentFieldUse}" FontSize="12" />
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Equipment type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding EquipmentType}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Equipment text:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding EquipmentText}" FontSize="12" /></Grid>
                     <CheckBox Content="Fail on printer error" IsChecked="{Binding FailOnPrinterError}" FontSize="12" />
                   </StackPanel>
                 </nodify:Node>

@@ -328,10 +328,6 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PrinterName { get; set; }
 
-        [JsonPropertyName("deviceName")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? DeviceName { get; set; }
-
         [JsonPropertyName("serialVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? SerialVariableName { get; set; }
@@ -339,22 +335,6 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("copies")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Copies { get; set; }
-
-        [JsonPropertyName("includeMac")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? IncludeMac { get; set; }
-
-        [JsonPropertyName("equipmentFieldUse")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? EquipmentFieldUse { get; set; }
-
-        [JsonPropertyName("equipmentType")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? EquipmentType { get; set; }
-
-        [JsonPropertyName("equipmentText")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? EquipmentText { get; set; }
 
         [JsonPropertyName("failOnPrinterError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

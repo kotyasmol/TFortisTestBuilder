@@ -265,15 +265,10 @@ namespace TestBuilder.ViewModels.NodifyVM
                 """,
 
             [typeof(PrintLabelNodeViewModel)] = """
-                Печатает этикетку на принтере.
-                Printer - имя принтера Windows.
-                Device name и Device type - текст для этикетки.
-                Serial var - переменная с серийным номером.
-                MAC var - переменная с MAC-адресом.
-                Copies - количество копий.
-                Include MAC - печатать MAC на этикетке.
-                Use equipment field - использовать дополнительное поле оборудования.
-                Equipment type и Equipment text - содержимое дополнительного поля.
+                Печатает серийный номер текстом и Code128-штрихкодом по макету RTL_v2.
+                Printer - имя RAW-принтера Windows, по умолчанию TSC TE310.
+                Serial var - переменная с полным серийным номером.
+                Copies - количество одинаковых этикеток, по умолчанию 4.
                 Fail on printer error - считать ошибку печати провалом теста.
                 """,
 
