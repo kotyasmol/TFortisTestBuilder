@@ -16,7 +16,7 @@
       "color": "orange",
       "name": "01. Подготовка стенда",
       "description": "Сброс питания/ключей/нагревателей, очистка ARP, фиксация параметров профиля",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -198,7 +198,7 @@
       "color": "orange",
       "name": "02. Сброс PoE-нагрузок EL60v5",
       "description": "Безопасно выключить нагрузку на EL60v5 перед стартом",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -776,7 +776,7 @@
             "y": 120,
             "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 180000,
+            "timeoutMs": 300000,
             "pollIntervalMs": 5000,
             "validationRules": "",
             "failOnError": true,
@@ -1001,7 +1001,7 @@
       "color": "purple",
       "name": "08. Проверка нагревателя 1",
       "description": "Ток нагревателя 1: до включения 0..50, после включения 150..1000",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1161,7 +1161,7 @@
       "color": "purple",
       "name": "09. Проверка нагревателя 2",
       "description": "Ток нагревателя 2: до включения 0..50, после включения 150..1000",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1321,7 +1321,7 @@
       "color": "purple",
       "name": "10. DataTest портов 0..9",
       "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1388,7 +1388,7 @@
       "color": "blue",
       "name": "проверка акб (упс)",
       "description": "Проверка akb_voltage=20..27 В при подключённом SIMBAT и переключении AC1",
-      "isEnabled": false,
+      "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
@@ -1598,7 +1598,8 @@
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "deviceType": "PSW+UPS-Box 8x2Pro",
             "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false
+            "useFixedSerialNumber": false,
+            "fixedSerialNumber": 3200428
           },
           {
             "id": "2",
@@ -1857,10 +1858,13 @@
             "x": 540,
             "y": 120,
             "color": "blue",
-            "printerName": "TSC TE310",
-            "serialVariableName": "SerialNumber",
             "serialShortVariableName": "SerialShort",
             "macVariableName": "Dut.default_mac",
+            "printerName": "TSC TE310",
+            "serialVariableName": "SerialNumber",
+            "useManualSerialNumber": false,
+            "manualSerialNumber": "",
+            "manualMacAddress": "",
             "copies": 4,
             "useQtProZplFormat": true,
             "failOnPrinterError": true
