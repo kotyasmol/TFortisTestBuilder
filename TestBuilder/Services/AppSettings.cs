@@ -13,6 +13,7 @@ namespace TestBuilder.Services
     {
         public const string DefaultServerBaseUrl = "https://iccid.fort-telecom.ru";
         public const string DefaultStandId = "123";
+        public const string DefaultLogFolder = "logs";
 
         private static readonly string SettingsPath = Path.Combine(
             AppContext.BaseDirectory, "testbuilder.settings");
@@ -37,6 +38,12 @@ namespace TestBuilder.Services
 
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Light";
+
+        [JsonPropertyName("enableFileLogging")]
+        public bool EnableFileLogging { get; set; } = false;
+
+        [JsonPropertyName("logFolder")]
+        public string LogFolder { get; set; } = string.Empty;
 
 
         private static AppSettings Load()
@@ -75,6 +82,11 @@ namespace TestBuilder.Services
             if (string.IsNullOrWhiteSpace(settings.StandId))
             {
                 settings.StandId = DefaultStandId;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.LogFolder))
+            {
+                settings.LogFolder = Path.Combine(AppContext.BaseDirectory, DefaultLogFolder);
             }
 
             return settings;

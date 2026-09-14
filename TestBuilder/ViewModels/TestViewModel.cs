@@ -876,8 +876,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         var profileName = SelectedProfile?.Name ?? "без профиля";
+        var logFilePath = LoggingService.Instance.StartFileLogForRun(profileName);
 
         TestingLogger.Info($"Запуск теста: {profileName}");
+        if (!string.IsNullOrWhiteSpace(logFilePath))
+            TestingLogger.Info($"Логи записываются в файл: {logFilePath}");
         if (!IsConnected)
         {
             TestingLogger.Info("Автономный запуск: граф не содержит Modbus-нод, подключение к стенду не требуется.");
@@ -980,6 +983,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _testRunCts = null;
             ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
             ResetConnectorsStateRecursive(RootGraph);
+            LoggingService.Instance.StopFileLogForRun();
         }
     }
 

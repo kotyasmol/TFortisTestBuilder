@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Threading.Tasks;
 using TestBuilder.Services;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.ViewModels
 {
@@ -20,18 +21,28 @@ namespace TestBuilder.ViewModels
         private string standId = string.Empty;
 
         [ObservableProperty]
+        private bool enableFileLogging;
+
+        [ObservableProperty]
+        private string logFolder = string.Empty;
+
+        [ObservableProperty]
         private bool isDarkTheme;
 
         public IAsyncRelayCommand SelectFolderCommand { get; }
+        public IAsyncRelayCommand SelectLogFolderCommand { get; }
 
         public SettingsViewModel()
         {
             GraphsFolder = AppSettings.Instance.GraphsFolder;
             ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
             StandId = AppSettings.Instance.StandId;
+            EnableFileLogging = AppSettings.Instance.EnableFileLogging;
+            LogFolder = AppSettings.Instance.LogFolder;
             IsDarkTheme = AppSettings.Instance.Theme == "Dark";
 
             SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
+            SelectLogFolderCommand = new AsyncRelayCommand(SelectLogFolderAsync);
 
             ApplyTheme(IsDarkTheme);
         }
@@ -73,6 +84,29 @@ namespace TestBuilder.ViewModels
             AppSettings.Instance.Save();
         }
 
+        private async Task SelectLogFolderAsync()
+        {
+            var topLevel = Avalonia.Application.Current?.ApplicationLifetime
+                is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            if (topLevel == null) return;
+
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
+                new FolderPickerOpenOptions
+                {
+                    Title = "Выберите папку для текстовых логов",
+                    AllowMultiple = false
+                });
+
+            if (folders.Count == 0) return;
+
+            LogFolder = folders[0].Path.LocalPath;
+            AppSettings.Instance.LogFolder = LogFolder;
+            AppSettings.Instance.Save();
+        }
+
         partial void OnGraphsFolderChanged(string value)
         {
             AppSettings.Instance.GraphsFolder = value;
@@ -88,6 +122,21 @@ namespace TestBuilder.ViewModels
         partial void OnStandIdChanged(string value)
         {
             AppSettings.Instance.StandId = value?.Trim() ?? string.Empty;
+            AppSettings.Instance.Save();
+        }
+
+        partial void OnEnableFileLoggingChanged(bool value)
+        {
+            AppSettings.Instance.EnableFileLogging = value;
+            AppSettings.Instance.Save();
+
+            if (!value)
+                LoggingService.Instance.StopFileLogForRun();
+        }
+
+        partial void OnLogFolderChanged(string value)
+        {
+            AppSettings.Instance.LogFolder = value?.Trim() ?? string.Empty;
             AppSettings.Instance.Save();
         }
     }
