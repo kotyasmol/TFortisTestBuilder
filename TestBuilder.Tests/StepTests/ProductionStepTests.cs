@@ -13,7 +13,7 @@ namespace TestBuilder.Tests.StepTests;
 public class ProductionStepTests
 {
     [Fact]
-    public async Task GetSerialNumberFromServerStep_EncodesDeviceTypeAndSavesSerial()
+    public async Task GetSerialNumberFromServerStep_ReusesExistingSerialWithoutAllocation()
     {
         var service = new CapturingHttpService(HttpRequestResult.Success(200, "12345", TimeSpan.FromMilliseconds(1)));
         var context = new TestContext(new RegisterState());
@@ -41,8 +41,87 @@ public class ProductionStepTests
         Assert.Equal(1, context.GetVariable<int>("SerialNumberAttempts"));
         Assert.Equal(200, context.GetVariable<int>("SerialNumberStatusCode"));
         Assert.Equal("CPU 1", context.GetVariable<string>("SerialNumberCpuId"));
-        Assert.Contains("devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
-        Assert.Contains("cpuId=CPU%201", service.LastUrl);
+        Assert.Equal(
+            "http://server/api/api.svc/getExistsSerialNum?cpuId=CPU%201",
+            service.LastUrl);
+        Assert.Equal("ServerExisting", context.GetVariable<string>("SerialNumberSource"));
+        Assert.False(context.GetVariable<bool>("SerialNumberWasAllocated"));
+        Assert.Equal(1, service.Calls);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_AllocatesOnlyWhenLookupConfirmsMissing()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "0", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, "3200005", TimeSpan.FromMilliseconds(2)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-NEW");
+        var step = CreateSerialStep(service);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(3200005, context.GetVariable<int>("SerialNumber"));
+        Assert.Equal("ServerNew", context.GetVariable<string>("SerialNumberSource"));
+        Assert.True(context.GetVariable<bool>("SerialNumberWasAllocated"));
+        Assert.True(context.GetVariable<bool>("SerialNumberLookupConfirmedMissing"));
+        Assert.Equal(1, context.GetVariable<int>("SerialNumberAllocationAttempts"));
+        Assert.Equal(
+            new[]
+            {
+                "http://server/api/api.svc/getExistsSerialNum?cpuId=CPU-NEW",
+                "http://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=CPU-NEW"
+            },
+            service.RequestedUrls);
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_DoesNotAllocateWhenLookupFails()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Failure("lookup unavailable", TimeSpan.FromMilliseconds(3)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-UNKNOWN");
+        var step = CreateSerialStep(service);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Single(service.RequestedUrls);
+        Assert.Contains("getExistsSerialNum", service.RequestedUrls[0]);
+        Assert.DoesNotContain(service.RequestedUrls, url => url.Contains("/getSerialNum", StringComparison.Ordinal));
+        Assert.Contains("не создать дубль", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_DoesNotRepeatAmbiguousAllocationRequest()
+    {
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, "0", TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Failure("allocation timeout", TimeSpan.FromMilliseconds(1000)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-TIMEOUT");
+        var step = new GetSerialNumberFromServerStep(
+            service,
+            NullLogger.Instance,
+            "http://server",
+            "PSW+UPS-Box 8x2Pro",
+            "Dut.cpu_id",
+            1000,
+            retryCount: 3,
+            retryDelayMs: 0,
+            "SerialNumber",
+            failOnError: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Contains("getExistsSerialNum", service.RequestedUrls[0]);
+        Assert.Contains("/getSerialNum", service.RequestedUrls[1]);
+        Assert.Equal(1, context.GetVariable<int>("SerialNumberAllocationAttempts"));
+        Assert.Contains("не повторяется автоматически", context.GetVariable<string>("SerialNumberError"));
     }
 
     [Fact]
@@ -134,7 +213,9 @@ public class ProductionStepTests
 
         Assert.Equal(StepResult.True, result);
         Assert.Equal(3200001, context.GetVariable<int>("SerialNumber"));
-        Assert.Contains("cpuId=ABC%2F123", service.LastUrl);
+        Assert.Equal(
+            "http://server/api/api.svc/getExistsSerialNum?cpuId=ABC%2F123",
+            service.LastUrl);
     }
 
     [Theory]
@@ -183,6 +264,8 @@ public class ProductionStepTests
         Assert.Equal(200, context.GetVariable<int>("SerialNumberStatusCode"));
         Assert.Equal(7, context.GetVariable<int>("SerialNumberElapsedMs"));
         Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.All(service.RequestedUrls, url => Assert.Contains("getExistsSerialNum", url));
+        Assert.Equal("ServerExisting", context.GetVariable<string>("SerialNumberSource"));
     }
 
     [Fact]
@@ -209,7 +292,9 @@ public class ProductionStepTests
         Assert.Equal(StepResult.True, result);
         Assert.Equal(654, context.GetVariable<int>("ServerSerial"));
         Assert.Equal(654, context.GetVariable<int>("SerialNumber"));
-        Assert.Equal("https://server/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=ABC%2B123", service.LastUrl);
+        Assert.Equal(
+            "https://server/api/api.svc/getExistsSerialNum?cpuId=ABC%2B123",
+            service.LastUrl);
     }
 
     [Fact]
@@ -262,7 +347,7 @@ public class ProductionStepTests
             Assert.Equal(StepResult.True, result);
             Assert.Equal(777, context.GetVariable<int>("SerialNumber"));
             Assert.Equal(
-                "http://serial-server.local/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=CPU-777",
+                "http://serial-server.local/api/api.svc/getExistsSerialNum?cpuId=CPU-777",
                 service.LastUrl);
         }
         finally
@@ -297,7 +382,7 @@ public class ProductionStepTests
         Assert.Equal(3200004, context.GetVariable<int>("SerialNumber"));
         Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
         Assert.Equal(
-            "http://serial-server.local/api/Api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=CPU%204",
+            "http://serial-server.local/api/Api.svc/getExistsSerialNum?cpuId=CPU%204",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 

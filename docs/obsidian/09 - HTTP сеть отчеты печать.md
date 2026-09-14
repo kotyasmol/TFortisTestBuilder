@@ -5,7 +5,7 @@ tags:
   - network
   - reports
   - printing
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 
 # HTTP, сеть, отчеты и печать
@@ -147,7 +147,27 @@ selftest. Legacy `Wait Variable Until` с `GetIrpStatus` использует т
 
 ## Получение серийного номера
 
-`GetSerialNumberFromServerStep` строит URL двумя способами.
+`GetSerialNumberFromServerStep` использует два серверных endpoint:
+
+```text
+https://server/api/api.svc/getExistsSerialNum?cpuId=...
+https://server/api/api.svc/getSerialNum?devType=...&cpuId=...
+```
+
+Первый только проверяет привязку CPU ID. Если он возвращает положительный
+серийник, нода использует его повторно (`SerialNumberSource = ServerExisting`).
+Только успешный ответ с точным числом `0` разрешает один запрос нового номера
+через второй endpoint (`SerialNumberSource = ServerNew`). Ошибка сети, HTTP
+error или нечисловой ответ проверки блокируют выдачу: такой ответ не трактуется
+как отсутствие номера.
+
+Запрос нового номера выполняется максимум один раз за запуск ноды. Если сервер
+успел обработать его, но ответ потерялся, автоматический повтор не делается.
+Следующий запуск снова сначала проверит `getExistsSerialNum`, поэтому результат
+неоднозначного запроса не должен создавать второй номер. `RetryCount` и
+`RetryDelayMs` применяются к проверке существующего номера.
+
+URL строятся двумя способами.
 
 Если `ServerBaseUrl` похож на полный endpoint:
 
@@ -197,8 +217,7 @@ elapsed, raw response и текст ошибки.
 endpoint не вызывается ни при каких условиях, а в `SerialNumber` и
 `NetTest.SerialNumber` записывается `FixedSerialNumber`. В рабочем PSW-профиле
 режим выключен и фиксированное значение отсутствует: используется реальный
-production-запрос по `Dut.cpu_id`, а источник результата —
-`SerialNumberSource = Server`.
+production-алгоритм по `Dut.cpu_id`.
 
 ## Set Pro MAC
 

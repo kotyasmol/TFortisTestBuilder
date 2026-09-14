@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-11
+updated: 2026-09-14
 ---
 
 # JSON профили
@@ -157,9 +157,10 @@ timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Про�
 
 В рабочем PSW-профиле `Get Serial Number` содержит
 `useFixedSerialNumber: false`, а `fixedSerialNumber` отсутствует. Нода выполняет
-production-запрос с фактическим `Dut.cpu_id`; успешный запрос может выдать новый
-серийный номер. Отладочный режим остаётся доступен в редакторе ноды, но в этом
-профиле не используется. `Set Pro MAC` использует
+production-проверку с фактическим `Dut.cpu_id`: существующий номер используется
+повторно, а новый выдаётся только после подтверждённого ответом `0` отсутствия
+привязки. Отладочный режим остаётся доступен в редакторе ноды, но в этом профиле
+не используется. `Set Pro MAC` использует
 `batchPath: "set_mac_pro.bat"`, `boardVersion: "PSW+UPS-Box 8x2Pro"`,
 `macVariableName: "Dut.NewMac"`, `timeoutMs: 60000` и `failOnError: true`.
 Относительный путь означает bat рядом с exe; его содержимое и учётные данные
