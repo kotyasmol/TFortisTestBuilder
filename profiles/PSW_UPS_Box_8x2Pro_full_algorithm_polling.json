@@ -1598,8 +1598,7 @@
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "deviceType": "PSW+UPS-Box 8x2Pro",
             "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false,
-            "fixedSerialNumber": 3200428
+            "useFixedSerialNumber": false
           },
           {
             "id": "2",

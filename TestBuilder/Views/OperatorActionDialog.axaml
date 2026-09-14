@@ -4,24 +4,33 @@
         x:Class="TestBuilder.Views.OperatorActionDialog"
         x:DataType="views:OperatorActionDialogModel"
         Title="Требуется действие оператора"
-        Width="420"
-        Height="200"
+        Width="620"
+        Height="380"
+        MinWidth="520"
+        MinHeight="300"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
+        CanResize="True"
         ShowInTaskbar="False">
 
-    <StackPanel Margin="24" Spacing="16">
-        <TextBlock Text="Требуется действие оператора"
+    <Grid Margin="24" RowDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Row="0"
+                   Text="Требуется действие оператора"
                    FontSize="15"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap" />
 
-        <TextBlock Text="{Binding Message}"
-                   FontSize="13"
-                   Opacity="0.7"
-                   TextWrapping="Wrap" />
+        <ScrollViewer Grid.Row="1"
+                      Margin="0,16,0,16"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <TextBlock Text="{Binding Message}"
+                       FontSize="14"
+                       Opacity="0.8"
+                       TextWrapping="Wrap" />
+        </ScrollViewer>
 
-        <StackPanel Orientation="Horizontal"
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="10"
                     Margin="0,8,0,0">
@@ -32,6 +41,6 @@
                     Width="100"
                     Click="OnCancel" />
         </StackPanel>
-    </StackPanel>
+    </Grid>
 
 </Window>

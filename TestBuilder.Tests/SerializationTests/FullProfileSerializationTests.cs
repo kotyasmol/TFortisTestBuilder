@@ -191,7 +191,7 @@ public class FullProfileSerializationTests
             .OfType<SelfTestCheckNodeViewModel>()
             .Single();
         Assert.Equal(5000, startupDelay.Milliseconds);
-        Assert.Equal(180000, startupSelftest.TimeoutMs);
+        Assert.Equal(300000, startupSelftest.TimeoutMs);
         Assert.Equal(5000, startupSelftest.PollIntervalMs);
 
         var dataTestNode = dataTestSubtest.BodyGraph.Nodes
