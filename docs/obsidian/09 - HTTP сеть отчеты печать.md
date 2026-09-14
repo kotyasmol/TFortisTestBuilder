@@ -196,8 +196,9 @@ elapsed, raw response и текст ошибки.
 Для стендовой отладки есть явный режим `UseFixedSerialNumber`. В нём серверный
 endpoint не вызывается ни при каких условиях, а в `SerialNumber` и
 `NetTest.SerialNumber` записывается `FixedSerialNumber`. В рабочем PSW-профиле
-режим включён со значением `3200428`; источник виден в
-`SerialNumberSource = FixedDebug`.
+режим выключен и фиксированное значение отсутствует: используется реальный
+production-запрос по `Dut.cpu_id`, а источник результата —
+`SerialNumberSource = Server`.
 
 ## Set Pro MAC
 

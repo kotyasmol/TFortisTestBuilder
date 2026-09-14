@@ -156,9 +156,10 @@ timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Про�
 `arp`.
 
 В рабочем PSW-профиле `Get Serial Number` содержит
-`useFixedSerialNumber: true` и `fixedSerialNumber: 3200428`. Это защитный режим
-стендовой отладки: endpoint выдачи номеров не вызывается. Для возврата к
-production-выдаче нужно явно снять флаг в ноде. `Set Pro MAC` использует
+`useFixedSerialNumber: false`, а `fixedSerialNumber` отсутствует. Нода выполняет
+production-запрос с фактическим `Dut.cpu_id`; успешный запрос может выдать новый
+серийный номер. Отладочный режим остаётся доступен в редакторе ноды, но в этом
+профиле не используется. `Set Pro MAC` использует
 `batchPath: "set_mac_pro.bat"`, `boardVersion: "PSW+UPS-Box 8x2Pro"`,
 `macVariableName: "Dut.NewMac"`, `timeoutMs: 60000` и `failOnError: true`.
 Относительный путь означает bat рядом с exe; его содержимое и учётные данные

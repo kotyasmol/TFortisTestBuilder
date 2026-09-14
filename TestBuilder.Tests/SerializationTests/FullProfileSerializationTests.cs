@@ -124,8 +124,8 @@ public class FullProfileSerializationTests
             .OfType<GetSerialNumberFromServerNodeViewModel>()
             .Single();
         Assert.Equal("https://iccid.fort-telecom.ru", serialNode.ServerBaseUrl);
-        Assert.True(serialNode.UseFixedSerialNumber);
-        Assert.Equal(3200428, serialNode.FixedSerialNumber);
+        Assert.False(serialNode.UseFixedSerialNumber);
+        Assert.DoesNotContain("\"fixedSerialNumber\"", json);
         var setMacNode = serialSubtest.BodyGraph.Nodes
             .OfType<SetProMacNodeViewModel>()
             .Single();
