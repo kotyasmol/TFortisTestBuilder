@@ -37,12 +37,16 @@ public class ManualLabelProfileTests
         Assert.Equal("SerialNumber", printNode.SerialVariableName);
         Assert.True(printNode.UseManualSerialNumber);
         Assert.Equal(string.Empty, printNode.ManualSerialNumber);
+        Assert.Equal(string.Empty, printNode.ManualMacAddress);
+        Assert.Equal("SerialShort", printNode.SerialShortVariableName);
+        Assert.Equal("Dut.default_mac", printNode.MacVariableName);
         Assert.Equal(4, printNode.Copies);
         Assert.True(printNode.UseQtProZplFormat);
         Assert.True(printNode.FailOnPrinterError);
         Assert.False(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
 
         printNode.ManualSerialNumber = "3200999";
+        printNode.ManualMacAddress = "C0:11:A6:20:03:E7";
         var savedJson = GraphSerializer.Serialize(viewModel, profileName);
 
         using var reloadedModbus = new ModbusService();
@@ -52,6 +56,7 @@ public class ManualLabelProfileTests
             reloadedViewModel.RootGraph.Nodes.OfType<PrintLabelNodeViewModel>());
         Assert.True(reloadedPrintNode.UseManualSerialNumber);
         Assert.Equal("3200999", reloadedPrintNode.ManualSerialNumber);
+        Assert.Equal("C0:11:A6:20:03:E7", reloadedPrintNode.ManualMacAddress);
         Assert.True(reloadedPrintNode.UseQtProZplFormat);
     }
 

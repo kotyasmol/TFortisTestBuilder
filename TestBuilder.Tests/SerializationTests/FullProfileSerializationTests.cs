@@ -138,10 +138,12 @@ public class FullProfileSerializationTests
             .Single();
         Assert.Equal("TSC TE310", printNode.PrinterName);
         Assert.Equal("SerialNumber", printNode.SerialVariableName);
+        Assert.Equal("SerialShort", printNode.SerialShortVariableName);
+        Assert.Equal("Dut.default_mac", printNode.MacVariableName);
         Assert.False(printNode.UseManualSerialNumber);
         Assert.Equal(string.Empty, printNode.ManualSerialNumber);
         Assert.Equal(4, printNode.Copies);
-        Assert.False(printNode.UseQtProZplFormat);
+        Assert.True(printNode.UseQtProZplFormat);
         Assert.True(printNode.FailOnPrinterError);
         Assert.Contains(
             startupSubtest.BodyGraph.Connections,

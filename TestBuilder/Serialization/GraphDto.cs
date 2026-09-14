@@ -340,6 +340,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ManualSerialNumber { get; set; }
 
+        [JsonPropertyName("manualMacAddress")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ManualMacAddress { get; set; }
+
         [JsonPropertyName("copies")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Copies { get; set; }

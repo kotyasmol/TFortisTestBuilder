@@ -1838,7 +1838,7 @@
       "y": 480,
       "color": "red",
       "name": "16. Печать этикеток",
-      "description": "Печать серийного номера на 4 этикетках TSC TE310",
+      "description": "Печать 4 производственных ZPL-этикеток PSW+UPS-Box 8x2Pro",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -1860,7 +1860,10 @@
             "color": "blue",
             "printerName": "TSC TE310",
             "serialVariableName": "SerialNumber",
+            "serialShortVariableName": "SerialShort",
+            "macVariableName": "Dut.default_mac",
             "copies": 4,
+            "useQtProZplFormat": true,
             "failOnPrinterError": true
           },
           {

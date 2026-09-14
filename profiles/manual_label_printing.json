@@ -18,6 +18,7 @@
       "serialVariableName": "SerialNumber",
       "useManualSerialNumber": true,
       "manualSerialNumber": "",
+      "manualMacAddress": "",
       "copies": 4,
       "useQtProZplFormat": true,
       "failOnPrinterError": true

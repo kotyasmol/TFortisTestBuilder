@@ -125,7 +125,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
-| Print Label | `printerName`, `serialVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `copies`, `useQtProZplFormat`, `failOnPrinterError` |
+| Print Label | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
@@ -228,7 +228,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |
-| `Print Label` | `printerName`, `serialVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `copies`, `useQtProZplFormat` | `TSC TE310`, `SerialNumber`, `false`, `""`, `4`, `false` |
+| `Print Label` | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat` | `TSC TE310`, `SerialNumber`, `SerialShort`, `Dut.default_mac`, `false`, `""`, `""`, `4`, `false` |
 | `For Slaves` | `fromSlaveId`, `toSlaveId`, `step` | `1`, `20`, `1` |
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
 | `Subtest` | `runOnFailure` | `false` |
@@ -238,19 +238,24 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 Полный список дефолтов описан в [[05 - Справочник нод]].
 
 У старых `Print Label` допустимы лишние поля `deviceName`, `deviceType`,
-`macVariableName`, `includeMac`, `equipmentFieldUse`, `equipmentType` и
-`equipmentText`: JSON-deserializer проигнорирует их как неизвестные для
-актуальной ноды.
+`includeMac`, `equipmentFieldUse`, `equipmentType` и `equipmentText`:
+JSON-deserializer проигнорирует их как неизвестные для актуальной ноды.
+`macVariableName` теперь является действующим полем Pro-ZPL-режима.
 При следующем сохранении эти legacy-поля исчезнут. Если старый профиль не
 содержит `serialVariableName`, используется полный `SerialNumber`.
 
 Поставляемый `manual_label_printing.json` содержит только структурные
 `Start`/`End` и один исполняемый `Print Label`. В нём
 `useManualSerialNumber: true`, пустое `manualSerialNumber` заполняется оператором
-в UI перед запуском, `copies: 4` и `useQtProZplFormat: true`. Поэтому он печатает
-четыре Qt/ZPL-этикетки `PSW+UPS-Box 8x2Pro` с MAC, коротким SN и составным
-штрихкодом. Поскольку Modbus-нод нет, профиль разрешено запускать без
-подключения к стенду. Основной рабочий профиль не включает Pro-ZPL-режим.
+в UI перед запуском вместе с обязательным `manualMacAddress`; `copies: 4` и
+`useQtProZplFormat: true`. Поэтому он печатает четыре Qt/ZPL-этикетки
+`PSW+UPS-Box 8x2Pro` с введённым MAC, коротким SN и составным штрихкодом.
+Поскольку Modbus-нод нет, профиль разрешено запускать без подключения к стенду.
+
+Основной рабочий профиль также включает Pro-ZPL-режим, но использует только
+значения контекста: `SerialNumber`, `SerialShort` и фактически прочитанный после
+перезапуска `Dut.default_mac`. Отсутствующие или несогласованные данные ведут в
+`False`; Print Label не рассчитывает MAC и не использует `SetMac.Timestamp`.
 
 Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
 `GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние

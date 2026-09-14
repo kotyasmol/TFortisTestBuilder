@@ -34,8 +34,11 @@ namespace TestBuilder.Domain.Steps
         private readonly ILogger _logger;
         private readonly string _printerName;
         private readonly string _serialVariableName;
+        private readonly string _serialShortVariableName;
+        private readonly string _macVariableName;
         private readonly bool _useManualSerialNumber;
         private readonly string _manualSerialNumber;
+        private readonly string _manualMacAddress;
         private readonly int _copies;
         private readonly bool _useQtProZplFormat;
         private readonly bool _failOnPrinterError;
@@ -46,8 +49,11 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             string printerName,
             string serialVariableName,
+            string serialShortVariableName,
+            string macVariableName,
             bool useManualSerialNumber,
             string manualSerialNumber,
+            string manualMacAddress,
             int copies,
             bool useQtProZplFormat,
             bool failOnPrinterError)
@@ -55,8 +61,11 @@ namespace TestBuilder.Domain.Steps
                 logger,
                 printerName,
                 serialVariableName,
+                serialShortVariableName,
+                macVariableName,
                 useManualSerialNumber,
                 manualSerialNumber,
+                manualMacAddress,
                 copies,
                 useQtProZplFormat,
                 failOnPrinterError,
@@ -69,8 +78,11 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             string printerName,
             string serialVariableName,
+            string serialShortVariableName,
+            string macVariableName,
             bool useManualSerialNumber,
             string manualSerialNumber,
+            string manualMacAddress,
             int copies,
             bool useQtProZplFormat,
             bool failOnPrinterError,
@@ -82,8 +94,15 @@ namespace TestBuilder.Domain.Steps
             _serialVariableName = string.IsNullOrWhiteSpace(serialVariableName)
                 ? "SerialNumber"
                 : serialVariableName.Trim();
+            _serialShortVariableName = string.IsNullOrWhiteSpace(serialShortVariableName)
+                ? "SerialShort"
+                : serialShortVariableName.Trim();
+            _macVariableName = string.IsNullOrWhiteSpace(macVariableName)
+                ? "Dut.default_mac"
+                : macVariableName.Trim();
             _useManualSerialNumber = useManualSerialNumber;
             _manualSerialNumber = manualSerialNumber?.Trim() ?? string.Empty;
+            _manualMacAddress = manualMacAddress?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
             _useQtProZplFormat = useQtProZplFormat;
             _failOnPrinterError = failOnPrinterError;
@@ -148,12 +167,72 @@ namespace TestBuilder.Domain.Steps
 
             if (_useQtProZplFormat)
             {
-                if (!TryResolvePswUpsBox8x2ProSerial(serial, out var fullSerial, out var shortSerial, out var serialError))
+                int fullSerial;
+                int shortSerial;
+                string mac;
+                string shortSerialSource;
+                string macSource;
+
+                if (_useManualSerialNumber)
                 {
-                    return Fail(context, 6, serialError);
+                    if (!TryResolveManualPswUpsBox8x2ProSerial(serial, out fullSerial, out shortSerial, out var serialError))
+                    {
+                        return Fail(context, 6, serialError);
+                    }
+
+                    if (!TryNormalizeMac(_manualMacAddress, out mac))
+                    {
+                        return Fail(
+                            context,
+                            6,
+                            "Введите реальный MAC в поле 'MAC вручную', например C0:11:A6:20:01:AC.");
+                    }
+
+                    shortSerialSource = "Manual";
+                    macSource = "Manual";
+                }
+                else
+                {
+                    if (!int.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out fullSerial))
+                    {
+                        return Fail(context, 6, $"Серийный номер '{serial}' слишком большой или имеет неверный формат.");
+                    }
+
+                    if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
+                    {
+                        return Fail(
+                            context,
+                            6,
+                            $"Переменная короткого серийного номера '{_serialShortVariableName}' не найдена или не является целым числом.");
+                    }
+
+                    if (shortSerial is < 0 or > 0xFFFF)
+                    {
+                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..65535.");
+                    }
+
+                    if (fullSerial != PswUpsBox8x2ProSerialOffset + shortSerial)
+                    {
+                        return Fail(
+                            context,
+                            6,
+                            $"Серийники не согласованы: {_serialVariableName}={fullSerial}, " +
+                            $"{_serialShortVariableName}={shortSerial}.");
+                    }
+
+                    if (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
+                        !TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac))
+                    {
+                        return Fail(
+                            context,
+                            6,
+                            $"Переменная MAC '{_macVariableName}' не найдена или содержит некорректный адрес.");
+                    }
+
+                    shortSerialSource = _serialShortVariableName;
+                    macSource = _macVariableName;
                 }
 
-                var mac = BuildPswUpsBox8x2ProMac(shortSerial);
                 var barcode = $"{PswUpsBox8x2ProDeviceType:D3}{shortSerial:D5}";
                 singleLabel = BuildPswUpsBox8x2ProZpl(shortSerial, mac);
                 language = "ZPL";
@@ -166,6 +245,8 @@ namespace TestBuilder.Domain.Steps
                 context.SetVariable("PrintLabel.DeviceName", PswUpsBox8x2ProName);
                 context.SetVariable("PrintLabel.DeviceType", PswUpsBox8x2ProDeviceType);
                 context.SetVariable("PrintLabel.Mac", mac);
+                context.SetVariable("PrintLabel.MacSource", macSource);
+                context.SetVariable("PrintLabel.SerialShortSource", shortSerialSource);
                 context.SetVariable("PrintLabel.Barcode", barcode);
             }
             else
@@ -266,7 +347,7 @@ namespace TestBuilder.Domain.Steps
                 "^FS^XZ ");
         }
 
-        private static bool TryResolvePswUpsBox8x2ProSerial(
+        private static bool TryResolveManualPswUpsBox8x2ProSerial(
             string serial,
             out int fullSerial,
             out int shortSerial,
@@ -303,11 +384,53 @@ namespace TestBuilder.Domain.Steps
             return true;
         }
 
-        private static string BuildPswUpsBox8x2ProMac(int shortSerial)
+        private static bool TryReadIntVariable(TestContext context, string variableName, out int value)
         {
-            var high = (shortSerial >> 8) & 0xFF;
-            var low = shortSerial & 0xFF;
-            return $"C0:11:A6:{PswUpsBox8x2ProDeviceType:X2}:{high:X2}:{low:X2}";
+            value = 0;
+            if (!context.Variables.TryGetValue(variableName, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            if (rawValue is int intValue)
+            {
+                value = intValue;
+                return true;
+            }
+
+            if (rawValue is long longValue && longValue is >= int.MinValue and <= int.MaxValue)
+            {
+                value = (int)longValue;
+                return true;
+            }
+
+            return int.TryParse(
+                rawValue.ToString(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out value);
+        }
+
+        private static bool TryNormalizeMac(string value, out string normalized)
+        {
+            normalized = string.Empty;
+            var compact = (value ?? string.Empty)
+                .Trim()
+                .Replace(":", string.Empty, StringComparison.Ordinal)
+                .Replace("-", string.Empty, StringComparison.Ordinal)
+                .Replace(".", string.Empty, StringComparison.Ordinal)
+                .Replace(" ", string.Empty, StringComparison.Ordinal);
+
+            if (compact.Length != 12 || compact.Any(character => !Uri.IsHexDigit(character)))
+            {
+                return false;
+            }
+
+            normalized = string.Join(
+                ":",
+                Enumerable.Range(0, 6)
+                    .Select(index => compact.Substring(index * 2, 2).ToUpperInvariant()));
+            return true;
         }
 
         private static int CalculateBarcodeWidth(string serial)
@@ -350,6 +473,8 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.DeviceName", string.Empty);
             context.SetVariable("PrintLabel.DeviceType", 0);
             context.SetVariable("PrintLabel.Mac", string.Empty);
+            context.SetVariable("PrintLabel.MacSource", string.Empty);
+            context.SetVariable("PrintLabel.SerialShortSource", string.Empty);
             context.SetVariable("PrintLabel.Barcode", string.Empty);
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.TimedOut", false);

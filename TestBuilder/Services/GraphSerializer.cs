@@ -287,8 +287,11 @@ namespace TestBuilder.Services
                     case PrintLabelNodeViewModel pl:
                         n.PrinterName = pl.PrinterName;
                         n.SerialVariableName = pl.SerialVariableName;
+                        n.SerialShortVariableName = pl.SerialShortVariableName;
+                        n.MacVariableName = pl.MacVariableName;
                         n.UseManualSerialNumber = pl.UseManualSerialNumber;
                         n.ManualSerialNumber = pl.ManualSerialNumber;
+                        n.ManualMacAddress = pl.ManualMacAddress;
                         n.Copies = pl.Copies;
                         n.UseQtProZplFormat = pl.UseQtProZplFormat;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
@@ -590,8 +593,11 @@ namespace TestBuilder.Services
                         Location = location,
                         PrinterName = n.PrinterName ?? "TSC TE310",
                         SerialVariableName = n.SerialVariableName ?? "SerialNumber",
+                        SerialShortVariableName = n.SerialShortVariableName ?? "SerialShort",
+                        MacVariableName = n.MacVariableName ?? "Dut.default_mac",
                         UseManualSerialNumber = n.UseManualSerialNumber ?? false,
                         ManualSerialNumber = n.ManualSerialNumber ?? string.Empty,
+                        ManualMacAddress = n.ManualMacAddress ?? string.Empty,
                         Copies = n.Copies ?? 4,
                         UseQtProZplFormat = n.UseQtProZplFormat ?? false,
                         FailOnPrinterError = n.FailOnPrinterError ?? true

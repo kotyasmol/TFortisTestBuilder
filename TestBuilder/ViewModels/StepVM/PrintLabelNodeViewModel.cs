@@ -10,8 +10,11 @@ namespace TestBuilder.ViewModels.StepVM
     {
         [ObservableProperty] private string printerName = "TSC TE310";
         [ObservableProperty] private string serialVariableName = "SerialNumber";
+        [ObservableProperty] private string serialShortVariableName = "SerialShort";
+        [ObservableProperty] private string macVariableName = "Dut.default_mac";
         [ObservableProperty] private bool useManualSerialNumber;
         [ObservableProperty] private string manualSerialNumber = string.Empty;
+        [ObservableProperty] private string manualMacAddress = string.Empty;
         [ObservableProperty] private int copies = 4;
         [ObservableProperty] private bool useQtProZplFormat;
         [ObservableProperty] private bool failOnPrinterError = true;
@@ -36,25 +39,41 @@ namespace TestBuilder.ViewModels.StepVM
                 logger,
                 PrinterName,
                 SerialVariableName,
+                SerialShortVariableName,
+                MacVariableName,
                 UseManualSerialNumber,
                 ManualSerialNumber,
+                ManualMacAddress,
                 Copies,
                 UseQtProZplFormat,
                 FailOnPrinterError);
 
         public bool IsVariableSerialMode => !UseManualSerialNumber;
+        public bool IsManualQtProMode => UseManualSerialNumber && UseQtProZplFormat;
+        public bool IsVariableQtProMode => !UseManualSerialNumber && UseQtProZplFormat;
 
         partial void OnUseManualSerialNumberChanged(bool value)
         {
             OnPropertyChanged(nameof(IsVariableSerialMode));
+            OnPropertyChanged(nameof(IsManualQtProMode));
+            OnPropertyChanged(nameof(IsVariableQtProMode));
+        }
+
+        partial void OnUseQtProZplFormatChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsManualQtProMode));
+            OnPropertyChanged(nameof(IsVariableQtProMode));
         }
 
         public override NodeViewModel Clone() => new PrintLabelNodeViewModel
         {
             PrinterName = PrinterName,
             SerialVariableName = SerialVariableName,
+            SerialShortVariableName = SerialShortVariableName,
+            MacVariableName = MacVariableName,
             UseManualSerialNumber = UseManualSerialNumber,
             ManualSerialNumber = ManualSerialNumber,
+            ManualMacAddress = ManualMacAddress,
             Copies = Copies,
             UseQtProZplFormat = UseQtProZplFormat,
             FailOnPrinterError = FailOnPrinterError

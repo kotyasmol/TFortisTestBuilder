@@ -69,6 +69,7 @@ public class PrintLabelStepTests
             printer,
             copies: 4,
             manualSerial: serial,
+            manualMacAddress: "C0:11:A6:20:01:AC",
             useQtProZplFormat: true);
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
@@ -93,6 +94,43 @@ public class PrintLabelStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_PrintsQtProValuesObtainedByPreviousTestSteps()
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", 3200428);
+        context.SetVariable("SerialShort", 428);
+        context.SetVariable("Dut.default_mac", "c0-11-a6-20-01-ac");
+        context.SetVariable("SetMac.Timestamp", 1790000123L);
+        var step = CreateStep(printer, copies: 4, useQtProZplFormat: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Contains("MAC: C0:11:A6:20:01:AC", printer.GetText());
+        Assert.Contains("SN: 00428", printer.GetText());
+        Assert.Equal("Dut.default_mac", context.GetVariable<string>("PrintLabel.MacSource"));
+        Assert.Equal("SerialShort", context.GetVariable<string>("PrintLabel.SerialShortSource"));
+        Assert.DoesNotContain("1790000123", printer.GetText());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DoesNotCalculateMissingQtProMac()
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", 3200428);
+        context.SetVariable("SerialShort", 428);
+        var step = CreateStep(printer, copies: 4, useQtProZplFormat: true);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, printer.Calls);
+        Assert.Contains("Dut.default_mac", context.GetVariable<string>("PrintLabel.Error"));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RejectsQtProSerialOutsideMacRange()
     {
         var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
@@ -101,6 +139,7 @@ public class PrintLabelStepTests
             printer,
             copies: 4,
             manualSerial: "3299999",
+            manualMacAddress: "C0:11:A6:20:01:AC",
             useQtProZplFormat: true);
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
@@ -176,13 +215,17 @@ public class PrintLabelStepTests
         int copies,
         int timeoutMs = 1000,
         string manualSerial = "",
+        string manualMacAddress = "",
         bool useQtProZplFormat = false) =>
         new(
             NullLogger.Instance,
             "TSC TE310",
             "SerialNumber",
+            "SerialShort",
+            "Dut.default_mac",
             !string.IsNullOrEmpty(manualSerial),
             manualSerial,
+            manualMacAddress,
             copies,
             useQtProZplFormat,
             failOnPrinterError: true,
