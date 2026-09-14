@@ -65,12 +65,11 @@ namespace TestBuilder.Domain.Steps
                 return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
             }
 
-            string allocationUrl;
-            string lookupUrl;
+            string url;
             string cpuId;
             try
             {
-                BuildUrls(context, out cpuId, out lookupUrl, out allocationUrl);
+                url = BuildUrl(context, out cpuId);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is UriFormatException)
             {
@@ -79,103 +78,45 @@ namespace TestBuilder.Domain.Steps
 
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", cpuId);
-            context.SetVariable("SerialNumberLookupUrl", lookupUrl);
-            context.SetVariable("SerialNumberAllocationUrl", allocationUrl);
+            context.SetVariable("SerialNumberRequestUrl", url);
+            context.SetVariable("SerialNumberSource", "Server");
 
             var timeout = TimeSpan.FromMilliseconds(_timeoutMs);
-            var totalAttempts = 0;
-
-            if (!string.IsNullOrWhiteSpace(lookupUrl))
-            {
-                var lookupAttempts = _retryCount + 1;
-                string lookupError = string.Empty;
-                string lookupRaw = string.Empty;
-
-                _logger.Info(
-                    $"[ШАГ] Проверка существующего серийного номера: cpuId={cpuId}, " +
-                    $"timeout={_timeoutMs} мс, попыток={lookupAttempts}, url={lookupUrl}");
-
-                for (var attempt = 1; attempt <= lookupAttempts; attempt++)
-                {
-                    var result = await _httpRequestService.GetAsync(lookupUrl, timeout, cancellationToken);
-                    totalAttempts++;
-                    lookupRaw = result.Body.Trim();
-                    SaveAttemptDiagnostics(context, totalAttempts, result, lookupRaw);
-                    SaveLookupDiagnostics(context, attempt, result, lookupRaw);
-
-                    if (string.IsNullOrWhiteSpace(result.ErrorMessage) &&
-                        result.IsSuccessStatusCode &&
-                        TryParseNonNegativeSerial(lookupRaw, out var existingSerial))
-                    {
-                        if (existingSerial > 0)
-                        {
-                            context.SetVariable("SerialNumberSource", "ServerExisting");
-                            context.SetVariable("SerialNumberWasAllocated", false);
-                            SaveSerial(context, existingSerial, lookupRaw, lookupUrl);
-                            _logger.Info(
-                                $"[OK] Для CPU ID {cpuId} уже существует серийный номер {existingSerial}; " +
-                                "новый номер не запрашивается.");
-                            return StepResult.True;
-                        }
-
-                        _logger.Info(
-                            $"[ШАГ] Для CPU ID {cpuId} существующий серийный номер не найден; " +
-                            "будет выполнен один запрос нового номера.");
-                        break;
-                    }
-
-                    lookupError = BuildError(result, lookupRaw);
-
-                    if (attempt < lookupAttempts && _retryDelayMs > 0)
-                    {
-                        _logger.Warning(
-                            $"Существующий серийный номер не проверен (попытка {attempt}/{lookupAttempts}): " +
-                            $"{lookupError}. Повтор через {_retryDelayMs} мс.");
-                        await Task.Delay(_retryDelayMs, cancellationToken);
-                    }
-                }
-
-                if (!context.GetVariable<bool>("SerialNumberLookupConfirmedMissing"))
-                {
-                    var error = string.IsNullOrWhiteSpace(lookupError)
-                        ? "сервер не подтвердил отсутствие серийного номера ответом 0"
-                        : lookupError;
-                    return Fail(
-                        context,
-                        $"Проверка существующего серийного номера не выполнена: {error}. " +
-                        "Новый номер не запрашивался, чтобы не создать дубль.",
-                        lookupRaw,
-                        lookupUrl);
-                }
-            }
+            var attempts = _retryCount + 1;
+            string lastError = string.Empty;
+            string raw = string.Empty;
 
             _logger.Info(
-                $"[ШАГ] Запрос нового серийного номера: device={_deviceType}, cpuId={cpuId}, " +
-                $"timeout={_timeoutMs} мс, одна попытка, url={allocationUrl}");
+                $"[ШАГ] Запрос серийного номера: device={_deviceType}, cpuId={cpuId}, " +
+                $"timeout={_timeoutMs} мс, попыток={attempts}, url={url}");
 
-            var allocationResult = await _httpRequestService.GetAsync(allocationUrl, timeout, cancellationToken);
-            totalAttempts++;
-            var allocationRaw = allocationResult.Body.Trim();
-            SaveAttemptDiagnostics(context, totalAttempts, allocationResult, allocationRaw);
-            SaveAllocationDiagnostics(context, allocationResult, allocationRaw);
-
-            if (TryParseSerial(allocationRaw, out var allocatedSerial) &&
-                string.IsNullOrWhiteSpace(allocationResult.ErrorMessage) &&
-                allocationResult.IsSuccessStatusCode)
+            for (var attempt = 1; attempt <= attempts; attempt++)
             {
-                context.SetVariable("SerialNumberSource", "ServerNew");
-                context.SetVariable("SerialNumberWasAllocated", true);
-                SaveSerial(context, allocatedSerial, allocationRaw, allocationUrl);
-                _logger.Info($"[OK] Новый серийный номер получен: {allocatedSerial}.");
-                return StepResult.True;
+                var result = await _httpRequestService.GetAsync(url, timeout, cancellationToken);
+                raw = result.Body.Trim();
+                SaveAttemptDiagnostics(context, attempt, result, raw);
+
+                if (TryParseSerial(raw, out var serial) &&
+                    string.IsNullOrWhiteSpace(result.ErrorMessage) &&
+                    result.IsSuccessStatusCode)
+                {
+                    SaveSerial(context, serial, raw, url);
+                    _logger.Info($"[OK] Serial number received: {serial}.");
+                    return StepResult.True;
+                }
+
+                lastError = BuildError(result, raw);
+
+                if (attempt < attempts && _retryDelayMs > 0)
+                {
+                    _logger.Warning(
+                        $"Серийный номер не получен (попытка {attempt}/{attempts}): {lastError}. " +
+                        $"Повтор через {_retryDelayMs} мс.");
+                    await Task.Delay(_retryDelayMs, cancellationToken);
+                }
             }
 
-            return Fail(
-                context,
-                $"Новый серийный номер не получен: {BuildError(allocationResult, allocationRaw)}. " +
-                "Запрос не повторяется автоматически: следующий запуск сначала проверит привязку по CPU ID.",
-                allocationRaw,
-                allocationUrl);
+            return Fail(context, lastError, raw, url);
         }
 
         private StepResult UseFixedSerialNumber(TestContext context, int serial)
@@ -248,16 +189,6 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", string.Empty);
             context.SetVariable("SerialNumberSource", string.Empty);
-            context.SetVariable("SerialNumberWasAllocated", false);
-            context.SetVariable("SerialNumberLookupUrl", string.Empty);
-            context.SetVariable("SerialNumberLookupAttempts", 0);
-            context.SetVariable("SerialNumberLookupStatusCode", 0);
-            context.SetVariable("SerialNumberLookupRawResponse", string.Empty);
-            context.SetVariable("SerialNumberLookupConfirmedMissing", false);
-            context.SetVariable("SerialNumberAllocationUrl", string.Empty);
-            context.SetVariable("SerialNumberAllocationAttempts", 0);
-            context.SetVariable("SerialNumberAllocationStatusCode", 0);
-            context.SetVariable("SerialNumberAllocationRawResponse", string.Empty);
         }
 
         private string ResolveCpuIdForDiagnostics(TestContext context)
@@ -290,38 +221,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberRawResponse", raw);
         }
 
-        private static void SaveLookupDiagnostics(
-            TestContext context,
-            int attempt,
-            HttpRequestResult result,
-            string raw)
-        {
-            context.SetVariable("SerialNumberLookupAttempts", attempt);
-            context.SetVariable("SerialNumberLookupStatusCode", result.StatusCode ?? 0);
-            context.SetVariable("SerialNumberLookupRawResponse", raw);
-            context.SetVariable(
-                "SerialNumberLookupConfirmedMissing",
-                string.IsNullOrWhiteSpace(result.ErrorMessage) &&
-                result.IsSuccessStatusCode &&
-                TryParseNonNegativeSerial(raw, out var serial) &&
-                serial == 0);
-        }
-
-        private static void SaveAllocationDiagnostics(
-            TestContext context,
-            HttpRequestResult result,
-            string raw)
-        {
-            context.SetVariable("SerialNumberAllocationAttempts", 1);
-            context.SetVariable("SerialNumberAllocationStatusCode", result.StatusCode ?? 0);
-            context.SetVariable("SerialNumberAllocationRawResponse", raw);
-        }
-
-        private void BuildUrls(
-            TestContext context,
-            out string cpuId,
-            out string lookupUrl,
-            out string allocationUrl)
+        private string BuildUrl(TestContext context, out string cpuId)
         {
             var baseUrl = NormalizeServerBaseUrl(_serverBaseUrl);
 
@@ -341,32 +241,23 @@ namespace TestBuilder.Domain.Steps
             if (LooksLikeGetSerialEndpoint(baseUrl))
             {
                 var endpointUri = new Uri(baseUrl, UriKind.Absolute);
-                var allocationBuilder = new UriBuilder(endpointUri)
+                var endpointBuilder = new UriBuilder(endpointUri)
                 {
                     Path = endpointUri.AbsolutePath.TrimEnd('/'),
-                    Query = BuildAllocationQuery(cpuId)
+                    Query = BuildQuery(cpuId)
                 };
 
-                allocationUrl = allocationBuilder.Uri.AbsoluteUri;
-                lookupUrl = BuildLookupUrl(endpointUri, cpuId);
-                return;
+                return endpointBuilder.Uri.AbsoluteUri;
             }
 
             var baseUri = new Uri(baseUrl, UriKind.Absolute);
-            var allocationBuilderFromBase = new UriBuilder(baseUri)
+            var builder = new UriBuilder(baseUri)
             {
-                Path = BuildEndpointPath(baseUri.AbsolutePath, "getSerialNum"),
-                Query = BuildAllocationQuery(cpuId)
+                Path = BuildEndpointPath(baseUri.AbsolutePath),
+                Query = BuildQuery(cpuId)
             };
 
-            allocationUrl = allocationBuilderFromBase.Uri.AbsoluteUri;
-
-            var lookupBuilder = new UriBuilder(baseUri)
-            {
-                Path = BuildEndpointPath(baseUri.AbsolutePath, "getExistsSerialNum"),
-                Query = BuildLookupQuery(cpuId)
-            };
-            lookupUrl = string.IsNullOrWhiteSpace(cpuId) ? string.Empty : lookupBuilder.Uri.AbsoluteUri;
+            return builder.Uri.AbsoluteUri;
         }
 
         private string ResolveCpuId(TestContext context)
@@ -395,7 +286,7 @@ namespace TestBuilder.Domain.Steps
             return cpuId;
         }
 
-        private string BuildAllocationQuery(string cpuId)
+        private string BuildQuery(string cpuId)
         {
             var query = $"devType={Uri.EscapeDataString(_deviceType)}";
 
@@ -405,29 +296,6 @@ namespace TestBuilder.Domain.Steps
             }
 
             return query;
-        }
-
-        private static string BuildLookupQuery(string cpuId) =>
-            string.IsNullOrWhiteSpace(cpuId)
-                ? string.Empty
-                : $"cpuId={Uri.EscapeDataString(cpuId)}";
-
-        private static string BuildLookupUrl(Uri allocationEndpoint, string cpuId)
-        {
-            if (string.IsNullOrWhiteSpace(cpuId))
-            {
-                return string.Empty;
-            }
-
-            var allocationPath = allocationEndpoint.AbsolutePath.TrimEnd('/');
-            var lastSlash = allocationPath.LastIndexOf('/');
-            var parentPath = lastSlash >= 0 ? allocationPath[..lastSlash] : string.Empty;
-            var builder = new UriBuilder(allocationEndpoint)
-            {
-                Path = $"{parentPath}/getExistsSerialNum",
-                Query = BuildLookupQuery(cpuId)
-            };
-            return builder.Uri.AbsoluteUri;
         }
 
         private static string NormalizeServerBaseUrl(string serverBaseUrl)
@@ -441,7 +309,7 @@ namespace TestBuilder.Domain.Steps
                    uri.AbsolutePath.TrimEnd('/').EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string BuildEndpointPath(string basePath, string endpointName)
+        private static string BuildEndpointPath(string basePath)
         {
             var normalizedBase = string.IsNullOrWhiteSpace(basePath) || basePath == "/"
                 ? string.Empty
@@ -449,23 +317,18 @@ namespace TestBuilder.Domain.Steps
 
             if (normalizedBase.EndsWith("/api/api.svc", StringComparison.OrdinalIgnoreCase))
             {
-                return $"{normalizedBase}/{endpointName}";
+                return $"{normalizedBase}/getSerialNum";
             }
 
             if (normalizedBase.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
             {
-                return $"{normalizedBase}/api.svc/{endpointName}";
+                return $"{normalizedBase}/api.svc/getSerialNum";
             }
 
-            return $"{normalizedBase}/api/api.svc/{endpointName}";
+            return $"{normalizedBase}/api/api.svc/getSerialNum";
         }
 
         private static bool TryParseSerial(string raw, out int serial)
-        {
-            return TryParseNonNegativeSerial(raw, out serial) && serial > 0;
-        }
-
-        private static bool TryParseNonNegativeSerial(string raw, out int serial)
         {
             serial = 0;
             var normalized = (raw ?? string.Empty)
@@ -474,7 +337,7 @@ namespace TestBuilder.Domain.Steps
                 .Trim();
 
             if (int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out serial) &&
-                serial >= 0)
+                serial > 0)
             {
                 return true;
             }
@@ -486,13 +349,13 @@ namespace TestBuilder.Domain.Steps
 
                 if (root.ValueKind == JsonValueKind.Number && root.TryGetInt32(out serial))
                 {
-                    return serial >= 0;
+                    return serial > 0;
                 }
 
                 if (root.ValueKind == JsonValueKind.String &&
                     int.TryParse(root.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out serial))
                 {
-                    return serial >= 0;
+                    return serial > 0;
                 }
             }
             catch (JsonException)

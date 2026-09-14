@@ -157,10 +157,11 @@ timeout `160000`, интервал `5000` мс и `failOnTimeout: true`. Про�
 
 В рабочем PSW-профиле `Get Serial Number` содержит
 `useFixedSerialNumber: false`, а `fixedSerialNumber` отсутствует. Нода выполняет
-production-проверку с фактическим `Dut.cpu_id`: существующий номер используется
-повторно, а новый выдаётся только после подтверждённого ответом `0` отсутствия
-привязки. Отладочный режим остаётся доступен в редакторе ноды, но в этом профиле
-не используется. `Set Pro MAC` использует
+production-запрос с фактическим `Dut.cpu_id`; успешный запрос может выдать новый
+серийный номер. Отладочный режим остаётся доступен в редакторе ноды, но в этом
+профиле не используется. Запрос выполняется через `getSerialNum`, как в
+производственном пути старого Qt; `getExistsSerialNum` не используется.
+`Set Pro MAC` использует
 `batchPath: "set_mac_pro.bat"`, `boardVersion: "PSW+UPS-Box 8x2Pro"`,
 `macVariableName: "Dut.NewMac"`, `timeoutMs: 60000` и `failOnError: true`.
 Относительный путь означает bat рядом с exe; его содержимое и учётные данные
@@ -258,6 +259,11 @@ JSON-deserializer проигнорирует их как неизвестные 
 значения контекста: `SerialNumber`, `SerialShort` и фактически прочитанный после
 перезапуска `Dut.default_mac`. Отсутствующие или несогласованные данные ведут в
 `False`; Print Label не рассчитывает MAC и не использует `SetMac.Timestamp`.
+
+Перед штатным и аварийным `Send Test Report` рабочий профиль содержит
+`Operator Action` с шаблонами `{SerialNumber}`, `{Dut.default_mac}` и
+`{Dut.NewMac}`. Ветка `Отмена` пропускает HTTP POST. Аварийный отчёт дополнительно
+защищён `Check Variable Range` для `SerialNumber = 3200000..3299999`.
 
 Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
 `GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние

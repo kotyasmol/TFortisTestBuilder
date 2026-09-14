@@ -1935,9 +1935,17 @@
             "testType": "production"
           },
           {
+            "id": "5",
+            "type": "Operator Action",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
+          },
+          {
             "id": "3",
             "type": "Send Test Report",
-            "x": 1460,
+            "x": 1920,
             "y": 120,
             "color": "blue",
             "timeoutMs": 10000,
@@ -1953,7 +1961,7 @@
           {
             "id": "4",
             "type": "End",
-            "x": 1920,
+            "x": 2380,
             "y": 120,
             "color": "blue"
           }
@@ -1980,8 +1988,20 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Продолжить",
             "targetNodeId": "3",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Отмена",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "3",
@@ -2299,9 +2319,21 @@
             "color": "blue"
           },
           {
+            "id": "4",
+            "type": "Check Variable Range",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "variableName": "SerialNumber",
+            "min": 3200000,
+            "max": 3299999,
+            "inclusive": true,
+            "failMessage": "Отчёт при ошибке не отправлен: серийный номер не относится к коммутатору PSW+UPS-Box 8x2Pro"
+          },
+          {
             "id": "1",
             "type": "Build Test Report",
-            "x": 540,
+            "x": 1000,
             "y": 120,
             "color": "blue",
             "serialVariableName": "SerialNumber",
@@ -2310,9 +2342,17 @@
             "testType": "production"
           },
           {
+            "id": "5",
+            "type": "Operator Action",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
+          },
+          {
             "id": "2",
             "type": "Send Test Report",
-            "x": 1000,
+            "x": 1920,
             "y": 120,
             "color": "blue",
             "timeoutMs": 10000,
@@ -2328,7 +2368,7 @@
           {
             "id": "3",
             "type": "End",
-            "x": 1460,
+            "x": 2380,
             "y": 120,
             "color": "blue"
           }
@@ -2337,18 +2377,42 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
             "targetNodeId": "1",
             "targetConnector": "In"
           },
           {
+            "sourceNodeId": "4",
+            "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
             "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "1",
             "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Отмена",
             "targetNodeId": "3",
             "targetConnector": "Вход"
           },
