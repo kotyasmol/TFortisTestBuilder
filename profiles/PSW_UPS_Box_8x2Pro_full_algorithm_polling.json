@@ -860,7 +860,7 @@
             "y": 120,
             "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 180000,
+            "timeoutMs": 300000,
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=0..65535\nfirmvare_vers=0..65535\nboot_vers=0..65535",
             "failOnError": true,
@@ -1939,7 +1939,7 @@
             "testType": "production"
           },
           {
-            "id": "5",
+            "id": "3",
             "type": "Operator Action",
             "x": 1460,
             "y": 120,
@@ -1947,7 +1947,7 @@
             "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
           },
           {
-            "id": "3",
+            "id": "4",
             "type": "Send Test Report",
             "x": 1920,
             "y": 120,
@@ -1963,7 +1963,7 @@
             "localReportsDirectory": "reports"
           },
           {
-            "id": "4",
+            "id": "5",
             "type": "End",
             "x": 2380,
             "y": 120,
@@ -1992,25 +1992,25 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "3",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "Отмена",
-            "targetNodeId": "4",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "3",
-            "sourceConnector": "True",
+            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Отмена",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
             "targetConnector": "Вход"
           }
         ]
@@ -2323,19 +2323,19 @@
             "color": "blue"
           },
           {
-            "id": "4",
+            "id": "1",
             "type": "Check Variable Range",
             "x": 540,
             "y": 120,
             "color": "blue",
-            "variableName": "SerialNumber",
             "min": 3200000,
             "max": 3299999,
-            "inclusive": true,
-            "failMessage": "Отчёт при ошибке не отправлен: серийный номер не относится к коммутатору PSW+UPS-Box 8x2Pro"
+            "variableName": "SerialNumber",
+            "failMessage": "Отчёт при ошибке не отправлен: серийный номер не относится к коммутатору PSW+UPS-Box 8x2Pro",
+            "inclusive": true
           },
           {
-            "id": "1",
+            "id": "2",
             "type": "Build Test Report",
             "x": 1000,
             "y": 120,
@@ -2346,7 +2346,7 @@
             "testType": "production"
           },
           {
-            "id": "5",
+            "id": "3",
             "type": "Operator Action",
             "x": 1460,
             "y": 120,
@@ -2354,7 +2354,7 @@
             "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
           },
           {
-            "id": "2",
+            "id": "4",
             "type": "Send Test Report",
             "x": 1920,
             "y": 120,
@@ -2370,7 +2370,7 @@
             "localReportsDirectory": "reports"
           },
           {
-            "id": "3",
+            "id": "5",
             "type": "End",
             "x": 2380,
             "y": 120,
@@ -2381,49 +2381,49 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "4",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
             "targetNodeId": "1",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "4",
-            "sourceConnector": "False",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "5",
-            "sourceConnector": "Отмена",
-            "targetNodeId": "3",
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Отмена",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
             "targetConnector": "Вход"
           }
         ]
