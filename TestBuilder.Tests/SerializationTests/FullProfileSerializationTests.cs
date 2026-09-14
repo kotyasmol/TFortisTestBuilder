@@ -98,11 +98,25 @@ public class FullProfileSerializationTests
             viewModel.RootGraph.Nodes.IndexOf(failureReportSubtest));
         var buildReport = reportSubtest.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Single();
         var sendReport = reportSubtest.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single();
+        var reportConfirmation = reportSubtest.BodyGraph.Nodes
+            .OfType<OperatorActionNodeViewModel>()
+            .Single();
         Assert.Equal("SerialNumber", buildReport.SerialVariableName);
         Assert.Equal("TestReportText", buildReport.ReportVariableName);
         Assert.Equal("production", buildReport.TestType);
         Assert.Equal("TestReportText", sendReport.ReportVariableName);
         Assert.Equal("https://iccid.fort-telecom.ru", sendReport.ServerBaseUrl);
+        Assert.Contains("{SerialNumber}", reportConfirmation.Message);
+        Assert.Contains("{Dut.default_mac}", reportConfirmation.Message);
+        Assert.Contains(
+            reportSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, buildReport) &&
+                          ReferenceEquals(connection.Target.Parent, reportConfirmation));
+        Assert.Contains(
+            reportSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, reportConfirmation) &&
+                          connection.Source.Title == "Продолжить" &&
+                          ReferenceEquals(connection.Target.Parent, sendReport));
         Assert.Contains(
             reportSubtest.BodyGraph.Connections,
             connection => connection.Source.Parent is SelfTestCheckNodeViewModel &&
@@ -116,10 +130,31 @@ public class FullProfileSerializationTests
         var failureSendReport = failureReportSubtest.BodyGraph.Nodes
             .OfType<SendTestReportNodeViewModel>()
             .Single();
+        var failureReportConfirmation = failureReportSubtest.BodyGraph.Nodes
+            .OfType<OperatorActionNodeViewModel>()
+            .Single();
+        var failureSerialGuard = failureReportSubtest.BodyGraph.Nodes
+            .OfType<CheckVariableRangeNodeViewModel>()
+            .Single();
         Assert.Equal("SerialNumber", failureBuildReport.SerialVariableName);
         Assert.Equal("TestReportText", failureBuildReport.ReportVariableName);
         Assert.Equal("TestReportText", failureSendReport.ReportVariableName);
         Assert.Equal("https://iccid.fort-telecom.ru", failureSendReport.ServerBaseUrl);
+        Assert.Equal("SerialNumber", failureSerialGuard.VariableName);
+        Assert.Equal(3200000, failureSerialGuard.Min);
+        Assert.Equal(3299999, failureSerialGuard.Max);
+        Assert.Contains("{SerialNumber}", failureReportConfirmation.Message);
+        Assert.Contains("{Dut.default_mac}", failureReportConfirmation.Message);
+        Assert.Contains(
+            failureReportSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, failureSerialGuard) &&
+                          connection.Source.Title == "True" &&
+                          ReferenceEquals(connection.Target.Parent, failureBuildReport));
+        Assert.Contains(
+            failureReportSubtest.BodyGraph.Connections,
+            connection => ReferenceEquals(connection.Source.Parent, failureReportConfirmation) &&
+                          connection.Source.Title == "Продолжить" &&
+                          ReferenceEquals(connection.Target.Parent, failureSendReport));
         var serialNode = serialSubtest.BodyGraph.Nodes
             .OfType<GetSerialNumberFromServerNodeViewModel>()
             .Single();
