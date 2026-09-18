@@ -66,8 +66,8 @@
     },
     {
       "id": "8", "type": "Check Variable Equality", "x": 3760, "y": 120, "color": "blue",
-      "variableName": "Dut.sensor_0", "expectedValue": "1", "comparisonType": "Number",
-      "failMessage": "Датчик вскрытия с установленной шторкой должен быть замкнут"
+      "variableName": "Dut.sensor_0", "expectedValue": "0", "comparisonType": "Number",
+      "failMessage": "Датчик вскрытия с установленной шторкой: ожидается sensor_0=0 (инвертированная проверка)"
     },
     {
       "id": "9",

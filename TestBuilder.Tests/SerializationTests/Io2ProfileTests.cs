@@ -100,7 +100,7 @@ public class Io2ProfileTests
         // with the existing direct-HTTP seam so this test never opens a browser/DUT.
         var testGraph = WithMockHttp(compiled.StartNode, stand);
         var context = new TestContext(new RegisterState());
-        context.SetVariable("Dut.sensor_0", "1");
+        context.SetVariable("Dut.sensor_0", "0");
         context.SetVariable("Dut.sensor_1", "1"); // A stale success must not pass.
         if (outcome == "cancel")
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new TestExecutor().ExecuteAsync(testGraph, context, cancellation.Token));
@@ -125,6 +125,26 @@ public class Io2ProfileTests
         Assert.Equal(new[] { (1500, 0), (1501, 0) }, stand.Io2Writes.Skip(beforeCleanup));
         Assert.Equal(0, stand.Values[(21, 1501)]);
         if (outcome != "reset-failure") Assert.Equal(0, stand.Values[(21, 1500)]);
+    }
+
+    [Theory]
+    [InlineData(FullProfile, "0", StepResult.True)]
+    [InlineData(FullProfile, "1", StepResult.False)]
+    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "0", StepResult.True)]
+    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "1", StepResult.False)]
+    public async Task TamperCheckUsesInvertedExpectedValue(string file, string actual, StepResult expected)
+    {
+        using var service = new ModbusService();
+        var vm = Load(file, service);
+        var nodes = vm.RootGraph.Nodes.Concat(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+            .SelectMany(n => n.BodyGraph.Nodes));
+        var check = nodes.OfType<CheckVariableEqualityNodeViewModel>().Single(n => n.VariableName == "Dut.sensor_0");
+        Assert.Equal("0", check.ExpectedValue);
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.sensor_0", actual);
+
+        Assert.Equal(expected, await check.CreateStep(NullLogger.Instance).ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(actual, context.GetVariable<string>("Dut.sensor_0"));
     }
 
     [Theory]
