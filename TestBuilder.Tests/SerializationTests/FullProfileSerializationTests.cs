@@ -31,7 +31,7 @@ public class FullProfileSerializationTests
             .Select(node => node.BodyGraph.Connections.Count));
         Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
         var sensors = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => !n.RunOnFailure);
-        Assert.Equal(2, sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
+        Assert.Equal(4, sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
         Assert.DoesNotContain(sensors.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
         var dataTest = viewModel.RootGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
         Assert.Equal(100, dataTest.TargetBandwidthMbps);

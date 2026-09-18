@@ -59,6 +59,19 @@ public class Io2ProfileTests
                 var off = Assert.IsType<ModbusWriteNodeViewModel>(sequence[position + 2]);
                 Assert.Equal(on.Address, off.Address);
                 Assert.Equal(0, off.Value);
+                if (!relay)
+                {
+                    var released = Assert.IsType<WaitVariableUntilNodeViewModel>(sequence[position + 3]);
+                    Assert.Equal($"Dut.sensor_{sensor}", released.VariableName);
+                    Assert.Equal("0", released.ExpectedValue);
+                    Assert.Equal("SelftestSnapshot", released.PollAction);
+                    Assert.Equal("/test.shtml", released.Endpoint);
+                    Assert.Equal(30000, released.RequestTimeoutMs);
+                    Assert.Equal(60000, released.TimeoutMs);
+                    Assert.Equal(1000, released.IntervalMs);
+                    Assert.True(released.FailOnTimeout);
+                    Assert.DoesNotContain(graph.Connections, c => ReferenceEquals(c.Source, released.FalseOut));
+                }
             }
             var cleanup = CleanupGraph(vm);
             var cleanupWrites = cleanup.Nodes.OfType<ModbusWriteNodeViewModel>().Where(n => n.SlaveId == 21).ToArray();
@@ -86,6 +99,7 @@ public class Io2ProfileTests
     [Theory]
     [InlineData("success")]
     [InlineData("web-timeout")]
+    [InlineData("web-release-timeout")]
     [InlineData("cancel")]
     [InlineData("reset-failure")]
     public async Task SensorGraphWaitsForFreshWebStateAndCleanupResetsBothOutputs(string outcome)
@@ -111,8 +125,13 @@ public class Io2ProfileTests
         }
         if (outcome == "success")
         {
-            Assert.Equal(4, stand.HttpCalls);
+            Assert.Equal(8, stand.HttpCalls);
             Assert.Equal(new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0), (1501, 1), (1501, 0) }, stand.Io2Writes);
+        }
+        if (outcome == "web-release-timeout")
+        {
+            Assert.DoesNotContain(stand.Io2Writes, n => n.Address == 1501 && n.Value == 1);
+            Assert.Equal("1", context.GetVariable<string>("Dut.sensor_1"));
         }
         if (outcome == "reset-failure")
         {
@@ -232,6 +251,8 @@ public class Io2ProfileTests
         public List<(int Address, int Value)> Io2Writes { get; } = new();
         public int HttpCalls { get; private set; }
         private int _pollsSinceWrite;
+        private int _webSensor1;
+        private int _webSensor2;
 
         public Task<ushort[]> ReadRegistersAsync(byte slaveId, ushort address, ushort count, CancellationToken cancellationToken = default) =>
             Task.FromResult(new[] { Values.GetValueOrDefault((slaveId, address)) });
@@ -255,9 +276,13 @@ public class Io2ProfileTests
             if (outcome == "cancel") cancellation.Cancel();
             cancellationToken.ThrowIfCancellationRequested();
             var updated = ++_pollsSinceWrite > 1 && outcome != "web-timeout";
-            var first = updated ? Values[(21, 1500)] : 0;
-            var second = updated ? Values[(21, 1501)] : 0;
-            var xml = $"<selftest><default_mac>c0:11:a6:05:00:00</default_mac><init_ok>1</init_ok><dev_type>6</dev_type><firmvare_vers>1</firmvare_vers><boot_vers>0</boot_vers><sensor_1>{first}</sensor_1><sensor_2>{second}</sensor_2></selftest>";
+            if (updated)
+            {
+                if (!(outcome == "web-release-timeout" && Values[(21, 1500)] == 0))
+                    _webSensor1 = Values[(21, 1500)];
+                _webSensor2 = Values[(21, 1501)];
+            }
+            var xml = $"<selftest><default_mac>c0:11:a6:05:00:00</default_mac><init_ok>1</init_ok><dev_type>6</dev_type><firmvare_vers>20c</firmvare_vers><boot_vers>105</boot_vers><sensor_1>{_webSensor1}</sensor_1><sensor_2>{_webSensor2}</sensor_2></selftest>";
             return Task.FromResult(HttpRequestResult.Success(200, xml, TimeSpan.Zero));
         }
 
