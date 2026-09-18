@@ -9,7 +9,7 @@
     },
     {
       "id": "2", "type": "Operator Action", "x": 880, "y": 120, "color": "orange",
-      "text": "ДИАГНОСТИЧЕСКИЙ ЧЕРНОВИК PSW-2G6F+. Это НЕ полный производственный тест: прошивка/DFU, SFP 1 Гбит/с, запись MAC и печать этикеток здесь не выполняются. В конце результат будет НЕ ПРОЙДЕНО. Перед продолжением подтвердите адрес PS3=23, шесть EL60v5=1/3/5/7/9/11, IO-2=21 и IP тестовых карт 192.168.0.2..7. Выходы 1500/1501 должны переключать Sensor1/Sensor2; без подключения второго входа Sensor2 не пройдёт. Датчик крышки (sensor_0) сейчас проверяется только в состоянии 0. Вставьте разъёмы. Продолжить диагностику?"
+      "text": "ДИАГНОСТИЧЕСКИЙ ЧЕРНОВИК PSW-2G6F+. Это НЕ полный производственный тест: прошивка/DFU, SFP 1 Гбит/с, запись MAC и печать этикеток здесь не выполняются. В конце результат будет НЕ ПРОЙДЕНО. Перед продолжением подтвердите адрес PS3=23, шесть EL60v5=1/3/5/7/9/11, IO-2=21 и IP тестовых карт 192.168.0.2..7. Проверяется только сухой контакт Sensor1: 1500=0 — разомкнуто, 1500=1 — замкнуто. Sensor0 и Sensor2 не проверяются. Вставьте разъёмы. Продолжить диагностику?"
     },
     {
       "id": "3", "type": "For Slaves", "x": 1360, "y": 120, "color": "blue",
@@ -65,23 +65,18 @@
       "failOnError": true, "outputPrefix": "Dut"
     },
     {
-      "id": "8", "type": "Check Variable Equality", "x": 3760, "y": 120, "color": "blue",
-      "variableName": "Dut.sensor_0", "expectedValue": "0", "comparisonType": "Number",
-      "failMessage": "Датчик вскрытия с установленной шторкой: ожидается sensor_0=0 (инвертированная проверка)"
-    },
-    {
       "id": "9",
       "type": "Subtest",
       "x": 4240,
       "y": 120,
       "color": "purple",
-      "name": "Sensor1 и Sensor2 — IO-2 / 21",
-      "description": "Sensor1/2: запись IO-2=1 → свежий selftest=1 → запись 0 → свежий selftest=0",
+      "name": "Сухой контакт Sensor1 — IO-2 / 21",
+      "description": "Обнулить IO-2 1500/1501, считать исходную страницу, замкнуть Sensor1 (1500=1), подтвердить sensor_1=1 и разомкнуть (1500=0), как в C++.",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "Sensor1 и Sensor2",
+        "name": "Сухой контакт Sensor1",
         "nodes": [
           {
             "type": "Start",
@@ -151,83 +146,22 @@
             "y": 580
           },
           {
-            "type": "Write Register",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1501,
-            "value": 1,
-            "verifyWrite": true,
-            "id": "6",
-            "x": 1000,
-            "y": 580
-          },
-          {
-            "type": "Wait Variable Until",
-            "variableName": "Dut.sensor_2",
-            "expectedValue": "1",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml",
-            "responseType": "String",
-            "requestTimeoutMs": 30000,
-            "timeoutMs": 60000,
-            "intervalMs": 1000,
-            "failOnTimeout": true,
-            "id": "7",
-            "x": 1460,
-            "y": 580
-          },
-          {
-            "type": "Write Register",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1501,
-            "value": 0,
-            "verifyWrite": true,
-            "id": "8",
-            "x": 1920,
-            "y": 580
-          },
-          {
             "type": "End",
             "id": "9",
-            "x": 540,
-            "y": 1040
+            "x": 2840,
+            "y": 120
           },
           {
-            "type": "Wait Variable Until",
-            "variableName": "Dut.sensor_1",
-            "expectedValue": "0",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml",
-            "responseType": "String",
-            "requestTimeoutMs": 30000,
-            "timeoutMs": 60000,
-            "intervalMs": 1000,
-            "failOnTimeout": true,
+            "type": "Selftest Check",
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 180000,
+            "pollIntervalMs": 5000,
+            "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "failOnError": true,
+            "outputPrefix": "Dut",
             "id": "10",
-            "x": 540,
-            "y": 580
-          },
-          {
-            "type": "Wait Variable Until",
-            "variableName": "Dut.sensor_2",
-            "expectedValue": "0",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml",
-            "responseType": "String",
-            "requestTimeoutMs": 30000,
-            "timeoutMs": 60000,
-            "intervalMs": 1000,
-            "failOnTimeout": true,
-            "id": "11",
-            "x": 80,
-            "y": 1040
+            "x": 1320,
+            "y": 120
           }
         ],
         "connections": [
@@ -246,6 +180,12 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
+            "targetNodeId": "10",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "10",
+            "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "Вход"
           },
@@ -263,36 +203,6 @@
           },
           {
             "sourceNodeId": "5",
-            "sourceConnector": "True",
-            "targetNodeId": "10",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "10",
-            "sourceConnector": "True",
-            "targetNodeId": "6",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "6",
-            "sourceConnector": "True",
-            "targetNodeId": "7",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "7",
-            "sourceConnector": "True",
-            "targetNodeId": "8",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "8",
-            "sourceConnector": "True",
-            "targetNodeId": "11",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "11",
             "sourceConnector": "True",
             "targetNodeId": "9",
             "targetConnector": "Вход"
@@ -606,8 +516,7 @@
     { "sourceNodeId": "5", "sourceConnector": "True", "targetNodeId": "6", "targetConnector": "Вход" },
     { "sourceNodeId": "6", "sourceConnector": "True", "targetNodeId": "17", "targetConnector": "Вход" },
     { "sourceNodeId": "17", "sourceConnector": "Выход", "targetNodeId": "7", "targetConnector": "In" },
-    { "sourceNodeId": "7", "sourceConnector": "True", "targetNodeId": "8", "targetConnector": "In" },
-    { "sourceNodeId": "8", "sourceConnector": "True", "targetNodeId": "9", "targetConnector": "In" },
+    { "sourceNodeId": "7", "sourceConnector": "True", "targetNodeId": "9", "targetConnector": "In" },
     { "sourceNodeId": "9", "sourceConnector": "Success", "targetNodeId": "10", "targetConnector": "In" },
     { "sourceNodeId": "10", "sourceConnector": "True", "targetNodeId": "11", "targetConnector": "In" },
     { "sourceNodeId": "11", "sourceConnector": "True", "targetNodeId": "12", "targetConnector": "Вход" },

@@ -14,7 +14,7 @@
       "x": 540,
       "y": 120,
       "color": "orange",
-      "text": "PSW-2G6F+, полный алгоритм БЕЗ прошивки/DFU. Подтвердите подключение: PS3=23; EL60v5=1,3,5,7,9,11; IO-2=21. Выходы IO-2 1500/1501 должны переключать входы Sensor1/Sensor2; без подключения второго входа Sensor2 не пройдёт. Датчик крышки (sensor_0) сейчас проверяется отдельно только в состоянии 0. Медные пары стенда: 192.168.0.2/.3, .4/.5, .6/.7 (100 Мбит/с); SFP: .8/.9 (1 Гбит/с), оба конца и модули должны поддерживать гигабит. Подключите порты. Продолжить?"
+      "text": "PSW-2G6F+, полный алгоритм БЕЗ прошивки/DFU. Подтвердите подключение: PS3=23; EL60v5=1,3,5,7,9,11; IO-2=21. Проверяется только сухой контакт Sensor1: выход IO-2 1500 размыкает его при 0 и замыкает при 1. Sensor0 и Sensor2 не проверяются. Медные пары стенда: 192.168.0.2/.3, .4/.5, .6/.7 (100 Мбит/с); SFP: .8/.9 (1 Гбит/с), оба конца и модули должны поддерживать гигабит. Подключите порты. Продолжить?"
     },
     {
       "id": "2",
@@ -452,13 +452,13 @@
       "x": 1920,
       "y": 120,
       "color": "blue",
-      "name": "3. Датчик вскрытия, Sensor1 и Sensor2",
-      "description": "IO-2 slave 21: исходный ноль 1500/1501; для Sensor1 и Sensor2 запись 1 → свежий selftest=1 → запись 0 → свежий selftest=0.",
+      "name": "3. Сухой контакт Sensor1",
+      "description": "IO-2 slave 21: обнулить OUT1/OUT2, считать исходную страницу, замкнуть OUT1 (1500=1), подтвердить sensor_1=1 по новой странице и разомкнуть OUT1 (1500=0), как в C++.",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "3. Датчик вскрытия, Sensor1 и Sensor2",
+        "name": "3. Сухой контакт Sensor1",
         "nodes": [
           {
             "id": "0",
@@ -493,14 +493,16 @@
           },
           {
             "id": "3",
-            "type": "Check Variable Equality",
+            "type": "Selftest Check",
             "x": 1460,
             "y": 120,
             "color": "blue",
-            "expectedValue": "0",
-            "variableName": "Dut.sensor_0",
-            "comparisonType": "Number",
-            "failMessage": "Датчик крышки: ожидается sensor_0=0 (инвертированная проверка)"
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 180000,
+            "pollIntervalMs": 5000,
+            "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "failOnError": true,
+            "outputPrefix": "Dut"
           },
           {
             "id": "4",
@@ -545,89 +547,11 @@
             "verifyWrite": true
           },
           {
-            "id": "7",
-            "type": "Write Register",
-            "x": 4080,
-            "y": 112,
-            "color": "blue",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1501,
-            "value": 1,
-            "verifyWrite": true
-          },
-          {
-            "id": "8",
-            "type": "Wait Variable Until",
-            "x": 4656,
-            "y": 112,
-            "color": "blue",
-            "expectedValue": "1",
-            "timeoutMs": 60000,
-            "baseUrl": "http://192.168.0.1",
-            "responseType": "String",
-            "variableName": "Dut.sensor_2",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "requestTimeoutMs": 30000,
-            "intervalMs": 1000,
-            "failOnTimeout": true,
-            "endpoint": "/test.shtml"
-          },
-          {
-            "id": "9",
-            "type": "Write Register",
-            "x": 5328,
-            "y": 112,
-            "color": "blue",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1501,
-            "value": 0,
-            "verifyWrite": true
-          },
-          {
             "id": "10",
             "type": "End",
-            "x": 6464,
-            "y": 112,
-            "color": "blue"
-          },
-          {
-            "id": "11",
-            "type": "Wait Variable Until",
             "x": 3616,
             "y": 112,
-            "color": "blue",
-            "variableName": "Dut.sensor_1",
-            "expectedValue": "0",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml",
-            "responseType": "String",
-            "requestTimeoutMs": 30000,
-            "timeoutMs": 60000,
-            "intervalMs": 1000,
-            "failOnTimeout": true
-          },
-          {
-            "id": "12",
-            "type": "Wait Variable Until",
-            "x": 5792,
-            "y": 112,
-            "color": "blue",
-            "variableName": "Dut.sensor_2",
-            "expectedValue": "0",
-            "comparisonType": "Number",
-            "pollAction": "SelftestSnapshot",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml",
-            "responseType": "String",
-            "requestTimeoutMs": 30000,
-            "timeoutMs": 60000,
-            "intervalMs": 1000,
-            "failOnTimeout": true
+            "color": "blue"
           }
         ],
         "connections": [
@@ -669,36 +593,6 @@
           },
           {
             "sourceNodeId": "6",
-            "sourceConnector": "True",
-            "targetNodeId": "11",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "11",
-            "sourceConnector": "True",
-            "targetNodeId": "7",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "7",
-            "sourceConnector": "True",
-            "targetNodeId": "8",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "8",
-            "sourceConnector": "True",
-            "targetNodeId": "9",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "9",
-            "sourceConnector": "True",
-            "targetNodeId": "12",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "12",
             "sourceConnector": "True",
             "targetNodeId": "10",
             "targetConnector": "Вход"

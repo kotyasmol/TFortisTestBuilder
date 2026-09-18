@@ -38,11 +38,23 @@ public class Io2ProfileTests
                 Assert.False(n.UseCurrentSlaveId);
                 Assert.True(n.VerifyWrite);
             });
-            Assert.Equal(new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0), (1501, 1), (1501, 0) },
+            var expectedWrites = relay
+                ? new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0), (1501, 1), (1501, 0) }
+                : new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0) };
+            Assert.Equal(expectedWrites,
                 writes.Where(n => n.Address is 1500 or 1501).Select(n => ((int)n.Address, (int)n.Value)));
             Assert.IsType<ModbusWriteNodeViewModel>(sequence[1]);
             Assert.IsType<ModbusWriteNodeViewModel>(sequence[2]);
-            foreach (var sensor in new[] { 1, 2 })
+            if (!relay)
+            {
+                var baseline = Assert.IsType<SelfTestCheckNodeViewModel>(sequence[3]);
+                Assert.Equal("http://192.168.0.1/test.shtml", baseline.Url);
+                Assert.Contains("init_ok=1..1", baseline.ValidationRules);
+                Assert.Contains("dev_type=6..6", baseline.ValidationRules);
+                Assert.DoesNotContain(sequence, n => n is CheckVariableEqualityNodeViewModel);
+                Assert.Equal(new[] { "Dut.sensor_1" }, sequence.OfType<WaitVariableUntilNodeViewModel>().Select(n => n.VariableName));
+            }
+            foreach (var sensor in relay ? new[] { 1, 2 } : new[] { 1 })
             {
                 var on = writes.Single(n => n.Address == 1499 + sensor && n.Value == 1);
                 var position = sequence.IndexOf(on);
@@ -59,19 +71,6 @@ public class Io2ProfileTests
                 var off = Assert.IsType<ModbusWriteNodeViewModel>(sequence[position + 2]);
                 Assert.Equal(on.Address, off.Address);
                 Assert.Equal(0, off.Value);
-                if (!relay)
-                {
-                    var released = Assert.IsType<WaitVariableUntilNodeViewModel>(sequence[position + 3]);
-                    Assert.Equal($"Dut.sensor_{sensor}", released.VariableName);
-                    Assert.Equal("0", released.ExpectedValue);
-                    Assert.Equal("SelftestSnapshot", released.PollAction);
-                    Assert.Equal("/test.shtml", released.Endpoint);
-                    Assert.Equal(30000, released.RequestTimeoutMs);
-                    Assert.Equal(60000, released.TimeoutMs);
-                    Assert.Equal(1000, released.IntervalMs);
-                    Assert.True(released.FailOnTimeout);
-                    Assert.DoesNotContain(graph.Connections, c => ReferenceEquals(c.Source, released.FalseOut));
-                }
             }
             var cleanup = CleanupGraph(vm);
             var cleanupWrites = cleanup.Nodes.OfType<ModbusWriteNodeViewModel>().Where(n => n.SlaveId == 21).ToArray();
@@ -99,7 +98,6 @@ public class Io2ProfileTests
     [Theory]
     [InlineData("success")]
     [InlineData("web-timeout")]
-    [InlineData("web-release-timeout")]
     [InlineData("cancel")]
     [InlineData("reset-failure")]
     public async Task SensorGraphWaitsForFreshWebStateAndCleanupResetsBothOutputs(string outcome)
@@ -114,7 +112,6 @@ public class Io2ProfileTests
         // with the existing direct-HTTP seam so this test never opens a browser/DUT.
         var testGraph = WithMockHttp(compiled.StartNode, stand);
         var context = new TestContext(new RegisterState());
-        context.SetVariable("Dut.sensor_0", "0");
         context.SetVariable("Dut.sensor_1", "1"); // A stale success must not pass.
         if (outcome == "cancel")
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new TestExecutor().ExecuteAsync(testGraph, context, cancellation.Token));
@@ -125,12 +122,8 @@ public class Io2ProfileTests
         }
         if (outcome == "success")
         {
-            Assert.Equal(8, stand.HttpCalls);
-            Assert.Equal(new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0), (1501, 1), (1501, 0) }, stand.Io2Writes);
-        }
-        if (outcome == "web-release-timeout")
-        {
-            Assert.DoesNotContain(stand.Io2Writes, n => n.Address == 1501 && n.Value == 1);
+            Assert.Equal(3, stand.HttpCalls);
+            Assert.Equal(new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0) }, stand.Io2Writes);
             Assert.Equal("1", context.GetVariable<string>("Dut.sensor_1"));
         }
         if (outcome == "reset-failure")
@@ -147,23 +140,19 @@ public class Io2ProfileTests
     }
 
     [Theory]
-    [InlineData(FullProfile, "0", StepResult.True)]
-    [InlineData(FullProfile, "1", StepResult.False)]
-    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "0", StepResult.True)]
-    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "1", StepResult.False)]
-    public async Task TamperCheckUsesInvertedExpectedValue(string file, string actual, StepResult expected)
+    [InlineData(FullProfile)]
+    [InlineData("PSW_2G6F_plus_diagnostic_draft.json")]
+    public void PswProfilesCheckOnlySensor1DryContact(string file)
     {
         using var service = new ModbusService();
         var vm = Load(file, service);
         var nodes = vm.RootGraph.Nodes.Concat(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
-            .SelectMany(n => n.BodyGraph.Nodes));
-        var check = nodes.OfType<CheckVariableEqualityNodeViewModel>().Single(n => n.VariableName == "Dut.sensor_0");
-        Assert.Equal("0", check.ExpectedValue);
-        var context = new TestContext(new RegisterState());
-        context.SetVariable("Dut.sensor_0", actual);
-
-        Assert.Equal(expected, await check.CreateStep(NullLogger.Instance).ExecuteAsync(context, CancellationToken.None));
-        Assert.Equal(actual, context.GetVariable<string>("Dut.sensor_0"));
+            .SelectMany(n => n.BodyGraph.Nodes)).ToArray();
+        Assert.DoesNotContain(nodes.OfType<CheckVariableEqualityNodeViewModel>(), n =>
+            n.VariableName is "Dut.sensor_0" or "Dut.sensor_1" or "Dut.sensor_2");
+        Assert.DoesNotContain(nodes.OfType<WaitVariableUntilNodeViewModel>(), n =>
+            n.VariableName is "Dut.sensor_0" or "Dut.sensor_2");
+        Assert.DoesNotContain(nodes.OfType<ModbusWriteNodeViewModel>(), n => n.SlaveId == 21 && n.Address == 1501 && n.Value == 1);
     }
 
     [Theory]
@@ -230,11 +219,16 @@ public class Io2ProfileTests
         {
             if (node == null) return null;
             if (copies.TryGetValue(node, out var existing)) return existing;
-            var step = node.Source is WaitVariableUntilNodeViewModel wait
-                ? new WaitVariableUntilStep(stand, NullLogger.Instance, wait.VariableName, wait.ExpectedValue,
-                    wait.ComparisonType, wait.PollAction, wait.BaseUrl, wait.Endpoint, wait.ResponseType,
-                    100, 500, 1, wait.FailOnTimeout, useBrowserForSelftest: false)
-                : node.Step;
+            ITestStep? step = node.Source switch
+            {
+                WaitVariableUntilNodeViewModel wait => new WaitVariableUntilStep(stand, NullLogger.Instance,
+                    wait.VariableName, wait.ExpectedValue, wait.ComparisonType, wait.PollAction, wait.BaseUrl,
+                    wait.Endpoint, wait.ResponseType, 100, 500, 1, wait.FailOnTimeout, useBrowserForSelftest: false),
+                SelfTestCheckNodeViewModel selftest => new SelfTestCheckStep(stand, NullLogger.Instance,
+                    selftest.Url, 500, selftest.OutputPrefix, selftest.ValidationRules, selftest.FailOnError,
+                    useBrowser: false, pollIntervalMs: 100, enforceMinimumDeviceReadyTimeout: false),
+                _ => node.Step
+            };
             var copy = new TestNode(step, node.Source);
             copies.Add(node, copy);
             copy.Next = Copy(node.Next);
@@ -278,8 +272,7 @@ public class Io2ProfileTests
             var updated = ++_pollsSinceWrite > 1 && outcome != "web-timeout";
             if (updated)
             {
-                if (!(outcome == "web-release-timeout" && Values[(21, 1500)] == 0))
-                    _webSensor1 = Values[(21, 1500)];
+                _webSensor1 = Values[(21, 1500)];
                 _webSensor2 = Values[(21, 1501)];
             }
             var xml = $"<selftest><default_mac>c0:11:a6:05:00:00</default_mac><init_ok>1</init_ok><dev_type>6</dev_type><firmvare_vers>20c</firmvare_vers><boot_vers>105</boot_vers><sensor_1>{_webSensor1}</sensor_1><sensor_2>{_webSensor2}</sensor_2></selftest>";

@@ -23,15 +23,15 @@ public class FullProfileSerializationTests
         var name = GraphSerializer.Deserialize(File.ReadAllText(profilePath), viewModel);
 
         Assert.Contains("диагностический черновик", name);
-        Assert.Equal(18, viewModel.RootGraph.Nodes.Count);
-        Assert.Equal(16, viewModel.RootGraph.Connections.Count);
+        Assert.Equal(17, viewModel.RootGraph.Nodes.Count);
+        Assert.Equal(15, viewModel.RootGraph.Connections.Count);
         Assert.Equal(20000, viewModel.RootGraph.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
         Assert.Equal(new[] { 5, 5, 3, 5 }, viewModel.RootGraph.Nodes
             .OfType<ForEachSlaveNodeViewModel>()
             .Select(node => node.BodyGraph.Connections.Count));
         Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
         var sensors = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => !n.RunOnFailure);
-        Assert.Equal(4, sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
+        Assert.Single(sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>());
         Assert.DoesNotContain(sensors.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
         var dataTest = viewModel.RootGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
         Assert.Equal(100, dataTest.TargetBandwidthMbps);
