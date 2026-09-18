@@ -56,7 +56,7 @@ public class Psw2G6FProfileTests
             Assert.DoesNotContain("firmvare_vers", n.ValidationRules);
         });
         Assert.DoesNotContain(nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
-        Assert.Equal(2, nodes.OfType<WaitVariableUntilNodeViewModel>().Count(n => n.VariableName.StartsWith("Dut.sensor_")));
+        Assert.Equal(4, nodes.OfType<WaitVariableUntilNodeViewModel>().Count(n => n.VariableName.StartsWith("Dut.sensor_")));
         var data = Assert.Single(nodes.OfType<RunDataTestNodeViewModel>());
         Assert.True(data.AllowGigabit);
         Assert.Equal(4, data.PortsText.Split('\n').Length);

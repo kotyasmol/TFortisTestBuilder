@@ -9,7 +9,7 @@
     },
     {
       "id": "2", "type": "Operator Action", "x": 880, "y": 120, "color": "orange",
-      "text": "ДИАГНОСТИЧЕСКИЙ ЧЕРНОВИК PSW-2G6F+. Это НЕ полный производственный тест: прошивка/DFU, SFP 1 Гбит/с, запись MAC и печать этикеток здесь не выполняются. В конце результат будет НЕ ПРОЙДЕНО. Перед продолжением подтвердите адрес PS3=23, шесть EL60v5=1/3/5/7/9/11, IO-2=21 и IP тестовых карт 192.168.0.2..7; установите шторку датчика вскрытия и вставьте разъёмы. Продолжить диагностику?"
+      "text": "ДИАГНОСТИЧЕСКИЙ ЧЕРНОВИК PSW-2G6F+. Это НЕ полный производственный тест: прошивка/DFU, SFP 1 Гбит/с, запись MAC и печать этикеток здесь не выполняются. В конце результат будет НЕ ПРОЙДЕНО. Перед продолжением подтвердите адрес PS3=23, шесть EL60v5=1/3/5/7/9/11, IO-2=21 и IP тестовых карт 192.168.0.2..7. Выходы 1500/1501 должны переключать Sensor1/Sensor2; без подключения второго входа Sensor2 не пройдёт. Датчик крышки (sensor_0) сейчас проверяется только в состоянии 0. Вставьте разъёмы. Продолжить диагностику?"
     },
     {
       "id": "3", "type": "For Slaves", "x": 1360, "y": 120, "color": "blue",
@@ -76,7 +76,7 @@
       "y": 120,
       "color": "purple",
       "name": "Sensor1 и Sensor2 — IO-2 / 21",
-      "description": "Запись 1500/1501 → ожидание свежего selftest → сброс выхода",
+      "description": "Sensor1/2: запись IO-2=1 → свежий selftest=1 → запись 0 → свежий selftest=0",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -158,7 +158,7 @@
             "value": 1,
             "verifyWrite": true,
             "id": "6",
-            "x": 540,
+            "x": 1000,
             "y": 580
           },
           {
@@ -175,7 +175,7 @@
             "intervalMs": 1000,
             "failOnTimeout": true,
             "id": "7",
-            "x": 1000,
+            "x": 1460,
             "y": 580
           },
           {
@@ -186,14 +186,48 @@
             "value": 0,
             "verifyWrite": true,
             "id": "8",
-            "x": 1460,
+            "x": 1920,
             "y": 580
           },
           {
             "type": "End",
             "id": "9",
-            "x": 1920,
+            "x": 540,
+            "y": 1040
+          },
+          {
+            "type": "Wait Variable Until",
+            "variableName": "Dut.sensor_1",
+            "expectedValue": "0",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "baseUrl": "http://192.168.0.1",
+            "endpoint": "/test.shtml",
+            "responseType": "String",
+            "requestTimeoutMs": 30000,
+            "timeoutMs": 60000,
+            "intervalMs": 1000,
+            "failOnTimeout": true,
+            "id": "10",
+            "x": 540,
             "y": 580
+          },
+          {
+            "type": "Wait Variable Until",
+            "variableName": "Dut.sensor_2",
+            "expectedValue": "0",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "baseUrl": "http://192.168.0.1",
+            "endpoint": "/test.shtml",
+            "responseType": "String",
+            "requestTimeoutMs": 30000,
+            "timeoutMs": 60000,
+            "intervalMs": 1000,
+            "failOnTimeout": true,
+            "id": "11",
+            "x": 80,
+            "y": 1040
           }
         ],
         "connections": [
@@ -230,6 +264,12 @@
           {
             "sourceNodeId": "5",
             "sourceConnector": "True",
+            "targetNodeId": "10",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "10",
+            "sourceConnector": "True",
             "targetNodeId": "6",
             "targetConnector": "Вход"
           },
@@ -247,6 +287,12 @@
           },
           {
             "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "11",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "11",
             "sourceConnector": "True",
             "targetNodeId": "9",
             "targetConnector": "Вход"
