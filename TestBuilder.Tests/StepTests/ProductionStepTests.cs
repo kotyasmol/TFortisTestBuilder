@@ -812,6 +812,94 @@ public class ProductionStepTests
         Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
     }
 
+    [Theory]
+    [InlineData("sensor_1")]
+    [InlineData("sensor_2")]
+    public async Task WaitVariableUntilStep_SelftestSnapshotAcceptsHexFirmwareWhileWaitingForSensor(string sensorName)
+    {
+        string Snapshot(int sensorValue) => $"""
+            <selftest>
+              <default_mac>c0:11:a6:05:00:00</default_mac>
+              <init_ok>1</init_ok>
+              <dev_type>6</dev_type>
+              <firmvare_vers>20c</firmvare_vers>
+              <boot_vers>10a</boot_vers>
+              <{sensorName}>{sensorValue}</{sensorName}>
+            </selftest>
+            """;
+
+        var service = new QueueHttpService(
+            HttpRequestResult.Success(200, Snapshot(0), TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, Snapshot(1), TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable($"Dut.{sensorName}", "1");
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            $"Dut.{sensorName}",
+            "1",
+            VariableComparisonType.Number,
+            "SelftestSnapshot",
+            "http://192.168.0.1",
+            "/test.shtml",
+            HttpResponseValueType.String,
+            1000,
+            1000,
+            1,
+            true,
+            useBrowserForSelftest: false);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.True, result);
+        Assert.Equal(2, service.RequestedUrls.Count);
+        Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
+        Assert.Equal("1", context.GetVariable<string>($"Dut.{sensorName}"));
+        Assert.Equal("20c", context.GetVariable<string>("Dut.firmvare_vers"));
+        Assert.Equal(2, context.GetVariable<int>("SelfTest.CheckedRuleCount"));
+        Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
+    }
+
+    [Fact]
+    public async Task WaitVariableUntilStep_SelftestSnapshotRejectsInvalidInitializationDespiteMatchingSensor()
+    {
+        const string snapshot = """
+            <selftest>
+              <default_mac>c0:11:a6:05:00:00</default_mac>
+              <init_ok>0</init_ok>
+              <dev_type>6</dev_type>
+              <firmvare_vers>20c</firmvare_vers>
+              <sensor_1>1</sensor_1>
+            </selftest>
+            """;
+        var service = new CapturingHttpService(
+            HttpRequestResult.Success(200, snapshot, TimeSpan.FromMilliseconds(1)));
+        var context = new TestContext(new RegisterState());
+        var step = new WaitVariableUntilStep(
+            service,
+            NullLogger.Instance,
+            "Dut.sensor_1",
+            "1",
+            VariableComparisonType.Number,
+            "SelftestSnapshot",
+            "http://192.168.0.1",
+            "/test.shtml",
+            HttpResponseValueType.String,
+            1000,
+            25,
+            10,
+            true,
+            useBrowserForSelftest: false);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(StepResult.False, result);
+        Assert.True(service.Calls > 0);
+        Assert.Equal(1, context.GetVariable<int>("SelfTest.FailedRuleCount"));
+        Assert.False(context.GetVariable<bool>("WaitVariable.Passed"));
+        Assert.Contains("init_ok", context.GetVariable<string>("WaitVariable.Error"));
+    }
+
     [Fact]
     public async Task WaitVariableUntilStep_SelftestSnapshotWaitsUntilNumberEntersRange()
     {

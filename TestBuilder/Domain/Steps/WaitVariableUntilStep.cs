@@ -10,6 +10,11 @@ namespace TestBuilder.Domain.Steps
 {
     public sealed class WaitVariableUntilStep : ITestStep
     {
+        // A snapshot poll checks that the page is ready; the requested variable is
+        // compared below. Firmware versions may be hexadecimal (for example 20c),
+        // so the generic numeric version rules must not block sensor polling.
+        private const string SnapshotValidationRules = "init_ok=1..1\ndev_type=0..65535";
+
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
         private readonly string _variableName;
@@ -147,7 +152,7 @@ namespace TestBuilder.Domain.Steps
                     snapshotUrl,
                     _requestTimeoutMs,
                     outputPrefix,
-                    SelfTestCheckStep.DefaultValidationRules,
+                    SnapshotValidationRules,
                     failOnError: false,
                     useBrowser: _useBrowserForSelftest,
                     pollIntervalMs: _intervalMs,
