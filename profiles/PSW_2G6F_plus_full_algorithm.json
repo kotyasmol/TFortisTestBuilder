@@ -1,5 +1,5 @@
-﻿{
-  "name": "PSW_2G6F_plus_full_algorithm",
+{
+  "name": "PSW-2G6F+ — полный алгоритм без прошивки и DFU",
   "nodes": [
     {
       "id": "0",
@@ -500,7 +500,7 @@
             "expectedValue": "0",
             "variableName": "Dut.sensor_0",
             "comparisonType": "Number",
-            "failMessage": "Датчик вскрытия с установленной шторкой: ожидается sensor_0=0 (инвертированная проверка)"
+            "failMessage": "Датчик крышки: ожидается sensor_0=0 (инвертированная проверка)"
           },
           {
             "id": "4",
@@ -547,26 +547,19 @@
           {
             "id": "7",
             "type": "Write Register",
-            "x": 3616,
+            "x": 4080,
             "y": 112,
             "color": "blue",
             "slaveId": 21,
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 1,
-<<<<<<< HEAD
             "verifyWrite": true
-=======
-            "verifyWrite": true,
-            "id": "7",
-            "x": 1460,
-            "y": 580
->>>>>>> 689ab63131a7df6ea493bda7beff46f1588f4d70
           },
           {
             "id": "8",
             "type": "Wait Variable Until",
-            "x": 4080,
+            "x": 4656,
             "y": 112,
             "color": "blue",
             "expectedValue": "1",
@@ -579,46 +572,33 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 1000,
             "failOnTimeout": true,
-<<<<<<< HEAD
             "endpoint": "/test.shtml"
-=======
-            "id": "8",
-            "x": 1920,
-            "y": 580
->>>>>>> 689ab63131a7df6ea493bda7beff46f1588f4d70
           },
           {
             "id": "9",
             "type": "Write Register",
-            "x": 4656,
+            "x": 5328,
             "y": 112,
             "color": "blue",
             "slaveId": 21,
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 0,
-<<<<<<< HEAD
             "verifyWrite": true
-=======
-            "verifyWrite": true,
-            "id": "9",
-            "x": 80,
-            "y": 1040
->>>>>>> 689ab63131a7df6ea493bda7beff46f1588f4d70
           },
           {
             "id": "10",
-<<<<<<< HEAD
             "type": "End",
-            "x": 5184,
+            "x": 6464,
             "y": 112,
             "color": "blue"
-=======
-            "x": 1000,
-            "y": 1040
           },
           {
+            "id": "11",
             "type": "Wait Variable Until",
+            "x": 3616,
+            "y": 112,
+            "color": "blue",
             "variableName": "Dut.sensor_1",
             "expectedValue": "0",
             "comparisonType": "Number",
@@ -629,13 +609,14 @@
             "requestTimeoutMs": 30000,
             "timeoutMs": 60000,
             "intervalMs": 1000,
-            "failOnTimeout": true,
-            "id": "11",
-            "x": 1000,
-            "y": 580
+            "failOnTimeout": true
           },
           {
+            "id": "12",
             "type": "Wait Variable Until",
+            "x": 5792,
+            "y": 112,
+            "color": "blue",
             "variableName": "Dut.sensor_2",
             "expectedValue": "0",
             "comparisonType": "Number",
@@ -646,11 +627,7 @@
             "requestTimeoutMs": 30000,
             "timeoutMs": 60000,
             "intervalMs": 1000,
-            "failOnTimeout": true,
-            "id": "12",
-            "x": 540,
-            "y": 1040
->>>>>>> 689ab63131a7df6ea493bda7beff46f1588f4d70
+            "failOnTimeout": true
           }
         ],
         "connections": [
@@ -826,7 +803,7 @@
       "allowedLossPercent": 1,
       "allowedTxDeficitPercent": 2,
       "bidirectional": true,
-      "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nsfp6-7,192.168.0.8,192.168.0.9,1000"
+      "portsText": "port0-1,192.168.0.2,192.168.0.3,100\nport2-3,192.168.0.4,192.168.0.5,100\nport4-5,192.168.0.6,192.168.0.7,100\nsfp6-7,192.168.0.8,192.168.0.9,1000"
     },
     {
       "id": "7",
@@ -863,8 +840,7 @@
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "deviceType": "PSW-2G6F+",
             "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false,
-            "fixedSerialNumber": 3200428
+            "useFixedSerialNumber": false
           },
           {
             "id": "2",
