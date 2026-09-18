@@ -9,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Channels;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
 
@@ -52,6 +53,7 @@ namespace TestBuilder.Domain.Steps
         private readonly IReadOnlyList<DataTestPortConfig> _ports;
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
+        private readonly bool _allowGigabit;
 
         public RunDataTestStep(
             ILogger logger,
@@ -69,7 +71,8 @@ namespace TestBuilder.Domain.Steps
             bool bidirectional,
             IEnumerable<DataTestPortConfig> ports,
             string outputVariableName,
-            bool failOnError)
+            bool failOnError,
+            bool allowGigabit = false)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mode = string.IsNullOrWhiteSpace(mode) ? "SoftwarePcap" : mode.Trim();
@@ -77,7 +80,8 @@ namespace TestBuilder.Domain.Steps
             _packetSizeBytes = Math.Max(MinEthernetFrameLength, packetSizeBytes);
             _udpPort = udpPort <= 0 ? 43962 : udpPort;
             _maxPortTestTimeMs = Math.Max(1, maxPortTestTimeMs);
-            _targetBandwidthMbps = NormalizeBandwidth(targetBandwidthMbps);
+            _allowGigabit = allowGigabit;
+            _targetBandwidthMbps = NormalizeBandwidth(targetBandwidthMbps, allowGigabit);
             _durationMs = Math.Max(100, durationMs);
             _warmupMs = Math.Max(0, warmupMs);
             _interPairDelayMs = Math.Max(0, interPairDelayMs);
@@ -105,7 +109,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{_outputVariableName}.AllowedLossPercent", _allowedLossPercent);
             context.SetVariable($"{_outputVariableName}.AllowedTxDeficitPercent", _allowedTxDeficitPercent);
             context.SetVariable($"{_outputVariableName}.Bidirectional", _bidirectional);
-            context.SetVariable($"{_outputVariableName}.BandwidthLimitMbps", MaximumSupportedBandwidthMbps);
+            context.SetVariable($"{_outputVariableName}.BandwidthLimitMbps", _allowGigabit ? 1000 : MaximumSupportedBandwidthMbps);
 
             if (_ports.Count == 0)
             {
@@ -219,13 +223,13 @@ namespace TestBuilder.Domain.Steps
             }
 
             var requestedBandwidthMbps = port.TargetBandwidthMbps ?? _targetBandwidthMbps;
-            var targetBandwidthMbps = NormalizeBandwidth(requestedBandwidthMbps);
+            var targetBandwidthMbps = NormalizeBandwidth(requestedBandwidthMbps, _allowGigabit);
 
             if (requestedBandwidthMbps != targetBandwidthMbps)
             {
                 _logger.Warning(
                     $"DataTest {port.Name}: target {requestedBandwidthMbps} Mbps ограничен до {targetBandwidthMbps} Mbps, " +
-                    $"потому что текущая нода предназначена для 100-Мбит портов.");
+                    $"лимит выбранного режима: {(_allowGigabit ? 1000 : 100)} Mbps.");
             }
 
             var linkError = ValidateLinkSpeed(inNetworkInterface, inIp, targetBandwidthMbps) ??
@@ -596,7 +600,7 @@ namespace TestBuilder.Domain.Steps
         {
             if (device is PcapDevice pcapDevice && IsNativeSendQueueAvailable())
             {
-                return SendWithNpcapQueue(
+                return await SendWithNpcapQueueAsync(
                     pcapDevice,
                     packet,
                     targetBandwidthMbps,
@@ -614,7 +618,7 @@ namespace TestBuilder.Domain.Steps
                 cancellationToken);
         }
 
-        private static PacedSendResult SendWithNpcapQueue(
+        private static async Task<PacedSendResult> SendWithNpcapQueueAsync(
             PcapDevice device,
             byte[] packet,
             int targetBandwidthMbps,
@@ -624,76 +628,108 @@ namespace TestBuilder.Domain.Steps
         {
             var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length);
-            var queues = new List<SendQueuePlan>();
+            // Bound native memory independently of test duration. At 1 Gbit/s a
+            // complete five-second prebuilt test would otherwise occupy ~640 MB.
+            var chunkMs = targetBandwidthMbps > 100 ? 100 : SendQueueChunkMs;
+            var queues = Channel.CreateBounded<SendQueuePlan>(new BoundedChannelOptions(2)
+            {
+                SingleReader = true,
+                SingleWriter = true,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            using var preparationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var preparationToken = preparationCts.Token;
+            var producer = Task.Run(async () =>
+            {
+                try
+                {
+                    for (var chunkStartMs = 0; chunkStartMs < durationMs; chunkStartMs += chunkMs)
+                    {
+                        preparationToken.ThrowIfCancellationRequested();
+                        var chunkEndMs = Math.Min(durationMs, chunkStartMs + chunkMs);
+                        var startSequence = Math.Min(
+                            targetPackets,
+                            (int)Math.Round(packetsPerSecond * chunkStartMs / 1000.0, MidpointRounding.AwayFromZero));
+                        var endSequence = chunkEndMs >= durationMs
+                            ? targetPackets
+                            : Math.Min(
+                                targetPackets,
+                                (int)Math.Round(packetsPerSecond * chunkEndMs / 1000.0, MidpointRounding.AwayFromZero));
+                        var packetCount = Math.Max(0, endSequence - startSequence);
+
+                        if (packetCount == 0)
+                        {
+                            continue;
+                        }
+
+                        var queueCapacity = checked(packetCount * (packet.Length + 64));
+                        var queue = new SendQueue(queueCapacity);
+                        var transferred = false;
+                        try
+                        {
+                            for (var sequence = startSequence; sequence < endSequence; sequence++)
+                            {
+                                preparationToken.ThrowIfCancellationRequested();
+                                WriteProbeIdentity(packet, runId, sequence);
+                                var relativeMicroseconds = (int)Math.Round(
+                                    (sequence - startSequence) * 1_000_000.0 / packetsPerSecond,
+                                    MidpointRounding.AwayFromZero);
+
+                                if (!queue.Add(
+                                        packet,
+                                        relativeMicroseconds / 1_000_000,
+                                        relativeMicroseconds % 1_000_000))
+                                {
+                                    throw new InvalidOperationException("Не удалось подготовить очередь Npcap для DataTest.");
+                                }
+                            }
+
+                            await queues.Writer.WriteAsync(new SendQueuePlan(queue, packetCount), preparationToken);
+                            transferred = true;
+                        }
+                        finally
+                        {
+                            if (!transferred) queue.Dispose();
+                        }
+                    }
+                    queues.Writer.TryComplete();
+                }
+                catch (Exception ex) { queues.Writer.TryComplete(ex); }
+            }, CancellationToken.None);
 
             try
             {
-                for (var chunkStartMs = 0; chunkStartMs < durationMs; chunkStartMs += SendQueueChunkMs)
-                {
-                    var chunkEndMs = Math.Min(durationMs, chunkStartMs + SendQueueChunkMs);
-                    var startSequence = Math.Min(
-                        targetPackets,
-                        (int)Math.Round(packetsPerSecond * chunkStartMs / 1000.0, MidpointRounding.AwayFromZero));
-                    var endSequence = chunkEndMs >= durationMs
-                        ? targetPackets
-                        : Math.Min(
-                            targetPackets,
-                            (int)Math.Round(packetsPerSecond * chunkEndMs / 1000.0, MidpointRounding.AwayFromZero));
-                    var packetCount = Math.Max(0, endSequence - startSequence);
-
-                    if (packetCount == 0)
-                    {
-                        continue;
-                    }
-
-                    var queueCapacity = checked(packetCount * (packet.Length + 64));
-                    var queue = new SendQueue(queueCapacity);
-
-                    for (var sequence = startSequence; sequence < endSequence; sequence++)
-                    {
-                        WriteProbeIdentity(packet, runId, sequence);
-                        var relativeMicroseconds = (int)Math.Round(
-                            (sequence - startSequence) * 1_000_000.0 / packetsPerSecond,
-                            MidpointRounding.AwayFromZero);
-
-                        if (!queue.Add(
-                                packet,
-                                relativeMicroseconds / 1_000_000,
-                                relativeMicroseconds % 1_000_000))
-                        {
-                            queue.Dispose();
-                            throw new InvalidOperationException("Не удалось подготовить очередь Npcap для DataTest.");
-                        }
-                    }
-
-                    queues.Add(new SendQueuePlan(queue, packetCount));
-                }
-
-                var startTimestamp = Stopwatch.GetTimestamp();
+                long startTimestamp = 0;
                 var sent = 0;
 
-                foreach (var plan in queues)
+                await foreach (var plan in queues.Reader.ReadAllAsync(cancellationToken))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
-                    var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
-                    var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
-                        ? plan.PacketCount
-                        : Math.Clamp(transmittedBytes / Math.Max(1, entrySize), 0, plan.PacketCount);
-                    sent += sentInQueue;
-
-                    if (sentInQueue < plan.PacketCount)
+                    using (plan.Queue)
                     {
-                        break;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (startTimestamp == 0) startTimestamp = Stopwatch.GetTimestamp();
+                        var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
+                        var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
+                        var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
+                            ? plan.PacketCount
+                            : Math.Clamp(transmittedBytes / Math.Max(1, entrySize), 0, plan.PacketCount);
+                        sent += sentInQueue;
+
+                        if (sentInQueue < plan.PacketCount)
+                        {
+                            break;
+                        }
                     }
                 }
 
-                var elapsedMs = GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
+                var elapsedMs = startTimestamp == 0 ? 0 : GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
                 return new PacedSendResult(sent, elapsedMs, "NpcapSendQueue");
             }
             finally
             {
-                foreach (var plan in queues)
+                preparationCts.Cancel();
+                await producer;
+                while (queues.Reader.TryRead(out var plan))
                 {
                     plan.Queue.Dispose();
                 }
@@ -1010,9 +1046,9 @@ namespace TestBuilder.Domain.Steps
                    mode.Equals("TYPE_SOFT_GEN", StringComparison.OrdinalIgnoreCase);
         }
 
-        public static int NormalizeBandwidth(int bandwidthMbps)
+        public static int NormalizeBandwidth(int bandwidthMbps, bool allowGigabit = false)
         {
-            return Math.Clamp(bandwidthMbps, 1, MaximumSupportedBandwidthMbps);
+            return Math.Clamp(bandwidthMbps, 1, allowGigabit ? 1000 : MaximumSupportedBandwidthMbps);
         }
 
         private static string? ValidateLinkSpeed(

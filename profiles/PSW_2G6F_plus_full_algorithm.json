@@ -1,0 +1,1588 @@
+{
+  "name": "PSW-2G6F+ — полный алгоритм без прошивки и DFU",
+  "nodes": [
+    {
+      "type": "Start",
+      "id": "0",
+      "x": 80,
+      "y": 120
+    },
+    {
+      "id": "1",
+      "type": "Operator Action",
+      "x": 540,
+      "y": 120,
+      "color": "orange",
+      "text": "PSW-2G6F+, полный алгоритм БЕЗ прошивки/DFU. Подтвердите подключение: PS3=23; EL60v5=1,3,5,7,9,11; нужная IO-2 найдена сканированием. Медные пары стенда: 192.168.0.2/.3, .4/.5, .6/.7 (100 Мбит/с); SFP: .8/.9 (1 Гбит/с), оба конца и модули должны поддерживать гигабит. Установите шторку датчика вскрытия и подключите порты. Продолжить?"
+    },
+    {
+      "type": "Subtest",
+      "name": "1. Подготовка питания и 12 линий PoE",
+      "description": "1. Подготовка питания и 12 линий PoE",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "1. Подготовка питания и 12 линий PoE",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 540,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 1000,
+            "y": 120
+          },
+          {
+            "id": "3",
+            "type": "For Slaves",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "fromSlaveId": 1,
+            "toSlaveId": 11,
+            "step": 2,
+            "stopOnError": true,
+            "body": {
+              "name": "Сброс шести PoE-нагрузок EL60v5",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Body Start",
+                  "x": 80,
+                  "y": 120
+                },
+                {
+                  "id": "1",
+                  "type": "Write Register",
+                  "x": 440,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1414,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "2",
+                  "type": "Write Register",
+                  "x": 800,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1415,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "3",
+                  "type": "Write Register",
+                  "x": 1160,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1412,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "4",
+                  "type": "Write Register",
+                  "x": 1520,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1413,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "5",
+                  "type": "Body End",
+                  "x": 1880,
+                  "y": 120
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "True",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "3",
+                  "sourceConnector": "True",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "True",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
+          },
+          {
+            "id": "4",
+            "type": "For Slaves",
+            "x": 1920,
+            "y": 120,
+            "color": "blue",
+            "fromSlaveId": 1,
+            "toSlaveId": 11,
+            "step": 2,
+            "stopOnError": true,
+            "body": {
+              "name": "Установка 13 Вт на каждой из 12 линий PoE",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Body Start",
+                  "x": 80,
+                  "y": 120
+                },
+                {
+                  "id": "1",
+                  "type": "Write Register",
+                  "x": 440,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1412,
+                  "value": 13000,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "2",
+                  "type": "Write Register",
+                  "x": 800,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1413,
+                  "value": 13000,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "3",
+                  "type": "Write Register",
+                  "x": 1160,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1414,
+                  "value": 1,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "4",
+                  "type": "Write Register",
+                  "x": 1520,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1415,
+                  "value": 1,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "5",
+                  "type": "Body End",
+                  "x": 1880,
+                  "y": 120
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "True",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "3",
+                  "sourceConnector": "True",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "True",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 10000,
+            "id": "5",
+            "x": 2380,
+            "y": 120
+          },
+          {
+            "type": "End",
+            "id": "6",
+            "x": 2840,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Выход",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "2",
+      "x": 1000,
+      "y": 120
+    },
+    {
+      "type": "Subtest",
+      "name": "2. Включение AC1 и встроенный тест",
+      "description": "2. Включение AC1 и встроенный тест",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "2. Включение AC1 и встроенный тест",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 540,
+            "y": 120
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 20000,
+            "id": "2",
+            "x": 1000,
+            "y": 120
+          },
+          {
+            "type": "Clear ARP Cache",
+            "timeoutMs": 5000,
+            "failOnError": false,
+            "runArpdBat": true,
+            "arpdBatPath": "arpd.bat",
+            "command": "arp",
+            "arguments": "-d *",
+            "id": "3",
+            "x": 1460,
+            "y": 120
+          },
+          {
+            "id": "4",
+            "type": "Selftest Check",
+            "x": 1920,
+            "y": 120,
+            "color": "blue",
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 300000,
+            "pollIntervalMs": 5000,
+            "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "failOnError": true,
+            "outputPrefix": "Dut"
+          },
+          {
+            "type": "End",
+            "id": "5",
+            "x": 2380,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "Выход",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "3",
+      "x": 1460,
+      "y": 120
+    },
+    {
+      "type": "Subtest",
+      "name": "3. Датчик вскрытия, Sensor1 и Sensor2",
+      "description": "3. Датчик вскрытия, Sensor1 и Sensor2",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "3. Датчик вскрытия, Sensor1 и Sensor2",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Check Variable Equality",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "variableName": "Dut.sensor_0",
+            "expectedValue": "1",
+            "comparisonType": "Number",
+            "failMessage": "Датчик вскрытия с установленной шторкой должен быть замкнут"
+          },
+          {
+            "id": "2",
+            "type": "Check IO-2 Sensors and Relay",
+            "x": 1000,
+            "y": 120,
+            "color": "purple",
+            "io2SlaveId": 0,
+            "baseUrl": "http://192.168.0.1",
+            "selftestEndpoint": "/test.shtml",
+            "relayEndpointTemplate": "/test.shtml?set_mb_output={state}",
+            "requestTimeoutMs": 5000,
+            "stateTimeoutMs": 30000,
+            "pollIntervalMs": 1000,
+            "useBrowserForSelftest": false,
+            "checkRelay": false
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1460,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "4",
+      "x": 1920,
+      "y": 120
+    },
+    {
+      "id": "5",
+      "type": "For Slaves",
+      "x": 2380,
+      "y": 120,
+      "color": "blue",
+      "fromSlaveId": 1,
+      "toSlaveId": 11,
+      "step": 2,
+      "stopOnError": true,
+      "body": {
+        "name": "Напряжение 53..56 В на всех 12 линиях PoE",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Body Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Check Register Range",
+            "x": 440,
+            "y": 120,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "liveRead": true,
+            "address": 1402,
+            "min": 53000,
+            "max": 56000
+          },
+          {
+            "id": "2",
+            "type": "Check Register Range",
+            "x": 800,
+            "y": 120,
+            "slaveId": 0,
+            "useCurrentSlaveId": true,
+            "liveRead": true,
+            "address": 1403,
+            "min": 53000,
+            "max": 56000
+          },
+          {
+            "id": "3",
+            "type": "Body End",
+            "x": 1160,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6",
+      "type": "Run Data Test",
+      "x": 2840,
+      "y": 120,
+      "color": "blue",
+      "mode": "SoftwarePcap",
+      "durationMs": 5000,
+      "expectedPackets": 10000,
+      "packetSizeBytes": 1514,
+      "udpPort": 43962,
+      "maxPortTestTimeMs": 15000,
+      "targetBandwidthMbps": 100,
+      "warmupMs": 500,
+      "interPairDelayMs": 5000,
+      "allowedLossPercent": 1,
+      "allowedTxDeficitPercent": 2,
+      "bidirectional": true,
+      "outputVariableName": "DataTest",
+      "failOnError": true,
+      "portsText": "port0-1,192.168.0.2,192.168.0.3,100\nport2-3,192.168.0.4,192.168.0.5,100\nport4-5,192.168.0.6,192.168.0.7,100\nsfp6-7,192.168.0.8,192.168.0.9,1000",
+      "allowGigabit": true
+    },
+    {
+      "type": "Subtest",
+      "name": "6. Серийный номер, UDP MAC и проверка после перезапуска",
+      "description": "6. Серийный номер, UDP MAC и проверка после перезапуска",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "6. Серийный номер, UDP MAC и проверка после перезапуска",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Get Serial Number",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 30000,
+            "outputVariableName": "SerialNumber",
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "deviceType": "PSW-2G6F+",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": false
+          },
+          {
+            "id": "2",
+            "type": "Check Variable Range",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "min": 600000,
+            "max": 665535,
+            "variableName": "SerialNumber",
+            "failMessage": "Серийный номер PSW-2G6F+ должен быть в диапазоне 600000..665535",
+            "inclusive": true
+          },
+          {
+            "id": "3",
+            "type": "Build MAC From Serial",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "failOnError": true,
+            "serialOffset": 600000,
+            "macPrefix": "C0:11:A6:06",
+            "serialShortVariableName": "SerialShort",
+            "macVariableName": "Dut.NewMac",
+            "serialVariableName": "SerialNumber"
+          },
+          {
+            "type": "Set PSW MAC (UDP)",
+            "destinationIp": "192.168.0.1",
+            "localIp": "192.168.0.2",
+            "localPort": 6123,
+            "udpPort": 43962,
+            "macVariableName": "Dut.NewMac",
+            "timeoutMs": 5000,
+            "failOnError": true,
+            "id": "4",
+            "x": 1920,
+            "y": 120
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 7000,
+            "id": "5",
+            "x": 2380,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "6",
+            "x": 2840,
+            "y": 120
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 10000,
+            "id": "7",
+            "x": 3300,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true,
+            "id": "8",
+            "x": 3760,
+            "y": 120
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 20000,
+            "id": "9",
+            "x": 4220,
+            "y": 120
+          },
+          {
+            "type": "Clear ARP Cache",
+            "timeoutMs": 5000,
+            "failOnError": false,
+            "runArpdBat": true,
+            "arpdBatPath": "arpd.bat",
+            "command": "arp",
+            "arguments": "-d *",
+            "id": "10",
+            "x": 4680,
+            "y": 120
+          },
+          {
+            "id": "11",
+            "type": "Selftest Check",
+            "x": 5140,
+            "y": 120,
+            "color": "blue",
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 300000,
+            "pollIntervalMs": 5000,
+            "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "failOnError": true,
+            "outputPrefix": "DutAfterMac"
+          },
+          {
+            "id": "12",
+            "type": "Compare Variables",
+            "x": 5600,
+            "y": 120,
+            "color": "blue",
+            "comparisonType": "MacAddress",
+            "failMessage": "MAC после перезапуска должен совпасть с рассчитанным",
+            "leftVariableName": "DutAfterMac.default_mac",
+            "rightVariableName": "Dut.NewMac"
+          },
+          {
+            "type": "End",
+            "id": "13",
+            "x": 6060,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Выход",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "Выход",
+            "targetNodeId": "8",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "9",
+            "sourceConnector": "Выход",
+            "targetNodeId": "10",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "10",
+            "sourceConnector": "True",
+            "targetNodeId": "11",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "11",
+            "sourceConnector": "True",
+            "targetNodeId": "12",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "12",
+            "sourceConnector": "True",
+            "targetNodeId": "13",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "7",
+      "x": 3300,
+      "y": 120
+    },
+    {
+      "id": "8",
+      "type": "Print Label",
+      "x": 3760,
+      "y": 120,
+      "color": "blue",
+      "serialShortVariableName": "SerialShort",
+      "macVariableName": "DutAfterMac.default_mac",
+      "printerName": "TSC TE310",
+      "serialVariableName": "SerialNumber",
+      "useManualSerialNumber": false,
+      "manualSerialNumber": "",
+      "manualMacAddress": "",
+      "copies": 4,
+      "useQtProZplFormat": true,
+      "failOnPrinterError": true,
+      "labelModel": "Psw2G6FPlus"
+    },
+    {
+      "id": "9",
+      "type": "Subtest",
+      "x": 4220,
+      "y": 120,
+      "color": "red",
+      "name": "8. Финальная статистика и отчёт",
+      "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "17. Финальная статистика и отчет",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Selftest Check",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 180000,
+            "pollIntervalMs": 5000,
+            "validationRules": "",
+            "failOnError": false,
+            "outputPrefix": "DutFinal"
+          },
+          {
+            "id": "2",
+            "type": "Build Test Report",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "includeAllVariables": true,
+            "testType": "production (без прошивки/DFU)"
+          },
+          {
+            "id": "3",
+            "type": "Operator Action",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {DutAfterMac.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\n\nПрошивка и DFU в этом профиле не выполнялись."
+          },
+          {
+            "id": "4",
+            "type": "Send Test Report",
+            "x": 1920,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 10000,
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": false,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "reportVariableName": "TestReportText",
+            "endpoint": "/api/Api.svc/result.json",
+            "saveLocalCopy": true,
+            "localReportsDirectory": "reports"
+          },
+          {
+            "id": "5",
+            "type": "End",
+            "x": 2380,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Отмена",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Subtest",
+      "name": "9. Выключение AC1/AC2 и PoE",
+      "description": "9. Выключение AC1/AC2 и PoE",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "9. Выключение AC1/AC2 и PoE",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 540,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 1000,
+            "y": 120
+          },
+          {
+            "id": "3",
+            "type": "For Slaves",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "fromSlaveId": 1,
+            "toSlaveId": 11,
+            "step": 2,
+            "stopOnError": true,
+            "body": {
+              "name": "Отключение шести PoE-нагрузок EL60v5",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Body Start",
+                  "x": 80,
+                  "y": 120
+                },
+                {
+                  "id": "1",
+                  "type": "Write Register",
+                  "x": 440,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1414,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "2",
+                  "type": "Write Register",
+                  "x": 800,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1415,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "3",
+                  "type": "Write Register",
+                  "x": 1160,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1412,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "4",
+                  "type": "Write Register",
+                  "x": 1520,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1413,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "5",
+                  "type": "Body End",
+                  "x": 1880,
+                  "y": 120
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "True",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "3",
+                  "sourceConnector": "True",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "True",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
+          },
+          {
+            "type": "End",
+            "id": "4",
+            "x": 1920,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "10",
+      "x": 4680,
+      "y": 120
+    },
+    {
+      "type": "Operator Action",
+      "text": "PSW-2G6F+: проверки завершены. Установите штатные разъёмы, как требует заключительный шаг старого профиля. Прошивка и DFU не выполнялись.",
+      "id": "11",
+      "x": 5140,
+      "y": 120
+    },
+    {
+      "type": "End",
+      "id": "12",
+      "x": 5600,
+      "y": 120
+    },
+    {
+      "id": "cleanup",
+      "type": "Subtest",
+      "x": 80,
+      "y": 850,
+      "color": "red",
+      "name": "Аварийное выключение PSW-2G6F+",
+      "description": "Аварийное выключение AC1/AC2 и всех 12 линий PoE после ошибки/отмены",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": true,
+      "bodyGraph": {
+        "name": "Аварийное выключение PSW-2G6F+",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 440,
+            "y": 120,
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true
+          },
+          {
+            "id": "2",
+            "type": "For Slaves",
+            "x": 800,
+            "y": 120,
+            "fromSlaveId": 1,
+            "toSlaveId": 11,
+            "step": 2,
+            "stopOnError": false,
+            "body": {
+              "name": "Сброс PoE после ошибки",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Body Start",
+                  "x": 80,
+                  "y": 120
+                },
+                {
+                  "id": "1",
+                  "type": "Write Register",
+                  "x": 440,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1414,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "2",
+                  "type": "Write Register",
+                  "x": 800,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1415,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "3",
+                  "type": "Write Register",
+                  "x": 1160,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1412,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "4",
+                  "type": "Write Register",
+                  "x": 1520,
+                  "y": 120,
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "address": 1413,
+                  "value": 0,
+                  "verifyWrite": true
+                },
+                {
+                  "id": "5",
+                  "type": "Body End",
+                  "x": 1880,
+                  "y": 120
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "False",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "True",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "False",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "3",
+                  "sourceConnector": "True",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "3",
+                  "sourceConnector": "False",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "True",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "False",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
+          },
+          {
+            "id": "3",
+            "type": "End",
+            "x": 1160,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "ac2",
+            "x": 620,
+            "y": 400
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "ac2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "ac2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "ac2",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "ac2",
+            "sourceConnector": "False",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          }
+        ]
+      }
+    },
+    {
+      "id": "failureReport",
+      "type": "Subtest",
+      "x": 700,
+      "y": 850,
+      "color": "red",
+      "name": "Отчёт при ошибке",
+      "description": "Автоматически собирает и отправляет отчёт после аварийного выключения стенда; не подключать в основную цепочку",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": true,
+      "bodyGraph": {
+        "name": "Отчёт при ошибке",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Check Variable Range",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "min": 600000,
+            "max": 665535,
+            "variableName": "SerialNumber",
+            "failMessage": "Отчёт отправляется только с серийным номером PSW-2G6F+ 600000..665535",
+            "inclusive": true
+          },
+          {
+            "id": "2",
+            "type": "Build Test Report",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "includeAllVariables": true,
+            "testType": "production (без прошивки/DFU)"
+          },
+          {
+            "id": "3",
+            "type": "Operator Action",
+            "x": 1460,
+            "y": 120,
+            "color": "blue",
+            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\nМодель: PSW-2G6F+. Прошивка и DFU не выполнялись."
+          },
+          {
+            "id": "4",
+            "type": "Send Test Report",
+            "x": 1920,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 10000,
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": false,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "reportVariableName": "TestReportText",
+            "endpoint": "/api/Api.svc/result.json",
+            "saveLocalCopy": true,
+            "localReportsDirectory": "reports"
+          },
+          {
+            "id": "5",
+            "type": "End",
+            "x": 2380,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "Отмена",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "Продолжить",
+      "targetNodeId": "2",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "2",
+      "sourceConnector": "Success",
+      "targetNodeId": "3",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "Success",
+      "targetNodeId": "4",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "4",
+      "sourceConnector": "Success",
+      "targetNodeId": "5",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "5",
+      "sourceConnector": "True",
+      "targetNodeId": "6",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "6",
+      "sourceConnector": "True",
+      "targetNodeId": "7",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "7",
+      "sourceConnector": "Success",
+      "targetNodeId": "8",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "8",
+      "sourceConnector": "True",
+      "targetNodeId": "9",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "9",
+      "sourceConnector": "Success",
+      "targetNodeId": "10",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "10",
+      "sourceConnector": "Success",
+      "targetNodeId": "11",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "11",
+      "sourceConnector": "Продолжить",
+      "targetNodeId": "12",
+      "targetConnector": "Вход"
+    }
+  ]
+}

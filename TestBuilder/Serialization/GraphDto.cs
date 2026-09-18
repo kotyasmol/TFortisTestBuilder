@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using TestBuilder.Domain.Steps;
 
 namespace TestBuilder.Serialization
 {
@@ -219,6 +220,31 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? FailOnTimeout { get; set; }
 
+        // --- IO-2 sensors and relay ---
+        [JsonPropertyName("io2SlaveId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public byte? Io2SlaveId { get; set; }
+
+        [JsonPropertyName("selftestEndpoint")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SelftestEndpoint { get; set; }
+
+        [JsonPropertyName("relayEndpointTemplate")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RelayEndpointTemplate { get; set; }
+
+        [JsonPropertyName("stateTimeoutMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? StateTimeoutMs { get; set; }
+
+        [JsonPropertyName("useBrowserForSelftest")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseBrowserForSelftest { get; set; }
+
+        [JsonPropertyName("checkRelay")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? CheckRelay { get; set; }
+
         // --- Clear ARP Cache ---
         [JsonPropertyName("runArpdBat")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -270,7 +296,22 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? BoardVersion { get; set; }
 
+        [JsonPropertyName("destinationIp")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? DestinationIp { get; set; }
+
+        [JsonPropertyName("localIp")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? LocalIp { get; set; }
+
+        [JsonPropertyName("localPort")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? LocalPort { get; set; }
+
         // --- Data Test ---
+        [JsonPropertyName("allowGigabit")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? AllowGigabit { get; set; }
         [JsonPropertyName("mode")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Mode { get; set; }
@@ -351,6 +392,11 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("useQtProZplFormat")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? UseQtProZplFormat { get; set; }
+
+        [JsonPropertyName("labelModel")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonConverter(typeof(JsonStringEnumConverter<DeviceLabelModel>))]
+        public DeviceLabelModel? LabelModel { get; set; }
 
         [JsonPropertyName("failOnPrinterError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

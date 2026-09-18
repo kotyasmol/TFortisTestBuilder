@@ -103,6 +103,7 @@ namespace TestBuilder.Services
                 ClearArpCacheNodeViewModel clearArp => clearArp.CreateStep(_logger),
                 GetSerialNumberFromServerNodeViewModel serial => serial.CreateStep(_httpRequestService, _logger),
                 SetProMacNodeViewModel setMac => setMac.CreateStep(_logger),
+                SetPswMacNodeViewModel pswMac => pswMac.CreateStep(_logger),
                 RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
                 GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
@@ -111,6 +112,7 @@ namespace TestBuilder.Services
                 BuildMacFromSerialNodeViewModel buildMac => buildMac.CreateStep(_logger),
                 CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
                 WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
+                CheckIo2SensorsAndRelayNodeViewModel inOut => inOut.CreateStep(_modbusService, _httpRequestService, _logger),
                 BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger),
@@ -255,6 +257,10 @@ namespace TestBuilder.Services
                     BindTrueFalse(sourceConnector, source, target, setMacVm.TrueOut, setMacVm.FalseOut);
                     break;
 
+                case SetPswMacNodeViewModel pswMacVm:
+                    BindTrueFalse(sourceConnector, source, target, pswMacVm.TrueOut, pswMacVm.FalseOut);
+                    break;
+
                 case RunDataTestNodeViewModel dataTestVm:
                     BindTrueFalse(sourceConnector, source, target, dataTestVm.TrueOut, dataTestVm.FalseOut);
                     break;
@@ -285,6 +291,10 @@ namespace TestBuilder.Services
 
                 case WaitVariableUntilNodeViewModel waitVariableVm:
                     BindTrueFalse(sourceConnector, source, target, waitVariableVm.TrueOut, waitVariableVm.FalseOut);
+                    break;
+
+                case CheckIo2SensorsAndRelayNodeViewModel inOutVm:
+                    BindTrueFalse(sourceConnector, source, target, inOutVm.TrueOut, inOutVm.FalseOut);
                     break;
 
                 case BuildTestReportNodeViewModel buildReportVm:

@@ -24,6 +24,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int udpPort = 43962;
         [ObservableProperty] private int maxPortTestTimeMs = 15000;
         [ObservableProperty] private int targetBandwidthMbps = 100;
+        [ObservableProperty] private bool allowGigabit;
         [ObservableProperty] private int durationMs = 5000;
         [ObservableProperty] private int warmupMs = 500;
         [ObservableProperty] private int interPairDelayMs = 5000;
@@ -51,12 +52,15 @@ namespace TestBuilder.ViewModels.StepVM
 
         partial void OnTargetBandwidthMbpsChanged(int value)
         {
-            var normalized = RunDataTestStep.NormalizeBandwidth(value);
+            var normalized = RunDataTestStep.NormalizeBandwidth(value, AllowGigabit);
             if (normalized != value)
             {
                 TargetBandwidthMbps = normalized;
             }
         }
+
+        partial void OnAllowGigabitChanged(bool value) =>
+            TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(TargetBandwidthMbps, value);
 
         public ITestStep CreateStep(ILogger logger) =>
             new RunDataTestStep(
@@ -75,7 +79,8 @@ namespace TestBuilder.ViewModels.StepVM
                 Bidirectional,
                 ParsePorts(),
                 OutputVariableName,
-                FailOnError);
+                FailOnError,
+                AllowGigabit);
 
         public override NodeViewModel Clone() => new RunDataTestNodeViewModel
         {
@@ -84,6 +89,7 @@ namespace TestBuilder.ViewModels.StepVM
             PacketSizeBytes = PacketSizeBytes,
             UdpPort = UdpPort,
             MaxPortTestTimeMs = MaxPortTestTimeMs,
+            AllowGigabit = AllowGigabit,
             TargetBandwidthMbps = TargetBandwidthMbps,
             DurationMs = DurationMs,
             WarmupMs = WarmupMs,
@@ -107,7 +113,7 @@ namespace TestBuilder.ViewModels.StepVM
                     parts[1].Trim(),
                     parts[2].Trim(),
                     parts.Length >= 4 && int.TryParse(parts[3].Trim(), out var mbps)
-                        ? RunDataTestStep.NormalizeBandwidth(mbps)
+                        ? RunDataTestStep.NormalizeBandwidth(mbps, AllowGigabit)
                         : null));
         }
     }

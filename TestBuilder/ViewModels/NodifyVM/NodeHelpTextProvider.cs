@@ -161,6 +161,15 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Критическая ошибка при провале - останавливать тест, если номер получить не удалось.
                 """,
 
+            [typeof(SetPswMacNodeViewModel)] = """
+                Запись MAC обычных PSW (не Pro): 21-байтовая UDP-команда CONFIG/mw.
+                DUT IPv4 — адрес коммутатора; Local IPv4 — адрес сетевой карты стенда.
+                Local port = 6123, UDP port = 43962; MAC var — рассчитанный адрес.
+                True означает только отправку. Протокол не подтверждает запись.
+                После команды нужны выдержка 7 с, отключение питания на 10 с,
+                запуск DUT и сравнение свежего selftest MAC с рассчитанным адресом.
+                """,
+
             [typeof(SetProMacNodeViewModel)] = """
                 Записывает MAC в коммутатор Pro через set_mac_pro.bat и WinSCP.
                 Batch path - путь к рабочему set_mac_pro.bat; относительный путь ищется рядом с TestBuilder.exe.
@@ -177,7 +186,9 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Mode - режим теста.
                 Packet size - размер UDP-пакета.
                 UDP port - порт тестового обмена.
-                Target wire Mbps - целевая скорость на линии; для этой ноды максимум 100 Mbps.
+                Target wire Mbps - целевая скорость на линии, обычно до 100 Mbps.
+                Allow gigabit — разрешить до 1000 Mbps (включая скорости отдельных пар).
+                Для гигабита требуются подходящие NIC/SFP и Npcap; недобор TX — ошибка генератора.
                 Duration ms - длительность замера.
                 Warmup ms - прогрев перед учетом результата.
                 Pair pause ms - пауза между последовательными парами портов.
@@ -256,6 +267,14 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Fail on timeout - считать таймаут провалом теста.
                 """,
 
+            [typeof(CheckIo2SensorsAndRelayNodeViewModel)] = """
+                Проверяет Sensor1, Sensor2 и релейный выход DUT через плату IO-2 стенда.
+                IO-2 Slave ID = 0 — автоматически взять IO-2 из последнего сканирования стенда; другое значение — проверить именно этот slave.
+                Для Sensor1 и Sensor2 нода замыкает IO-2 OUT1/OUT2 и ждет sensor_1/sensor_2 = 1 в свежем selftest.
+                Для реле отправляется HTTP-команда set_mb_output=1, ожидается IO-2 IN1 = 1, затем команда выключения и IN1 = 0.
+                В любом исходе OUT1, OUT2 и тестовый режим реле принудительно выключаются.
+                """,
+
             [typeof(BuildTestReportNodeViewModel)] = """
                 Собирает построчный отчет в формате оригинального QTstand.
                 Report var - имя переменной отчета.
@@ -270,10 +289,11 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Printer - имя RAW-принтера Windows, по умолчанию TSC TE310.
                 Ввести серийник вручную - печатать цифры из поля ноды вместо переменной.
                 Serial var - переменная с полным серийным номером.
-                Qt Pro ZPL - этикетка 25x13 мм для PSW+UPS-Box 8x2Pro: модель, MAC, короткий SN и Code128.
-                В основном графе Qt Pro ZPL читает Short SN var и MAC var; MAC не рассчитывается внутри печати.
+                Производственная ZPL - модель, MAC, короткий SN и Code128.
+                Label model — PswUpsBox8x2Pro (тип 32) или Psw2G6FPlus (тип 6).
+                В основном графе ZPL читает Short SN var и MAC var; MAC не рассчитывается внутри печати.
                 При ручном серийнике MAC также вводится вручную отдельным полем.
-                Если Qt Pro ZPL выключен, печатается прежний макет RTL_v2: полный номер текстом и Code128.
+                Если производственная ZPL выключена, печатается прежний макет RTL_v2: полный номер текстом и Code128.
                 Copies - количество одинаковых этикеток, по умолчанию 4.
                 Fail on printer error - считать ошибку печати провалом теста.
                 """,

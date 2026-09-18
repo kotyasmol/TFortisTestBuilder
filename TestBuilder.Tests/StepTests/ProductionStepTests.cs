@@ -912,6 +912,22 @@ public class ProductionStepTests
         Assert.Equal(406372, packets);
     }
 
+    [Theory]
+    [InlineData(false, 100)]
+    [InlineData(true, 1000)]
+    public async Task RunDataTestStep_RuntimeUsesExplicitGigabitLimit(bool allowGigabit, int limit)
+    {
+        var context = new TestContext(new RegisterState());
+        // An unsupported mode exits before any NIC/pcap access.
+        var step = new RunDataTestStep(NullLogger.Instance, "Unsupported", 10000, 1514,
+            43962, 15000, 1000, 5000, 500, 5000, 1, 2, true,
+            new[] { new DataTestPortConfig("sfp", "192.168.0.8", "192.168.0.9", 1000) },
+            "DataTest", true, allowGigabit);
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(limit, context.GetVariable<int>("DataTest.TargetBandwidthMbps"));
+        Assert.Equal(limit, context.GetVariable<int>("DataTest.BandwidthLimitMbps"));
+    }
+
     [Fact]
     public void RunDataTestStep_AccountsForEthernetWireOverhead()
     {

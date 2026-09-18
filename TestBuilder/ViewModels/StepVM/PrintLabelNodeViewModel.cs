@@ -17,6 +17,8 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string manualMacAddress = string.Empty;
         [ObservableProperty] private int copies = 4;
         [ObservableProperty] private bool useQtProZplFormat;
+        [ObservableProperty] private DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro;
+        public DeviceLabelModel[] LabelModels { get; } = System.Enum.GetValues<DeviceLabelModel>();
         [ObservableProperty] private bool failOnPrinterError = true;
 
         public ConnectorViewModel In { get; }
@@ -46,7 +48,8 @@ namespace TestBuilder.ViewModels.StepVM
                 ManualMacAddress,
                 Copies,
                 UseQtProZplFormat,
-                FailOnPrinterError);
+                FailOnPrinterError,
+                LabelModel);
 
         public bool IsVariableSerialMode => !UseManualSerialNumber;
         public bool IsManualQtProMode => UseManualSerialNumber && UseQtProZplFormat;
@@ -76,6 +79,7 @@ namespace TestBuilder.ViewModels.StepVM
             ManualMacAddress = ManualMacAddress,
             Copies = Copies,
             UseQtProZplFormat = UseQtProZplFormat,
+            LabelModel = LabelModel,
             FailOnPrinterError = FailOnPrinterError
         };
     }

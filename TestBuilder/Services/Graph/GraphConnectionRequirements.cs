@@ -16,7 +16,8 @@ namespace TestBuilder.Services.Graph
                 CheckRegisterRangeNodeViewModel or
                 CheckRegisterEqualityNodeViewModel or
                 WaitUntilNodeViewModel or
-                PollRegisterNodeViewModel)
+                PollRegisterNodeViewModel or
+                CheckIo2SensorsAndRelayNodeViewModel)
             {
                 return true;
             }

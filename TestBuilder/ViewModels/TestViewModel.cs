@@ -163,9 +163,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new ClearArpCacheNodeViewModel(),
         new GetSerialNumberFromServerNodeViewModel(),
         new SetProMacNodeViewModel(),
+        new SetPswMacNodeViewModel(),
         new RunDataTestNodeViewModel(),
         new ReadHttpVariableNodeViewModel(),
         new WaitVariableUntilNodeViewModel(),
+        new CheckIo2SensorsAndRelayNodeViewModel(),
         new BuildMacFromSerialNodeViewModel(),
         new CompareVariablesNodeViewModel(),
         new BuildTestReportNodeViewModel(),
@@ -307,13 +309,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Проверки",
             Find("Selftest Check"),
             Find("Check Variable Equality"),
-            Find("Check Variable Range")));
+            Find("Check Variable Range"),
+            Find("Check IO-2 Sensors and Relay")));
 
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
             "HTTP и сеть",
             Find("Clear ARP Cache"),
             Find("Get Serial Number"),
             Find("Set Pro MAC"),
+            Find("Set PSW MAC (UDP)"),
             Find("Run Data Test"),
             Find("Read HTTP Variable"),
             Find("Wait Variable Until")));
@@ -1468,12 +1472,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Clear ARP Cache" => new ClearArpCacheNodeViewModel { Location = location },
             "Get Serial Number" => new GetSerialNumberFromServerNodeViewModel { Location = location },
             "Set Pro MAC" => new SetProMacNodeViewModel { Location = location },
+            "Set PSW MAC (UDP)" => new SetPswMacNodeViewModel { Location = location },
             "Run Data Test" => new RunDataTestNodeViewModel { Location = location },
             "Get UPS Status" => new GetUpsStatusNodeViewModel { Location = location },
             "Get UPS Voltage" => new GetUpsVoltageNodeViewModel { Location = location },
             "Get IRP Status" => new GetIrpStatusNodeViewModel { Location = location },
             "Read HTTP Variable" => new ReadHttpVariableNodeViewModel { Location = location },
             "Wait Variable Until" => new WaitVariableUntilNodeViewModel { Location = location },
+            "Check IO-2 Sensors and Relay" => new CheckIo2SensorsAndRelayNodeViewModel { Location = location },
             "Build MAC From Serial" => new BuildMacFromSerialNodeViewModel { Location = location },
             "Compare Variables" => new CompareVariablesNodeViewModel { Location = location },
             "Build Test Report" => new BuildTestReportNodeViewModel { Location = location },

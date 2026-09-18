@@ -210,13 +210,50 @@ public class PrintLabelStepTests
         Assert.Equal(5, context.GetVariable<int>("PrintLabel.ErrorCode"));
     }
 
+    [Theory]
+    [InlineData("600428")]
+    [InlineData("00428")]
+    public async Task Psw2G6FPlusPrintsExactLegacyLabel(string serial)
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(printer, 4, manualSerial: serial, manualMacAddress: "C0:11:A6:06:01:AC",
+            useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        const string expected = "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+^FS" +
+            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
+            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
+            "^FO510,117^BY2^BCN,50,N,N,N^FD00600428^FS^XZ ";
+        Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
+        Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
+        Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));
+        Assert.Equal("Psw2G6FPlus", context.GetVariable<string>("PrintLabel.Template"));
+    }
+
+    [Theory]
+    [InlineData(600428, true)]
+    [InlineData(3200428, false)]
+    [InlineData(665536, false)]
+    public async Task Psw2G6FPlusValidatesContextSerialsBeforePrinting(int fullSerial, bool valid)
+    {
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", fullSerial);
+        context.SetVariable("SerialShort", 428);
+        context.SetVariable("Dut.default_mac", "C0:11:A6:06:01:AC");
+        var step = CreateStep(printer, 4, useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
+        Assert.Equal(valid ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(valid ? 1 : 0, printer.Calls);
+    }
+
     private static PrintLabelStep CreateStep(
         IRawLabelPrinter printer,
         int copies,
         int timeoutMs = 1000,
         string manualSerial = "",
         string manualMacAddress = "",
-        bool useQtProZplFormat = false) =>
+        bool useQtProZplFormat = false,
+        DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro) =>
         new(
             NullLogger.Instance,
             "TSC TE310",
@@ -230,7 +267,8 @@ public class PrintLabelStepTests
             useQtProZplFormat,
             failOnPrinterError: true,
             printer,
-            timeoutMs);
+            timeoutMs,
+            labelModel);
 
     private static int CountOccurrences(string value, string needle) =>
         value.Split(needle, StringSplitOptions.None).Length - 1;

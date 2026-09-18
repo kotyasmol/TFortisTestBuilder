@@ -44,6 +44,7 @@ namespace TestBuilder.Services
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
             GetSerialNumberFromServerNodeViewModel => "Get Serial Number",
             SetProMacNodeViewModel => "Set Pro MAC",
+            SetPswMacNodeViewModel => "Set PSW MAC (UDP)",
             RunDataTestNodeViewModel => "Run Data Test",
             GetUpsStatusNodeViewModel => "Get UPS Status",
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
@@ -52,6 +53,7 @@ namespace TestBuilder.Services
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
             CompareVariablesNodeViewModel => "Compare Variables",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
+            CheckIo2SensorsAndRelayNodeViewModel => "Check IO-2 Sensors and Relay",
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
@@ -199,20 +201,31 @@ namespace TestBuilder.Services
                         n.FailOnError = proMac.FailOnError;
                         break;
 
+                    case SetPswMacNodeViewModel pswMac:
+                        n.DestinationIp = pswMac.DestinationIp;
+                        n.LocalIp = pswMac.LocalIp;
+                        n.LocalPort = pswMac.LocalPort;
+                        n.UdpPort = pswMac.UdpPort;
+                        n.MacVariableName = pswMac.MacVariableName;
+                        n.TimeoutMs = pswMac.TimeoutMs;
+                        n.FailOnError = pswMac.FailOnError;
+                        break;
+
                     case RunDataTestNodeViewModel d:
                         n.Mode = d.Mode;
                         n.ExpectedPackets = d.ExpectedPackets;
                         n.PacketSizeBytes = d.PacketSizeBytes;
                         n.UdpPort = d.UdpPort;
                         n.MaxPortTestTimeMs = d.MaxPortTestTimeMs;
-                        n.TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(d.TargetBandwidthMbps);
+                        n.AllowGigabit = d.AllowGigabit;
+                        n.TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(d.TargetBandwidthMbps, d.AllowGigabit);
                         n.DurationMs = d.DurationMs;
                         n.WarmupMs = d.WarmupMs;
                         n.InterPairDelayMs = d.InterPairDelayMs;
                         n.AllowedLossPercent = d.AllowedLossPercent;
                         n.AllowedTxDeficitPercent = d.AllowedTxDeficitPercent;
                         n.Bidirectional = d.Bidirectional;
-                        n.PortsText = NormalizeDataTestPortsText(d.PortsText);
+                        n.PortsText = NormalizeDataTestPortsText(d.PortsText, d.AllowGigabit);
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
                         break;
@@ -277,6 +290,18 @@ namespace TestBuilder.Services
                         n.FailOnTimeout = wait.FailOnTimeout;
                         break;
 
+                    case CheckIo2SensorsAndRelayNodeViewModel inOut:
+                        n.Io2SlaveId = inOut.Io2SlaveId;
+                        n.BaseUrl = inOut.BaseUrl;
+                        n.SelftestEndpoint = inOut.SelftestEndpoint;
+                        n.RelayEndpointTemplate = inOut.RelayEndpointTemplate;
+                        n.RequestTimeoutMs = inOut.RequestTimeoutMs;
+                        n.StateTimeoutMs = inOut.StateTimeoutMs;
+                        n.PollIntervalMs = inOut.PollIntervalMs;
+                        n.UseBrowserForSelftest = inOut.UseBrowserForSelftest;
+                        n.CheckRelay = inOut.CheckRelay;
+                        break;
+
                     case BuildTestReportNodeViewModel br:
                         n.ReportVariableName = br.ReportVariableName;
                         n.SerialVariableName = br.SerialVariableName;
@@ -294,6 +319,7 @@ namespace TestBuilder.Services
                         n.ManualMacAddress = pl.ManualMacAddress;
                         n.Copies = pl.Copies;
                         n.UseQtProZplFormat = pl.UseQtProZplFormat;
+                        n.LabelModel = pl.LabelModel;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
 
@@ -478,6 +504,18 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
+                    "Set PSW MAC (UDP)" => new SetPswMacNodeViewModel
+                    {
+                        Location = location,
+                        DestinationIp = n.DestinationIp ?? "192.168.0.1",
+                        LocalIp = n.LocalIp ?? "192.168.0.2",
+                        LocalPort = n.LocalPort ?? 6123,
+                        UdpPort = n.UdpPort ?? 43962,
+                        MacVariableName = n.MacVariableName ?? "Dut.NewMac",
+                        TimeoutMs = n.TimeoutMs ?? 5000,
+                        FailOnError = n.FailOnError ?? true
+                    },
+
                     "Run Data Test" or "RUN_DATA_TEST" or "Тест передачи данных" => new RunDataTestNodeViewModel
                     {
                         Location = location,
@@ -486,14 +524,15 @@ namespace TestBuilder.Services
                         PacketSizeBytes = n.PacketSizeBytes ?? 1514,
                         UdpPort = n.UdpPort ?? 43962,
                         MaxPortTestTimeMs = n.MaxPortTestTimeMs ?? 15000,
-                        TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(n.TargetBandwidthMbps ?? 100),
+                        AllowGigabit = n.AllowGigabit ?? false,
+                        TargetBandwidthMbps = RunDataTestStep.NormalizeBandwidth(n.TargetBandwidthMbps ?? 100, n.AllowGigabit ?? false),
                         DurationMs = n.DurationMs ?? 5000,
                         WarmupMs = n.WarmupMs ?? 500,
                         InterPairDelayMs = n.InterPairDelayMs ?? 5000,
                         AllowedLossPercent = n.AllowedLossPercent ?? 1.0,
                         AllowedTxDeficitPercent = n.AllowedTxDeficitPercent ?? 2.0,
                         Bidirectional = n.Bidirectional ?? true,
-                        PortsText = NormalizeDataTestPortsText(n.PortsText ?? PortsToText(n.Ports)),
+                        PortsText = NormalizeDataTestPortsText(n.PortsText ?? PortsToText(n.Ports, n.AllowGigabit ?? false), n.AllowGigabit ?? false),
                         OutputVariableName = n.OutputVariableName ?? "DataTest",
                         FailOnError = n.FailOnError ?? true
                     },
@@ -574,6 +613,20 @@ namespace TestBuilder.Services
                         FailOnTimeout = n.FailOnTimeout ?? true
                     },
 
+                    "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле" => new CheckIo2SensorsAndRelayNodeViewModel
+                    {
+                        Location = location,
+                        Io2SlaveId = n.Io2SlaveId ?? 0,
+                        BaseUrl = n.BaseUrl ?? CheckIo2SensorsAndRelayStep.DefaultBaseUrl,
+                        SelftestEndpoint = n.SelftestEndpoint ?? CheckIo2SensorsAndRelayStep.DefaultSelftestEndpoint,
+                        RelayEndpointTemplate = n.RelayEndpointTemplate ?? CheckIo2SensorsAndRelayStep.DefaultRelayEndpointTemplate,
+                        RequestTimeoutMs = n.RequestTimeoutMs ?? CheckIo2SensorsAndRelayStep.DefaultRequestTimeoutMs,
+                        StateTimeoutMs = n.StateTimeoutMs ?? CheckIo2SensorsAndRelayStep.DefaultStateTimeoutMs,
+                        PollIntervalMs = n.PollIntervalMs ?? CheckIo2SensorsAndRelayStep.DefaultPollIntervalMs,
+                        UseBrowserForSelftest = n.UseBrowserForSelftest ?? false,
+                        CheckRelay = n.CheckRelay ?? true
+                    },
+
                     "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
                     {
                         Location = location,
@@ -600,6 +653,7 @@ namespace TestBuilder.Services
                         ManualMacAddress = n.ManualMacAddress ?? string.Empty,
                         Copies = n.Copies ?? 4,
                         UseQtProZplFormat = n.UseQtProZplFormat ?? false,
+                        LabelModel = n.LabelModel ?? DeviceLabelModel.PswUpsBox8x2Pro,
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 
@@ -944,7 +998,7 @@ namespace TestBuilder.Services
             };
         }
 
-        private static string PortsToText(List<DataTestPortDto>? ports)
+        private static string PortsToText(List<DataTestPortDto>? ports, bool allowGigabit = false)
         {
             if (ports == null || ports.Count == 0)
             {
@@ -954,11 +1008,11 @@ namespace TestBuilder.Services
             return string.Join(
                 Environment.NewLine,
                 ports.Select(port => port.BandwidthMbps.HasValue
-                    ? $"{port.Name},{port.InIp},{port.OutIp},{RunDataTestStep.NormalizeBandwidth(port.BandwidthMbps.Value)}"
+                    ? $"{port.Name},{port.InIp},{port.OutIp},{RunDataTestStep.NormalizeBandwidth(port.BandwidthMbps.Value, allowGigabit)}"
                     : $"{port.Name},{port.InIp},{port.OutIp}"));
         }
 
-        private static string NormalizeDataTestPortsText(string portsText)
+        private static string NormalizeDataTestPortsText(string portsText, bool allowGigabit = false)
         {
             var lines = portsText.Split(
                 new[] { '\r', '\n' },
@@ -972,7 +1026,7 @@ namespace TestBuilder.Services
                     if (parts.Length >= 4 &&
                         int.TryParse(parts[3].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bandwidthMbps))
                     {
-                        parts[3] = RunDataTestStep.NormalizeBandwidth(bandwidthMbps).ToString(CultureInfo.InvariantCulture);
+                        parts[3] = RunDataTestStep.NormalizeBandwidth(bandwidthMbps, allowGigabit).ToString(CultureInfo.InvariantCulture);
                     }
 
                     return string.Join(",", parts.Select(part => part.Trim()));

@@ -2427,6 +2427,66 @@
           }
         ]
       }
+    },
+    {
+      "id": "22",
+      "type": "Subtest",
+      "x": 4400,
+      "y": -520,
+      "color": "purple",
+      "name": "09a. Проверка Sensor1, Sensor2 и реле",
+      "description": "IO-2 OUT1/OUT2 замыкают Sensor1/Sensor2; свежий selftest DUT должен показать sensor_1/sensor_2=1. Релейный выход DUT проверяется по IO-2 IN1.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "09a. Проверка Sensor1, Sensor2 и реле",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Check IO-2 Sensors and Relay",
+            "x": 540,
+            "y": 120,
+            "color": "purple",
+            "io2SlaveId": 0,
+            "baseUrl": "http://192.168.0.1",
+            "selftestEndpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "relayEndpointTemplate": "/test.shtml?set_mb_output={state}",
+            "requestTimeoutMs": 5000,
+            "stateTimeoutMs": 30000,
+            "pollIntervalMs": 1000,
+            "useBrowserForSelftest": false
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 1040,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     }
   ],
   "connections": [
@@ -2474,6 +2534,12 @@
     },
     {
       "sourceNodeId": "8",
+      "sourceConnector": "Success",
+      "targetNodeId": "22",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "22",
       "sourceConnector": "Success",
       "targetNodeId": "9",
       "targetConnector": "In"

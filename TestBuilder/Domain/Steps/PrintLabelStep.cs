@@ -10,6 +10,8 @@ using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
 {
+    public enum DeviceLabelModel { PswUpsBox8x2Pro, Psw2G6FPlus }
+
     internal readonly record struct RawLabelPrintResult(bool Success, int ErrorCode, string Error)
     {
         public static RawLabelPrintResult Ok() => new(true, 0, string.Empty);
@@ -29,7 +31,6 @@ namespace TestBuilder.Domain.Steps
         private const int LabelWidthDots = 354;
         private const string PswUpsBox8x2ProName = "PSW+UPS-Box 8x2Pro";
         private const int PswUpsBox8x2ProDeviceType = 32;
-        private const int PswUpsBox8x2ProSerialOffset = 3200000;
 
         private readonly ILogger _logger;
         private readonly string _printerName;
@@ -44,6 +45,10 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _failOnPrinterError;
         private readonly IRawLabelPrinter _printer;
         private readonly int _printerTimeoutMs;
+        private readonly DeviceLabelModel _labelModel;
+        private string DeviceName => _labelModel == DeviceLabelModel.Psw2G6FPlus ? "PSW-2G6F+" : PswUpsBox8x2ProName;
+        private int DeviceType => _labelModel == DeviceLabelModel.Psw2G6FPlus ? 6 : PswUpsBox8x2ProDeviceType;
+        private int SerialOffset => DeviceType * 100000;
 
         public PrintLabelStep(
             ILogger logger,
@@ -56,7 +61,8 @@ namespace TestBuilder.Domain.Steps
             string manualMacAddress,
             int copies,
             bool useQtProZplFormat,
-            bool failOnPrinterError)
+            bool failOnPrinterError,
+            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro)
             : this(
                 logger,
                 printerName,
@@ -70,7 +76,8 @@ namespace TestBuilder.Domain.Steps
                 useQtProZplFormat,
                 failOnPrinterError,
                 new WindowsRawLabelPrinter(),
-                DefaultPrinterTimeoutMs)
+                DefaultPrinterTimeoutMs,
+                labelModel)
         {
         }
 
@@ -87,7 +94,8 @@ namespace TestBuilder.Domain.Steps
             bool useQtProZplFormat,
             bool failOnPrinterError,
             IRawLabelPrinter printer,
-            int printerTimeoutMs)
+            int printerTimeoutMs,
+            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
@@ -108,6 +116,8 @@ namespace TestBuilder.Domain.Steps
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
             _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
+            if (!Enum.IsDefined(labelModel)) throw new ArgumentOutOfRangeException(nameof(labelModel));
+            _labelModel = labelModel;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -117,7 +127,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Copies", _copies);
             context.SetVariable("PrintLabel.PrinterName", _printerName);
             context.SetVariable("PrintLabel.Language", _useQtProZplFormat ? "ZPL" : "EPL");
-            context.SetVariable("PrintLabel.Template", _useQtProZplFormat ? "PswUpsBox8x2Pro" : "SerialOnlyEpl");
+            context.SetVariable("PrintLabel.Template", _useQtProZplFormat ? _labelModel.ToString() : "SerialOnlyEpl");
 
             if (string.IsNullOrWhiteSpace(_printerName))
             {
@@ -175,7 +185,7 @@ namespace TestBuilder.Domain.Steps
 
                 if (_useManualSerialNumber)
                 {
-                    if (!TryResolveManualPswUpsBox8x2ProSerial(serial, out fullSerial, out shortSerial, out var serialError))
+                    if (!TryResolveManualSerial(serial, out fullSerial, out shortSerial, out var serialError))
                     {
                         return Fail(context, 6, serialError);
                     }
@@ -211,7 +221,7 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..65535.");
                     }
 
-                    if (fullSerial != PswUpsBox8x2ProSerialOffset + shortSerial)
+                    if (fullSerial != SerialOffset + shortSerial)
                     {
                         return Fail(
                             context,
@@ -233,17 +243,19 @@ namespace TestBuilder.Domain.Steps
                     macSource = _macVariableName;
                 }
 
-                var barcode = $"{PswUpsBox8x2ProDeviceType:D3}{shortSerial:D5}";
-                singleLabel = BuildPswUpsBox8x2ProZpl(shortSerial, mac);
+                var barcode = $"{DeviceType:D3}{shortSerial:D5}";
+                singleLabel = _labelModel == DeviceLabelModel.Psw2G6FPlus
+                    ? BuildPsw2G6FPlusZpl(shortSerial, mac)
+                    : BuildPswUpsBox8x2ProZpl(shortSerial, mac);
                 language = "ZPL";
                 logDescription =
-                    $"этикеток {PswUpsBox8x2ProName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
+                    $"этикеток {DeviceName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
 
-                context.SetVariable("PrintLabel.Template", "PswUpsBox8x2Pro");
+                context.SetVariable("PrintLabel.Template", _labelModel.ToString());
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
-                context.SetVariable("PrintLabel.DeviceName", PswUpsBox8x2ProName);
-                context.SetVariable("PrintLabel.DeviceType", PswUpsBox8x2ProDeviceType);
+                context.SetVariable("PrintLabel.DeviceName", DeviceName);
+                context.SetVariable("PrintLabel.DeviceType", DeviceType);
                 context.SetVariable("PrintLabel.Mac", mac);
                 context.SetVariable("PrintLabel.MacSource", macSource);
                 context.SetVariable("PrintLabel.SerialShortSource", shortSerialSource);
@@ -347,7 +359,17 @@ namespace TestBuilder.Domain.Steps
                 "^FS^XZ ");
         }
 
-        private static bool TryResolveManualPswUpsBox8x2ProSerial(
+        internal static string BuildPsw2G6FPlusZpl(int shortSerial, string mac)
+        {
+            if (shortSerial is < 0 or > 0xFFFF) throw new ArgumentOutOfRangeException(nameof(shortSerial));
+            // Exact non-Pro Qt layout; Pro retains its different barcode origin and prefix.
+            return "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+" +
+                $"^FS^FO510,70^A0,25,20^FDMAC: {mac}" +
+                $"^FS^FO510,95^A0,25,20^FDSN: {shortSerial.ToString("D5", CultureInfo.InvariantCulture)}" +
+                $"^FS^FO510,117^BY2^BCN,50,N,N,N^FD006{shortSerial.ToString("D5", CultureInfo.InvariantCulture)}^FS^XZ ";
+        }
+
+        private bool TryResolveManualSerial(
             string serial,
             out int fullSerial,
             out int shortSerial,
@@ -366,16 +388,16 @@ namespace TestBuilder.Domain.Steps
             if (parsed <= 0xFFFF)
             {
                 shortSerial = parsed;
-                fullSerial = PswUpsBox8x2ProSerialOffset + shortSerial;
+                fullSerial = SerialOffset + shortSerial;
                 return true;
             }
 
-            shortSerial = parsed - PswUpsBox8x2ProSerialOffset;
+            shortSerial = parsed - SerialOffset;
             if (shortSerial is < 0 or > 0xFFFF)
             {
                 error =
-                    $"Для {PswUpsBox8x2ProName} введите полный серийник " +
-                    $"{PswUpsBox8x2ProSerialOffset}..{PswUpsBox8x2ProSerialOffset + 0xFFFF} " +
+                    $"Для {DeviceName} введите полный серийник " +
+                    $"{SerialOffset}..{SerialOffset + 0xFFFF} " +
                     "или короткий номер 0..65535.";
                 return false;
             }

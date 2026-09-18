@@ -29,6 +29,7 @@ namespace TestBuilder.Views
         public IDataTemplate? GetSerialNumberTemplate { get; set; }
 
         public IDataTemplate? SetProMacTemplate { get; set; }
+        public IDataTemplate? SetPswMacTemplate { get; set; }
 
         public IDataTemplate? RunDataTestTemplate { get; set; }
 
@@ -45,6 +46,8 @@ namespace TestBuilder.Views
         public IDataTemplate? CompareVariablesTemplate { get; set; }
 
         public IDataTemplate? WaitVariableUntilTemplate { get; set; }
+
+        public IDataTemplate? CheckIo2SensorsAndRelayTemplate { get; set; }
 
         public IDataTemplate? BuildTestReportTemplate { get; set; }
 
@@ -81,6 +84,7 @@ namespace TestBuilder.Views
                 ClearArpCacheNodeViewModel => ClearArpCacheTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetSerialNumberFromServerNodeViewModel => GetSerialNumberTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SetProMacNodeViewModel => SetProMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                SetPswMacNodeViewModel => SetPswMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
@@ -89,6 +93,7 @@ namespace TestBuilder.Views
                 BuildMacFromSerialNodeViewModel => BuildMacFromSerialTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CompareVariablesNodeViewModel => CompareVariablesTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 WaitVariableUntilNodeViewModel => WaitVariableUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                CheckIo2SensorsAndRelayNodeViewModel => CheckIo2SensorsAndRelayTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 BuildTestReportNodeViewModel => BuildTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 PrintLabelNodeViewModel => PrintLabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SendTestReportNodeViewModel => SendTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

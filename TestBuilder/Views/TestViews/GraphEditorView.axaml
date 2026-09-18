@@ -1372,6 +1372,28 @@
               </DataTemplate>
             </views:NodeTemplateSelector.SetProMacTemplate>
 
+            <views:NodeTemplateSelector.SetPswMacTemplate>
+              <DataTemplate x:DataType="stepvm:SetPswMacNodeViewModel">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
+                             Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode"
+                             Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                  <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
+                  <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
+                  <StackPanel Margin="8" Spacing="6" Width="320">
+                    <TextBlock Text="Отправка ≠ подтверждение записи MAC" TextWrapping="Wrap" FontSize="12" />
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="DUT IPv4:" /><TextBox Grid.Column="1" Text="{Binding DestinationIp}" /></Grid>
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="Local IPv4:" /><TextBox Grid.Column="1" Text="{Binding LocalIp}" /></Grid>
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="Local port:" /><TextBox Grid.Column="1" Text="{Binding LocalPort}" /></Grid>
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="UDP port:" /><TextBox Grid.Column="1" Text="{Binding UdpPort}" /></Grid>
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="MAC var:" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" /></Grid>
+                    <Grid ColumnDefinitions="110,*"><TextBlock Text="Timeout ms:" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" /></Grid>
+                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" />
+                  </StackPanel>
+                </nodify:Node>
+              </DataTemplate>
+            </views:NodeTemplateSelector.SetPswMacTemplate>
+
             <views:NodeTemplateSelector.RunDataTestTemplate>
               <DataTemplate x:DataType="stepvm:RunDataTestNodeViewModel">
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
@@ -1411,6 +1433,7 @@
                       <TextBlock Grid.Column="0" Text="Target wire Mbps:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="12" />
                     </Grid>
+                    <CheckBox Content="Allow gigabit (до 1000 Mbps)" IsChecked="{Binding AllowGigabit}" FontSize="12" />
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Duration ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBox Grid.Column="1" Text="{Binding DurationMs}" FontSize="12" />
@@ -1562,6 +1585,27 @@
               </DataTemplate>
             </views:NodeTemplateSelector.WaitVariableUntilTemplate>
 
+            <views:NodeTemplateSelector.CheckIo2SensorsAndRelayTemplate>
+              <DataTemplate x:DataType="stepvm:CheckIo2SensorsAndRelayNodeViewModel">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="ModbusNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                  <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
+                  <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
+                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="370">
+                    <TextBlock Text="Sensor1/2: IO-2 OUT1/OUT2 → selftest; реле: DUT → IO-2 IN1" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="IO-2 Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Io2SlaveId}" FontSize="12" ToolTip.Tip="0 — автоматически из сканирования" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="DUT base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Selftest endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SelftestEndpoint}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Relay endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RelayEndpointTemplate}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Request timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="State timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding StateTimeoutMs}" FontSize="12" /></Grid>
+                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Poll interval ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="12" /></Grid>
+                    <CheckBox Content="Selftest через браузер" IsChecked="{Binding UseBrowserForSelftest}" FontSize="12" />
+                    <CheckBox Content="Проверять релейный выход" IsChecked="{Binding CheckRelay}" FontSize="12" />
+                  </StackPanel>
+                </nodify:Node>
+              </DataTemplate>
+            </views:NodeTemplateSelector.CheckIo2SensorsAndRelayTemplate>
+
             <views:NodeTemplateSelector.BuildTestReportTemplate>
               <DataTemplate x:DataType="stepvm:BuildTestReportNodeViewModel">
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
@@ -1587,7 +1631,8 @@
                     <CheckBox Content="Ввести серийник вручную" IsChecked="{Binding UseManualSerialNumber}" FontSize="12" />
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseManualSerialNumber}"><TextBlock Grid.Column="0" Text="Серийник вручную:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <CheckBox Content="Qt Pro ZPL: модель + MAC + SN + штрихкод" IsChecked="{Binding UseQtProZplFormat}" FontSize="12" />
+                    <CheckBox Content="Производственная ZPL: модель + MAC + SN + штрихкод" IsChecked="{Binding UseQtProZplFormat}" FontSize="12" />
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseQtProZplFormat}"><TextBlock Text="Label model:" /><ComboBox Grid.Column="1" ItemsSource="{Binding LabelModels}" SelectedItem="{Binding LabelModel}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualQtProMode}"><TextBlock Grid.Column="0" Text="MAC вручную:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ManualMacAddress}" Watermark="C0:11:A6:20:01:AC" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Short SN var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="12" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" /></Grid>
