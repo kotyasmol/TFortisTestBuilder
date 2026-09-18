@@ -20,6 +20,7 @@ namespace TestBuilder.ViewModels
         public ModbusMonitoringViewModel ModbusVM { get; }
         public SelfTestPageViewModel SelfTestPageVM { get; }
         public SettingsViewModel SettingsVM { get; }
+        public NetworkSetupViewModel NetworkSetupVM { get; }
 
         public MainWindowViewModel()
         {
@@ -30,6 +31,7 @@ namespace TestBuilder.ViewModels
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel();
+            NetworkSetupVM = new NetworkSetupViewModel();
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
         }

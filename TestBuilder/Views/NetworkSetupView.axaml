@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels"
+             x:Class="TestBuilder.Views.NetworkSetupView"
+             x:DataType="vm:NetworkSetupViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="14" MaxWidth="1050" HorizontalAlignment="Left">
+      <TextBlock Text="Сконфигурировать сетевые карты" FontSize="22" FontWeight="SemiBold"/>
+      <TextBlock Text="Назначьте каждому порту стенда физический адаптер. Сверяйте имя и MAC-адрес: после сброса IP определить порт автоматически нельзя. Выбранная привязка сохранится для следующего восстановления."
+                 TextWrapping="Wrap"/>
+      <TextBlock Text="Применение заменит IPv4-адрес выбранных карт на статический /24 без шлюза. Требуются права администратора Windows. Отключённый кабель или скорость SFP эта операция не исправит."
+                 TextWrapping="Wrap" Opacity="0.7"/>
+      <Grid ColumnDefinitions="80,160,*" Margin="0,8,0,0">
+        <TextBlock Grid.Column="0" Text="Порт" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="Адрес" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Сетевая карта · MAC · состояние · текущий IPv4" FontWeight="SemiBold"/>
+      </Grid>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+            <Grid ColumnDefinitions="80,160,*" Margin="0,0,0,7">
+              <TextBlock Grid.Column="0" Text="{Binding Port}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{Binding Ip}" VerticalAlignment="Center"/>
+              <ComboBox Grid.Column="2" MinWidth="650"
+                        ItemsSource="{Binding Adapters}"
+                        SelectedItem="{Binding SelectedAdapter}"
+                        DisplayMemberBinding="{Binding Display}"/>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+        <Button Content="Обновить список" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+        <Button Content="Применить адреса" Command="{Binding ApplyCommand}" IsEnabled="{Binding !IsBusy}"/>
+      </StackPanel>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

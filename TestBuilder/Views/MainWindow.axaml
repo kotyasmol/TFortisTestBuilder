@@ -29,6 +29,10 @@
         <views:SelfTestPageView x:Name="SelfTestPageViewControl" />
       </TabItem>
 
+      <TabItem Header="Сконфигурировать сетевые карты">
+        <views:NetworkSetupView x:Name="NetworkSetupViewControl" />
+      </TabItem>
+
       <TabItem Header="Настройки">
         <views:SettingsView x:Name="SettingsViewControl" />
       </TabItem>

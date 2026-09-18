@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Collections.Generic;
 
 namespace TestBuilder.Services
 {
@@ -44,6 +45,10 @@ namespace TestBuilder.Services
 
         [JsonPropertyName("logFolder")]
         public string LogFolder { get; set; } = string.Empty;
+
+        // IP -> stable Windows network interface ID for the DataTest bench.
+        [JsonPropertyName("dataTestAdapterIds")]
+        public Dictionary<string, string> DataTestAdapterIds { get; set; } = new();
 
 
         private static AppSettings Load()
