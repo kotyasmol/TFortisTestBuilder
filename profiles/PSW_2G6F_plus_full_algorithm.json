@@ -13,7 +13,7 @@
       "x": 540,
       "y": 120,
       "color": "orange",
-      "text": "PSW-2G6F+, полный алгоритм БЕЗ прошивки/DFU. Подтвердите подключение: PS3=23; EL60v5=1,3,5,7,9,11; нужная IO-2 найдена сканированием. Медные пары стенда: 192.168.0.2/.3, .4/.5, .6/.7 (100 Мбит/с); SFP: .8/.9 (1 Гбит/с), оба конца и модули должны поддерживать гигабит. Установите шторку датчика вскрытия и подключите порты. Продолжить?"
+      "text": "PSW-2G6F+, полный алгоритм БЕЗ прошивки/DFU. Подтвердите подключение: PS3=23; EL60v5=1,3,5,7,9,11; IO-2=21. Медные пары стенда: 192.168.0.2/.3, .4/.5, .6/.7 (100 Мбит/с); SFP: .8/.9 (1 Гбит/с), оба конца и модули должны поддерживать гигабит. Установите шторку датчика вскрытия и подключите порты. Продолжить?"
     },
     {
       "type": "Subtest",
@@ -424,7 +424,7 @@
     {
       "type": "Subtest",
       "name": "3. Датчик вскрытия, Sensor1 и Sensor2",
-      "description": "3. Датчик вскрытия, Sensor1 и Sensor2",
+      "description": "IO-2 slave 21. Обычные Write Register: исходный ноль 1500/1501, включение каждого выхода, Wait Variable Until со свежим selftest, сброс.",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -438,9 +438,31 @@
             "y": 120
           },
           {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1500,
+            "value": 0,
+            "verifyWrite": true,
             "id": "1",
-            "type": "Check Variable Equality",
             "x": 540,
+            "y": 120
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1501,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 1000,
+            "y": 120
+          },
+          {
+            "id": "3",
+            "type": "Check Variable Equality",
+            "x": 1460,
             "y": 120,
             "color": "blue",
             "variableName": "Dut.sensor_0",
@@ -449,26 +471,88 @@
             "failMessage": "Датчик вскрытия с установленной шторкой должен быть замкнут"
           },
           {
-            "id": "2",
-            "type": "Check IO-2 Sensors and Relay",
-            "x": 1000,
-            "y": 120,
-            "color": "purple",
-            "io2SlaveId": 0,
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1500,
+            "value": 1,
+            "verifyWrite": true,
+            "id": "4",
+            "x": 1920,
+            "y": 120
+          },
+          {
+            "type": "Wait Variable Until",
+            "variableName": "Dut.sensor_1",
+            "expectedValue": "1",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
             "baseUrl": "http://192.168.0.1",
-            "selftestEndpoint": "/test.shtml",
-            "relayEndpointTemplate": "/test.shtml?set_mb_output={state}",
-            "requestTimeoutMs": 5000,
-            "stateTimeoutMs": 30000,
-            "pollIntervalMs": 1000,
-            "useBrowserForSelftest": false,
-            "checkRelay": false
+            "endpoint": "/test.shtml",
+            "responseType": "String",
+            "requestTimeoutMs": 30000,
+            "timeoutMs": 60000,
+            "intervalMs": 1000,
+            "failOnTimeout": true,
+            "id": "5",
+            "x": 80,
+            "y": 580
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1500,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "6",
+            "x": 540,
+            "y": 580
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1501,
+            "value": 1,
+            "verifyWrite": true,
+            "id": "7",
+            "x": 1000,
+            "y": 580
+          },
+          {
+            "type": "Wait Variable Until",
+            "variableName": "Dut.sensor_2",
+            "expectedValue": "1",
+            "comparisonType": "Number",
+            "pollAction": "SelftestSnapshot",
+            "baseUrl": "http://192.168.0.1",
+            "endpoint": "/test.shtml",
+            "responseType": "String",
+            "requestTimeoutMs": 30000,
+            "timeoutMs": 60000,
+            "intervalMs": 1000,
+            "failOnTimeout": true,
+            "id": "8",
+            "x": 1460,
+            "y": 580
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1501,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "9",
+            "x": 1920,
+            "y": 580
           },
           {
             "type": "End",
-            "id": "3",
-            "x": 1460,
-            "y": 120
+            "id": "10",
+            "x": 80,
+            "y": 1040
           }
         ],
         "connections": [
@@ -476,18 +560,60 @@
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
             "targetNodeId": "1",
-            "targetConnector": "In"
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
             "targetNodeId": "2",
-            "targetConnector": "In"
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "True",
+            "targetNodeId": "6",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "8",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "9",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "9",
+            "sourceConnector": "True",
+            "targetNodeId": "10",
             "targetConnector": "Вход"
           }
         ]
@@ -1173,7 +1299,7 @@
       "y": 850,
       "color": "red",
       "name": "Аварийное выключение PSW-2G6F+",
-      "description": "Аварийное выключение AC1/AC2 и всех 12 линий PoE после ошибки/отмены",
+      "description": "Аварийное выключение AC1/AC2 и всех 12 линий PoE после ошибки/отмены; сброс IO-2 slave 21 (1500/1501).",
       "isEnabled": true,
       "stopOnError": false,
       "runOnFailure": true,
@@ -1340,15 +1466,31 @@
             "id": "ac2",
             "x": 620,
             "y": 400
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1500,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "io2-cleanup-0",
+            "x": 80,
+            "y": 600
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 21,
+            "useCurrentSlaveId": false,
+            "address": 1501,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "io2-cleanup-1",
+            "x": 540,
+            "y": 600
           }
         ],
         "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
@@ -1378,6 +1520,36 @@
             "sourceConnector": "False",
             "targetNodeId": "2",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "io2-cleanup-0",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "io2-cleanup-0",
+            "sourceConnector": "True",
+            "targetNodeId": "io2-cleanup-1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "io2-cleanup-0",
+            "sourceConnector": "False",
+            "targetNodeId": "io2-cleanup-1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "io2-cleanup-1",
+            "sourceConnector": "True",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "io2-cleanup-1",
+            "sourceConnector": "False",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
           }
         ]
       }

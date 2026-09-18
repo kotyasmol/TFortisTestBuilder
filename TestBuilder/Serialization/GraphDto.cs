@@ -220,31 +220,6 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? FailOnTimeout { get; set; }
 
-        // --- IO-2 sensors and relay ---
-        [JsonPropertyName("io2SlaveId")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public byte? Io2SlaveId { get; set; }
-
-        [JsonPropertyName("selftestEndpoint")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? SelftestEndpoint { get; set; }
-
-        [JsonPropertyName("relayEndpointTemplate")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? RelayEndpointTemplate { get; set; }
-
-        [JsonPropertyName("stateTimeoutMs")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? StateTimeoutMs { get; set; }
-
-        [JsonPropertyName("useBrowserForSelftest")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? UseBrowserForSelftest { get; set; }
-
-        [JsonPropertyName("checkRelay")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? CheckRelay { get; set; }
-
         // --- Clear ARP Cache ---
         [JsonPropertyName("runArpdBat")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

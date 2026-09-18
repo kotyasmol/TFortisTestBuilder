@@ -53,7 +53,6 @@ namespace TestBuilder.Services
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
             CompareVariablesNodeViewModel => "Compare Variables",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
-            CheckIo2SensorsAndRelayNodeViewModel => "Check IO-2 Sensors and Relay",
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
@@ -290,18 +289,6 @@ namespace TestBuilder.Services
                         n.FailOnTimeout = wait.FailOnTimeout;
                         break;
 
-                    case CheckIo2SensorsAndRelayNodeViewModel inOut:
-                        n.Io2SlaveId = inOut.Io2SlaveId;
-                        n.BaseUrl = inOut.BaseUrl;
-                        n.SelftestEndpoint = inOut.SelftestEndpoint;
-                        n.RelayEndpointTemplate = inOut.RelayEndpointTemplate;
-                        n.RequestTimeoutMs = inOut.RequestTimeoutMs;
-                        n.StateTimeoutMs = inOut.StateTimeoutMs;
-                        n.PollIntervalMs = inOut.PollIntervalMs;
-                        n.UseBrowserForSelftest = inOut.UseBrowserForSelftest;
-                        n.CheckRelay = inOut.CheckRelay;
-                        break;
-
                     case BuildTestReportNodeViewModel br:
                         n.ReportVariableName = br.ReportVariableName;
                         n.SerialVariableName = br.SerialVariableName;
@@ -384,6 +371,7 @@ namespace TestBuilder.Services
             var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
+            RejectRemovedIo2Nodes(dto);
             vm.ResetToRootGraph();
             vm.RootGraph.Clear();
 
@@ -392,6 +380,18 @@ namespace TestBuilder.Services
             vm.ResetToRootGraph();
 
             return dto.Name;
+        }
+
+        private static void RejectRemovedIo2Nodes(GraphDto dto)
+        {
+            foreach (var node in dto.Nodes)
+            {
+                var type = string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type;
+                if (type is "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле")
+                    throw new InvalidOperationException("Отдельная нода проверки IO-2 удалена. Импортируйте обновлённый профиль: проверка выполняется обычными Write Register и Wait Variable Until.");
+                if (node.BodyGraph != null) RejectRemovedIo2Nodes(node.BodyGraph);
+                if (node.Body != null) RejectRemovedIo2Nodes(node.Body);
+            }
         }
 
         private static void DeserializeGraph(GraphDto dto, GraphWorkspaceViewModel graph, bool isBodyGraph)
@@ -611,20 +611,6 @@ namespace TestBuilder.Services
                         TimeoutMs = n.TimeoutMs ?? 160000,
                         IntervalMs = n.IntervalMs ?? 5000,
                         FailOnTimeout = n.FailOnTimeout ?? true
-                    },
-
-                    "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле" => new CheckIo2SensorsAndRelayNodeViewModel
-                    {
-                        Location = location,
-                        Io2SlaveId = n.Io2SlaveId ?? 0,
-                        BaseUrl = n.BaseUrl ?? CheckIo2SensorsAndRelayStep.DefaultBaseUrl,
-                        SelftestEndpoint = n.SelftestEndpoint ?? CheckIo2SensorsAndRelayStep.DefaultSelftestEndpoint,
-                        RelayEndpointTemplate = n.RelayEndpointTemplate ?? CheckIo2SensorsAndRelayStep.DefaultRelayEndpointTemplate,
-                        RequestTimeoutMs = n.RequestTimeoutMs ?? CheckIo2SensorsAndRelayStep.DefaultRequestTimeoutMs,
-                        StateTimeoutMs = n.StateTimeoutMs ?? CheckIo2SensorsAndRelayStep.DefaultStateTimeoutMs,
-                        PollIntervalMs = n.PollIntervalMs ?? CheckIo2SensorsAndRelayStep.DefaultPollIntervalMs,
-                        UseBrowserForSelftest = n.UseBrowserForSelftest ?? false,
-                        CheckRelay = n.CheckRelay ?? true
                     },
 
                     "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel

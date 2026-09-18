@@ -55,7 +55,8 @@ public class Psw2G6FProfileTests
             Assert.Equal("http://192.168.0.1/test.shtml", n.Url);
             Assert.DoesNotContain("firmvare_vers", n.ValidationRules);
         });
-        Assert.False(nodes.OfType<CheckIo2SensorsAndRelayNodeViewModel>().Single().CheckRelay);
+        Assert.DoesNotContain(nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
+        Assert.Equal(2, nodes.OfType<WaitVariableUntilNodeViewModel>().Count(n => n.VariableName.StartsWith("Dut.sensor_")));
         var data = Assert.Single(nodes.OfType<RunDataTestNodeViewModel>());
         Assert.True(data.AllowGigabit);
         Assert.Equal(4, data.PortsText.Split('\n').Length);
@@ -97,7 +98,7 @@ public class Psw2G6FProfileTests
         Assert.Equal(label.LabelModel, Assert.IsType<PrintLabelNodeViewModel>(label.Clone()).LabelModel);
         Assert.Equal(2, vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Count(n => n.RunOnFailure));
         var cleanup = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().First(n => n.RunOnFailure);
-        Assert.Equal(6, cleanup.BodyGraph.Connections.Count);
+        Assert.Equal(10, cleanup.BodyGraph.Connections.Count);
         Assert.Equal(9, cleanup.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>().Single().BodyGraph.Connections.Count);
         Assert.All(nodes.OfType<BuildTestReportNodeViewModel>(), n => Assert.Contains("без прошивки/DFU", n.TestType));
     }

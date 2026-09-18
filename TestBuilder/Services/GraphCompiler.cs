@@ -112,7 +112,6 @@ namespace TestBuilder.Services
                 BuildMacFromSerialNodeViewModel buildMac => buildMac.CreateStep(_logger),
                 CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
                 WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
-                CheckIo2SensorsAndRelayNodeViewModel inOut => inOut.CreateStep(_modbusService, _httpRequestService, _logger),
                 BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger),
@@ -291,10 +290,6 @@ namespace TestBuilder.Services
 
                 case WaitVariableUntilNodeViewModel waitVariableVm:
                     BindTrueFalse(sourceConnector, source, target, waitVariableVm.TrueOut, waitVariableVm.FalseOut);
-                    break;
-
-                case CheckIo2SensorsAndRelayNodeViewModel inOutVm:
-                    BindTrueFalse(sourceConnector, source, target, inOutVm.TrueOut, inOutVm.FalseOut);
                     break;
 
                 case BuildTestReportNodeViewModel buildReportVm:

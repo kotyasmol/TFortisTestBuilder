@@ -1585,26 +1585,6 @@
               </DataTemplate>
             </views:NodeTemplateSelector.WaitVariableUntilTemplate>
 
-            <views:NodeTemplateSelector.CheckIo2SensorsAndRelayTemplate>
-              <DataTemplate x:DataType="stepvm:CheckIo2SensorsAndRelayNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="ModbusNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
-                  <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
-                  <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="370">
-                    <TextBlock Text="Sensor1/2: IO-2 OUT1/OUT2 → selftest; реле: DUT → IO-2 IN1" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="IO-2 Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Io2SlaveId}" FontSize="12" ToolTip.Tip="0 — автоматически из сканирования" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="DUT base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Selftest endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SelftestEndpoint}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Relay endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RelayEndpointTemplate}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Request timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="State timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding StateTimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="150,*"><TextBlock Grid.Column="0" Text="Poll interval ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="12" /></Grid>
-                    <CheckBox Content="Selftest через браузер" IsChecked="{Binding UseBrowserForSelftest}" FontSize="12" />
-                    <CheckBox Content="Проверять релейный выход" IsChecked="{Binding CheckRelay}" FontSize="12" />
-                  </StackPanel>
-                </nodify:Node>
-              </DataTemplate>
-            </views:NodeTemplateSelector.CheckIo2SensorsAndRelayTemplate>
 
             <views:NodeTemplateSelector.BuildTestReportTemplate>
               <DataTemplate x:DataType="stepvm:BuildTestReportNodeViewModel">

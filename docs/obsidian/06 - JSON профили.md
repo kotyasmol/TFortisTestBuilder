@@ -102,7 +102,6 @@ updated: 2026-09-18
 | `Build MAC From Serial` | `BuildMacFromSerialNodeViewModel` |
 | `Compare Variables` | `CompareVariablesNodeViewModel` |
 | `Wait Variable Until` | `WaitVariableUntilNodeViewModel` |
-| `Check IO-2 Sensors and Relay` | `CheckIo2SensorsAndRelayNodeViewModel` |
 | `Build Test Report` | `BuildTestReportNodeViewModel` |
 | `Print Label` | `PrintLabelNodeViewModel` |
 | `Send Test Report` | `SendTestReportNodeViewModel` |
@@ -132,7 +131,6 @@ Deserializer также принимает часть русских и legacy-�
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
-| IO-2 sensor/relay check | `io2SlaveId`, `baseUrl`, `selftestEndpoint`, `relayEndpointTemplate`, `requestTimeoutMs`, `stateTimeoutMs`, `pollIntervalMs`, `useBrowserForSelftest` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
 Для браузерного исполнения `Selftest Check` дополнительные JSON-поля не нужны:
@@ -143,18 +141,22 @@ Deserializer также принимает часть русских и legacy-�
 профиля используются `timeoutMs: 300000` и `pollIntervalMs: 5000`; последующие
 проверки уже загруженного DUT сохраняют `timeoutMs: 180000`.
 
-`Check IO-2 Sensors and Relay` использует `io2SlaveId: 0` для автоматического
-выбора IO-2 из последнего сканирования стенда. В поставляемом PSW-профиле нода
-использует `OUT1=1500`/`OUT2=1501` для Sensor1/Sensor2, свежий selftest по LuCI
-`deviceinfo` и команду реле `/test.shtml?set_mb_output={state}`. Она ожидает
-`sensor_1 = 1`, `sensor_2 = 1`, затем `IN1 (1507) = 1 → 0`; выходы и реле
-выключаются в `finally`. `stateTimeoutMs` — общий deadline каждого состояния,
-а `useBrowserForSelftest: false` сохраняет быстрый прямой HTTP-путь старого
-стенда.
+Sensor1/Sensor2 собираются обычными нодами, без специализированного типа:
+`Write Register` (`slaveId: 21`, `useCurrentSlaveId: false`, `verifyWrite: true`)
+сначала обнуляет `1500/1501`, затем включает соответствующий выход.
+`Wait Variable Until` с `pollAction: SelftestSnapshot` ждёт свежие
+`Dut.sensor_1=1` / `Dut.sensor_2=1`, после чего обычная запись возвращает выход
+в ноль. Параметры ожидания: `requestTimeoutMs: 30000`, `timeoutMs: 60000`,
+`intervalMs: 1000`, `failOnTimeout: true`. PSW-2G6F+ читает `/test.shtml`,
+Pro — LuCI `deviceinfo`. Аварийный `runOnFailure`-подтест также сбрасывает оба
+выхода, продолжая попытки при `False` отдельной записи.
 
-Для моделей без релейного теста параметр `checkRelay: false` отключает HTTP-команды
-реле и чтение IO-2 IN1; Sensor1/2 проверяются как раньше. Отсутствующее поле
-трактуется как `true`, чтобы старые профили не меняли поведение.
+Реле Pro проверяется обычными `Read HTTP Variable` (команды
+`/test.shtml?set_mb_output=0/1`), `Write Register` (сброс `1507=0` после
+выключения) и `Wait Until` (`1507=1`, `liveRead: true`). В PSW-2G6F+ этих
+шагов нет. Старый тип `Check IO-2 Sensors and Relay` и его aliases теперь
+отклоняются с указанием импортировать обновлённый профиль; проверка не
+пропускается молча. Поля специализированной ноды удалены из DTO.
 
 Рабочий подтест `проверка акб (упс)` не использует `akb_det`: на фактической
 прошивке поле не меняется после включения SIMBAT. Подтест выполняет четыре
@@ -208,7 +210,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 ### Профиль PSW-2G6F+ без прошивки/DFU
 
 `profiles/PSW_2G6F_plus_full_algorithm.json` заменяет диагностический черновик
-для запуска. Selftest — `/test.shtml`, модель 6; Sensor1/2 с `checkRelay=false`;
+для запуска. Selftest — `/test.shtml`, модель 6; Sensor1/2 через IO-2 slave 21 без релейного теста;
 12 линий PoE; три медные пары по 100 и SFP `.8/.9` по 1000 Мбит/с.
 Серийники `600000..665535`, MAC-префикс `C0:11:A6:06`; отдельный тип
 `Set PSW MAC (UDP)` не пересекается с legacy-алиасами `Set Pro MAC`.
@@ -267,7 +269,6 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 | `Get UPS Status` | `baseUrl` | `http://192.168.0.1` |
 | `Read HTTP Variable` | `baseUrl`, `endpoint`, `responseType` | `http://192.168.0.1`, `/api/getUpsStatus`, `Integer` |
 | `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
-| `Check IO-2 Sensors and Relay` | `io2SlaveId`, `baseUrl`, `selftestEndpoint`, `relayEndpointTemplate`, `requestTimeoutMs`, `stateTimeoutMs`, `pollIntervalMs`, `useBrowserForSelftest`, `checkRelay` | `0`, `http://192.168.0.1`, LuCI `deviceinfo`, `/test.shtml?set_mb_output={state}`, `5000`, `30000`, `1000`, `false`, `true` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
 | `Build MAC From Serial` | `macPrefix` | `C0:11:A6:20` |
 | `Print Label` | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat` | `TSC TE310`, `SerialNumber`, `SerialShort`, `Dut.default_mac`, `false`, `""`, `""`, `4`, `false` |

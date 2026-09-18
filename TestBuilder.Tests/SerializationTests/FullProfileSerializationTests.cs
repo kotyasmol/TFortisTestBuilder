@@ -30,21 +30,23 @@ public class FullProfileSerializationTests
             .OfType<ForEachSlaveNodeViewModel>()
             .Select(node => node.BodyGraph.Connections.Count));
         Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
-        Assert.False(viewModel.RootGraph.Nodes.OfType<CheckIo2SensorsAndRelayNodeViewModel>().Single().CheckRelay);
+        var sensors = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => !n.RunOnFailure);
+        Assert.Equal(2, sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
+        Assert.DoesNotContain(sensors.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
         var dataTest = viewModel.RootGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
         Assert.Equal(100, dataTest.TargetBandwidthMbps);
         Assert.Equal(3, dataTest.PortsText.Split('\n').Length);
         Assert.DoesNotContain(viewModel.RootGraph.Nodes, node => node is SetProMacNodeViewModel or PrintLabelNodeViewModel);
-        var cleanup = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single();
+        var cleanup = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.RunOnFailure);
         Assert.True(cleanup.RunOnFailure);
-        Assert.Equal(4, cleanup.BodyGraph.Connections.Count);
+        Assert.Equal(8, cleanup.BodyGraph.Connections.Count);
         Assert.Equal(9, cleanup.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
             .Single().BodyGraph.Connections.Count);
         var gate = viewModel.RootGraph.Nodes.OfType<CheckVariableEqualityNodeViewModel>()
             .Single(node => node.VariableName == "Migration.ProductionReady");
         Assert.Equal("1", gate.ExpectedValue);
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(viewModel.RootGraph));
-        Assert.Contains("\"checkRelay\": false", GraphSerializer.Serialize(viewModel, name));
+        Assert.DoesNotContain("Check IO-2 Sensors and Relay", GraphSerializer.Serialize(viewModel, name));
     }
 
     [Fact]
@@ -127,7 +129,7 @@ public class FullProfileSerializationTests
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "16. Печать этикеток");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
-        Assert.Contains(viewModel.AvailableNodes, node => node is CheckIo2SensorsAndRelayNodeViewModel);
+        Assert.DoesNotContain(viewModel.AvailableNodes, node => node.Title == "Check IO-2 Sensors and Relay");
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetIrpStatusNodeViewModel);
@@ -235,20 +237,14 @@ public class FullProfileSerializationTests
         Assert.Equal(300000, startupSelftest.TimeoutMs);
         Assert.Equal(5000, startupSelftest.PollIntervalMs);
 
-        var inOutNode = inOutSubtest.BodyGraph.Nodes
-            .OfType<CheckIo2SensorsAndRelayNodeViewModel>()
-            .Single();
-        Assert.Equal(0, inOutNode.Io2SlaveId);
-        Assert.Equal("http://192.168.0.1", inOutNode.BaseUrl);
-        Assert.Equal(
-            "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            inOutNode.SelftestEndpoint);
-        Assert.Equal("/test.shtml?set_mb_output={state}", inOutNode.RelayEndpointTemplate);
-        Assert.Equal(5000, inOutNode.RequestTimeoutMs);
-        Assert.Equal(30000, inOutNode.StateTimeoutMs);
-        Assert.Equal(1000, inOutNode.PollIntervalMs);
-        Assert.False(inOutNode.UseBrowserForSelftest);
-        Assert.True(inOutNode.CheckRelay);
+        Assert.All(inOutSubtest.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => Assert.Equal(21, n.SlaveId));
+        Assert.Equal(2, inOutSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
+        var relayWait = Assert.Single(inOutSubtest.BodyGraph.Nodes.OfType<WaitUntilNodeViewModel>());
+        Assert.Equal(21, relayWait.SlaveId);
+        Assert.Equal(1507, relayWait.Address);
+        Assert.Equal(1, relayWait.ExpectedValue);
+        Assert.True(relayWait.LiveRead);
+        Assert.Equal(3, inOutSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>().Count());
         Assert.Contains(
             viewModel.RootGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, inOutSubtest) &&

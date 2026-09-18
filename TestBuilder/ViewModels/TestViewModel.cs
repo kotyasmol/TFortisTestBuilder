@@ -167,7 +167,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new RunDataTestNodeViewModel(),
         new ReadHttpVariableNodeViewModel(),
         new WaitVariableUntilNodeViewModel(),
-        new CheckIo2SensorsAndRelayNodeViewModel(),
         new BuildMacFromSerialNodeViewModel(),
         new CompareVariablesNodeViewModel(),
         new BuildTestReportNodeViewModel(),
@@ -309,8 +308,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Проверки",
             Find("Selftest Check"),
             Find("Check Variable Equality"),
-            Find("Check Variable Range"),
-            Find("Check IO-2 Sensors and Relay")));
+            Find("Check Variable Range")));
 
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
             "HTTP и сеть",
@@ -1479,7 +1477,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Get IRP Status" => new GetIrpStatusNodeViewModel { Location = location },
             "Read HTTP Variable" => new ReadHttpVariableNodeViewModel { Location = location },
             "Wait Variable Until" => new WaitVariableUntilNodeViewModel { Location = location },
-            "Check IO-2 Sensors and Relay" => new CheckIo2SensorsAndRelayNodeViewModel { Location = location },
             "Build MAC From Serial" => new BuildMacFromSerialNodeViewModel { Location = location },
             "Compare Variables" => new CompareVariablesNodeViewModel { Location = location },
             "Build Test Report" => new BuildTestReportNodeViewModel { Location = location },

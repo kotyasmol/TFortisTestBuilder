@@ -47,8 +47,6 @@ namespace TestBuilder.Views
 
         public IDataTemplate? WaitVariableUntilTemplate { get; set; }
 
-        public IDataTemplate? CheckIo2SensorsAndRelayTemplate { get; set; }
-
         public IDataTemplate? BuildTestReportTemplate { get; set; }
 
         public IDataTemplate? PrintLabelTemplate { get; set; }
@@ -93,7 +91,6 @@ namespace TestBuilder.Views
                 BuildMacFromSerialNodeViewModel => BuildMacFromSerialTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CompareVariablesNodeViewModel => CompareVariablesTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 WaitVariableUntilNodeViewModel => WaitVariableUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                CheckIo2SensorsAndRelayNodeViewModel => CheckIo2SensorsAndRelayTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 BuildTestReportNodeViewModel => BuildTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 PrintLabelNodeViewModel => PrintLabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SendTestReportNodeViewModel => SendTestReportTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
