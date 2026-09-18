@@ -19,6 +19,8 @@ namespace TestBuilder.Domain.Modbus.Models
         public byte Output7 { get; private set; } // 1506
 
         // ===== Входы =====
+        // Read-only in the register editor. The relay test has a dedicated
+        // zero-only reset of 1507, matching legacy set_mb_io02_in(0, 0).
         public byte Input1 { get; private set; }  // 1507
         public byte Input2 { get; private set; }  // 1508
         public byte Input3 { get; private set; }  // 1509

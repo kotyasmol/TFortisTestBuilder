@@ -31,6 +31,7 @@ namespace TestBuilder.Domain.Steps
         private const ushort Sensor1OutputRegister = 1500;
         private const ushort Sensor2OutputRegister = 1501;
         private const ushort RelayInputRegister = 1507;
+        private const int CleanupVerifyTimeoutMs = 3000;
 
         private readonly IModbusService _modbusService;
         private readonly IHttpRequestService _httpRequestService;
@@ -104,7 +105,11 @@ namespace TestBuilder.Domain.Steps
                 {
                     context.SetVariable("InOut.Io2SlaveId", io2SlaveId.Value);
 
-                    if (_checkRelay && !await EnsureRelayStateAsync(context, io2SlaveId.Value, 0, cancellationToken, "InOut.Relay.Initial"))
+                    if (!await ResetOutputsAsync(context, io2SlaveId.Value, cancellationToken))
+                    {
+                        failureMessage = "Исходное состояние IO-2 не подтверждено: OUT1 и OUT2 должны быть 0. Проверка не запущена.";
+                    }
+                    else if (_checkRelay && !await EnsureRelayStateAsync(context, io2SlaveId.Value, 0, cancellationToken, "InOut.Relay.Initial"))
                     {
                         failureMessage = "Не удалось привести релейный выход DUT в исходное состояние.";
                     }
@@ -186,6 +191,9 @@ namespace TestBuilder.Domain.Steps
 
         private void SaveConfiguration(TestContext context)
         {
+            context.SetVariable("InOut.Ok", false);
+            context.SetVariable("InOut.Error", string.Empty);
+            context.SetVariable("InOut.InitialOutputsOff", false);
             context.SetVariable("InOut.ConfiguredIo2SlaveId", _io2SlaveId);
             context.SetVariable("InOut.BaseUrl", _baseUrl);
             context.SetVariable("InOut.SelftestEndpoint", _selftestEndpoint);
@@ -193,6 +201,18 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("InOut.StateTimeoutMs", _stateTimeoutMs);
             context.SetVariable("InOut.PollIntervalMs", _pollIntervalMs);
             context.SetVariable("InOut.CheckRelay", _checkRelay);
+        }
+
+        private async Task<bool> ResetOutputsAsync(TestContext context, byte io2SlaveId, CancellationToken cancellationToken)
+        {
+            _logger.Info("[ШАГ] Подготовка IO-2: размыкаю OUT1 (1500) и OUT2 (1501), подтверждаю оба нуля чтением.");
+            // Attempt both resets even if the first one cannot be confirmed.
+            var output1Off = await WriteIo2RegisterAsync(context, io2SlaveId,
+                Sensor1OutputRegister, 0, cancellationToken, "InOut.Initial.Sensor1");
+            var output2Off = await WriteIo2RegisterAsync(context, io2SlaveId,
+                Sensor2OutputRegister, 0, cancellationToken, "InOut.Initial.Sensor2");
+            context.SetVariable("InOut.InitialOutputsOff", output1Off && output2Off);
+            return output1Off && output2Off;
         }
 
         private async Task<byte?> ResolveIo2SlaveIdAsync(TestContext context, CancellationToken cancellationToken)
@@ -265,7 +285,7 @@ namespace TestBuilder.Domain.Steps
             var outputDisabled = false;
             try
             {
-                outputEnabled = await WriteIo2OutputAsync(
+                outputEnabled = await WriteIo2RegisterAsync(
                     context,
                     io2SlaveId,
                     outputRegister,
@@ -284,13 +304,14 @@ namespace TestBuilder.Domain.Steps
             }
             finally
             {
-                outputDisabled = await WriteIo2OutputAsync(
+                outputDisabled = await WriteIo2RegisterAsync(
                     context,
                     io2SlaveId,
                     outputRegister,
                     0,
                     CancellationToken.None,
-                    $"{prefix}.Cleanup");
+                    $"{prefix}.Cleanup",
+                    verificationTimeoutMs: Math.Min(_stateTimeoutMs, CleanupVerifyTimeoutMs));
 
                 context.SetVariable($"{prefix}.OutputDisabled", outputDisabled);
                 if (!outputDisabled)
@@ -348,6 +369,14 @@ namespace TestBuilder.Domain.Steps
             string prefix)
         {
             if (!await SendRelayCommandAsync(context, expectedInputValue, cancellationToken, prefix))
+            {
+                return false;
+            }
+
+            // Legacy IO-2 explicitly clears the input register after releasing
+            // the DUT relay. A previous captured 1 must not satisfy a new test.
+            if (expectedInputValue == 0 && !await WriteIo2RegisterAsync(
+                    context, io2SlaveId, RelayInputRegister, 0, cancellationToken, $"{prefix}.ResetInput"))
             {
                 return false;
             }
@@ -512,32 +541,87 @@ namespace TestBuilder.Domain.Steps
             return passed;
         }
 
-        private async Task<bool> WriteIo2OutputAsync(
+        private async Task<bool> WriteIo2RegisterAsync(
             TestContext context,
             byte io2SlaveId,
             ushort register,
             ushort value,
             CancellationToken cancellationToken,
-            string prefix)
+            string prefix,
+            int? verificationTimeoutMs = null)
         {
+            context.SetVariable($"{prefix}.WriteRegister", register);
+            context.SetVariable($"{prefix}.WriteValue", value);
+            context.SetVariable($"{prefix}.WriteSuccess", false);
+            context.SetVariable($"{prefix}.WriteAttempts", 0);
+            context.SetVariable($"{prefix}.WriteActualValue", -1);
+            var timeoutMs = verificationTimeoutMs ?? _stateTimeoutMs;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(timeoutMs);
+            var operationToken = timeout.Token;
             try
             {
+                operationToken.ThrowIfCancellationRequested();
                 var success = await _modbusService.WriteRegisterAsync(
                     io2SlaveId,
                     register,
                     value,
-                    verify: true,
-                    cancellationToken: cancellationToken);
-                context.SetVariable($"{prefix}.WriteRegister", register);
-                context.SetVariable($"{prefix}.WriteValue", value);
-                context.SetVariable($"{prefix}.WriteSuccess", success);
-                context.SetVariable($"{prefix}.WriteError", success ? string.Empty : "Modbus-запись не подтверждена.");
+                    verify: false,
+                    cancellationToken: operationToken);
                 if (!success)
                 {
-                    _logger.Warning($"[ОШИБКА] IO-2 {io2SlaveId}, register {register} ← {value}: запись не подтверждена.");
+                    context.SetVariable($"{prefix}.WriteError", "Команда Modbus-записи не выполнена.");
+                    _logger.Warning($"[ОШИБКА] IO-2 {io2SlaveId}, register {register} ← {value}: команда не выполнена.");
+                    return false;
                 }
 
-                return success;
+                // IO-2 can expose the previous value just after a write. Poll
+                // read-back instead of immediately failing or repeating writes.
+                var deadline = DateTimeOffset.UtcNow.AddMilliseconds(timeoutMs);
+                var attempts = 0;
+                var lastValue = -1;
+                var lastError = string.Empty;
+                do
+                {
+                    operationToken.ThrowIfCancellationRequested();
+                    attempts++;
+                    try
+                    {
+                        var values = await _modbusService.ReadRegistersAsync(io2SlaveId, register, 1, operationToken);
+                        lastValue = values.Length == 0 ? -1 : values[0];
+                        context.SetVariable($"{prefix}.WriteAttempts", attempts);
+                        context.SetVariable($"{prefix}.WriteActualValue", lastValue);
+                        if (lastValue == value)
+                        {
+                            context.RegisterState.Update(io2SlaveId, register, value);
+                            context.SetVariable($"{prefix}.WriteSuccess", true);
+                            context.SetVariable($"{prefix}.WriteError", string.Empty);
+                            _logger.Info($"[OK] IO-2 {io2SlaveId}, register {register} = {value}, подтверждено чтением ({attempts}).");
+                            return true;
+                        }
+                        lastError = values.Length == 0 ? "Пустой ответ IO-2." : string.Empty;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        lastError = ex.Message;
+                    }
+
+                    var remaining = deadline - DateTimeOffset.UtcNow;
+                    if (remaining <= TimeSpan.Zero) break;
+                    await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(_pollIntervalMs, remaining.TotalMilliseconds)), operationToken);
+                } while (DateTimeOffset.UtcNow <= deadline);
+
+                var error = $"Запись IO-2 {register} не подтверждена: ожидалось {value}, прочитано {lastValue}. {lastError}".Trim();
+                context.SetVariable($"{prefix}.WriteError", error);
+                _logger.Warning($"[ОШИБКА] {error}");
+                return false;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                var error = $"Таймаут подтверждения IO-2 {register} = {value} ({timeoutMs} мс).";
+                context.SetVariable($"{prefix}.WriteError", error);
+                _logger.Warning($"[ОШИБКА] {error}");
+                return false;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -553,20 +637,22 @@ namespace TestBuilder.Domain.Steps
             var outputsSafe = true;
             if (io2SlaveId != null)
             {
-                outputsSafe &= await WriteIo2OutputAsync(
+                outputsSafe &= await WriteIo2RegisterAsync(
                     context,
                     io2SlaveId.Value,
                     Sensor1OutputRegister,
                     0,
                     CancellationToken.None,
-                    "InOut.Finally.Sensor1");
-                outputsSafe &= await WriteIo2OutputAsync(
+                    "InOut.Finally.Sensor1",
+                    verificationTimeoutMs: Math.Min(_stateTimeoutMs, CleanupVerifyTimeoutMs));
+                outputsSafe &= await WriteIo2RegisterAsync(
                     context,
                     io2SlaveId.Value,
                     Sensor2OutputRegister,
                     0,
                     CancellationToken.None,
-                    "InOut.Finally.Sensor2");
+                    "InOut.Finally.Sensor2",
+                    verificationTimeoutMs: Math.Min(_stateTimeoutMs, CleanupVerifyTimeoutMs));
             }
 
             var relaySafe = !_checkRelay || await SendRelayCommandAsync(
@@ -574,6 +660,13 @@ namespace TestBuilder.Domain.Steps
                 0,
                 CancellationToken.None,
                 "InOut.Finally.Relay");
+
+            if (_checkRelay && relaySafe && io2SlaveId != null)
+            {
+                relaySafe = await WriteIo2RegisterAsync(context, io2SlaveId.Value,
+                    RelayInputRegister, 0, CancellationToken.None, "InOut.Finally.Relay.ResetInput",
+                    verificationTimeoutMs: Math.Min(_stateTimeoutMs, CleanupVerifyTimeoutMs));
+            }
 
             context.SetVariable("InOut.CleanupOutputsOff", outputsSafe);
             context.SetVariable("InOut.CleanupRelayOff", relaySafe);
