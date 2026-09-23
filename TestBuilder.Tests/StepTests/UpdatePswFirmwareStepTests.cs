@@ -12,6 +12,7 @@ public class UpdatePswFirmwareStepTests
 {
     [Theory]
     [InlineData("20c", 524)]
+    [InlineData("20d", 525)]
     [InlineData("0x20d", 525)]
     [InlineData("0.2.13", 525)]
     [InlineData("0.2.8", 520)]
