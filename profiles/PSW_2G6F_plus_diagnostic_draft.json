@@ -59,9 +59,9 @@
     { "id": "6", "type": "Write Register", "x": 2800, "y": 120, "slaveId": 23, "useCurrentSlaveId": false, "address": 1200, "value": 1, "verifyWrite": true },
     {
       "id": "7", "type": "Selftest Check", "x": 3280, "y": 120, "color": "blue",
-      "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+      "url": "http://192.168.0.1/test.shtml",
       "timeoutMs": 300000, "pollIntervalMs": 5000,
-      "validationRules": "init_ok=1..1\ndev_type=6..6\nfirmvare_vers=520..65535\nboot_vers=0..65535",
+      "validationRules": "init_ok=1..1\ndev_type=6..6",
       "failOnError": true, "outputPrefix": "Dut"
     },
     {

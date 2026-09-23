@@ -25,6 +25,10 @@ public class FullProfileSerializationTests
         Assert.Contains("диагностический черновик", name);
         Assert.Equal(17, viewModel.RootGraph.Nodes.Count);
         Assert.Equal(15, viewModel.RootGraph.Connections.Count);
+        var firstSelftest = Assert.Single(viewModel.RootGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
+        Assert.Equal("http://192.168.0.1/test.shtml", firstSelftest.Url);
+        Assert.Equal("init_ok=1..1\ndev_type=6..6", firstSelftest.ValidationRules);
+        Assert.Equal(300000, firstSelftest.TimeoutMs);
         Assert.Equal(20000, viewModel.RootGraph.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
         Assert.Equal(new[] { 5, 5, 3, 5 }, viewModel.RootGraph.Nodes
             .OfType<ForEachSlaveNodeViewModel>()
