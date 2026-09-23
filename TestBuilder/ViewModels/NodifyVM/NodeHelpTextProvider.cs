@@ -115,7 +115,10 @@ namespace TestBuilder.ViewModels.NodifyVM
 
             [typeof(SelfTestCheckNodeViewModel)] = """
                 Получает selftest-страницу устройства и проверяет найденные параметры.
-                URL - адрес страницы selftest/deviceinfo.
+                URL - адрес страницы конкретной модели. Для старого PSW-2G6F+:
+                http://192.168.0.1/test.shtml. Для нового PSW+UPS-Box 8x2Pro:
+                LuCI /cgi-bin/luci/admin/statistics/deviceinfo. Дефолтный URL
+                относится к Pro; при добавлении ноды в старый профиль замените его.
                 Timeout - общий лимит ожидания ответа и появления данных.
                 Prefix - префикс имен переменных, куда сохранить найденные значения.
                 Min/Max - правила валидации по строкам: имя параметра и допустимый диапазон.

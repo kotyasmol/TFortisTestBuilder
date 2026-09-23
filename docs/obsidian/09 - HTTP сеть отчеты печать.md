@@ -12,6 +12,12 @@ updated: 2026-09-18
 
 Эта страница описывает инфраструктуру, которой пользуются HTTP-, сетевые, отчетные и печатные ноды.
 
+Модели без `Pro` относятся к старым коммутаторам; модели с `Pro` — к новым.
+Для `PSW-2G6F+` selftest запрашивается с `/test.shtml`, MAC записывается по
+UDP. Для `PSW+UPS-Box 8x2Pro` selftest читается через LuCI `deviceinfo`, а
+MAC записывается через WinSCP. Обе страницы находятся на `192.168.0.1`,
+поэтому доступность одного только корневого URL не проверяет нужный endpoint.
+
 ## HttpRequestService
 
 `HttpRequestService` реализует `IHttpRequestService`:
@@ -53,8 +59,9 @@ Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken
   `<settings>...</settings>` с `default_mac`, ждет `PollIntervalMs` и пробует снова.
 
 Каждая browser-попытка намеренно повторяет старую отдельную Selenium-утилиту: один `GoToUrl`,
-`Thread.Sleep(10000)`, один `PageSource`. В рабочем браузерном режиме нет POST-логина,
-обычного HTTP fallback и запроса `/test.shtml`; повторяется только эта целая попытка.
+`Thread.Sleep(10000)`, один `PageSource`. В браузерном режиме нет POST-логина и
+обычного HTTP fallback; каждая попытка повторяет именно `Url` ноды. Если
+профиль старого коммутатора задал `/test.shtml`, нода открывает его напрямую.
 После попытки Chrome получает `Browser.close`; выход процесса ожидается до 2 секунд.
 Для зависшего Windows Chrome принудительное завершение вынесено в отдельный
 `taskkill /PID <PID своего Chrome> /T /F` с ожиданием до 3 секунд. Ошибка завершения

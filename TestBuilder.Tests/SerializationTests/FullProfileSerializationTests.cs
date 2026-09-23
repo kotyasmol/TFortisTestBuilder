@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
@@ -11,6 +12,53 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class FullProfileSerializationTests
 {
+    [Theory]
+    [InlineData("PSW_2G6F_plus_full_algorithm.json", "/test.shtml")]
+    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "/test.shtml")]
+    [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "/cgi-bin/luci/admin/statistics/deviceinfo")]
+    public void SelftestUrlsFollowSwitchFamily(string profileFile, string expectedPath)
+    {
+        using var profile = ReadProfile(profileFile);
+        var selftestNodes = AllNodes(profile.RootElement)
+            .Where(node => node.GetProperty("type").GetString() == "Selftest Check")
+            .ToArray();
+
+        Assert.NotEmpty(selftestNodes);
+        Assert.All(selftestNodes, node => Assert.Contains(expectedPath,
+            node.GetProperty("url").GetString(), StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("PSW_2G6F_plus_full_algorithm.json", "Set PSW MAC (UDP)", "Set Pro MAC")]
+    [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "Set Pro MAC", "Set PSW MAC (UDP)")]
+    public void MacWriterFollowsSwitchFamily(string profileFile, string expectedType, string forbiddenType)
+    {
+        using var profile = ReadProfile(profileFile);
+        var types = AllNodes(profile.RootElement)
+            .Select(node => node.GetProperty("type").GetString()).ToArray();
+
+        Assert.Contains(expectedType, types);
+        Assert.DoesNotContain(forbiddenType, types);
+    }
+
+    private static JsonDocument ReadProfile(string file) => JsonDocument.Parse(File.ReadAllText(
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file))));
+
+    private static IEnumerable<JsonElement> AllNodes(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty("type", out _)) yield return element;
+            foreach (var property in element.EnumerateObject())
+                foreach (var node in AllNodes(property.Value)) yield return node;
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                foreach (var node in AllNodes(item)) yield return node;
+        }
+    }
+
     [Fact]
     public void Psw2G6FDiagnosticDraft_LoadsAndKeepsRequiredFailureGate()
     {
