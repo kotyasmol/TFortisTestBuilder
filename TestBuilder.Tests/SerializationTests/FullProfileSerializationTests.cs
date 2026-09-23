@@ -14,7 +14,6 @@ public class FullProfileSerializationTests
 {
     [Theory]
     [InlineData("PSW_2G6F_plus_full_algorithm.json", "/test.shtml")]
-    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", "/test.shtml")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "/cgi-bin/luci/admin/statistics/deviceinfo")]
     public void SelftestUrlsFollowSwitchFamily(string profileFile, string expectedPath)
     {
@@ -57,48 +56,6 @@ public class FullProfileSerializationTests
             foreach (var item in element.EnumerateArray())
                 foreach (var node in AllNodes(item)) yield return node;
         }
-    }
-
-    [Fact]
-    public void Psw2G6FDiagnosticDraft_LoadsAndKeepsRequiredFailureGate()
-    {
-        var profilePath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "profiles",
-            "PSW_2G6F_plus_diagnostic_draft.json"));
-        using var modbus = new ModbusService();
-        var viewModel = new TestViewModel(modbus, new SlaveManager(modbus));
-
-        var name = GraphSerializer.Deserialize(File.ReadAllText(profilePath), viewModel);
-
-        Assert.Contains("диагностический черновик", name);
-        Assert.Equal(17, viewModel.RootGraph.Nodes.Count);
-        Assert.Equal(15, viewModel.RootGraph.Connections.Count);
-        var firstSelftest = Assert.Single(viewModel.RootGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
-        Assert.Equal("http://192.168.0.1/test.shtml", firstSelftest.Url);
-        Assert.Equal("init_ok=1..1\ndev_type=6..6", firstSelftest.ValidationRules);
-        Assert.Equal(300000, firstSelftest.TimeoutMs);
-        Assert.Equal(20000, viewModel.RootGraph.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
-        Assert.Equal(new[] { 5, 5, 3, 5 }, viewModel.RootGraph.Nodes
-            .OfType<ForEachSlaveNodeViewModel>()
-            .Select(node => node.BodyGraph.Connections.Count));
-        Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
-        var sensors = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => !n.RunOnFailure);
-        Assert.Single(sensors.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>());
-        Assert.DoesNotContain(sensors.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
-        var dataTest = viewModel.RootGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
-        Assert.Equal(100, dataTest.TargetBandwidthMbps);
-        Assert.Equal(3, dataTest.PortsText.Split('\n').Length);
-        Assert.DoesNotContain(viewModel.RootGraph.Nodes, node => node is SetProMacNodeViewModel or PrintLabelNodeViewModel);
-        var cleanup = viewModel.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.RunOnFailure);
-        Assert.True(cleanup.RunOnFailure);
-        Assert.Equal(8, cleanup.BodyGraph.Connections.Count);
-        Assert.Equal(9, cleanup.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
-            .Single().BodyGraph.Connections.Count);
-        var gate = viewModel.RootGraph.Nodes.OfType<CheckVariableEqualityNodeViewModel>()
-            .Single(node => node.VariableName == "Migration.ProductionReady");
-        Assert.Equal("1", gate.ExpectedValue);
-        Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(viewModel.RootGraph));
-        Assert.DoesNotContain("Check IO-2 Sensors and Relay", GraphSerializer.Serialize(viewModel, name));
     }
 
     [Fact]

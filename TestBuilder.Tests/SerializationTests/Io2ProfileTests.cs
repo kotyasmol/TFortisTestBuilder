@@ -21,7 +21,6 @@ public class Io2ProfileTests
 
     [Theory]
     [InlineData(FullProfile, false)]
-    [InlineData("PSW_2G6F_plus_diagnostic_draft.json", false)]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", true)]
     public void ProfilesUseVisibleWriteAndFreshWebWaitNodes(string file, bool relay)
     {
@@ -141,7 +140,6 @@ public class Io2ProfileTests
 
     [Theory]
     [InlineData(FullProfile)]
-    [InlineData("PSW_2G6F_plus_diagnostic_draft.json")]
     public void PswProfilesCheckOnlySensor1DryContact(string file)
     {
         using var service = new ModbusService();

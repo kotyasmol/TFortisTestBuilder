@@ -18,6 +18,8 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int max;
         [ObservableProperty] private bool useCurrentSlaveId;
         [ObservableProperty] private bool liveRead;
+        [ObservableProperty] private int readAttempts = 1;
+        [ObservableProperty] private int readIntervalMs;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -114,7 +116,9 @@ namespace TestBuilder.ViewModels.StepVM
                 logger,
                 UseCurrentSlaveId,
                 modbusService,
-                LiveRead);
+                LiveRead,
+                ReadAttempts,
+                ReadIntervalMs);
         }
 
         public override NodeViewModel Clone() => new CheckRegisterRangeNodeViewModel
@@ -124,7 +128,9 @@ namespace TestBuilder.ViewModels.StepVM
             Min = Min,
             Max = Max,
             UseCurrentSlaveId = UseCurrentSlaveId,
-            LiveRead = LiveRead
+            LiveRead = LiveRead,
+            ReadAttempts = ReadAttempts,
+            ReadIntervalMs = ReadIntervalMs
         };
     }
 }

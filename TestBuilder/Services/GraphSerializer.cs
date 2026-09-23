@@ -113,6 +113,8 @@ namespace TestBuilder.Services
                         n.Max = c.Max;
                         n.UseCurrentSlaveId = c.UseCurrentSlaveId;
                         n.LiveRead = c.LiveRead;
+                        n.ReadAttempts = c.ReadAttempts;
+                        n.ReadIntervalMs = c.ReadIntervalMs;
                         break;
 
                     case CheckRegisterEqualityNodeViewModel eq:
@@ -735,7 +737,9 @@ namespace TestBuilder.Services
                 Min = ToInt(n.Min),
                 Max = ToInt(n.Max),
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
-                LiveRead = n.LiveRead ?? false
+                LiveRead = n.LiveRead ?? false,
+                ReadAttempts = n.ReadAttempts ?? 1,
+                ReadIntervalMs = n.ReadIntervalMs ?? 0
             };
 
             node.RestoreSelections();

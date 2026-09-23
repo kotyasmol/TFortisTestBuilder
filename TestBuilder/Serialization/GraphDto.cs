@@ -82,6 +82,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? LiveRead { get; set; }
 
+        [JsonPropertyName("readAttempts")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ReadAttempts { get; set; }
+
+        [JsonPropertyName("readIntervalMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ReadIntervalMs { get; set; }
+
         [JsonPropertyName("address")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ushort? Address { get; set; }

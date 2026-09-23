@@ -88,6 +88,34 @@ public class CompareStepTests
         Assert.Equal(1, modbus.ReadCount);
     }
 
+    [Fact]
+    public async Task CheckRegisterRangeStep_RetriesOutOfRangeLiveReadAndStopsAtFirstPassingValue()
+    {
+        var modbus = new FakeModbusService(45000, 54000, 55000);
+        var context = new TestContext(new RegisterState());
+        var step = new CheckRegisterRangeStep(1, 1403, 53000, 56000,
+            NullLogger.Instance, modbusService: modbus, liveRead: true,
+            readAttempts: 3, readIntervalMs: 0);
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(2, modbus.ReadCount);
+        Assert.True(context.RegisterState.TryGet(1, 1403, out var value));
+        Assert.Equal(54000, value);
+    }
+
+    [Fact]
+    public async Task CheckRegisterRangeStep_FailsAfterConfiguredAttempts()
+    {
+        var modbus = new FakeModbusService(45000, 46000, 47000);
+        var step = new CheckRegisterRangeStep(1, 1403, 53000, 56000,
+            NullLogger.Instance, modbusService: modbus, liveRead: true,
+            readAttempts: 3, readIntervalMs: 0);
+
+        Assert.Equal(StepResult.False,
+            await step.ExecuteAsync(new TestContext(new RegisterState()), CancellationToken.None));
+        Assert.Equal(3, modbus.ReadCount);
+    }
+
     private sealed class FakeModbusService : IModbusService
     {
         private readonly ushort[] _values;
@@ -106,7 +134,9 @@ public class CompareStepTests
             CancellationToken cancellationToken = default)
         {
             ReadCount++;
-            return Task.FromResult(_values);
+            return Task.FromResult(_values.Length == 0
+                ? Array.Empty<ushort>()
+                : new[] { _values[Math.Min(ReadCount - 1, _values.Length - 1)] });
         }
 
         public Task<bool> WriteRegisterAsync(

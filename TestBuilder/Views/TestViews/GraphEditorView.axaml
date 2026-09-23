@@ -835,6 +835,16 @@
                               FontSize="12" />
 
                     <Grid ColumnDefinitions="76,*">
+                      <TextBlock Grid.Column="0" Text="Попыток:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding ReadAttempts}" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="76,*">
+                      <TextBlock Grid.Column="0" Text="Пауза, мс:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBox Grid.Column="1" Text="{Binding ReadIntervalMs}" FontSize="12" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="76,*">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"

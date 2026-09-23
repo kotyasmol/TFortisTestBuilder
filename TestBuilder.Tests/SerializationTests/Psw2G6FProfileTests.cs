@@ -12,6 +12,40 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class Psw2G6FProfileTests
 {
+    [Theory]
+    [InlineData("PSW_2G6F_plus_full_algorithm.json")]
+    public void PoeLoopMatchesModelLimitsAndQtReadTiming(string file)
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+            "profiles", file));
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize(File.ReadAllText(path), vm);
+        var poe = vm.RootGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
+            .Single(n => n.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().Any());
+        Assert.Equal((byte)1, poe.FromSlaveId);
+        Assert.Equal((byte)11, poe.ToSlaveId);
+        Assert.Equal((byte)2, poe.Step);
+        var checks = poe.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().ToArray();
+        Assert.Equal(new ushort[] { 1403, 1402 }, checks.Select(n => n.Address));
+        Assert.All(checks, n =>
+        {
+            Assert.True(n.UseCurrentSlaveId);
+            Assert.True(n.LiveRead);
+            Assert.Equal(53000, n.Min);
+            Assert.Equal(56000, n.Max);
+            Assert.Equal(3, n.ReadAttempts);
+            Assert.Equal(600, n.ReadIntervalMs);
+        });
+        Assert.Equal(new[] { 200, 200 }, poe.BodyGraph.Nodes.OfType<DelayNodeViewModel>()
+            .Select(n => n.Milliseconds));
+        Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
+        GraphSerializer.Deserialize(GraphSerializer.Serialize(vm, file), vm);
+        Assert.Equal(2, vm.RootGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
+            .Single(n => n.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().Any())
+            .BodyGraph.Nodes.OfType<DelayNodeViewModel>().Count());
+    }
+
     [Fact]
     public void FullProfileCompilesAndRoundTripsWithoutFirmwareOrDraftGate()
     {
@@ -20,7 +54,7 @@ public class Psw2G6FProfileTests
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         var name = GraphSerializer.Deserialize(File.ReadAllText(path), vm);
-        Assert.Contains("без прошивки", name);
+        Assert.Equal("PSW_2G6F_plus_full_algorithm", name);
         AssertProfile(vm, modbus);
         var json = GraphSerializer.Serialize(vm, name);
         GraphSerializer.Deserialize(json, vm);

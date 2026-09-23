@@ -19,6 +19,8 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _useCurrentSlaveId;
         private readonly IModbusService? _modbusService;
         private readonly bool _liveRead;
+        private readonly int _readAttempts;
+        private readonly int _readIntervalMs;
         private readonly ILogger _logger;
 
         public CheckRegisterRangeStep(
@@ -29,7 +31,9 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             bool useCurrentSlaveId = false,
             IModbusService? modbusService = null,
-            bool liveRead = false)
+            bool liveRead = false,
+            int readAttempts = 1,
+            int readIntervalMs = 0)
         {
             _slaveId = slaveId;
             _address = address;
@@ -39,6 +43,8 @@ namespace TestBuilder.Domain.Steps
             _useCurrentSlaveId = useCurrentSlaveId;
             _modbusService = modbusService;
             _liveRead = liveRead;
+            _readAttempts = System.Math.Max(1, readAttempts);
+            _readIntervalMs = System.Math.Max(0, readIntervalMs);
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -55,36 +61,35 @@ namespace TestBuilder.Domain.Steps
                 return StepResult.False;
             }
 
-            var read = await ModbusRegisterReadHelper.ReadAsync(
-                context,
-                _modbusService,
-                actualSlaveId.Value,
-                _address,
-                _liveRead,
-                cancellationToken);
-
-            if (!read.Success)
+            for (var attempt = 1; attempt <= _readAttempts; attempt++)
             {
-                _logger.Warning(
-                    $"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {_address}: {read.Error}");
+                // The old stand waits before each of its three PoE reads.
+                if (_liveRead && _readIntervalMs > 0)
+                    await Task.Delay(_readIntervalMs, cancellationToken);
 
-                return StepResult.False;
+                var read = await ModbusRegisterReadHelper.ReadAsync(
+                    context, _modbusService, actualSlaveId.Value, _address, _liveRead, cancellationToken);
+
+                if (read.Success)
+                {
+                    var inRange = read.Value >= _min && read.Value <= _max;
+                    _logger.Info(
+                        $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
+                    if (inRange)
+                    {
+                        _logger.Info($"[OK] Значение {read.Value} в диапазоне [{_min}..{_max}].");
+                        return StepResult.True;
+                    }
+                    if (attempt == _readAttempts)
+                        _logger.Warning($"[ОШИБКА] Значение {read.Value} вне диапазона [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {_address}.");
+                }
+                else if (attempt == _readAttempts)
+                {
+                    _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {_address}: {read.Error}");
+                }
             }
 
-            var value = read.Value;
-            var inRange = value >= _min && value <= _max;
-
-            _logger.Info(
-                $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {value}, диапазон [{_min}..{_max}], источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
-
-            if (!inRange)
-            {
-                _logger.Warning(
-                    $"[ОШИБКА] Значение {value} вне диапазона [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {_address}.");
-            }
-
-            if (inRange) _logger.Info($"[OK] Значение {value} в диапазоне [{_min}..{_max}].");
-            return inRange ? StepResult.True : StepResult.False;
+            return StepResult.False;
         }
 
         private byte? ResolveSlaveId(TestContext context)

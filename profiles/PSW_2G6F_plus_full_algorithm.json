@@ -629,9 +629,11 @@
             "slaveId": 0,
             "useCurrentSlaveId": true,
             "liveRead": true,
-            "address": 1402,
-            "min": 0,
-            "max": 56000
+            "address": 1403,
+            "min": 53000,
+            "max": 56000,
+            "readAttempts": 3,
+            "readIntervalMs": 600
           },
           {
             "id": "2",
@@ -642,16 +644,34 @@
             "slaveId": 0,
             "useCurrentSlaveId": true,
             "liveRead": true,
-            "address": 1403,
-            "min": 0,
-            "max": 56000
+            "address": 1402,
+            "min": 53000,
+            "max": 56000,
+            "readAttempts": 3,
+            "readIntervalMs": 600
           },
           {
             "id": "3",
             "type": "Body End",
-            "x": 1456,
+            "x": 1960,
             "y": 80,
             "color": "blue"
+          },
+          {
+            "id": "4",
+            "type": "Delay",
+            "x": 672,
+            "y": 120,
+            "color": "blue",
+            "milliseconds": 200
+          },
+          {
+            "id": "5",
+            "type": "Delay",
+            "x": 1456,
+            "y": 120,
+            "color": "blue",
+            "milliseconds": 200
           }
         ],
         "connections": [
@@ -664,12 +684,24 @@
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "Выход",
             "targetNodeId": "2",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "5",
+            "sourceConnector": "Выход",
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
