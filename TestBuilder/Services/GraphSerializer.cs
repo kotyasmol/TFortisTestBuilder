@@ -45,6 +45,7 @@ namespace TestBuilder.Services
             GetSerialNumberFromServerNodeViewModel => "Get Serial Number",
             SetProMacNodeViewModel => "Set Pro MAC",
             SetPswMacNodeViewModel => "Set PSW MAC (UDP)",
+            UpdatePswFirmwareNodeViewModel => "Update PSW Firmware",
             RunDataTestNodeViewModel => "Run Data Test",
             GetUpsStatusNodeViewModel => "Get UPS Status",
             GetUpsVoltageNodeViewModel => "Get UPS Voltage",
@@ -210,6 +211,14 @@ namespace TestBuilder.Services
                         n.MacVariableName = pswMac.MacVariableName;
                         n.TimeoutMs = pswMac.TimeoutMs;
                         n.FailOnError = pswMac.FailOnError;
+                        break;
+
+                    case UpdatePswFirmwareNodeViewModel firmware:
+                        n.BaseUrl = firmware.BaseUrl;
+                        n.FirmwarePath = firmware.FirmwarePath;
+                        n.TargetVersion = firmware.TargetVersion;
+                        n.VersionVariable = firmware.VersionVariable;
+                        n.ExpectedSha256 = firmware.ExpectedSha256;
                         break;
 
                     case RunDataTestNodeViewModel d:
@@ -516,6 +525,16 @@ namespace TestBuilder.Services
                         MacVariableName = n.MacVariableName ?? "Dut.NewMac",
                         TimeoutMs = n.TimeoutMs ?? 5000,
                         FailOnError = n.FailOnError ?? true
+                    },
+
+                    "Update PSW Firmware" => new UpdatePswFirmwareNodeViewModel
+                    {
+                        Location = location,
+                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
+                        FirmwarePath = n.FirmwarePath ?? string.Empty,
+                        TargetVersion = n.TargetVersion ?? "0.2.13",
+                        VersionVariable = n.VersionVariable ?? "Dut.firmvare_vers",
+                        ExpectedSha256 = n.ExpectedSha256 ?? string.Empty
                     },
 
                     "Run Data Test" or "RUN_DATA_TEST" or "Тест передачи данных" => new RunDataTestNodeViewModel

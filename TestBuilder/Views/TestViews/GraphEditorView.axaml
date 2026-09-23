@@ -1404,6 +1404,26 @@
               </DataTemplate>
             </views:NodeTemplateSelector.SetPswMacTemplate>
 
+            <views:NodeTemplateSelector.UpdatePswFirmwareTemplate>
+              <DataTemplate x:DataType="stepvm:UpdatePswFirmwareNodeViewModel">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
+                             Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode"
+                             Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                  <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
+                  <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
+                  <StackPanel Margin="8" Spacing="6" Width="390">
+                    <TextBlock Text="Старые PSW: проверка версии, загрузка и повторный selftest" TextWrapping="Wrap" FontSize="12" />
+                    <Grid ColumnDefinitions="115,*"><TextBlock Text="DUT URL:" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" /></Grid>
+                    <Grid ColumnDefinitions="115,*"><TextBlock Text="Файл .img:" /><TextBox Grid.Column="1" Text="{Binding FirmwarePath}" /></Grid>
+                    <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия:" /><TextBox Grid.Column="1" Text="{Binding TargetVersion}" /></Grid>
+                    <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия из:" /><TextBox Grid.Column="1" Text="{Binding VersionVariable}" /></Grid>
+                    <Grid ColumnDefinitions="115,*"><TextBlock Text="SHA-256:" /><TextBox Grid.Column="1" Text="{Binding ExpectedSha256}" /></Grid>
+                  </StackPanel>
+                </nodify:Node>
+              </DataTemplate>
+            </views:NodeTemplateSelector.UpdatePswFirmwareTemplate>
+
             <views:NodeTemplateSelector.RunDataTestTemplate>
               <DataTemplate x:DataType="stepvm:RunDataTestNodeViewModel">
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"

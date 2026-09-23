@@ -132,6 +132,23 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Url { get; set; }
 
+        // --- Legacy PSW web firmware update ---
+        [JsonPropertyName("firmwarePath")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? FirmwarePath { get; set; }
+
+        [JsonPropertyName("targetVersion")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TargetVersion { get; set; }
+
+        [JsonPropertyName("versionVariable")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VersionVariable { get; set; }
+
+        [JsonPropertyName("expectedSha256")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ExpectedSha256 { get; set; }
+
         [JsonPropertyName("timeoutMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? TimeoutMs { get; set; }

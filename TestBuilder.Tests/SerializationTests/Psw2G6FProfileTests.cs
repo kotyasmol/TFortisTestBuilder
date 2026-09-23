@@ -47,7 +47,7 @@ public class Psw2G6FProfileTests
     }
 
     [Fact]
-    public void FullProfileCompilesAndRoundTripsWithoutFirmwareOrDraftGate()
+    public void FullProfileCompilesAndRoundTripsWithFirmwareUpdate()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
             "profiles", "PSW_2G6F_plus_full_algorithm.json"));
@@ -90,6 +90,13 @@ public class Psw2G6FProfileTests
             Assert.DoesNotContain("firmvare_vers", n.ValidationRules);
         });
         Assert.DoesNotContain(nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
+        var firmware = Assert.Single(nodes.OfType<UpdatePswFirmwareNodeViewModel>());
+        Assert.Equal("0.2.13", firmware.TargetVersion);
+        Assert.EndsWith("sw407-0.2.13-05.09.2025.img", firmware.FirmwarePath);
+        Assert.Equal(64, firmware.ExpectedSha256.Length);
+        var firmwareGraph = Graphs(vm.RootGraph).Single(g => g.Nodes.Contains(firmware));
+        Assert.IsType<SelfTestCheckNodeViewModel>(firmwareGraph.Connections
+            .Single(c => ReferenceEquals(c.Target.Parent, firmware)).Source.Parent);
         Assert.Equal(new[] { "Dut.sensor_1" }, nodes.OfType<WaitVariableUntilNodeViewModel>()
             .Where(n => n.VariableName.StartsWith("Dut.sensor_"))
             .Select(n => n.VariableName));
@@ -136,7 +143,7 @@ public class Psw2G6FProfileTests
         var cleanup = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().First(n => n.RunOnFailure);
         Assert.Equal(10, cleanup.BodyGraph.Connections.Count);
         Assert.Equal(9, cleanup.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>().Single().BodyGraph.Connections.Count);
-        Assert.All(nodes.OfType<BuildTestReportNodeViewModel>(), n => Assert.Contains("без прошивки/DFU", n.TestType));
+        Assert.All(nodes.OfType<BuildTestReportNodeViewModel>(), n => Assert.Contains("прошивка 0.2.13", n.TestType));
     }
 
     [Theory]

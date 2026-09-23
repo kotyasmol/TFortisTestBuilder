@@ -164,6 +164,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new GetSerialNumberFromServerNodeViewModel(),
         new SetProMacNodeViewModel(),
         new SetPswMacNodeViewModel(),
+        new UpdatePswFirmwareNodeViewModel(),
         new RunDataTestNodeViewModel(),
         new ReadHttpVariableNodeViewModel(),
         new WaitVariableUntilNodeViewModel(),
@@ -316,6 +317,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             Find("Get Serial Number"),
             Find("Set Pro MAC"),
             Find("Set PSW MAC (UDP)"),
+            Find("Update PSW Firmware"),
             Find("Run Data Test"),
             Find("Read HTTP Variable"),
             Find("Wait Variable Until")));
@@ -1471,6 +1473,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Get Serial Number" => new GetSerialNumberFromServerNodeViewModel { Location = location },
             "Set Pro MAC" => new SetProMacNodeViewModel { Location = location },
             "Set PSW MAC (UDP)" => new SetPswMacNodeViewModel { Location = location },
+            "Update PSW Firmware" => new UpdatePswFirmwareNodeViewModel { Location = location },
             "Run Data Test" => new RunDataTestNodeViewModel { Location = location },
             "Get UPS Status" => new GetUpsStatusNodeViewModel { Location = location },
             "Get UPS Voltage" => new GetUpsVoltageNodeViewModel { Location = location },

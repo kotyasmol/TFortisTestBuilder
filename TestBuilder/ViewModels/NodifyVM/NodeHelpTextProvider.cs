@@ -173,6 +173,14 @@ namespace TestBuilder.ViewModels.NodifyVM
                 запуск DUT и сравнение свежего selftest MAC с рассчитанным адресом.
                 """,
 
+            [typeof(UpdatePswFirmwareNodeViewModel)] = """
+                Веб-обновление прошивки старого PSW (не Pro).
+                Версия берётся из selftest; если она уже не ниже целевой, загрузка пропускается.
+                Файл .img и SHA-256 проверяются до очистки памяти коммутатора.
+                Затем образ отправляется на DUT, подтверждается обновление и проверяется новая версия.
+                При ошибке тест останавливается. Файл должен находиться на компьютере стенда.
+                """,
+
             [typeof(SetProMacNodeViewModel)] = """
                 Записывает MAC в коммутатор Pro через set_mac_pro.bat и WinSCP.
                 Batch path - путь к рабочему set_mac_pro.bat; относительный путь ищется рядом с TestBuilder.exe.

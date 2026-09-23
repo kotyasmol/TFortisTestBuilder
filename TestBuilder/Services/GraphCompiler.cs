@@ -104,6 +104,7 @@ namespace TestBuilder.Services
                 GetSerialNumberFromServerNodeViewModel serial => serial.CreateStep(_httpRequestService, _logger),
                 SetProMacNodeViewModel setMac => setMac.CreateStep(_logger),
                 SetPswMacNodeViewModel pswMac => pswMac.CreateStep(_logger),
+                UpdatePswFirmwareNodeViewModel firmware => firmware.CreateStep(_httpRequestService, _logger),
                 RunDataTestNodeViewModel dataTest => dataTest.CreateStep(_logger),
                 GetUpsStatusNodeViewModel upsStatus => upsStatus.CreateStep(_httpRequestService, _logger),
                 GetUpsVoltageNodeViewModel upsVoltage => upsVoltage.CreateStep(_httpRequestService, _logger),
@@ -258,6 +259,10 @@ namespace TestBuilder.Services
 
                 case SetPswMacNodeViewModel pswMacVm:
                     BindTrueFalse(sourceConnector, source, target, pswMacVm.TrueOut, pswMacVm.FalseOut);
+                    break;
+
+                case UpdatePswFirmwareNodeViewModel firmwareVm:
+                    BindTrueFalse(sourceConnector, source, target, firmwareVm.TrueOut, firmwareVm.FalseOut);
                     break;
 
                 case RunDataTestNodeViewModel dataTestVm:

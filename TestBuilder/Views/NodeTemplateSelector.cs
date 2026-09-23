@@ -30,6 +30,7 @@ namespace TestBuilder.Views
 
         public IDataTemplate? SetProMacTemplate { get; set; }
         public IDataTemplate? SetPswMacTemplate { get; set; }
+        public IDataTemplate? UpdatePswFirmwareTemplate { get; set; }
 
         public IDataTemplate? RunDataTestTemplate { get; set; }
 
@@ -83,6 +84,7 @@ namespace TestBuilder.Views
                 GetSerialNumberFromServerNodeViewModel => GetSerialNumberTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SetProMacNodeViewModel => SetProMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SetPswMacNodeViewModel => SetPswMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                UpdatePswFirmwareNodeViewModel => UpdatePswFirmwareTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

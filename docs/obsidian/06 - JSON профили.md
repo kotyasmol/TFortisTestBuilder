@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-09-18
+updated: 2026-09-23
 ---
 
 # JSON профили
@@ -111,6 +111,7 @@ updated: 2026-09-18
 | `Get Serial Number` | `GetSerialNumberFromServerNodeViewModel` |
 | `Set Pro MAC` | `SetProMacNodeViewModel` |
 | `Set PSW MAC (UDP)` | `SetPswMacNodeViewModel` |
+| `Update PSW Firmware` | `UpdatePswFirmwareNodeViewModel` |
 | `Run Data Test` | `RunDataTestNodeViewModel` |
 | `Get UPS Status` | `GetUpsStatusNodeViewModel` |
 | `Get UPS Voltage` | `GetUpsVoltageNodeViewModel` |
@@ -143,6 +144,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | Set PSW MAC (UDP) | `destinationIp`, `localIp`, `localPort`, `udpPort`, `macVariableName`, `timeoutMs`, `failOnError` |
+| Update PSW Firmware | `baseUrl`, `firmwarePath`, `targetVersion`, `versionVariable`, `expectedSha256` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `allowGigabit`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `labelModel`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
@@ -168,7 +170,8 @@ Deserializer также принимает часть русских и legacy-�
 в PSW-профилях не проверяются. Профиль Pro сохраняет проверку Sensor1/2.
 Каждый снимок проверяет готовность (`init_ok=1`, числовой `dev_type`),
 но не валидирует версии прошивки и загрузчика: на DUT они могут приходить
-шестнадцатеричными строками, а проверка прошивки в этих профилях отложена.
+шестнадцатеричными строками. В PSW-2G6F+ версию отдельно проверяет
+`Update PSW Firmware` после первого selftest.
 Параметры ожидания: `requestTimeoutMs: 30000`, `timeoutMs: 60000`,
 `intervalMs: 1000`, `failOnTimeout: true`. PSW-2G6F+ читает `/test.shtml`,
 Pro — LuCI `deviceinfo`. Аварийный `runOnFailure`-подтест также сбрасывает оба
@@ -230,7 +233,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 
 ## Вложенные графы
 
-### Профиль PSW-2G6F+ без прошивки/DFU
+### Профиль PSW-2G6F+ с прошивкой 0.2.13
 
 Рабочий `PSW_2G6F_plus_full_algorithm.json` должен оставаться валидным JSON без
 маркеров слияния Git. Проверка серийного номера выполняется через сервер:
@@ -255,8 +258,11 @@ DUT может быть строкой вроде `20c`.
 
 `Print Label.labelModel` — строковый enum `PswUpsBox8x2Pro` (дефолт) или
 `Psw2G6FPlus`; применяется при `useQtProZplFormat=true`. Для модели 6 —
-четыре этикетки, штрихкод `006SSSSS`. Прошивка/DFU и проверка версии исключены
-по заданию, в `testType` отчёта указано `production (без прошивки/DFU)`.
+четыре этикетки, штрихкод `006SSSSS`. После первого selftest проверяется версия
+ПО, при необходимости загружается `sw407-0.2.13-05.09.2025.img` и затем
+повторно читается страница. Образ берётся с Windows-стенда по пути из
+`firmwarePath`; `expectedSha256` сверяется до команды очистки. DFU не входит
+в автоматический граф; `testType` — `production (прошивка 0.2.13, без DFU)`.
 Адреса стенда и требуемое оборудование описаны в
 [`PSW_2G6F_plus_migration.md`](../PSW_2G6F_plus_migration.md).
 
