@@ -290,7 +290,7 @@ namespace TestBuilder.Domain.Steps
         {
             var keyFields = GetRules()
                 .Select(rule => rule.FieldName)
-                .Concat(new[] { "default_mac", "cpu_id" })
+                .Concat(new[] { "firmvare_vers", "sensor_0", "sensor_1", "sensor_2", "default_mac", "cpu_id" })
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Where(values.ContainsKey)
                 .Select(field => $"{field}={values[field]}")

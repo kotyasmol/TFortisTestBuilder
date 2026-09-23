@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -53,8 +54,11 @@ public sealed class UpdatePswFirmwareStep : ITestStep
 
     public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
     {
+        var total = Stopwatch.StartNew();
+        var stage = "проверка параметров";
         context.SetVariable("Firmware.Updated", false);
         context.SetVariable("Firmware.Error", string.Empty);
+        context.SetVariable("Firmware.Stage", stage);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (!Uri.TryCreate(_baseUrl, UriKind.Absolute, out var baseUri) ||
@@ -68,9 +72,11 @@ public sealed class UpdatePswFirmwareStep : ITestStep
 
         context.SetVariable("Firmware.Before", rawVersion?.ToString() ?? string.Empty);
         context.SetVariable("Firmware.Target", _targetVersion);
+        _logger.Info($"[FW] Текущая версия '{rawVersion}' (код {current}), цель '{_targetVersion}' (код {target}), принудительное обновление: {_forceUpdate}.");
         if (current == target || (!_forceUpdate && current > target))
         {
-            _logger.Info($"[OK] Прошивка {rawVersion} уже не старее {_targetVersion}; обновление пропущено.");
+            context.SetVariable("Firmware.Stage", "пропущено");
+            _logger.Info($"[FW] Обновление пропущено: установленная версия уже подходит. HTTP-запросов прошивки не было.");
             return StepResult.True;
         }
 
@@ -86,25 +92,51 @@ public sealed class UpdatePswFirmwareStep : ITestStep
             await using var image = new FileStream(_firmwarePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             if (image.Length == 0)
                 return Fail(context, "Файл прошивки пуст.");
+            context.SetVariable("Firmware.ImageSizeBytes", image.Length);
+            _logger.Info($"[FW] Файл открыт: {Path.GetFileName(_firmwarePath)}, {image.Length} байт. SHA-256 не проверяется.");
 
             using var client = _createClient();
             client.DefaultRequestHeaders.ExpectContinue = false;
-            _logger.Info($"[ШАГ] Обновление PSW {rawVersion} → {_targetVersion}: очистка памяти.");
+            stage = "очистка памяти";
+            context.SetVariable("Firmware.Stage", stage);
+            var requestTimer = Stopwatch.StartNew();
+            _logger.Info($"[FW] GET {_baseUrl}/clear.shtml: начало очистки памяти.");
             using (var clear = await client.GetAsync(new Uri(baseUri, "/clear.shtml"), cancellationToken))
+            {
+                await LogResponseAsync("Очистка", clear, requestTimer.ElapsedMilliseconds, cancellationToken);
                 clear.EnsureSuccessStatusCode();
+            }
+            _logger.Info("[FW] Пауза 10 с после очистки памяти.");
             await _delay(TimeSpan.FromSeconds(10), cancellationToken);
 
+            stage = "загрузка образа";
+            context.SetVariable("Firmware.Stage", stage);
             using var form = BuildLegacyMultipart(image, Path.GetFileName(_firmwarePath));
-            _logger.Info($"[ШАГ] Загрузка образа {Path.GetFileName(_firmwarePath)}.");
+            requestTimer.Restart();
+            _logger.Info($"[FW] POST {_baseUrl}/mngt/update.shtml: {form.Headers.ContentLength} байт multipart, образ {image.Length} байт.");
             using (var upload = await client.PostAsync(new Uri(baseUri, "/mngt/update.shtml"), form, cancellationToken))
+            {
+                await LogResponseAsync("Загрузка", upload, requestTimer.ElapsedMilliseconds, cancellationToken);
                 upload.EnsureSuccessStatusCode();
+            }
+            _logger.Info("[FW] Пауза 10 с после передачи образа.");
             await _delay(TimeSpan.FromSeconds(10), cancellationToken);
 
-            _logger.Info("[ШАГ] Подтверждение обновления ПО.");
+            stage = "подтверждение обновления";
+            context.SetVariable("Firmware.Stage", stage);
+            requestTimer.Restart();
+            _logger.Info($"[FW] GET {_baseUrl}/mngt/update.shtml?Update=Update: подтверждение прошивки.");
             using (var confirm = await client.GetAsync(new Uri(baseUri, "/mngt/update.shtml?Update=Update"), cancellationToken))
+            {
+                await LogResponseAsync("Подтверждение", confirm, requestTimer.ElapsedMilliseconds, cancellationToken);
                 confirm.EnsureSuccessStatusCode();
+            }
+            _logger.Info("[FW] Пауза 40 с на перезапуск коммутатора.");
             await _delay(TimeSpan.FromSeconds(40), cancellationToken);
 
+            stage = "повторный selftest";
+            context.SetVariable("Firmware.Stage", stage);
+            _logger.Info("[FW] Запрос новой /test.shtml и проверка версии после перезапуска.");
             // SelfTestCheck only writes fields present on the page. Remove the old version
             // so a missing field cannot be mistaken for a post-update reading.
             context.Variables.Remove(_versionVariable);
@@ -118,11 +150,31 @@ public sealed class UpdatePswFirmwareStep : ITestStep
                 return Fail(context, $"После обновления версия ПО '{updatedRaw}' не совпала с {_targetVersion}.");
 
             context.SetVariable("Firmware.Updated", true);
-            _logger.Info($"[OK] Прошивка обновлена до {updatedRaw}.");
+            context.SetVariable("Firmware.Stage", "завершено");
+            context.SetVariable("Firmware.ElapsedMs", total.ElapsedMilliseconds);
+            _logger.Info($"[OK] Прошивка обновлена до {updatedRaw}; всего {total.ElapsedMilliseconds} мс.");
             return StepResult.True;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception ex) { return Fail(context, $"Обновление прошивки прервано: {ex}"); }
+        catch (Exception ex) { return Fail(context, $"Обновление прошивки прервано на этапе '{stage}' через {total.ElapsedMilliseconds} мс: {ex}"); }
+    }
+
+    private async Task LogResponseAsync(string stage, HttpResponseMessage response, long elapsedMs,
+        CancellationToken cancellationToken)
+    {
+        var mediaType = response.Content.Headers.ContentType?.MediaType ?? "не указан";
+        var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? "не указан";
+        var details = $"[FW] {stage}: HTTP {(int)response.StatusCode}, {elapsedMs} мс, " +
+            $"Content-Type={mediaType}, итоговый URL={finalUrl}.";
+        if (mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+            mediaType.Contains("xml", StringComparison.OrdinalIgnoreCase))
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var preview = body.Replace('\r', ' ').Replace('\n', ' ').Trim();
+            if (preview.Length > 240) preview = preview[..240] + "…";
+            if (preview.Length > 0) details += $" Ответ: {preview}";
+        }
+        _logger.Info(details);
     }
 
     internal static HttpContent BuildLegacyMultipart(Stream image, string fileName)

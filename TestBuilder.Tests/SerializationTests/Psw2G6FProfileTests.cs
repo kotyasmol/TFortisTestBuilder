@@ -93,7 +93,7 @@ public class Psw2G6FProfileTests
         var firmware = Assert.Single(nodes.OfType<UpdatePswFirmwareNodeViewModel>());
         Assert.Equal("0.2.8", firmware.TargetVersion);
         Assert.EndsWith("sw407-0.2.8-01.06.2021.img", firmware.FirmwarePath);
-        Assert.True(firmware.ForceUpdate);
+        Assert.False(firmware.ForceUpdate);
         var firmwareGraph = Graphs(vm.RootGraph).Single(g => g.Nodes.Contains(firmware));
         Assert.IsType<SelfTestCheckNodeViewModel>(firmwareGraph.Connections
             .Single(c => ReferenceEquals(c.Target.Parent, firmware)).Source.Parent);

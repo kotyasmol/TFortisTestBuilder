@@ -93,6 +93,7 @@ namespace TestBuilder.Domain.Steps
                     context.Variables.TryGetValue(_variableName, out var actual))
                 {
                     lastActual = ToInvariantString(actual);
+                    _logger.Info($"[INFO] Poll {_pollAction}, попытка {attempt}: {_variableName}='{lastActual}', ожидалось '{_expectedValue}'.");
 
                     try
                     {
