@@ -63,7 +63,7 @@ public sealed class UpdatePswFirmwareStep : ITestStep
             return Fail(context, "Некорректный адрес коммутатора или версия прошивки.");
 
         if (!context.Variables.TryGetValue(_versionVariable, out var rawVersion) ||
-            !TryParseVersion(rawVersion?.ToString(), out var current))
+            !TryParseVersion(rawVersion?.ToString(), out var current, deviceValue: true))
             return Fail(context, $"Нет корректной версии в переменной {_versionVariable}.");
 
         context.SetVariable("Firmware.Before", rawVersion?.ToString() ?? string.Empty);
@@ -105,11 +105,17 @@ public sealed class UpdatePswFirmwareStep : ITestStep
                 confirm.EnsureSuccessStatusCode();
             await _delay(TimeSpan.FromSeconds(40), cancellationToken);
 
-            if (await _refreshSelfTest(context, cancellationToken) != StepResult.True ||
-                !context.Variables.TryGetValue(_versionVariable, out var updatedRaw) ||
-                !TryParseVersion(updatedRaw?.ToString(), out var updated) ||
-                (_forceUpdate ? updated != target : updated < target))
-                return Fail(context, $"После обновления версия ПО не совпала с {_targetVersion}.");
+            // SelfTestCheck only writes fields present on the page. Remove the old version
+            // so a missing field cannot be mistaken for a post-update reading.
+            context.Variables.Remove(_versionVariable);
+            if (await _refreshSelfTest(context, cancellationToken) != StepResult.True)
+                return Fail(context, "После обновления не удалось прочитать новую тестовую страницу.");
+            if (!context.Variables.TryGetValue(_versionVariable, out var updatedRaw) ||
+                !TryParseVersion(updatedRaw?.ToString(), out var updated, deviceValue: true))
+                return Fail(context, $"На новой тестовой странице нет корректной версии ПО ({_versionVariable}).");
+            _logger.Info($"[ШАГ] Версия после обновления: '{updatedRaw}' (код {updated}); ожидалось {_targetVersion} (код {target}).");
+            if (_forceUpdate ? updated != target : updated < target)
+                return Fail(context, $"После обновления версия ПО '{updatedRaw}' не совпала с {_targetVersion}.");
 
             context.SetVariable("Firmware.Updated", true);
             _logger.Info($"[OK] Прошивка обновлена до {updatedRaw}.");
@@ -154,7 +160,7 @@ public sealed class UpdatePswFirmwareStep : ITestStep
         return StepResult.False;
     }
 
-    internal static bool TryParseVersion(string? value, out int version)
+    internal static bool TryParseVersion(string? value, out int version, bool deviceValue = false)
     {
         version = 0;
         if (string.IsNullOrWhiteSpace(value)) return false;
@@ -169,7 +175,10 @@ public sealed class UpdatePswFirmwareStep : ITestStep
         }
         var hasHexPrefix = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase);
         if (hasHexPrefix) text = text[2..];
-        if (hasHexPrefix || text.IndexOfAny("abcdefABCDEF".ToCharArray()) >= 0)
+        // DUT selftest encodes 0.2.8 as 208 and 0.2.12 as 20c: both are hex.
+        // Profile numbers such as 520 remain decimal unless explicitly prefixed.
+        if (hasHexPrefix || text.IndexOfAny("abcdefABCDEF".ToCharArray()) >= 0 ||
+            (deviceValue && text.Length == 3))
             return int.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out version);
         return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out version);
     }

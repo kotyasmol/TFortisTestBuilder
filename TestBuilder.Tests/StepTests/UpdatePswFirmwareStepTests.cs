@@ -23,6 +23,13 @@ public class UpdatePswFirmwareStepTests
     }
 
     [Fact]
+    public void ParsesNumericOnlyDeviceVersionAsHex()
+    {
+        Assert.True(UpdatePswFirmwareStep.TryParseVersion("208", out var version, deviceValue: true));
+        Assert.Equal(520, version);
+    }
+
+    [Fact]
     public async Task MissingImageStopsBeforeAnyHttpRequest()
     {
         var handler = new RecordingHandler();
@@ -73,7 +80,7 @@ public class UpdatePswFirmwareStepTests
             var step = CreateStep(path, handler, true,
                 (ctx, _) =>
                 {
-                    ctx.SetVariable("Dut.firmvare_vers", "0.2.8");
+                    ctx.SetVariable("Dut.firmvare_vers", "208");
                     return Task.FromResult(StepResult.True);
                 },
                 (duration, _) => { delays.Add(duration); return Task.CompletedTask; });
@@ -85,6 +92,23 @@ public class UpdatePswFirmwareStepTests
             Assert.Contains("multipart/form-data; boundary=", handler.UploadContentType);
             Assert.Equal(new double[] { 10, 10, 40 }, delays.Select(d => d.TotalSeconds));
             Assert.True(context.GetVariable<bool>("Firmware.Updated"));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public async Task MissingPostUpdateVersionDoesNotReuseOldValue()
+    {
+        var (directory, path) = CreateImage();
+        try
+        {
+            var context = Context("20c");
+            var step = CreateStep(path, new RecordingHandler(), true,
+                (_, _) => Task.FromResult(StepResult.True),
+                (_, _) => Task.CompletedTask);
+            Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+            Assert.False(context.Variables.ContainsKey("Dut.firmvare_vers"));
+            Assert.Contains("нет корректной версии", context.GetVariable<string>("Firmware.Error"));
         }
         finally { Directory.Delete(directory, true); }
     }
