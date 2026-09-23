@@ -144,7 +144,7 @@ Deserializer также принимает часть русских и legacy-�
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | Set PSW MAC (UDP) | `destinationIp`, `localIp`, `localPort`, `udpPort`, `macVariableName`, `timeoutMs`, `failOnError` |
-| Update PSW Firmware | `baseUrl`, `firmwarePath`, `targetVersion`, `versionVariable`, `expectedSha256` |
+| Update PSW Firmware | `baseUrl`, `firmwarePath`, `targetVersion`, `versionVariable`, `forceUpdate` |
 | DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `allowGigabit`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
 | Print Label | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `labelModel`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
@@ -233,7 +233,7 @@ Target рабочего профиля — `100 Mbps`, `bidirectional = true`. �
 
 ## Вложенные графы
 
-### Профиль PSW-2G6F+ с прошивкой 0.2.13
+### Профиль PSW-2G6F+ с прошивкой 0.2.8
 
 Рабочий `PSW_2G6F_plus_full_algorithm.json` должен оставаться валидным JSON без
 маркеров слияния Git. Проверка серийного номера выполняется через сервер:
@@ -259,10 +259,11 @@ DUT может быть строкой вроде `20c`.
 `Print Label.labelModel` — строковый enum `PswUpsBox8x2Pro` (дефолт) или
 `Psw2G6FPlus`; применяется при `useQtProZplFormat=true`. Для модели 6 —
 четыре этикетки, штрихкод `006SSSSS`. После первого selftest проверяется версия
-ПО, при необходимости загружается `sw407-0.2.13-05.09.2025.img` и затем
+ПО, принудительно загружается `sw407-0.2.8-01.06.2021.img` и затем
 повторно читается страница. Образ берётся с Windows-стенда по пути из
-`firmwarePath`; `expectedSha256` сверяется до команды очистки. DFU не входит
-в автоматический граф; `testType` — `production (прошивка 0.2.13, без DFU)`.
+`firmwarePath`; SHA-256 не проверяется. `forceUpdate=true` нужен для
+пробной загрузки 0.2.8 поверх текущей 0.2.12. DFU не входит
+в автоматический граф; `testType` — `production (прошивка 0.2.8, без DFU)`.
 Адреса стенда и требуемое оборудование описаны в
 [`PSW_2G6F_plus_migration.md`](../PSW_2G6F_plus_migration.md).
 

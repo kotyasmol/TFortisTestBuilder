@@ -1418,7 +1418,7 @@
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Файл .img:" /><TextBox Grid.Column="1" Text="{Binding FirmwarePath}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия:" /><TextBox Grid.Column="1" Text="{Binding TargetVersion}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия из:" /><TextBox Grid.Column="1" Text="{Binding VersionVariable}" /></Grid>
-                    <Grid ColumnDefinitions="115,*"><TextBlock Text="SHA-256:" /><TextBox Grid.Column="1" Text="{Binding ExpectedSha256}" /></Grid>
+                    <CheckBox Content="Прошивать даже при более новой версии" IsChecked="{Binding ForceUpdate}" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>

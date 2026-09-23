@@ -11,9 +11,9 @@ public partial class UpdatePswFirmwareNodeViewModel : NodeViewModel
 {
     [ObservableProperty] private string baseUrl = "http://192.168.0.1";
     [ObservableProperty] private string firmwarePath = string.Empty;
-    [ObservableProperty] private string targetVersion = "0.2.13";
+    [ObservableProperty] private string targetVersion = "0.2.8";
     [ObservableProperty] private string versionVariable = "Dut.firmvare_vers";
-    [ObservableProperty] private string expectedSha256 = string.Empty;
+    [ObservableProperty] private bool forceUpdate;
 
     public ConnectorViewModel In { get; }
     public ConnectorViewModel TrueOut { get; }
@@ -32,7 +32,7 @@ public partial class UpdatePswFirmwareNodeViewModel : NodeViewModel
 
     public ITestStep CreateStep(IHttpRequestService http, ILogger logger) =>
         new UpdatePswFirmwareStep(http, logger, BaseUrl, FirmwarePath, TargetVersion,
-            VersionVariable, ExpectedSha256);
+            VersionVariable, ForceUpdate);
 
     public override NodeViewModel Clone() => new UpdatePswFirmwareNodeViewModel
     {
@@ -40,6 +40,6 @@ public partial class UpdatePswFirmwareNodeViewModel : NodeViewModel
         FirmwarePath = FirmwarePath,
         TargetVersion = TargetVersion,
         VersionVariable = VersionVariable,
-        ExpectedSha256 = ExpectedSha256
+        ForceUpdate = ForceUpdate
     };
 }

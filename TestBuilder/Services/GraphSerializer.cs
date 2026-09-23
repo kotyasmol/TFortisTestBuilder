@@ -218,7 +218,7 @@ namespace TestBuilder.Services
                         n.FirmwarePath = firmware.FirmwarePath;
                         n.TargetVersion = firmware.TargetVersion;
                         n.VersionVariable = firmware.VersionVariable;
-                        n.ExpectedSha256 = firmware.ExpectedSha256;
+                        n.ForceUpdate = firmware.ForceUpdate;
                         break;
 
                     case RunDataTestNodeViewModel d:
@@ -532,9 +532,9 @@ namespace TestBuilder.Services
                         Location = location,
                         BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
                         FirmwarePath = n.FirmwarePath ?? string.Empty,
-                        TargetVersion = n.TargetVersion ?? "0.2.13",
+                        TargetVersion = n.TargetVersion ?? "0.2.8",
                         VersionVariable = n.VersionVariable ?? "Dut.firmvare_vers",
-                        ExpectedSha256 = n.ExpectedSha256 ?? string.Empty
+                        ForceUpdate = n.ForceUpdate ?? false
                     },
 
                     "Run Data Test" or "RUN_DATA_TEST" or "Тест передачи данных" => new RunDataTestNodeViewModel

@@ -145,9 +145,9 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? VersionVariable { get; set; }
 
-        [JsonPropertyName("expectedSha256")]
+        [JsonPropertyName("forceUpdate")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? ExpectedSha256 { get; set; }
+        public bool? ForceUpdate { get; set; }
 
         [JsonPropertyName("timeoutMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

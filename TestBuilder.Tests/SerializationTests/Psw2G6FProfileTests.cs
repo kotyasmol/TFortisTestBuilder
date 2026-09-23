@@ -91,9 +91,9 @@ public class Psw2G6FProfileTests
         });
         Assert.DoesNotContain(nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
         var firmware = Assert.Single(nodes.OfType<UpdatePswFirmwareNodeViewModel>());
-        Assert.Equal("0.2.13", firmware.TargetVersion);
-        Assert.EndsWith("sw407-0.2.13-05.09.2025.img", firmware.FirmwarePath);
-        Assert.Equal(64, firmware.ExpectedSha256.Length);
+        Assert.Equal("0.2.8", firmware.TargetVersion);
+        Assert.EndsWith("sw407-0.2.8-01.06.2021.img", firmware.FirmwarePath);
+        Assert.True(firmware.ForceUpdate);
         var firmwareGraph = Graphs(vm.RootGraph).Single(g => g.Nodes.Contains(firmware));
         Assert.IsType<SelfTestCheckNodeViewModel>(firmwareGraph.Connections
             .Single(c => ReferenceEquals(c.Target.Parent, firmware)).Source.Parent);
@@ -143,7 +143,7 @@ public class Psw2G6FProfileTests
         var cleanup = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().First(n => n.RunOnFailure);
         Assert.Equal(10, cleanup.BodyGraph.Connections.Count);
         Assert.Equal(9, cleanup.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>().Single().BodyGraph.Connections.Count);
-        Assert.All(nodes.OfType<BuildTestReportNodeViewModel>(), n => Assert.Contains("прошивка 0.2.13", n.TestType));
+        Assert.All(nodes.OfType<BuildTestReportNodeViewModel>(), n => Assert.Contains("прошивка 0.2.8", n.TestType));
     }
 
     [Theory]
