@@ -53,6 +53,18 @@ public class UpdatePswFirmwareStepTests
     }
 
     [Fact]
+    public async Task AlreadyTargetVersionSkipsEvenWhenDowngradeIsAllowed()
+    {
+        var handler = new RecordingHandler();
+        var context = Context("208");
+        var step = CreateStep("/missing/sw407-0.2.8-01.06.2021.img", handler, true);
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Empty(handler.Requests);
+        Assert.False(context.GetVariable<bool>("Firmware.Updated"));
+    }
+
+    [Fact]
     public async Task EmptyImageStopsBeforeClear()
     {
         var (directory, path) = CreateImage();

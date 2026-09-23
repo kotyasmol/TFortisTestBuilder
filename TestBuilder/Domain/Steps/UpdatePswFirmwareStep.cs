@@ -68,7 +68,7 @@ public sealed class UpdatePswFirmwareStep : ITestStep
 
         context.SetVariable("Firmware.Before", rawVersion?.ToString() ?? string.Empty);
         context.SetVariable("Firmware.Target", _targetVersion);
-        if (!_forceUpdate && current >= target)
+        if (current == target || (!_forceUpdate && current > target))
         {
             _logger.Info($"[OK] Прошивка {rawVersion} уже не старее {_targetVersion}; обновление пропущено.");
             return StepResult.True;
