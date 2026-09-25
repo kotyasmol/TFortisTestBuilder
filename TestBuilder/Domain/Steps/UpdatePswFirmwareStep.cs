@@ -171,7 +171,10 @@ public sealed class UpdatePswFirmwareStep : ITestStep
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var preview = body.Replace('\r', ' ').Replace('\n', ' ').Trim();
-            if (preview.Length > 240) preview = preview[..240] + "…";
+            // The update page starts with JavaScript; a rejection or status is often
+            // further down in the HTML. Keep both ends of a long response in the log.
+            if (preview.Length > 4000)
+                preview = preview[..2000] + $" … [пропущено {preview.Length - 4000} символов] … " + preview[^2000..];
             if (preview.Length > 0) details += $" Ответ: {preview}";
         }
         _logger.Info(details);
