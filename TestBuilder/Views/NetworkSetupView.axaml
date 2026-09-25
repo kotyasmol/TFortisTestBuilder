@@ -13,7 +13,7 @@
       <Grid ColumnDefinitions="80,160,*" Margin="0,8,0,0">
         <TextBlock Grid.Column="0" Text="Порт" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="1" Text="Адрес" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="Сетевая карта · MAC · состояние · текущий IPv4" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Сетевая карта · MAC · состояние · скорость · текущий IPv4" FontWeight="SemiBold"/>
       </Grid>
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>

@@ -9,9 +9,11 @@ using System.Threading.Tasks;
 
 namespace TestBuilder.Services;
 
-public sealed record BenchAdapter(string Id, string Name, string Mac, string Status, string Ipv4)
+public sealed record BenchAdapter(string Id, string Name, string Mac, string Status, string Ipv4,
+    double SpeedMbps = 0)
 {
-    public string Display => $"{Name}  |  {Mac}  |  {Status}  |  {Ipv4}";
+    public string Display => $"{Name}  |  {Mac}  |  {Status}  |  " +
+        (SpeedMbps > 0 ? $"{SpeedMbps:F0} Mbps" : "скорость неизвестна") + $"  |  {Ipv4}";
 }
 
 public sealed record AdapterAssignment(string Ip, string AdapterId);
@@ -31,9 +33,16 @@ public static class DataTestNetworkConfigurator
             adapter.OperationalStatus.ToString(),
             string.Join(", ", adapter.GetIPProperties().UnicastAddresses
                 .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
-                .Select(address => address.Address.ToString()))))
+                .Select(address => address.Address.ToString())),
+            GetSpeedMbps(adapter)))
         .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToArray();
+
+    private static double GetSpeedMbps(NetworkInterface adapter)
+    {
+        try { return adapter.Speed > 0 ? adapter.Speed / 1_000_000.0 : 0; }
+        catch { return 0; }
+    }
 
     public static string? ValidateAssignments(IReadOnlyList<AdapterAssignment> assignments,
         IReadOnlyList<BenchAdapter> adapters)

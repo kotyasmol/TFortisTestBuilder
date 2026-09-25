@@ -195,8 +195,17 @@ namespace TestBuilder.Domain.Steps
                 return DataTestPairResult.Fail($"Некорректный OutIp '{port.OutIp}'.");
             }
 
-            var inNetworkInterface = FindNetworkInterfaceByIp(inIp);
-            var outNetworkInterface = FindNetworkInterfaceByIp(outIp);
+            var inMatches = FindNetworkInterfacesByIp(inIp);
+            var outMatches = FindNetworkInterfacesByIp(outIp);
+            if (inMatches.Length > 1)
+                return DataTestPairResult.Fail($"IP {inIp} назначен нескольким картам: {string.Join(", ", inMatches.Select(item => item.Name))}.");
+            if (outMatches.Length > 1)
+                return DataTestPairResult.Fail($"IP {outIp} назначен нескольким картам: {string.Join(", ", outMatches.Select(item => item.Name))}.");
+
+            var inNetworkInterface = inMatches.SingleOrDefault();
+            var outNetworkInterface = outMatches.SingleOrDefault();
+            _logger.Info($"DataTest {port.Name}: карты {DescribeNetworkInterface(inIp, inNetworkInterface)}; " +
+                $"{DescribeNetworkInterface(outIp, outNetworkInterface)}.");
             var inDevice = FindDeviceByNetworkInterface(devices, inNetworkInterface);
             var outDevice = FindDeviceByNetworkInterface(devices, outNetworkInterface);
 
@@ -1106,11 +1115,20 @@ namespace TestBuilder.Domain.Steps
             return bytes.Length == 6 ? bytes : null;
         }
 
-        private static NetworkInterface? FindNetworkInterfaceByIp(IPAddress ip)
+        private static string DescribeNetworkInterface(IPAddress ip, NetworkInterface? networkInterface)
+        {
+            if (networkInterface == null) return $"{ip}: не найдена";
+            var speed = NetworkSpeedMbps(networkInterface);
+            var speedText = speed > 0 ? $"{speed:F0} Mbps" : "скорость неизвестна";
+            return $"{ip}: {networkInterface.Name}, MAC {networkInterface.GetPhysicalAddress()}, " +
+                $"{networkInterface.OperationalStatus}, {speedText}";
+        }
+
+        private static NetworkInterface[] FindNetworkInterfacesByIp(IPAddress ip)
         {
             return NetworkInterface.GetAllNetworkInterfaces()
                 .Where(networkInterface => networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .FirstOrDefault(networkInterface =>
+                .Where(networkInterface =>
                 {
                     try
                     {
@@ -1122,7 +1140,7 @@ namespace TestBuilder.Domain.Steps
                     {
                         return false;
                     }
-                });
+                }).ToArray();
         }
 
         private static bool SamePhysicalAddress(PhysicalAddress? left, PhysicalAddress? right)
