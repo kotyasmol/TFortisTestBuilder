@@ -35,4 +35,47 @@ public class DataTestNetworkConfiguratorTests
         Assert.Contains("192.168.0.5", DataTestNetworkConfigurator.ValidateAssignments(
             ValidAssignments(), [.. Adapters, extra]));
     }
+
+    [Fact]
+    public void Psw2G6FSuggestion_MapsActivePortsByNegotiatedSpeed_AndKeepsDownAdaptersAsSpare()
+    {
+        var speeds = new[] { 1000d, 1000, 100, 0, 0, 100, 100, 100, 100, 100 };
+        var adapters = DataTestNetworkConfigurator.BenchIps.Select((ip, index) =>
+            new BenchAdapter($"adapter-{index}", $"Ethernet {index}", $"MAC{index}",
+                speeds[index] == 0 ? "Down" : "Up", ip, speeds[index])).ToArray();
+        var internet = new BenchAdapter("internet", "INET", "INETMAC", "Up", "10.160.24.159", 1000);
+
+        var (assignments, error) = DataTestNetworkConfigurator.SuggestPsw2G6FAssignments(
+            [.. adapters, internet], []);
+
+        Assert.Null(error);
+        Assert.Equal(new[] { "adapter-2", "adapter-5", "adapter-6", "adapter-7",
+            "adapter-8", "adapter-9", "adapter-0", "adapter-1", "adapter-3", "adapter-4" },
+            assignments!.Select(assignment => assignment.AdapterId));
+        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(assignments!, [.. adapters, internet]));
+    }
+
+    [Fact]
+    public void Psw2G6FSuggestion_DoesNotGuessWhenLinkSpeedsDoNotMatch()
+    {
+        var adapters = DataTestNetworkConfigurator.BenchIps.Select((ip, index) =>
+            new BenchAdapter($"adapter-{index}", $"Ethernet {index}", $"MAC{index}",
+                "Up", ip, 100)).ToArray();
+
+        var (assignments, error) = DataTestNetworkConfigurator.SuggestPsw2G6FAssignments(adapters, []);
+
+        Assert.Null(assignments);
+        Assert.Contains("6 поднятых", error);
+    }
+
+    [Fact]
+    public void ServiceConnection_CannotBeSelectedForIpRewrite()
+    {
+        var internet = new BenchAdapter("internet", "INET", "INETMAC", "Up", "10.160.24.159", 1000);
+        var assignments = ValidAssignments();
+        assignments[0] = assignments[0] with { AdapterId = internet.Id };
+
+        Assert.Contains("служебное", DataTestNetworkConfigurator.ValidateAssignments(
+            assignments, [.. Adapters, internet]));
+    }
 }

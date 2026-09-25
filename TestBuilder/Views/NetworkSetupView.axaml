@@ -6,22 +6,26 @@
   <ScrollViewer>
     <StackPanel Margin="24" Spacing="14" MaxWidth="1050" HorizontalAlignment="Left">
       <TextBlock Text="Сконфигурировать сетевые карты" FontSize="22" FontWeight="SemiBold"/>
-      <TextBlock Text="Назначьте каждому порту стенда физический адаптер. Сверяйте имя и MAC-адрес: после сброса IP определить порт автоматически нельзя. Выбранная привязка сохранится для следующего восстановления."
+      <TextBlock Text="PSW-2G6F+: 6 медных портов по 100 Мбит/с используют адреса .2–.7, два SFP по 1 Гбит/с — .8–.9. Две остальные карты остаются в резерве на .10–.11. Для других моделей выберите карты вручную."
                  TextWrapping="Wrap"/>
+      <TextBlock Text="Подбор по скорости определяет тип порта, но не порядок кабелей внутри группы. Перед применением сверьте пары медных портов и SFP по проводам или MAC-адресам."
+                 TextWrapping="Wrap" Opacity="0.7"/>
       <TextBlock Text="Применение заменит IPv4-адрес выбранных карт на статический /24 без шлюза. Требуются права администратора Windows. Отключённый кабель или скорость SFP эта операция не исправит."
                  TextWrapping="Wrap" Opacity="0.7"/>
-      <Grid ColumnDefinitions="80,160,*" Margin="0,8,0,0">
+      <Grid ColumnDefinitions="70,110,145,*" Margin="0,8,0,0">
         <TextBlock Grid.Column="0" Text="Порт" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="1" Text="Адрес" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="Сетевая карта · MAC · состояние · скорость · текущий IPv4" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="PSW-2G6F+" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Адрес" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="3" Text="Сетевая карта · MAC · состояние · скорость · текущий IPv4" FontWeight="SemiBold"/>
       </Grid>
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
-            <Grid ColumnDefinitions="80,160,*" Margin="0,0,0,7">
+            <Grid ColumnDefinitions="70,110,145,*" Margin="0,0,0,7">
               <TextBlock Grid.Column="0" Text="{Binding Port}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="1" Text="{Binding Ip}" VerticalAlignment="Center"/>
-              <ComboBox Grid.Column="2" MinWidth="650"
+              <TextBlock Grid.Column="1" Text="{Binding Psw2G6FPort}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="{Binding Ip}" VerticalAlignment="Center"/>
+              <ComboBox Grid.Column="3" MinWidth="650"
                         ItemsSource="{Binding Adapters}"
                         SelectedItem="{Binding SelectedAdapter}"
                         DisplayMemberBinding="{Binding Display}"/>
@@ -31,6 +35,7 @@
       </ItemsControl>
       <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
         <Button Content="Обновить список" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+        <Button Content="Подобрать для PSW-2G6F+" Command="{Binding SuggestPsw2G6FCommand}" IsEnabled="{Binding !IsBusy}"/>
         <Button Content="Применить адреса" Command="{Binding ApplyCommand}" IsEnabled="{Binding !IsBusy}"/>
       </StackPanel>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>

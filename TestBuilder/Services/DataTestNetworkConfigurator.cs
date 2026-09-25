@@ -38,6 +38,45 @@ public static class DataTestNetworkConfigurator
         .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToArray();
 
+    // PSW-2G6F+ has six 100 Mbps copper ports and two 1 Gbps SFP ports.
+    // The remaining two bench adapters are kept as spare addresses for other models.
+    public static (IReadOnlyList<AdapterAssignment>? Assignments, string? Error)
+        SuggestPsw2G6FAssignments(IReadOnlyList<BenchAdapter> adapters,
+            IReadOnlyCollection<string> savedAdapterIds)
+    {
+        var savedIds = savedAdapterIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidates = adapters.Where(adapter => savedIds.Contains(adapter.Id) ||
+                adapter.Ipv4.Split(", ").Any(BenchIps.Contains))
+            .ToArray();
+        if (candidates.Length != BenchIps.Count)
+            return (null, $"Для подбора нужно найти ровно 10 карт стенда по текущим IP или сохранённой привязке; найдено {candidates.Length}. Выберите карты вручную.");
+
+        var copper = candidates.Where(adapter => adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase) &&
+                adapter.SpeedMbps is >= 95 and <= 105).ToArray();
+        var sfp = candidates.Where(adapter => adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase) &&
+                adapter.SpeedMbps >= 950).ToArray();
+        var spare = candidates.Where(adapter => !adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (copper.Length != 6 || sfp.Length != 2 || spare.Length != 2)
+            return (null, $"Для PSW-2G6F+ нужны 6 поднятых карт 100 Мбит/с, 2 поднятые карты 1 Гбит/с и 2 отключённые резервные. Сейчас: {copper.Length}, {sfp.Length}, {spare.Length}. Проверьте подключение или выберите карты вручную.");
+
+        // Keep the current IP order within each speed group. Speed alone cannot
+        // establish which physical port or pair a cable is connected to.
+        var ordered = copper.OrderBy(CurrentBenchIpOrder).Concat(sfp.OrderBy(CurrentBenchIpOrder))
+            .Concat(spare.OrderBy(CurrentBenchIpOrder)).ToArray();
+        return (BenchIps.Zip(ordered, (ip, adapter) => new AdapterAssignment(ip, adapter.Id)).ToArray(), null);
+    }
+
+    private static int CurrentBenchIpOrder(BenchAdapter adapter)
+    {
+        foreach (var ip in adapter.Ipv4.Split(", "))
+        {
+            for (var index = 0; index < BenchIps.Count; index++)
+                if (BenchIps[index] == ip) return index;
+        }
+        return int.MaxValue;
+    }
+
     private static double GetSpeedMbps(NetworkInterface adapter)
     {
         try { return adapter.Speed > 0 ? adapter.Speed / 1_000_000.0 : 0; }
@@ -65,6 +104,14 @@ public static class DataTestNetworkConfigurator
 
         var selectedIds = assignments.Select(assignment => assignment.AdapterId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var adapter in adapters.Where(item => selectedIds.Contains(item.Id)))
+        {
+            var otherIp = adapter.Ipv4.Split(", ").FirstOrDefault(ip =>
+                !string.IsNullOrWhiteSpace(ip) && !BenchIps.Contains(ip) &&
+                !ip.StartsWith("169.254.", StringComparison.Ordinal));
+            if (otherIp != null)
+                return $"Карта {adapter.Name} имеет адрес {otherIp} вне сети стенда. Не меняйте служебное подключение; выберите другую карту.";
+        }
         foreach (var adapter in adapters.Where(item => !selectedIds.Contains(item.Id)))
         {
             var conflictingIp = adapter.Ipv4.Split(", ")
@@ -86,6 +133,24 @@ public static class DataTestNetworkConfigurator
         var error = ValidateAssignments(assignments, adapters);
         if (error != null) return error;
 
+        // Release old bench addresses before assigning new ones. Otherwise a
+        // permutation such as .2 ↔ .8 temporarily duplicates an IPv4 address.
+        foreach (var assignment in assignments)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var adapter = adapters.Single(item =>
+                string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
+            foreach (var oldIp in adapter.Ipv4.Split(", ").Where(BenchIps.Contains))
+            {
+                if (oldIp == assignment.Ip) continue;
+                progress.Report($"Освобождение {oldIp} на {adapter.Name}...");
+                var deleteError = await RunNetshAsync(["interface", "ipv4", "delete", "address",
+                    $"name={adapter.Name}", $"address={oldIp}", "store=persistent"], cancellationToken);
+                if (deleteError != null)
+                    return $"Не удалось освободить {oldIp} на {adapter.Name}: {deleteError}. Запустите приложение от имени администратора.";
+            }
+        }
+
         foreach (var assignment in assignments)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -93,32 +158,11 @@ public static class DataTestNetworkConfigurator
                 string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
             progress.Report($"Настройка {adapter.Name}: {assignment.Ip}/24...");
 
-            var start = new ProcessStartInfo("netsh")
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-            start.ArgumentList.Add("interface");
-            start.ArgumentList.Add("ipv4");
-            start.ArgumentList.Add("set");
-            start.ArgumentList.Add("address");
-            start.ArgumentList.Add($"name={adapter.Name}");
-            start.ArgumentList.Add("source=static");
-            start.ArgumentList.Add($"address={assignment.Ip}");
-            start.ArgumentList.Add("mask=255.255.255.0");
-            start.ArgumentList.Add("gateway=none");
-            start.ArgumentList.Add("store=persistent");
-
-            using var process = Process.Start(start);
-            if (process == null) return $"Не удалось запустить netsh для {assignment.Ip}.";
-            var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
-            var output = (await stdout + " " + await stderr).Trim();
-            if (process.ExitCode != 0)
-                return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {output}. Запустите приложение от имени администратора.";
+            var setError = await RunNetshAsync(["interface", "ipv4", "set", "address",
+                $"name={adapter.Name}", "source=static", $"address={assignment.Ip}",
+                "mask=255.255.255.0", "gateway=none", "store=persistent"], cancellationToken);
+            if (setError != null)
+                return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {setError}. Запустите приложение от имени администратора.";
 
             // Windows can publish the new address shortly after netsh exits.
             var verified = false;
@@ -140,5 +184,26 @@ public static class DataTestNetworkConfigurator
         }
 
         return null;
+    }
+
+    private static async Task<string?> RunNetshAsync(IEnumerable<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var start = new ProcessStartInfo("netsh")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+
+        using var process = Process.Start(start);
+        if (process == null) return "Не удалось запустить netsh";
+        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        var output = (await stdout + " " + await stderr).Trim();
+        return process.ExitCode == 0 ? null : output;
     }
 }
