@@ -137,17 +137,9 @@ public partial class NetworkSetupViewModel : ViewModelBase
 
             var progress = new Progress<string>(message => Status = message);
             error = await DataTestNetworkConfigurator.ApplyAsync(assignments, progress);
-            if (error != null)
-            {
-                Status = error;
-            }
-            else
-            {
-                IsBusy = false;
-                Refresh();
-                if (!Status.StartsWith("Не удалось", StringComparison.Ordinal))
-                    Status = "Адреса настроены. Проверьте физические пары и повторите DataTest.";
-            }
+            IsBusy = false;
+            Refresh();
+            Status = error ?? "Адреса настроены. Проверьте физические пары и повторите DataTest.";
         }
         catch (Exception ex)
         {

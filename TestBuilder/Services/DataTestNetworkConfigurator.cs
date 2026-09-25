@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -83,6 +86,8 @@ public static class DataTestNetworkConfigurator
         catch { return 0; }
     }
 
+    private static string TemporaryIpFor(string benchIp) => $"192.0.2.{benchIp.Split('.')[3]}";
+
     public static string? ValidateAssignments(IReadOnlyList<AdapterAssignment> assignments,
         IReadOnlyList<BenchAdapter> adapters)
     {
@@ -106,8 +111,11 @@ public static class DataTestNetworkConfigurator
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var adapter in adapters.Where(item => selectedIds.Contains(item.Id)))
         {
+            var assignment = assignments.Single(item =>
+                string.Equals(item.AdapterId, adapter.Id, StringComparison.OrdinalIgnoreCase));
             var otherIp = adapter.Ipv4.Split(", ").FirstOrDefault(ip =>
                 !string.IsNullOrWhiteSpace(ip) && !BenchIps.Contains(ip) &&
+                ip != TemporaryIpFor(assignment.Ip) &&
                 !ip.StartsWith("169.254.", StringComparison.Ordinal));
             if (otherIp != null)
                 return $"Карта {adapter.Name} имеет адрес {otherIp} вне сети стенда. Не меняйте служебное подключение; выберите другую карту.";
@@ -133,22 +141,43 @@ public static class DataTestNetworkConfigurator
         var error = ValidateAssignments(assignments, adapters);
         if (error != null) return error;
 
-        // Release old bench addresses before assigning new ones. Otherwise a
-        // permutation such as .2 ↔ .8 temporarily duplicates an IPv4 address.
+        using var identity = WindowsIdentity.GetCurrent();
+        if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+            return "Текущий процесс TestBuilder не запущен с повышенными правами. " +
+                "Закройте приложение и запустите TestBuilder.exe от имени администратора.";
+
+        // set address replaces all static IPv4 addresses on the interface. Move
+        // changed adapters to distinct temporary addresses first, so a swap
+        // such as .2 ↔ .8 never creates a duplicate bench address.
+        var temporaryIpOwners = assignments.ToDictionary(
+            assignment => TemporaryIpFor(assignment.Ip), assignment => assignment.AdapterId);
+        var occupiedTemporaryIp = NetworkInterface.GetAllNetworkInterfaces()
+            .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses
+                .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(address => (adapter.Id, Ip: address.Address.ToString())))
+            .FirstOrDefault(item => temporaryIpOwners.TryGetValue(item.Ip, out var ownerId) &&
+                !string.Equals(item.Id, ownerId, StringComparison.OrdinalIgnoreCase));
+        if (occupiedTemporaryIp.Ip != null)
+            return $"Временный адрес {occupiedTemporaryIp.Ip} уже используется. Освободите его перед настройкой карт.";
+
         foreach (var assignment in assignments)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var adapter = adapters.Single(item =>
                 string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
-            foreach (var oldIp in adapter.Ipv4.Split(", ").Where(BenchIps.Contains))
-            {
-                if (oldIp == assignment.Ip) continue;
-                progress.Report($"Освобождение {oldIp} на {adapter.Name}...");
-                var deleteError = await RunNetshAsync(["interface", "ipv4", "delete", "address",
-                    $"name={adapter.Name}", $"address={oldIp}", "store=persistent"], cancellationToken);
-                if (deleteError != null)
-                    return $"Не удалось освободить {oldIp} на {adapter.Name}: {deleteError}. Запустите приложение от имени администратора.";
-            }
+            if (!adapter.Ipv4.Split(", ").Any(ip => BenchIps.Contains(ip) && ip != assignment.Ip))
+                continue;
+
+            var temporaryIp = TemporaryIpFor(assignment.Ip);
+            progress.Report($"Освобождение прежнего адреса на {adapter.Name}...");
+            var releaseError = await RunNetshAsync(["interface", "ipv4", "set", "address",
+                $"name={adapter.Name}", "source=static", $"address={temporaryIp}",
+                "mask=255.255.255.0", "gateway=none", "store=persistent"], cancellationToken);
+            if (releaseError != null)
+                return $"Не удалось освободить адрес на {adapter.Name}: {releaseError}";
+            if (!await WaitForAddressAsync(adapter.Id, temporaryIp, cancellationToken))
+                return $"netsh завершился без ошибки, но временный адрес {temporaryIp} " +
+                    $"на карте {adapter.Name} не появился. Адреса не были назначены.";
         }
 
         foreach (var assignment in assignments)
@@ -162,28 +191,30 @@ public static class DataTestNetworkConfigurator
                 $"name={adapter.Name}", "source=static", $"address={assignment.Ip}",
                 "mask=255.255.255.0", "gateway=none", "store=persistent"], cancellationToken);
             if (setError != null)
-                return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {setError}. Запустите приложение от имени администратора.";
+                return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {setError}";
 
-            // Windows can publish the new address shortly after netsh exits.
-            var verified = false;
-            for (var attempt = 0; attempt < 10; attempt++)
-            {
-                if (GetAdapters().Any(item =>
-                    string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase) &&
-                    item.Ipv4.Split(", ").Contains(assignment.Ip)))
-                {
-                    verified = true;
-                    break;
-                }
-                await Task.Delay(200, cancellationToken);
-            }
-            if (!verified)
+            if (!await WaitForAddressAsync(adapter.Id, assignment.Ip, cancellationToken))
                 return $"netsh завершился без ошибки, но адрес {assignment.Ip} на карте {adapter.Name} не появился.";
 
             progress.Report($"Настроено: {adapter.Name} → {assignment.Ip}/24");
         }
 
         return null;
+    }
+
+    private static async Task<bool> WaitForAddressAsync(string adapterId, string ip,
+        CancellationToken cancellationToken)
+    {
+        // Windows can publish a new address shortly after netsh exits.
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            if (GetAdapters().Any(item =>
+                string.Equals(item.Id, adapterId, StringComparison.OrdinalIgnoreCase) &&
+                item.Ipv4.Split(", ").Contains(ip)))
+                return true;
+            await Task.Delay(200, cancellationToken);
+        }
+        return false;
     }
 
     private static async Task<string?> RunNetshAsync(IEnumerable<string> arguments,
@@ -194,7 +225,9 @@ public static class DataTestNetworkConfigurator
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
+            StandardOutputEncoding = NetshOutputEncoding(),
+            StandardErrorEncoding = NetshOutputEncoding()
         };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
 
@@ -203,7 +236,19 @@ public static class DataTestNetworkConfigurator
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken);
-        var output = (await stdout + " " + await stderr).Trim();
-        return process.ExitCode == 0 ? null : output;
+        var standardOutput = (await stdout).Trim();
+        var standardError = (await stderr).Trim();
+        if (process.ExitCode == 0 && standardError.Length == 0) return null;
+        var output = string.Join(" ", new[] { standardOutput, standardError }
+            .Where(part => part.Length > 0));
+        return $"netsh (код {process.ExitCode}): " +
+            (output.Length > 0 ? output : "команда не вернула текст ошибки");
+    }
+
+    private static Encoding NetshOutputEncoding()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        try { return Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage); }
+        catch (ArgumentException) { return Encoding.UTF8; }
     }
 }

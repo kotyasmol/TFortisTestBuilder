@@ -78,4 +78,23 @@ public class DataTestNetworkConfiguratorTests
         Assert.Contains("служебное", DataTestNetworkConfigurator.ValidateAssignments(
             assignments, [.. Adapters, internet]));
     }
+
+    [Fact]
+    public void TemporaryAddressOnItsAssignedAdapter_AllowsRetryAfterPartialFailure()
+    {
+        var adapters = Adapters.ToArray();
+        adapters[0] = adapters[0] with { Ipv4 = "192.0.2.2" };
+
+        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(ValidAssignments(), adapters));
+    }
+
+    [Fact]
+    public void UnexpectedTemporaryAddressOnSelectedAdapter_IsRejected()
+    {
+        var adapters = Adapters.ToArray();
+        adapters[0] = adapters[0] with { Ipv4 = "192.0.2.3" };
+
+        Assert.Contains("вне сети стенда", DataTestNetworkConfigurator.ValidateAssignments(
+            ValidAssignments(), adapters));
+    }
 }
