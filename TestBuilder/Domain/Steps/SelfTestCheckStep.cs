@@ -145,6 +145,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
+            context.SetVariable("SelfTest.OutputPrefix", _outputPrefix);
+            context.SetVariable("SelfTest.Parsed", false);
             context.SelfTestPageState?.BeginLoading(_url, _outputPrefix);
 
             SelfTestFetchResult fetch;
@@ -193,6 +195,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             var values = ExtractValues(document);
+            context.SetVariable("SelfTest.Parsed", true);
+            context.SetVariable("SelfTest.ReportFields", values);
             context.SelfTestPageState?.SetLoaded(_url, _outputPrefix, values);
             foreach (var item in values)
             {
@@ -260,8 +264,7 @@ namespace TestBuilder.Domain.Steps
                     continue;
                 }
 
-                if (!double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual) &&
-                    !double.TryParse(rawValue, NumberStyles.Float, CultureInfo.CurrentCulture, out actual))
+                if (!TryReadValidationNumber(rule.FieldName, rawValue, out var actual))
                 {
                     results.Add(ValidationCheckResult.Fail(
                         rule,
@@ -284,6 +287,26 @@ namespace TestBuilder.Domain.Steps
             }
 
             return results;
+        }
+
+        private bool TryReadValidationNumber(string field, string raw, out double value)
+        {
+            // The old PSW page encodes firmware/boot versions in hexadecimal.
+            // Preserve the original text in Dut.*; only validation uses the number.
+            if (Uri.TryCreate(_url, UriKind.Absolute, out var uri) &&
+                uri.AbsolutePath.Equals("/test.shtml", StringComparison.OrdinalIgnoreCase) &&
+                (field.Equals("firmvare_vers", StringComparison.OrdinalIgnoreCase) ||
+                 field.Equals("boot_vers", StringComparison.OrdinalIgnoreCase)))
+            {
+                var text = raw.Trim();
+                if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) text = text[2..];
+                var parsed = uint.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var version);
+                value = version;
+                return parsed;
+            }
+            return (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+                    double.TryParse(raw, NumberStyles.Float, CultureInfo.CurrentCulture, out value)) &&
+                   double.IsFinite(value);
         }
 
         private void LogParsedFieldSnapshot(Dictionary<string, string> values)

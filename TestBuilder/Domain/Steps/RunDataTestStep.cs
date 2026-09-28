@@ -1,5 +1,6 @@
 using SharpPcap;
 using SharpPcap.LibPcap;
+using static TestBuilder.Domain.Steps.DataTestSendCoordinator;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -397,8 +398,23 @@ namespace TestBuilder.Domain.Steps
 
             try
             {
-                receiveDevice.Open(DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness, 100);
-                sendDevice.Open(DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness, 100);
+                // Batch capture notifications and reserve enough kernel buffer for
+                // scheduler pauses at line rate. A short read timeout drains the
+                // final partial batch before WaitForCaptureDrainAsync ends.
+                receiveDevice.Open(new DeviceConfiguration
+                {
+                    Mode = DeviceModes.Promiscuous,
+                    ReadTimeout = 20,
+                    Snaplen = packet.Length,
+                    BufferSize = 16 * 1024 * 1024,
+                    KernelBufferSize = OperatingSystem.IsWindows() ? 16 * 1024 * 1024 : null,
+                    MinToCopy = OperatingSystem.IsWindows() ? 64 * 1024 : null
+                });
+                // The high-rate injection handle must not capture its own traffic.
+                var highRateWindows = OperatingSystem.IsWindows() && targetBandwidthMbps > 100;
+                sendDevice.Open(highRateWindows ? DeviceModes.NoCaptureLocal :
+                    DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness, 100);
+                if (highRateWindows) sendDevice.Filter = "len = 0";
 
                 receiveDevice.Filter = BuildCaptureFilter(sourceIp, destinationIp, sourceMac, destinationMac, _udpPort);
                 receiveDevice.OnPacketArrival += OnPacketArrival;
@@ -609,6 +625,23 @@ namespace TestBuilder.Domain.Steps
         {
             if (device is PcapDevice pcapDevice && IsNativeSendQueueAvailable())
             {
+                if (OperatingSystem.IsWindows() && targetBandwidthMbps > 100)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // Independent native handles overlap transmit completion waits.
+                    // Each lane owns its packet buffer and alternating sequence numbers.
+                    using var second = new LibPcapLiveDevice(pcapDevice.Interface!);
+                    second.Open(DeviceModes.NoCaptureLocal, 100);
+                    second.Filter = "len = 0";
+                    var timer = Stopwatch.StartNew();
+                    return await RunParallelSendersAsync(async (lane, token) =>
+                    {
+                        var sender = lane == 0 ? pcapDevice : second;
+                        return await SendWithNpcapQueueAsync(sender, (byte[])packet.Clone(),
+                            targetBandwidthMbps, durationMs, runId, token, lane, 2, timer);
+                    }, CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs),
+                        durationMs, timer, cancellationToken);
+                }
                 return await SendWithNpcapQueueAsync(
                     pcapDevice,
                     packet,
@@ -633,11 +666,15 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             int durationMs,
             ulong runId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            int lane = 0,
+            int laneCount = 1,
+            Stopwatch? parallelClock = null)
         {
-            var targetPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
-            var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length);
-            // Bound native memory independently of test duration. At 1 Gbit/s a
+            var totalPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
+            var targetPackets = CalculateLanePacketCount(totalPackets, lane, laneCount);
+            var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
+            // Bound queue memory independently of test duration. At 1 Gbit/s a
             // complete five-second prebuilt test would otherwise occupy ~640 MB.
             var chunkMs = targetBandwidthMbps > 100 ? 100 : SendQueueChunkMs;
             var queues = Channel.CreateBounded<SendQueuePlan>(new BoundedChannelOptions(2)
@@ -679,7 +716,7 @@ namespace TestBuilder.Domain.Steps
                             for (var sequence = startSequence; sequence < endSequence; sequence++)
                             {
                                 preparationToken.ThrowIfCancellationRequested();
-                                WriteProbeIdentity(packet, runId, sequence);
+                                WriteProbeIdentity(packet, runId, sequence * laneCount + lane);
                                 var relativeMicroseconds = (int)Math.Round(
                                     (sequence - startSequence) * 1_000_000.0 / packetsPerSecond,
                                     MidpointRounding.AwayFromZero);
@@ -716,8 +753,11 @@ namespace TestBuilder.Domain.Steps
                     using (plan.Queue)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        if (parallelClock != null)
+                            await WaitForSendDeadlineAsync(parallelClock, sent * 1000.0 / packetsPerSecond, cancellationToken);
                         if (startTimestamp == 0) startTimestamp = Stopwatch.GetTimestamp();
-                        var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
+                        var transmittedBytes = plan.Queue.Transmit(device, parallelClock == null
+                            ? SendQueueTransmitModes.Synchronized : SendQueueTransmitModes.Normal);
                         var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
                         var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
                             ? plan.PacketCount
@@ -980,6 +1020,8 @@ namespace TestBuilder.Domain.Steps
         {
             context.SetVariable($"{_outputVariableName}.Passed", passed);
             context.SetVariable($"{_outputVariableName}.Error", error);
+            if (!passed)
+                context.AddReportEntry("Передача данных: " + _outputVariableName, false, error);
 
             if (passed)
             {
@@ -998,6 +1040,9 @@ namespace TestBuilder.Domain.Steps
             DataTestPairResult result)
         {
             var prefix = $"{_outputVariableName}.Port{index}";
+            context.AddReportEntry($"Передача данных {port.Name}", result.Passed,
+                FormattableString.Invariant($"цель {result.TargetBandwidthMbps} Мбит/с; TX {result.ActualTxMbps:F3}; RX {result.ActualRxMbps:F3}; потери {result.LossPercent:F3}%") +
+                (string.IsNullOrEmpty(result.Error) ? string.Empty : "; " + result.Error));
             context.SetVariable($"{prefix}.Name", port.Name);
             context.SetVariable($"{prefix}.InIp", port.InIp);
             context.SetVariable($"{prefix}.OutIp", port.OutIp);

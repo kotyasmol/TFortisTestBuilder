@@ -66,7 +66,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             var builder = new StringBuilder();
-            var successful = !context.HasCriticalError;
+            var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
+            var successful = !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
 
             AppendEntry(builder, "test_result", true, successful ? "1" : "0");
             AppendEntry(builder, "stand_id", true, _standId);
@@ -79,7 +80,7 @@ namespace TestBuilder.Domain.Steps
 
             AppendEntry(builder, "Тип проверки", true, _testType);
 
-            foreach (var entry in context.ReportEntries)
+            foreach (var entry in entries)
             {
                 if (!string.IsNullOrWhiteSpace(entry.Name))
                 {
@@ -96,7 +97,7 @@ namespace TestBuilder.Domain.Steps
                     AppendEntry(
                         builder,
                         variable.Key,
-                        InferSuccess(variable.Key, variable.Value),
+                        true, // Diagnostic values are not independent pass/fail criteria.
                         FormatValue(variable.Value));
                 }
             }
@@ -133,28 +134,6 @@ namespace TestBuilder.Domain.Steps
             return !string.Equals(name, _reportVariableName, StringComparison.Ordinal) &&
                    !name.StartsWith("BuildReport.", StringComparison.Ordinal) &&
                    !name.StartsWith("SendReport.", StringComparison.Ordinal);
-        }
-
-        private static bool InferSuccess(string name, object? value)
-        {
-            if (name.EndsWith(".Passed", StringComparison.OrdinalIgnoreCase) ||
-                name.EndsWith(".Success", StringComparison.OrdinalIgnoreCase) ||
-                name.EndsWith(".Ok", StringComparison.OrdinalIgnoreCase) ||
-                name.EndsWith("Received", StringComparison.OrdinalIgnoreCase) ||
-                name.EndsWith("PacketSent", StringComparison.OrdinalIgnoreCase))
-            {
-                if (value is bool boolean)
-                {
-                    return boolean;
-                }
-
-                if (bool.TryParse(value?.ToString(), out var parsed))
-                {
-                    return parsed;
-                }
-            }
-
-            return true;
         }
 
         private static string GetVariableText(TestContext context, string variableName)

@@ -73,6 +73,9 @@ namespace TestBuilder.Domain.Steps
                 if (read.Success)
                 {
                     var inRange = read.Value >= _min && read.Value <= _max;
+                    if (inRange || attempt == _readAttempts)
+                        SavePoeMeasurement(context, actualSlaveId.Value, inRange,
+                            System.FormattableString.Invariant($"{read.Value / 1000.0:F3} В; допуск {_min / 1000.0:F3}..{_max / 1000.0:F3} В"));
                     _logger.Info(
                         $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
                     if (inRange)
@@ -85,6 +88,7 @@ namespace TestBuilder.Domain.Steps
                 }
                 else if (attempt == _readAttempts)
                 {
+                    SavePoeMeasurement(context, actualSlaveId.Value, false, "Регистр не прочитан: " + read.Error);
                     _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {_address}: {read.Error}");
                 }
             }
@@ -95,6 +99,14 @@ namespace TestBuilder.Domain.Steps
         private byte? ResolveSlaveId(TestContext context)
         {
             return _useCurrentSlaveId ? context.CurrentSlaveId : _slaveId;
+        }
+
+        private void SavePoeMeasurement(TestContext context, byte slaveId, bool passed, string value)
+        {
+            // EL60V5 PoE voltage checks in the production For Slaves loop.
+            // Other range nodes may be branch conditions, not product failures.
+            if (_useCurrentSlaveId && _address is 1402 or 1403)
+                context.AddReportEntry($"напряжение PoE {(_address == 1402 ? "A" : "B")}, устройство {slaveId}", passed, value);
         }
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ namespace TestBuilder.Domain.Steps
 {
     public enum DeviceLabelModel { PswUpsBox8x2Pro, Psw2G6FPlus }
 
-    internal readonly record struct RawLabelPrintResult(bool Success, int ErrorCode, string Error)
+    internal readonly record struct RawLabelPrintResult(bool Success, int ErrorCode, string Error, uint JobId = 0, string CompletionStatus = "Printed")
     {
         public static RawLabelPrintResult Ok() => new(true, 0, string.Empty);
 
@@ -22,12 +21,12 @@ namespace TestBuilder.Domain.Steps
 
     internal interface IRawLabelPrinter
     {
-        RawLabelPrintResult Print(string printerName, byte[] bytes);
+        RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken cancellationToken);
     }
 
     public sealed class PrintLabelStep : ITestStep
     {
-        private const int DefaultPrinterTimeoutMs = 10000;
+        private const int DefaultPrinterTimeoutMs = 30000;
         private const int LabelWidthDots = 354;
         private const string PswUpsBox8x2ProName = "PSW+UPS-Box 8x2Pro";
         private const int PswUpsBox8x2ProDeviceType = 32;
@@ -282,18 +281,20 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
 
+            using var printCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var printTask = Task.Run(
-                () => _printer.Print(_printerName, bytes),
+                () => _printer.Print(_printerName, bytes, printCts.Token),
                 CancellationToken.None);
             var timeoutTask = Task.Delay(_printerTimeoutMs, cancellationToken);
             var completed = await Task.WhenAny(printTask, timeoutTask).ConfigureAwait(false);
 
             if (completed != printTask)
             {
+                printCts.Cancel();
                 ObserveLatePrintTask(printTask);
                 cancellationToken.ThrowIfCancellationRequested();
                 context.SetVariable("PrintLabel.TimedOut", true);
-                return Fail(context, 5, $"Принтер не ответил за {_printerTimeoutMs} мс.");
+                return Fail(context, 5, $"Задание печати не завершено за {_printerTimeoutMs} мс; запрошена отмена задания.");
             }
 
             RawLabelPrintResult printResult;
@@ -301,11 +302,17 @@ namespace TestBuilder.Domain.Steps
             {
                 printResult = await printTask.ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 return Fail(context, 3, ex.Message);
             }
 
+            context.SetVariable("PrintLabel.JobId", printResult.JobId);
+            context.SetVariable("PrintLabel.CompletionStatus", printResult.Success ? printResult.CompletionStatus : string.Empty);
             if (!printResult.Success)
             {
                 return Fail(context, printResult.ErrorCode, printResult.Error);
@@ -314,7 +321,11 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Success", true);
             context.SetVariable("PrintLabel.ErrorCode", 0);
             context.SetVariable("PrintLabel.Error", string.Empty);
-            _logger.Info($"[OK] В очередь принтера '{_printerName}' отправлено этикеток: {_copies}.");
+            var completionText = printResult.CompletionStatus == "SentToPrinter"
+                ? "передано принтеру; драйвер не подтверждает физический выход этикетки"
+                : "Windows сообщает PRINTED";
+            context.AddReportEntry("Печать этикеток", true, $"{completionText}; {_copies} шт.; {_printerName}; задание {printResult.JobId}");
+            _logger.Info($"[OK] Задание {printResult.JobId}: {completionText}; '{_printerName}', этикеток: {_copies}.");
             return StepResult.True;
         }
 
@@ -479,13 +490,16 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.ErrorCode", errorCode);
             context.SetVariable("PrintLabel.Error", error);
-            _logger.Warning($"[ОШИБКА] Этикетки не напечатаны: {error}");
+            context.AddReportEntry("Печать этикеток", false, error);
+            _logger.Warning($"[ОШИБКА] Печать этикеток не подтверждена: {error}");
             return _failOnPrinterError ? StepResult.False : StepResult.True;
         }
 
         private static void ResetDiagnostics(TestContext context)
         {
             context.SetVariable("PrintLabel.Copies", 0);
+            context.SetVariable("PrintLabel.JobId", 0u);
+            context.SetVariable("PrintLabel.CompletionStatus", string.Empty);
             context.SetVariable("PrintLabel.PrinterName", string.Empty);
             context.SetVariable("PrintLabel.Serial", string.Empty);
             context.SetVariable("PrintLabel.SerialSource", string.Empty);
@@ -537,103 +551,4 @@ namespace TestBuilder.Domain.Steps
         }
     }
 
-    internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
-    {
-        [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
-
-        [DllImport("winspool.drv", SetLastError = true)]
-        private static extern bool ClosePrinter(IntPtr hPrinter);
-
-        [DllImport("winspool.drv", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In] DocInfo1 docInfo);
-
-        [DllImport("winspool.drv", SetLastError = true)]
-        private static extern bool EndDocPrinter(IntPtr hPrinter);
-
-        [DllImport("winspool.drv", SetLastError = true)]
-        private static extern bool StartPagePrinter(IntPtr hPrinter);
-
-        [DllImport("winspool.drv", SetLastError = true)]
-        private static extern bool EndPagePrinter(IntPtr hPrinter);
-
-        [DllImport("winspool.drv", SetLastError = true)]
-        private static extern bool WritePrinter(IntPtr hPrinter, byte[] bytes, int count, out int written);
-
-        public RawLabelPrintResult Print(string printerName, byte[] bytes)
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                return RawLabelPrintResult.Fail(3, "RAW-печать поддерживается только в Windows.");
-            }
-
-            if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
-            {
-                var win32Error = Marshal.GetLastWin32Error();
-                return RawLabelPrintResult.Fail(3, $"Не удалось открыть принтер '{printerName}' (Win32 {win32Error}).");
-            }
-
-            try
-            {
-                var document = new DocInfo1
-                {
-                    DocumentName = "TFortis labels",
-                    DataType = "RAW"
-                };
-
-                if (!StartDocPrinter(printer, 1, document))
-                {
-                    return RawLabelPrintResult.Fail(2, $"Не удалось создать задание печати (Win32 {Marshal.GetLastWin32Error()}).");
-                }
-
-                try
-                {
-                    if (!StartPagePrinter(printer))
-                    {
-                        return RawLabelPrintResult.Fail(1, $"Не удалось начать RAW-страницу (Win32 {Marshal.GetLastWin32Error()}).");
-                    }
-
-                    try
-                    {
-                        if (!WritePrinter(printer, bytes, bytes.Length, out var written))
-                        {
-                            return RawLabelPrintResult.Fail(4, $"WritePrinter завершился ошибкой Win32 {Marshal.GetLastWin32Error()}.");
-                        }
-
-                        if (written != bytes.Length)
-                        {
-                            return RawLabelPrintResult.Fail(4, $"Принтер принял {written} из {bytes.Length} байт.");
-                        }
-                    }
-                    finally
-                    {
-                        EndPagePrinter(printer);
-                    }
-                }
-                finally
-                {
-                    EndDocPrinter(printer);
-                }
-
-                return RawLabelPrintResult.Ok();
-            }
-            finally
-            {
-                ClosePrinter(printer);
-            }
-        }
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private sealed class DocInfo1
-        {
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string DocumentName = string.Empty;
-
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string? OutputFile;
-
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string DataType = string.Empty;
-        }
-    }
 }

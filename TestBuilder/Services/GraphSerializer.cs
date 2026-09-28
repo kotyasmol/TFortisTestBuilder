@@ -645,7 +645,7 @@ namespace TestBuilder.Services
                                 ? "SerialNumber"
                                 : n.SerialVariableName ?? "SerialNumber",
                         TestType = n.TestType ?? "production",
-                        IncludeAllVariables = n.IncludeAllVariables ?? true
+                        IncludeAllVariables = n.IncludeAllVariables ?? false
                     },
 
                     "Print Label" or "PRINT_LABEL" or "Печать этикетки" => new PrintLabelNodeViewModel

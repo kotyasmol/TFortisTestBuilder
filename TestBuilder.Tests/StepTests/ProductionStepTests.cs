@@ -350,7 +350,7 @@ public class ProductionStepTests
             report);
         Assert.Contains("самотестирование=true=true\r\n", report);
         Assert.Contains("Dut.akb_voltage=true=24.5\r\n", report);
-        Assert.Contains("LastCheck.Passed=false=false\r\n", report);
+        Assert.Contains("LastCheck.Passed=true=false\r\n", report);
         Assert.DoesNotContain("serial_num=true=123\r\n", report);
         Assert.True(context.GetVariable<bool>("BuildReport.Success"));
     }

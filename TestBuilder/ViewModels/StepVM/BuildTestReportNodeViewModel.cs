@@ -12,7 +12,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string reportVariableName = "TestReportText";
         [ObservableProperty] private string serialVariableName = "SerialNumber";
         [ObservableProperty] private string testType = "production";
-        [ObservableProperty] private bool includeAllVariables = true;
+        [ObservableProperty] private bool includeAllVariables;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }

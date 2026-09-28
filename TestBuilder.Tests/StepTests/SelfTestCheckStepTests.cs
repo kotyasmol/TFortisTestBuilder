@@ -9,6 +9,23 @@ namespace TestBuilder.Tests.StepTests;
 
 public class SelfTestCheckStepTests
 {
+    [Theory]
+    [InlineData("20d", "105", "525..525", true)]
+    [InlineData("208", "105", "520..520", true)]
+    [InlineData("20d", "105", "526..600", false)]
+    [InlineData("oops", "105", "0..65535", false)]
+    public async Task LegacyVersionsUseHexadecimalWithoutChangingRawValues(string firmware, string boot, string range, bool passed)
+    {
+        var service = new QueueHttpRequestService(HttpRequestResult.Success(200,
+            $"<selftest><init_ok>1</init_ok><default_mac>00:11:22:33:44:55</default_mac><firmvare_vers>{firmware}</firmvare_vers><boot_vers>{boot}</boot_vers></selftest>", TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(service, $"init_ok=1..1\nfirmvare_vers={range}\nboot_vers=261..261", url: "http://192.168.0.1/test.shtml");
+        Assert.Equal(passed ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(firmware, context.GetVariable<string>("Dut.firmvare_vers"));
+        Assert.True(context.GetVariable<bool>("SelfTest.Parsed"));
+        Assert.Equal("Dut", context.GetVariable<string>("SelfTest.OutputPrefix"));
+    }
+
     [Fact]
     public async Task SelfTestCheckStep_ReturnsTrue_AndSavesFields_WhenRulesPass()
     {

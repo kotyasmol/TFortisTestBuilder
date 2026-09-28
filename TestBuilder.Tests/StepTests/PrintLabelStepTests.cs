@@ -8,6 +8,55 @@ namespace TestBuilder.Tests.StepTests;
 
 public class PrintLabelStepTests
 {
+    [Fact]
+    public async Task DriverCompleteKeepsHonestCompletionStatusInReport()
+    {
+        var context = new TestContext(new RegisterState());
+        var printer = new CapturingPrinter(new RawLabelPrintResult(true, 0, "", 42, "SentToPrinter"));
+        Assert.Equal(StepResult.True, await CreateStep(printer, 1, manualSerial: "612447")
+            .ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal("SentToPrinter", context.GetVariable<string>("PrintLabel.CompletionStatus"));
+        Assert.Contains("драйвер не подтверждает", Assert.Single(context.ReportEntries).Value);
+    }
+
+    [Fact]
+    public async Task TimeoutCancelsBackgroundPrinterWork()
+    {
+        var context = new TestContext(new RegisterState());
+        var printer = new CancellablePrinter();
+        Assert.Equal(StepResult.False, await CreateStep(printer, 1, 50, manualSerial: "612447")
+            .ExecuteAsync(context, CancellationToken.None));
+        Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.False(Assert.Single(context.ReportEntries).IsSuccess);
+    }
+
+    [Fact]
+    public async Task ExternalCancellationIsPropagatedAndCancelsPrinterWork()
+    {
+        var context = new TestContext(new RegisterState());
+        var printer = new CancellablePrinter();
+        using var stop = new CancellationTokenSource();
+        var task = CreateStep(printer, 1, 5000, manualSerial: "612447").ExecuteAsync(context, stop.Token);
+        await printer.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        stop.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+        Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    private sealed class CancellablePrinter : IRawLabelPrinter
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Cancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public RawLabelPrintResult Print(string name, byte[] bytes, CancellationToken token)
+        {
+            Started.TrySetResult(true);
+            token.WaitHandle.WaitOne();
+            Cancelled.TrySetResult(true);
+            token.ThrowIfCancellationRequested();
+            throw new InvalidOperationException();
+        }
+    }
+
     public PrintLabelStepTests()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -286,7 +335,7 @@ public class PrintLabelStepTests
         public string PrinterName { get; private set; } = string.Empty;
         public byte[] Bytes { get; private set; } = Array.Empty<byte>();
 
-        public RawLabelPrintResult Print(string printerName, byte[] bytes)
+        public RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken cancellationToken)
         {
             Calls++;
             PrinterName = printerName;
@@ -306,7 +355,7 @@ public class PrintLabelStepTests
             _delay = delay;
         }
 
-        public RawLabelPrintResult Print(string printerName, byte[] bytes)
+        public RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken cancellationToken)
         {
             Thread.Sleep(_delay);
             return RawLabelPrintResult.Ok();
