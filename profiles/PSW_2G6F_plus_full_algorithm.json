@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "PSW_2G6F_plus_full_algorithm",
   "nodes": [
     {
@@ -393,9 +393,9 @@
             "timeoutMs": 300000,
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "psw2G6FHardwareChecks": true,
             "failOnError": true,
-            "outputPrefix": "Dut",
-            "psw2G6FHardwareChecks": true
+            "outputPrefix": "Dut"
           },
           {
             "id": "5",
@@ -512,6 +512,7 @@
             "timeoutMs": 180000,
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "psw2G6FHardwareChecks": false,
             "failOnError": true,
             "outputPrefix": "Dut"
           },
@@ -764,7 +765,7 @@
             "color": "blue"
           },
           {
-            "id": "2",
+            "id": "1",
             "type": "Check Variable Range",
             "x": 1000,
             "y": 120,
@@ -776,7 +777,7 @@
             "inclusive": true
           },
           {
-            "id": "3",
+            "id": "2",
             "type": "Build MAC From Serial",
             "x": 1460,
             "y": 120,
@@ -789,7 +790,7 @@
             "serialVariableName": "SerialNumber"
           },
           {
-            "id": "4",
+            "id": "3",
             "type": "Set PSW MAC (UDP)",
             "x": 1920,
             "y": 120,
@@ -803,7 +804,7 @@
             "udpPort": 43962
           },
           {
-            "id": "5",
+            "id": "4",
             "type": "Delay",
             "x": 2380,
             "y": 120,
@@ -811,7 +812,7 @@
             "milliseconds": 7000
           },
           {
-            "id": "6",
+            "id": "5",
             "type": "Write Register",
             "x": 2840,
             "y": 120,
@@ -823,7 +824,7 @@
             "verifyWrite": true
           },
           {
-            "id": "7",
+            "id": "6",
             "type": "Delay",
             "x": 3300,
             "y": 120,
@@ -831,7 +832,7 @@
             "milliseconds": 10000
           },
           {
-            "id": "8",
+            "id": "7",
             "type": "Write Register",
             "x": 3760,
             "y": 120,
@@ -843,7 +844,7 @@
             "verifyWrite": true
           },
           {
-            "id": "9",
+            "id": "8",
             "type": "Delay",
             "x": 4220,
             "y": 120,
@@ -851,7 +852,7 @@
             "milliseconds": 20000
           },
           {
-            "id": "10",
+            "id": "9",
             "type": "Clear ARP Cache",
             "x": 4680,
             "y": 120,
@@ -864,7 +865,7 @@
             "arguments": "-d *"
           },
           {
-            "id": "11",
+            "id": "10",
             "type": "Selftest Check",
             "x": 5140,
             "y": 120,
@@ -873,12 +874,12 @@
             "timeoutMs": 300000,
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=6..6",
+            "psw2G6FHardwareChecks": true,
             "failOnError": true,
-            "outputPrefix": "DutAfterMac",
-            "psw2G6FHardwareChecks": true
+            "outputPrefix": "DutAfterMac"
           },
           {
-            "id": "12",
+            "id": "11",
             "type": "Compare Variables",
             "x": 5600,
             "y": 120,
@@ -889,7 +890,7 @@
             "rightVariableName": "Dut.NewMac"
           },
           {
-            "id": "13",
+            "id": "12",
             "type": "End",
             "x": 6060,
             "y": 120,
@@ -900,6 +901,12 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
@@ -913,41 +920,41 @@
             "sourceNodeId": "3",
             "sourceConnector": "True",
             "targetNodeId": "4",
-            "targetConnector": "In"
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
-            "sourceConnector": "True",
+            "sourceConnector": "Выход",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "5",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "6",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "6",
-            "sourceConnector": "True",
+            "sourceConnector": "Выход",
             "targetNodeId": "7",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "7",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "8",
             "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "8",
-            "sourceConnector": "True",
+            "sourceConnector": "Выход",
             "targetNodeId": "9",
-            "targetConnector": "Вход"
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "9",
-            "sourceConnector": "Выход",
+            "sourceConnector": "True",
             "targetNodeId": "10",
             "targetConnector": "In"
           },
@@ -961,12 +968,6 @@
             "sourceNodeId": "11",
             "sourceConnector": "True",
             "targetNodeId": "12",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "12",
-            "sourceConnector": "True",
-            "targetNodeId": "13",
             "targetConnector": "Вход"
           }
         ]
@@ -995,7 +996,7 @@
       "type": "Subtest",
       "x": 4220,
       "y": 120,
-      "color": "red",
+      "color": "blue",
       "name": "9. Финальная статистика и отчёт",
       "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
       "isEnabled": true,
@@ -1021,6 +1022,7 @@
             "timeoutMs": 180000,
             "pollIntervalMs": 5000,
             "validationRules": "",
+            "psw2G6FHardwareChecks": false,
             "failOnError": false,
             "outputPrefix": "DutFinal"
           },
@@ -1823,6 +1825,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "Новый профиль",
         "nodes": [
           {
             "id": "0",
