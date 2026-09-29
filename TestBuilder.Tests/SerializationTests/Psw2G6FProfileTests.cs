@@ -106,7 +106,29 @@ public class Psw2G6FProfileTests
         Assert.Contains("sfp6-7,192.168.0.8,192.168.0.9,1000", data.PortsText);
         Assert.Equal(2, data.AllowedTxDeficitPercent);
         Assert.True(data.Bidirectional);
-        var serial = Assert.Single(nodes.OfType<GetSerialNumberFromServerNodeViewModel>());
+        var serialNodes = nodes.OfType<GetSerialNumberFromServerNodeViewModel>().ToArray();
+        Assert.Equal(2, serialNodes.Length); // normal early lookup and guarded failure recovery
+        Assert.All(serialNodes, n => Assert.False(n.UseFixedSerialNumber));
+        var early = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+            .Single(n => !n.RunOnFailure && n.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Any());
+        var serial = early.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single();
+        var poe = mainPath.OfType<ForEachSlaveNodeViewModel>().Single();
+        var sensor = mainPath.OfType<SubtestNodeViewModel>()
+            .Single(n => n.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Any());
+        Assert.True(mainPath.IndexOf(early) < mainPath.IndexOf(poe));
+        Assert.True(mainPath.IndexOf(poe) < mainPath.IndexOf(sensor));
+        Assert.True(mainPath.IndexOf(sensor) < mainPath.IndexOf(data));
+        var hardwareChecks = nodes.OfType<SelfTestCheckNodeViewModel>().Where(n => n.Psw2G6FHardwareChecks).ToArray();
+        Assert.Equal(new[] { "Dut", "DutAfterMac" }, hardwareChecks.Select(n => n.OutputPrefix));
+        Assert.True(Assert.IsType<SelfTestCheckNodeViewModel>(hardwareChecks[0].Clone()).Psw2G6FHardwareChecks);
+        foreach (var send in nodes.OfType<SendTestReportNodeViewModel>())
+        {
+            Assert.True(send.FailOnError);
+            var g = Graphs(vm.RootGraph).Single(g => g.Nodes.Contains(send));
+            var exits = g.Connections.Where(c => ReferenceEquals(c.Source.Parent, send)).ToArray();
+            Assert.Equal(2, exits.Length);
+            Assert.All(exits, c => Assert.IsType<EndNodeViewModel>(c.Target.Parent));
+        }
         Assert.Equal("PSW-2G6F+", serial.DeviceType);
         Assert.False(serial.UseFixedSerialNumber);
         var mac = Assert.Single(nodes.OfType<BuildMacFromSerialNodeViewModel>());
@@ -165,6 +187,35 @@ public class Psw2G6FProfileTests
         Assert.Equal(100, RunDataTestStep.NormalizeBandwidth(1000));
         Assert.Equal(1000, RunDataTestStep.NormalizeBandwidth(1000, true));
         Assert.Equal(1000, RunDataTestStep.NormalizeBandwidth(10000, true));
+    }
+
+    [Fact]
+    public void FailureRecoveryRequiresModelAndValidServerSerialBeforeBuildingReport()
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+            "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+        using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        var graph = json.RootElement.GetProperty("nodes").EnumerateArray()
+            .Single(n => n.GetProperty("id").GetString() == "13").GetProperty("bodyGraph");
+        var nodes = graph.GetProperty("nodes").EnumerateArray().ToDictionary(n => n.GetProperty("id").GetString()!);
+        string Next(string id, string result) => graph.GetProperty("connections").EnumerateArray()
+            .Single(e => e.GetProperty("sourceNodeId").GetString() == id && e.GetProperty("sourceConnector").GetString() == result)
+            .GetProperty("targetNodeId").GetString()!;
+        Assert.Equal("2", Next("1", "True")); // an existing valid SN is reused
+        var modelId = Next("1", "False");
+        Assert.Equal("Dut.dev_type", nodes[modelId].GetProperty("variableName").GetString());
+        Assert.Equal(6, nodes[modelId].GetProperty("min").GetInt32());
+        Assert.Equal(6, nodes[modelId].GetProperty("max").GetInt32());
+        Assert.Equal("5", Next(modelId, "False"));
+        var serialId = Next(modelId, "True");
+        Assert.Equal("Get Serial Number", nodes[serialId].GetProperty("type").GetString());
+        Assert.Equal("Dut.cpu_id", nodes[serialId].GetProperty("cpuIdVariableName").GetString());
+        Assert.Equal("5", Next(serialId, "False"));
+        var checkId = Next(serialId, "True");
+        Assert.Equal(600000, nodes[checkId].GetProperty("min").GetInt32());
+        Assert.Equal(665535, nodes[checkId].GetProperty("max").GetInt32());
+        Assert.Equal("2", Next(checkId, "True"));
+        Assert.Equal("5", Next(checkId, "False"));
     }
 
     private static IEnumerable<GraphWorkspaceViewModel> Graphs(GraphWorkspaceViewModel graph)

@@ -582,6 +582,9 @@
                                Height="118" />
                     </Grid>
 
+                    <CheckBox Content="PSW-2G6F+: ADC, SFP и PoE"
+                              IsChecked="{Binding Psw2G6FHardwareChecks}"
+                              FontSize="12" />
                     <CheckBox Content="Критическая ошибка при провале"
                               IsChecked="{Binding FailOnError}"
                               FontSize="12" />

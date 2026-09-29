@@ -393,12 +393,81 @@ public class SelfTestCheckStepTests
         Assert.Contains(logger.Messages, message => message.Contains("actual 0", StringComparison.Ordinal));
     }
 
+    private static string PswHardwareXml() => "<selftest><init_ok>1</init_ok><dev_type>6</dev_type>" +
+        "<default_mac>C0:11:A6:06:30:9F</default_mac><cpu_id>20353852584850023a0020</cpu_id>" +
+        "<adc_1_2>1531</adc_1_2><adc_1_5>1906</adc_1_5><adc_2_5>3074</adc_2_5>" +
+        "<sfp_7_pres>1</sfp_7_pres><sfp_7_sd>1</sfp_7_sd><sfp_7_id>3</sfp_7_id>" +
+        "<sfp_8_pres>1</sfp_8_pres><sfp_8_sd>1</sfp_8_sd><sfp_8_id>3</sfp_8_id>" +
+        "<poe_a_1_state>1</poe_a_1_state><poe_a_2_state>1</poe_a_2_state><poe_a_3_state>1</poe_a_3_state>" +
+        "<poe_a_6_state>0</poe_a_6_state><sensor_0>0</sensor_0><sensor_2>0</sensor_2></selftest>";
+
+    [Theory]
+    [InlineData("3")]
+    [InlineData("255")]
+    public async Task PswHardwareAcceptsBoardSnapshotWithoutExtraSensorsOrInventedPoeFlags(string sfpId)
+    {
+        var service = new QueueHttpRequestService(HttpRequestResult.Success(200, PswHardwareXml().Replace("_id>3<", "_id>" + sfpId + "<"), TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(service, "init_ok=1..1", psw2G6FHardwareChecks: true);
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.False(context.HasCriticalError);
+        Assert.All(context.ReportEntries, entry => Assert.True(entry.IsSuccess));
+        Assert.Contains(context.ReportEntries, entry => entry.Name.EndsWith("adc_1_2") && entry.Value.StartsWith("1543.48"));
+        Assert.DoesNotContain(context.ReportEntries, entry => entry.Name.Contains("sensor_"));
+    }
+
+    [Theory]
+    [InlineData("adc_1_2", "1300")]
+    [InlineData("adc_1_5", "2200")]
+    [InlineData("adc_2_5", "3400")]
+    [InlineData("adc_2_5", "0")]
+    [InlineData("adc_2_5", "NaN")]
+    [InlineData("adc_1_2", "Infinity")]
+    [InlineData("sfp_7_pres", "0")]
+    [InlineData("sfp_8_sd", "0")]
+    [InlineData("poe_a_2_state", "0")]
+    [InlineData("dev_type", "32")]
+    [InlineData("sfp_7_pres", null)]
+    [InlineData("adc_1_5", null)]
+    public async Task PswHardwareRejectsBadOrMissingFieldsEvenIfContextContainsOldGoodValues(string field, string? value)
+    {
+        var xml = System.Xml.Linq.XDocument.Parse(PswHardwareXml());
+        var element = xml.Root!.Element(field)!;
+        if (value == null) element.Remove(); else element.Value = value;
+        var service = new QueueHttpRequestService(HttpRequestResult.Success(200, xml.ToString(), TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut." + field, "1");
+        var step = CreateStep(service, "init_ok=1..1", psw2G6FHardwareChecks: true);
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.True(context.HasCriticalError);
+        Assert.False(context.GetVariable<bool>("SelfTest.Ok"));
+        Assert.Contains(context.ReportEntries, entry => entry.Name.EndsWith(field) && !entry.IsSuccess);
+        Assert.Contains(field, context.GetVariable<string>("SelfTest.Error"));
+    }
+
+    [Theory]
+    [InlineData(1364, true)]
+    [InlineData(1627, true)]
+    [InlineData(1363, false)]
+    [InlineData(1628, false)]
+    public async Task PswAdcUsesInclusiveQtBoundsAfterReferenceCorrection(int corrected, bool passed)
+    {
+        var xml = System.Xml.Linq.XDocument.Parse(PswHardwareXml());
+        xml.Root!.Element("adc_2_5")!.Value = "3200";
+        xml.Root.Element("adc_1_2")!.Value = (corrected + 48).ToString();
+        var service = new QueueHttpRequestService(HttpRequestResult.Success(200, xml.ToString(), TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        var step = CreateStep(service, "init_ok=1..1", psw2G6FHardwareChecks: true);
+        Assert.Equal(passed ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+    }
+
     private static SelfTestCheckStep CreateStep(
         IHttpRequestService service,
         string rules,
         int timeoutMs = SelfTestCheckStep.DefaultTimeoutMs,
         string? url = null,
-        int pollIntervalMs = SelfTestCheckStep.DefaultPollIntervalMs)
+        int pollIntervalMs = SelfTestCheckStep.DefaultPollIntervalMs,
+        bool psw2G6FHardwareChecks = false)
     {
         return new SelfTestCheckStep(
             service,
@@ -409,7 +478,8 @@ public class SelfTestCheckStepTests
             rules,
             failOnError: true,
             useBrowser: false,
-            pollIntervalMs: pollIntervalMs);
+            pollIntervalMs: pollIntervalMs,
+            psw2G6FHardwareChecks: psw2G6FHardwareChecks);
     }
 
     private sealed class QueueHttpRequestService : IHttpRequestService

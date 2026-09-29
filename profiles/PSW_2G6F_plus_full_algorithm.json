@@ -4,14 +4,14 @@
     {
       "id": "0",
       "type": "Start",
-      "x": 624,
+      "x": 80,
       "y": 112,
       "color": "blue"
     },
     {
       "id": "1",
       "type": "Subtest",
-      "x": 1000,
+      "x": 540,
       "y": 120,
       "color": "blue",
       "name": "1. Подготовка питания и 12 линий PoE",
@@ -332,7 +332,7 @@
     {
       "id": "2",
       "type": "Subtest",
-      "x": 1460,
+      "x": 1000,
       "y": 120,
       "color": "blue",
       "name": "2. Включение AC1 и встроенный тест",
@@ -394,7 +394,8 @@
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=6..6",
             "failOnError": true,
-            "outputPrefix": "Dut"
+            "outputPrefix": "Dut",
+            "psw2G6FHardwareChecks": true
           },
           {
             "id": "5",
@@ -459,10 +460,10 @@
     {
       "id": "3",
       "type": "Subtest",
-      "x": 1920,
+      "x": 2380,
       "y": 120,
       "color": "blue",
-      "name": "3. Сухой контакт Sensor1",
+      "name": "5. Сухой контакт Sensor1",
       "description": "IO-2 slave 21: обнулить OUT1/OUT2, считать исходную страницу, замкнуть OUT1 (1500=1), подтвердить sensor_1=1 по новой странице и разомкнуть OUT1 (1500=0), как в C++.",
       "isEnabled": true,
       "stopOnError": true,
@@ -613,7 +614,7 @@
     {
       "id": "4",
       "type": "For Slaves",
-      "x": 2380,
+      "x": 1920,
       "y": 120,
       "color": "blue",
       "fromSlaveId": 1,
@@ -633,8 +634,8 @@
           {
             "id": "1",
             "type": "Check Register Range",
-            "x": 544,
-            "y": 0,
+            "x": 540,
+            "y": 120,
             "color": "blue",
             "slaveId": 0,
             "useCurrentSlaveId": true,
@@ -648,8 +649,8 @@
           {
             "id": "2",
             "type": "Check Register Range",
-            "x": 1024,
-            "y": 0,
+            "x": 1460,
+            "y": 120,
             "color": "blue",
             "slaveId": 0,
             "useCurrentSlaveId": true,
@@ -657,34 +658,52 @@
             "readAttempts": 3,
             "readIntervalMs": 600,
             "address": 1402,
-            "min": 0,
+            "min": 53000,
             "max": 56000
           },
           {
             "id": "3",
             "type": "Body End",
-            "x": 1960,
-            "y": 80,
+            "x": 2380,
+            "y": 120,
             "color": "blue"
           },
           {
             "id": "4",
             "type": "Delay",
-            "x": 192,
-            "y": -96,
+            "x": 1000,
+            "y": 120,
             "color": "blue",
-            "milliseconds": 5000
+            "milliseconds": 200
           },
           {
             "id": "5",
             "type": "Delay",
-            "x": 1456,
+            "x": 1920,
             "y": 120,
             "color": "blue",
             "milliseconds": 200
           }
         ],
         "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
@@ -695,24 +714,6 @@
             "sourceNodeId": "5",
             "sourceConnector": "Выход",
             "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
             "targetConnector": "Вход"
           }
         ]
@@ -747,8 +748,8 @@
       "x": 3300,
       "y": 120,
       "color": "blue",
-      "name": "6. Серийный номер, UDP MAC и проверка после перезапуска",
-      "description": "6. Серийный номер, UDP MAC и проверка после перезапуска",
+      "name": "7. UDP MAC и проверка после перезапуска",
+      "description": "Использует ранее полученный серийный номер; программирует MAC и проверяет его после перезапуска.",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -761,23 +762,6 @@
             "x": 80,
             "y": 120,
             "color": "blue"
-          },
-          {
-            "id": "1",
-            "type": "Get Serial Number",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "timeoutMs": 30000,
-            "outputVariableName": "SerialNumber",
-            "retryCount": 1,
-            "retryDelayMs": 1000,
-            "failOnError": true,
-            "serverBaseUrl": "https://iccid.fort-telecom.ru",
-            "deviceType": "PSW-2G6F+",
-            "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false,
-            "fixedSerialNumber": 3200428
           },
           {
             "id": "2",
@@ -890,7 +874,8 @@
             "pollIntervalMs": 5000,
             "validationRules": "init_ok=1..1\ndev_type=6..6",
             "failOnError": true,
-            "outputPrefix": "DutAfterMac"
+            "outputPrefix": "DutAfterMac",
+            "psw2G6FHardwareChecks": true
           },
           {
             "id": "12",
@@ -915,12 +900,6 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
@@ -1017,7 +996,7 @@
       "x": 4220,
       "y": 120,
       "color": "red",
-      "name": "8. Финальная статистика и отчёт",
+      "name": "9. Финальная статистика и отчёт",
       "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
       "isEnabled": true,
       "stopOnError": true,
@@ -1062,7 +1041,7 @@
             "x": 1460,
             "y": 120,
             "color": "blue",
-            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {DutAfterMac.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\n\nПрошивка и DFU в этом профиле не выполнялись."
+            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {DutAfterMac.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\n\nЦелевая версия ПО: 0.2.13 (обновляется при необходимости). DFU в цикл не входит."
           },
           {
             "id": "4",
@@ -1073,7 +1052,7 @@
             "timeoutMs": 10000,
             "retryCount": 1,
             "retryDelayMs": 1000,
-            "failOnError": false,
+            "failOnError": true,
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "reportVariableName": "TestReportText",
             "endpoint": "/api/Api.svc/result.json",
@@ -1130,6 +1109,12 @@
             "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
           }
         ]
       }
@@ -1140,7 +1125,7 @@
       "x": 4680,
       "y": 120,
       "color": "blue",
-      "name": "9. Выключение AC1/AC2 и PoE",
+      "name": "10. Выключение AC1/AC2 и PoE",
       "description": "9. Выключение AC1/AC2 и PoE",
       "isEnabled": true,
       "stopOnError": true,
@@ -1331,7 +1316,7 @@
       "x": 5140,
       "y": 120,
       "color": "blue",
-      "text": "PSW-2G6F+: проверки завершены. Установите штатные разъёмы, как требует заключительный шаг старого профиля. Прошивка и DFU не выполнялись."
+      "text": "PSW-2G6F+: цикл завершён.\n{ReportDelivery.Message}\n\nУстановите штатные разъёмы. Целевая версия ПО: 0.2.13. DFU в цикл не входит."
     },
     {
       "id": "11",
@@ -1622,7 +1607,7 @@
       "y": 850,
       "color": "red",
       "name": "Отчёт при ошибке",
-      "description": "Автоматически собирает и отправляет отчёт после аварийного выключения стенда; не подключать в основную цепочку",
+      "description": "После аварийного выключения: использовать действительный SN; при его отсутствии запросить по CPU ID подтверждённого PSW-2G6F+. Отправить отчёт только после подтверждения оператора.",
       "isEnabled": true,
       "stopOnError": false,
       "runOnFailure": true,
@@ -1665,7 +1650,7 @@
             "x": 1460,
             "y": 120,
             "color": "blue",
-            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\nМодель: PSW-2G6F+. Прошивка и DFU не выполнялись."
+            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?\nМодель: PSW-2G6F+. Целевая версия ПО: 0.2.13. DFU в цикл не входит."
           },
           {
             "id": "4",
@@ -1676,7 +1661,7 @@
             "timeoutMs": 10000,
             "retryCount": 1,
             "retryDelayMs": 1000,
-            "failOnError": false,
+            "failOnError": true,
             "serverBaseUrl": "https://iccid.fort-telecom.ru",
             "reportVariableName": "TestReportText",
             "endpoint": "/api/Api.svc/result.json",
@@ -1689,6 +1674,47 @@
             "x": 2380,
             "y": 120,
             "color": "blue"
+          },
+          {
+            "id": "6",
+            "type": "Check Variable Range",
+            "x": 2840,
+            "y": 120,
+            "color": "blue",
+            "min": 6,
+            "max": 6,
+            "variableName": "Dut.dev_type",
+            "failMessage": "Ранний отчёт: модель PSW-2G6F+ не подтверждена.",
+            "inclusive": true
+          },
+          {
+            "id": "7",
+            "type": "Get Serial Number",
+            "x": 3300,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 30000,
+            "outputVariableName": "SerialNumber",
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "deviceType": "PSW-2G6F+",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": false,
+            "fixedSerialNumber": 3200428
+          },
+          {
+            "id": "8",
+            "type": "Check Variable Range",
+            "x": 3760,
+            "y": 120,
+            "color": "blue",
+            "min": 600000,
+            "max": 665535,
+            "variableName": "SerialNumber",
+            "failMessage": "Серийный номер PSW-2G6F+ должен быть в диапазоне 600000..665535",
+            "inclusive": true
           }
         ],
         "connections": [
@@ -1703,12 +1729,6 @@
             "sourceConnector": "True",
             "targetNodeId": "2",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "2",
@@ -1739,12 +1759,145 @@
             "sourceConnector": "True",
             "targetNodeId": "5",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "6",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "8",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "8",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "14",
+      "type": "Subtest",
+      "x": 1460,
+      "y": 120,
+      "color": "blue",
+      "name": "3. Получение серийного номера",
+      "description": "Получить и проверить номер до PoE, Sensor1 и DataTest; повторно при записи MAC номер не запрашивается.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Get Serial Number",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "timeoutMs": 30000,
+            "outputVariableName": "SerialNumber",
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "deviceType": "PSW-2G6F+",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": false,
+            "fixedSerialNumber": 3200428
+          },
+          {
+            "id": "2",
+            "type": "Check Variable Range",
+            "x": 1000,
+            "y": 120,
+            "color": "blue",
+            "min": 600000,
+            "max": 665535,
+            "variableName": "SerialNumber",
+            "failMessage": "Серийный номер PSW-2G6F+ должен быть в диапазоне 600000..665535",
+            "inclusive": true
+          },
+          {
+            "id": "3",
+            "type": "End",
+            "x": 1460,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
           }
         ]
       }
     }
   ],
   "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
     {
       "sourceNodeId": "1",
       "sourceConnector": "Success",
@@ -1754,11 +1907,11 @@
     {
       "sourceNodeId": "2",
       "sourceConnector": "Success",
-      "targetNodeId": "3",
+      "targetNodeId": "14",
       "targetConnector": "In"
     },
     {
-      "sourceNodeId": "3",
+      "sourceNodeId": "14",
       "sourceConnector": "Success",
       "targetNodeId": "4",
       "targetConnector": "In"
@@ -1766,6 +1919,12 @@
     {
       "sourceNodeId": "4",
       "sourceConnector": "True",
+      "targetNodeId": "3",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "Success",
       "targetNodeId": "5",
       "targetConnector": "In"
     },
@@ -1804,12 +1963,6 @@
       "sourceConnector": "Продолжить",
       "targetNodeId": "11",
       "targetConnector": "Вход"
-    },
-    {
-      "sourceNodeId": "0",
-      "sourceConnector": "Выход",
-      "targetNodeId": "1",
-      "targetConnector": "In"
     }
   ]
 }

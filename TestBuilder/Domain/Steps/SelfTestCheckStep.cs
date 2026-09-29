@@ -52,6 +52,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _outputPrefix;
         private readonly string _validationRules;
         private readonly bool _failOnError;
+        private readonly bool _psw2G6FHardwareChecks;
         private readonly bool _useBrowser;
         private readonly int _pollIntervalMs;
         private readonly Func<string, TimeSpan, CancellationToken, Task<bool>> _endpointProbe;
@@ -67,7 +68,8 @@ namespace TestBuilder.Domain.Steps
             bool failOnError,
             bool useBrowser = true,
             int pollIntervalMs = DefaultPollIntervalMs,
-            bool enforceMinimumDeviceReadyTimeout = true)
+            bool enforceMinimumDeviceReadyTimeout = true,
+            bool psw2G6FHardwareChecks = false)
             : this(
                 httpRequestService,
                 logger,
@@ -80,7 +82,8 @@ namespace TestBuilder.Domain.Steps
                 pollIntervalMs,
                 enforceMinimumDeviceReadyTimeout,
                 ProbeWebEndpointAsync,
-                browserPageLoader: null)
+                browserPageLoader: null,
+                psw2G6FHardwareChecks: psw2G6FHardwareChecks)
         {
         }
 
@@ -96,7 +99,8 @@ namespace TestBuilder.Domain.Steps
             int pollIntervalMs,
             bool enforceMinimumDeviceReadyTimeout,
             Func<string, TimeSpan, CancellationToken, Task<bool>> endpointProbe,
-            Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>>? browserPageLoader)
+            Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>>? browserPageLoader,
+            bool psw2G6FHardwareChecks = false)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -111,6 +115,7 @@ namespace TestBuilder.Domain.Steps
                 ? DefaultValidationRules
                 : validationRules;
             _failOnError = failOnError;
+            _psw2G6FHardwareChecks = psw2G6FHardwareChecks;
             _useBrowser = useBrowser;
             _pollIntervalMs = NormalizePollInterval(pollIntervalMs);
             _endpointProbe = endpointProbe ?? throw new ArgumentNullException(nameof(endpointProbe));
@@ -212,6 +217,16 @@ namespace TestBuilder.Domain.Steps
             LogParsedFieldSnapshot(values);
 
             var checks = Validate(values);
+            if (_psw2G6FHardwareChecks)
+            {
+                var hardwareChecks = ValidatePsw2G6FHardware(values);
+                checks.AddRange(hardwareChecks);
+                foreach (var check in hardwareChecks)
+                {
+                    context.AddReportEntry($"{_outputPrefix}: {check.Rule.FieldName}", check.Passed,
+                        check.Passed ? $"{check.ActualValue} ({check.Rule.FormatRange()})" : check.Error);
+                }
+            }
             LogValidationChecks(checks);
             SaveValidationSummary(context, checks);
 
@@ -287,6 +302,56 @@ namespace TestBuilder.Domain.Steps
             }
 
             return results;
+        }
+
+        private List<ValidationCheckResult> ValidatePsw2G6FHardware(Dictionary<string, string> values)
+        {
+            // Model-specific checks. ADC values are raw codes, not volts.
+            // Qt TestThread.h: KOSTYL=50; TestThread.cpp compensates 1.2/1.5 V
+            // against the 2.5 V reference. Use only this fresh XML snapshot.
+            var checks = new List<ValidationCheckResult>();
+            double Read(string field) => values.TryGetValue(field, out var text) &&
+                double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) &&
+                double.IsFinite(value) ? value : double.NaN;
+            void Check(string field, double min, double max, double? corrected = null)
+            {
+                var rule = new ValidationRule(field, min, max);
+                var actual = corrected ?? Read(field);
+                checks.Add(double.IsFinite(actual) && actual >= min && actual <= max
+                    ? ValidationCheckResult.Pass(rule, actual)
+                    : ValidationCheckResult.Fail(rule, values.GetValueOrDefault(field, string.Empty),
+                        $"{field}: {actual.ToString(CultureInfo.InvariantCulture)} outside {rule.FormatRange()} or field missing/invalid"));
+            }
+
+            Check("dev_type", 6, 6);
+            // These three rails are present on PSW-2G6F+. Missing/zero values
+            // cannot silently certify the board as healthy.
+            var delta = Read("adc_2_5") - 3100;
+            Check("adc_2_5", 2895, 3305);
+            Check("adc_1_2", 1364, 1627, Read("adc_1_2") - delta * 0.48);
+            Check("adc_1_5", 1717, 2021, Read("adc_1_5") - delta * 0.6);
+            // Other rails are optional in the legacy page; 0 means unavailable.
+            foreach (var rail in new[] { ("adc_1_0", 1128d, 1352d), ("adc_1_8", 2071d, 2393d) })
+                if (values.ContainsKey(rail.Item1) && Read(rail.Item1) != 0)
+                    Check(rail.Item1, rail.Item2, rail.Item3);
+
+            // The profile enables SFP7/8 even though its legacy port_num=6
+            // accidentally excluded them from Qt's loop.
+            foreach (var port in new[] { 7, 8 })
+            {
+                Check($"sfp_{port}_pres", 1, double.MaxValue);
+                Check($"sfp_{port}_sd", 1, double.MaxValue);
+                // Qt logs an I2C identification warning but does not reject the
+                // DUT for this alone. PRESENT/SD and gigabit traffic are checks.
+                if (Read($"sfp_{port}_id") != 3)
+                    _logger.Warning($"[WARN] SFP{port}: ID is not 3 (I2C identification unavailable); Qt treats this as diagnostic only.");
+            }
+            // Qt loops i<port_num (6), checking i/2 on even enabled lines:
+            // DUT PoE A1..A3. All twelve actual A/B lines are independently
+            // measured by the EL60 loop (53..56 V); do not infer extra DUT flags.
+            for (var port = 1; port <= 3; port++)
+                Check($"poe_a_{port}_state", 1, double.MaxValue);
+            return checks;
         }
 
         private bool TryReadValidationNumber(string field, string raw, out double value)
@@ -1435,7 +1500,9 @@ namespace TestBuilder.Domain.Steps
         {
             public string FormatRange()
             {
-                return $"{Min.ToString(CultureInfo.InvariantCulture)}..{Max.ToString(CultureInfo.InvariantCulture)}";
+                return Max == double.MaxValue
+                    ? $">={Min.ToString(CultureInfo.InvariantCulture)}"
+                    : $"{Min.ToString(CultureInfo.InvariantCulture)}..{Max.ToString(CultureInfo.InvariantCulture)}";
             }
         }
 

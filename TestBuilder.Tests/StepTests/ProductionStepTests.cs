@@ -427,6 +427,7 @@ public class ProductionStepTests
             handler.Body);
         Assert.True(context.GetVariable<bool>("SendReport.Success"));
         Assert.Equal("Ok saved", context.GetVariable<string>("SendReport.RawResponse"));
+        Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
     }
 
     [Fact]
@@ -457,6 +458,103 @@ public class ProductionStepTests
         Assert.Equal(2, context.GetVariable<int>("SendReport.Attempts"));
         Assert.Equal(200, context.GetVariable<int>("SendReport.StatusCode"));
         Assert.Equal("Ok saved", context.GetVariable<string>("SendReport.RawResponse"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ReportDeliveryFailurePreservesLocalReportWithoutRejectingDevice(bool failOnError)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "TestBuilder-report-" + Guid.NewGuid());
+        try
+        {
+            var handler = new SequencedReportHandler((HttpStatusCode.ServiceUnavailable, "down"), (HttpStatusCode.OK, "not accepted"));
+            var context = new TestContext(new RegisterState());
+            const string report = "test_result=true=1\r\nserial_num=true=612447\r\n";
+            context.SetVariable("TestReportText", report);
+            var step = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "TestReportText",
+                "/api/Api.svc/result.json", 1000, 1, 0, true, directory, failOnError,
+                () => new HttpClient(handler, disposeHandler: false));
+            Assert.Equal(failOnError ? StepResult.False : StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+            Assert.Equal(2, handler.Calls);
+            Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
+            Assert.False(context.GetVariable<bool>("SendReport.Success"));
+            Assert.False(context.HasCriticalError);
+            Assert.Empty(context.ReportEntries);
+            Assert.Equal(report, await File.ReadAllTextAsync(context.GetVariable<string>("SendReport.LocalPath")!));
+            Assert.Contains("НЕ отправлен", context.GetVariable<string>("ReportDelivery.Message"));
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public async Task ReportLocalWriteFailureIsReportedWithoutPostingOrThrowing()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+            var context = new TestContext(new RegisterState());
+            context.SetVariable("TestReportText", "test_result=true=1\r\n");
+            var step = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "TestReportText",
+                "/api/Api.svc/result.json", 1000, 0, 0, true, path, true,
+                () => new HttpClient(handler, disposeHandler: false));
+            Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+            Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
+            Assert.Equal(0, context.GetVariable<int>("SendReport.Attempts"));
+            Assert.False(context.HasCriticalError);
+            Assert.Contains("не сохранена", context.GetVariable<string>("ReportDelivery.Message"));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData(0, "6", "CPU-test", "612447", 1, true)]
+    [InlineData(0, "6", "CPU-test", "600000", 1, true)]
+    [InlineData(0, "6", "CPU-test", "665535", 1, true)]
+    [InlineData(612447, "6", "CPU-test", "665536", 0, true)]
+    [InlineData(0, "32", "CPU-test", "612447", 0, false)]
+    [InlineData(0, "6", "", "612447", 0, false)]
+    [InlineData(0, "6", "CPU-test", "599999", 1, false)]
+    [InlineData(0, "6", "CPU-test", "665536", 1, false)]
+    [InlineData(0, "6", "CPU-test", "CPU-test", 1, false)]
+    public async Task RealFailureReportGraphRecoversSerialOnlyForIdentifiedDevice(
+        int existingSerial, string model, string cpu, string reply, int calls, bool buildsReport)
+    {
+        var previousStandId = AppSettings.Instance.StandId;
+        try
+        {
+            AppSettings.Instance.StandId = "TEST-STAND";
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+                "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+            GraphSerializer.Deserialize(File.ReadAllText(path), vm);
+            var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+                .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
+            recovery.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().RetryCount = 0;
+            var service = new CapturingHttpService(HttpRequestResult.Success(200, reply, TimeSpan.Zero));
+            var graph = new GraphCompiler(modbus, service, NullLogger.Instance).Compile(recovery.BodyGraph);
+            var prompted = false;
+            var context = new TestContext(new RegisterState()) { HasCriticalError = true,
+                OperatorPrompt = _ => { prompted = true; return Task.FromResult(false); } };
+            context.SetVariable("Dut.dev_type", model);
+            context.SetVariable("Dut.cpu_id", cpu);
+            if (existingSerial > 0) context.SetVariable("SerialNumber", existingSerial);
+            Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(graph.StartNode, context, CancellationToken.None));
+            Assert.Equal(calls, service.Calls);
+            Assert.Equal(buildsReport, prompted);
+            Assert.Equal(buildsReport, context.GetVariable<bool>("BuildReport.Success"));
+            Assert.False(context.Variables.ContainsKey("SendReport.Attempts")); // operator declined: no POST
+            if (buildsReport)
+            {
+                var report = context.GetVariable<string>("TestReportText")!;
+                Assert.Contains("test_result=true=0", report);
+                Assert.DoesNotContain("serial_num=true=CPU-test", report);
+                Assert.Equal("Pending", context.GetVariable<string>("ReportDelivery.Status"));
+            }
+        }
+        finally { AppSettings.Instance.StandId = previousStandId; }
     }
 
     [Fact]

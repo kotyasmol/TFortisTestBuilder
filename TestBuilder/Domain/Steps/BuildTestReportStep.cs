@@ -105,6 +105,9 @@ namespace TestBuilder.Domain.Steps
             var report = builder.ToString();
             context.SetVariable(_reportVariableName, report);
             context.SetVariable("BuildReport.Success", true);
+            context.SetVariable("BuildReport.DevicePassed", successful);
+            context.SetVariable("ReportDelivery.Status", "Pending");
+            context.SetVariable("ReportDelivery.Message", "Отчёт сформирован, но не отправлен.");
             context.SetVariable("BuildReport.VariableName", _reportVariableName);
             context.SetVariable("BuildReport.Format", "QTstand legacy text");
             context.SetVariable("BuildReport.StandId", _standId);

@@ -155,6 +155,7 @@ namespace TestBuilder.Services
                         n.PollIntervalMs = s.PollIntervalMs;
                         n.OutputPrefix = s.OutputPrefix;
                         n.ValidationRules = s.ValidationRules;
+                        n.Psw2G6FHardwareChecks = s.Psw2G6FHardwareChecks;
                         n.FailOnError = s.FailOnError;
                         break;
 
@@ -456,6 +457,7 @@ namespace TestBuilder.Services
                         PollIntervalMs = n.PollIntervalMs ?? SelfTestCheckStep.DefaultPollIntervalMs,
                         OutputPrefix = n.OutputPrefix ?? SelfTestCheckStep.DefaultOutputPrefix,
                         ValidationRules = n.ValidationRules ?? SelfTestCheckStep.DefaultValidationRules,
+                        Psw2G6FHardwareChecks = n.Psw2G6FHardwareChecks ?? false,
                         FailOnError = n.FailOnError ?? true
                     },
 

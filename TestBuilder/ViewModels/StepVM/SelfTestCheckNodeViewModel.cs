@@ -15,6 +15,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string outputPrefix = SelfTestCheckStep.DefaultOutputPrefix;
         [ObservableProperty] private string validationRules = SelfTestCheckStep.DefaultValidationRules;
         [ObservableProperty] private bool failOnError = true;
+        [ObservableProperty] private bool psw2G6FHardwareChecks;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -43,7 +44,8 @@ namespace TestBuilder.ViewModels.StepVM
                 OutputPrefix,
                 ValidationRules,
                 FailOnError,
-                pollIntervalMs: PollIntervalMs);
+                pollIntervalMs: PollIntervalMs,
+                psw2G6FHardwareChecks: Psw2G6FHardwareChecks);
         }
 
         public override NodeViewModel Clone() => new SelfTestCheckNodeViewModel
@@ -53,7 +55,8 @@ namespace TestBuilder.ViewModels.StepVM
             PollIntervalMs = PollIntervalMs,
             OutputPrefix = OutputPrefix,
             ValidationRules = ValidationRules,
-            FailOnError = FailOnError
+            FailOnError = FailOnError,
+            Psw2G6FHardwareChecks = Psw2G6FHardwareChecks
         };
     }
 }

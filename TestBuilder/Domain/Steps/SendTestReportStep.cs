@@ -78,6 +78,8 @@ namespace TestBuilder.Domain.Steps
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
+            context.SetVariable("ReportDelivery.Status", "Sending");
+            context.SetVariable("ReportDelivery.Message", "Отправка отчёта не завершена.");
             context.SetVariable("SendReport.Success", false);
             context.SetVariable("SendReport.RawResponse", string.Empty);
             context.SetVariable("SendReport.Attempts", 0);
@@ -96,17 +98,19 @@ namespace TestBuilder.Domain.Steps
 
             var report = reportValue.ToString() ?? string.Empty;
             string url;
-
+            var localPath = string.Empty;
             try
             {
+                // Keep the report even when the server address is invalid.
+                if (_saveLocalCopy)
+                    localPath = await SaveLocalCopyAsync(report, cancellationToken);
+                context.SetVariable("SendReport.LocalPath", localPath);
                 url = BuildUrl();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return Fail(context, ex.Message, string.Empty, 0, string.Empty);
+                return Fail(context, ex.Message, string.Empty, 0, localPath);
             }
-
-            var localPath = _saveLocalCopy ? await SaveLocalCopyAsync(report, cancellationToken) : string.Empty;
             var attempts = _retryCount + 1;
             string raw = string.Empty;
             string lastError = string.Empty;
@@ -124,6 +128,8 @@ namespace TestBuilder.Domain.Steps
 
                     if (response.IsSuccessStatusCode && raw.StartsWith("Ok", StringComparison.Ordinal))
                     {
+                        context.SetVariable("ReportDelivery.Status", "Sent");
+                        context.SetVariable("ReportDelivery.Message", "Отчёт принят сервером.");
                         context.SetVariable("SendReport.Success", true);
                         context.SetVariable("SendReport.RawResponse", raw);
                         context.SetVariable("SendReport.Attempts", attempt);
@@ -165,6 +171,9 @@ namespace TestBuilder.Domain.Steps
             int attempts,
             string localPath)
         {
+            context.SetVariable("ReportDelivery.Status", "Failed");
+            context.SetVariable("ReportDelivery.Message", $"Отчёт НЕ отправлен: {error}" +
+                (string.IsNullOrWhiteSpace(localPath) ? " Локальная копия не сохранена." : $" Копия: {localPath}"));
             context.SetVariable("SendReport.Success", false);
             context.SetVariable("SendReport.RawResponse", raw);
             context.SetVariable("SendReport.Attempts", attempts);
@@ -179,7 +188,7 @@ namespace TestBuilder.Domain.Steps
         private async Task<string> SaveLocalCopyAsync(string report, CancellationToken cancellationToken)
         {
             Directory.CreateDirectory(_localReportsDirectory);
-            var path = Path.Combine(_localReportsDirectory, $"result-{DateTime.Now:yyyyMMdd-HHmmss-fff}.txt");
+            var path = Path.Combine(_localReportsDirectory, $"result-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.txt");
             await File.WriteAllTextAsync(path, report, Encoding.UTF8, cancellationToken);
             return Path.GetFullPath(path);
         }

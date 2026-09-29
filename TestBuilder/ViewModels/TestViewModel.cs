@@ -987,6 +987,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _testRunCts = null;
             ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
             ResetConnectorsStateRecursive(RootGraph);
+            if (context != null && context.Variables.ContainsKey("ReportDelivery.Status"))
+            {
+                var delivery = context.GetVariable<string>("ReportDelivery.Status");
+                var devicePassed = !context.HasCriticalError && context.GetVariable<bool>("BuildReport.DevicePassed");
+                StatusMessage = (devicePassed ? "Проверки изделия пройдены. " : "Проверки изделия не пройдены. ") +
+                    context.GetVariable<string>("ReportDelivery.Message");
+                if (delivery == "Sent") TestingLogger.Info(StatusMessage);
+                else TestingLogger.Warning(StatusMessage);
+            }
             LoggingService.Instance.StopFileLogForRun();
         }
     }
@@ -1003,11 +1012,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         TestingLogger.Warning($"[ШАГ] Запуск cleanup-подтестов: {cleanupNodes.Count}.");
 
-        using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var previousToken = context.CancellationToken;
         var previousPause = context.WaitIfPausedAsync;
 
-        context.CancellationToken = cleanupCts.Token;
         context.WaitIfPausedAsync = _ => Task.CompletedTask;
 
         try
@@ -1016,6 +1023,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             foreach (var cleanupNode in cleanupNodes)
             {
+                using var cleanupCts = new CancellationTokenSource(
+                    cleanupNode.BodyGraph.Nodes.OfType<OperatorActionNodeViewModel>().Any()
+                        ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(60));
+                context.CancellationToken = cleanupCts.Token;
                 try
                 {
                     TestingLogger.Warning($"[ШАГ] Cleanup '{cleanupNode.Name}' начат.");
@@ -1037,7 +1048,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 catch (OperationCanceledException)
                 {
                     TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' прерван по таймауту.");
-                    break;
+                    continue;
                 }
                 catch (Exception ex)
                 {

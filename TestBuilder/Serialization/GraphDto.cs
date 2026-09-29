@@ -165,6 +165,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ValidationRules { get; set; }
 
+        [JsonPropertyName("psw2G6FHardwareChecks")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? Psw2G6FHardwareChecks { get; set; }
+
         [JsonPropertyName("baseUrl")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? BaseUrl { get; set; }
