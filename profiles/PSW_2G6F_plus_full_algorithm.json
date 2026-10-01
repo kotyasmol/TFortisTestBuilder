@@ -614,76 +614,139 @@
     },
     {
       "id": "4",
-      "type": "For Slaves",
+      "type": "Subtest",
       "x": 1920,
       "y": 120,
       "color": "blue",
-      "fromSlaveId": 1,
-      "toSlaveId": 11,
-      "step": 2,
+      "name": "4. Проверка напряжения 12 линий PoE",
+      "description": "Проверить линии B и A на шести EL60v5: 53–56 В, до трёх свежих чтений каждой линии.",
+      "isEnabled": true,
       "stopOnError": true,
-      "body": {
-        "name": "Напряжение 53..56 В на всех 12 линиях PoE",
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "4. Проверка напряжения 12 линий PoE",
         "nodes": [
           {
             "id": "0",
-            "type": "Body Start",
+            "type": "Start",
             "x": 80,
             "y": 120,
             "color": "blue"
           },
           {
             "id": "1",
-            "type": "Check Register Range",
+            "type": "For Slaves",
             "x": 540,
             "y": 120,
             "color": "blue",
-            "slaveId": 0,
-            "useCurrentSlaveId": true,
-            "liveRead": true,
-            "readAttempts": 3,
-            "readIntervalMs": 600,
-            "address": 1403,
-            "min": 53000,
-            "max": 56000
+            "fromSlaveId": 1,
+            "toSlaveId": 11,
+            "step": 2,
+            "stopOnError": true,
+            "body": {
+              "name": "Напряжение 53..56 В на всех 12 линиях PoE",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Body Start",
+                  "x": 80,
+                  "y": 120,
+                  "color": "blue"
+                },
+                {
+                  "id": "1",
+                  "type": "Check Register Range",
+                  "x": 540,
+                  "y": 120,
+                  "color": "blue",
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "liveRead": true,
+                  "readAttempts": 3,
+                  "readIntervalMs": 600,
+                  "address": 1403,
+                  "min": 53000,
+                  "max": 56000
+                },
+                {
+                  "id": "2",
+                  "type": "Check Register Range",
+                  "x": 1460,
+                  "y": 120,
+                  "color": "blue",
+                  "slaveId": 0,
+                  "useCurrentSlaveId": true,
+                  "liveRead": true,
+                  "readAttempts": 3,
+                  "readIntervalMs": 600,
+                  "address": 1402,
+                  "min": 53000,
+                  "max": 56000
+                },
+                {
+                  "id": "3",
+                  "type": "Body End",
+                  "x": 2380,
+                  "y": 120,
+                  "color": "blue"
+                },
+                {
+                  "id": "4",
+                  "type": "Delay",
+                  "x": 1000,
+                  "y": 120,
+                  "color": "blue",
+                  "milliseconds": 200
+                },
+                {
+                  "id": "5",
+                  "type": "Delay",
+                  "x": 1920,
+                  "y": 120,
+                  "color": "blue",
+                  "milliseconds": 200
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "4",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "4",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "2",
+                  "sourceConnector": "True",
+                  "targetNodeId": "5",
+                  "targetConnector": "Вход"
+                },
+                {
+                  "sourceNodeId": "5",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "3",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
           },
           {
             "id": "2",
-            "type": "Check Register Range",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "slaveId": 0,
-            "useCurrentSlaveId": true,
-            "liveRead": true,
-            "readAttempts": 3,
-            "readIntervalMs": 600,
-            "address": 1402,
-            "min": 53000,
-            "max": 56000
-          },
-          {
-            "id": "3",
-            "type": "Body End",
-            "x": 2380,
-            "y": 120,
-            "color": "blue"
-          },
-          {
-            "id": "4",
-            "type": "Delay",
+            "type": "End",
             "x": 1000,
             "y": 120,
-            "color": "blue",
-            "milliseconds": 200
-          },
-          {
-            "id": "5",
-            "type": "Delay",
-            "x": 1920,
-            "y": 120,
-            "color": "blue",
-            "milliseconds": 200
+            "color": "blue"
           }
         ],
         "connections": [
@@ -691,30 +754,12 @@
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
             "targetNodeId": "1",
-            "targetConnector": "Вход"
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "1",
             "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "Выход",
             "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "5",
-            "sourceConnector": "Выход",
-            "targetNodeId": "3",
             "targetConnector": "Вход"
           }
         ]
@@ -722,26 +767,71 @@
     },
     {
       "id": "5",
-      "type": "Run Data Test",
+      "type": "Subtest",
       "x": 2840,
       "y": 120,
       "color": "blue",
-      "durationMs": 5000,
-      "outputVariableName": "DataTest",
-      "failOnError": true,
-      "allowGigabit": true,
-      "mode": "SoftwarePcap",
-      "expectedPackets": 10000,
-      "packetSizeBytes": 1514,
-      "udpPort": 43962,
-      "maxPortTestTimeMs": 15000,
-      "targetBandwidthMbps": 100,
-      "warmupMs": 500,
-      "interPairDelayMs": 5000,
-      "allowedLossPercent": 1,
-      "allowedTxDeficitPercent": 2,
-      "bidirectional": true,
-      "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nsfp6-7,192.168.0.8,192.168.0.9,1000"
+      "name": "6. DataTest медных и SFP-портов",
+      "description": "Три медные пары 100 Мбит/с и одна SFP-пара 1000 Мбит/с, в обоих направлениях.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "6. DataTest медных и SFP-портов",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Run Data Test",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "durationMs": 5000,
+            "outputVariableName": "DataTest",
+            "failOnError": true,
+            "allowGigabit": true,
+            "mode": "SoftwarePcap",
+            "expectedPackets": 10000,
+            "packetSizeBytes": 1514,
+            "udpPort": 43962,
+            "maxPortTestTimeMs": 15000,
+            "targetBandwidthMbps": 100,
+            "warmupMs": 500,
+            "interPairDelayMs": 5000,
+            "allowedLossPercent": 1,
+            "allowedTxDeficitPercent": 2,
+            "bidirectional": true,
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nsfp6-7,192.168.0.8,192.168.0.9,1000"
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 1000,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     },
     {
       "id": "6",
@@ -975,21 +1065,66 @@
     },
     {
       "id": "7",
-      "type": "Print Label",
+      "type": "Subtest",
       "x": 3760,
       "y": 120,
       "color": "blue",
-      "serialShortVariableName": "SerialShort",
-      "macVariableName": "DutAfterMac.default_mac",
-      "printerName": "TSC TE310",
-      "serialVariableName": "SerialNumber",
-      "useManualSerialNumber": false,
-      "manualSerialNumber": "",
-      "manualMacAddress": "",
-      "copies": 4,
-      "useQtProZplFormat": true,
-      "labelModel": "Psw2G6FPlus",
-      "failOnPrinterError": true
+      "name": "8. Печать четырёх этикеток",
+      "description": "Напечатать четыре этикетки PSW-2G6F+ с подтверждённым MAC и серийным номером.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "8. Печать четырёх этикеток",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Print Label",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "serialShortVariableName": "SerialShort",
+            "macVariableName": "DutAfterMac.default_mac",
+            "printerName": "TSC TE310",
+            "serialVariableName": "SerialNumber",
+            "useManualSerialNumber": false,
+            "manualSerialNumber": "",
+            "manualMacAddress": "",
+            "copies": 4,
+            "useQtProZplFormat": true,
+            "labelModel": "Psw2G6FPlus",
+            "failOnPrinterError": true
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 1000,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     },
     {
       "id": "8",
@@ -1314,11 +1449,56 @@
     },
     {
       "id": "10",
-      "type": "Operator Action",
+      "type": "Subtest",
       "x": 5140,
       "y": 120,
       "color": "blue",
-      "text": "PSW-2G6F+: цикл завершён.\n{ReportDelivery.Message}\n\nУстановите штатные разъёмы. Целевая версия ПО: 0.2.13. DFU в цикл не входит."
+      "name": "11. Завершение проверки",
+      "description": "Показать состояние доставки отчёта и инструкцию по установке штатных разъёмов.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "11. Завершение проверки",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Operator Action",
+            "x": 540,
+            "y": 120,
+            "color": "blue",
+            "text": "PSW-2G6F+: цикл завершён.\n{ReportDelivery.Message}\n\nУстановите штатные разъёмы. Целевая версия ПО: 0.2.13. DFU в цикл не входит."
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 1000,
+            "y": 120,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     },
     {
       "id": "11",
@@ -1921,7 +2101,7 @@
     },
     {
       "sourceNodeId": "4",
-      "sourceConnector": "True",
+      "sourceConnector": "Success",
       "targetNodeId": "3",
       "targetConnector": "In"
     },
@@ -1933,7 +2113,7 @@
     },
     {
       "sourceNodeId": "5",
-      "sourceConnector": "True",
+      "sourceConnector": "Success",
       "targetNodeId": "6",
       "targetConnector": "In"
     },
@@ -1945,7 +2125,7 @@
     },
     {
       "sourceNodeId": "7",
-      "sourceConnector": "True",
+      "sourceConnector": "Success",
       "targetNodeId": "8",
       "targetConnector": "In"
     },
@@ -1959,11 +2139,11 @@
       "sourceNodeId": "9",
       "sourceConnector": "Success",
       "targetNodeId": "10",
-      "targetConnector": "Вход"
+      "targetConnector": "In"
     },
     {
       "sourceNodeId": "10",
-      "sourceConnector": "Продолжить",
+      "sourceConnector": "Success",
       "targetNodeId": "11",
       "targetConnector": "Вход"
     }

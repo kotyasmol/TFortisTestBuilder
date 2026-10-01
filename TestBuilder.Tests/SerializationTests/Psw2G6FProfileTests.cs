@@ -21,7 +21,7 @@ public class Psw2G6FProfileTests
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(File.ReadAllText(path), vm);
-        var poe = vm.RootGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
+        var poe = Graphs(vm.RootGraph).SelectMany(g => g.Nodes).OfType<ForEachSlaveNodeViewModel>()
             .Single(n => n.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().Any());
         Assert.Equal((byte)1, poe.FromSlaveId);
         Assert.Equal((byte)11, poe.ToSlaveId);
@@ -41,7 +41,7 @@ public class Psw2G6FProfileTests
             .Select(n => n.Milliseconds));
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
         GraphSerializer.Deserialize(GraphSerializer.Serialize(vm, file), vm);
-        Assert.Equal(2, vm.RootGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
+        Assert.Equal(2, Graphs(vm.RootGraph).SelectMany(g => g.Nodes).OfType<ForEachSlaveNodeViewModel>()
             .Single(n => n.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().Any())
             .BodyGraph.Nodes.OfType<DelayNodeViewModel>().Count());
     }
@@ -66,6 +66,12 @@ public class Psw2G6FProfileTests
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
         Assert.Equal(15, vm.RootGraph.Nodes.Count);
         Assert.Equal(12, vm.RootGraph.Connections.Count);
+        Assert.All(vm.RootGraph.Nodes.Where(n => n is not StartNodeViewModel && n is not EndNodeViewModel), n =>
+        {
+            var subtest = Assert.IsType<SubtestNodeViewModel>(n);
+            Assert.False(string.IsNullOrWhiteSpace(subtest.Name));
+            Assert.NotEqual("Подтест", subtest.Name);
+        });
         Assert.Contains(vm.AvailableNodes, n => n is SetPswMacNodeViewModel);
         var main = vm.RootGraph.Nodes.Single(n => n is StartNodeViewModel);
         var mainPath = new List<NodeViewModel>();
@@ -112,12 +118,16 @@ public class Psw2G6FProfileTests
         var early = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
             .Single(n => !n.RunOnFailure && n.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Any());
         var serial = early.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single();
-        var poe = mainPath.OfType<ForEachSlaveNodeViewModel>().Single();
+        var poe = mainPath.OfType<SubtestNodeViewModel>()
+            .Single(n => n.BodyGraph.Nodes.OfType<ForEachSlaveNodeViewModel>()
+                .Any(loop => loop.BodyGraph.Nodes.OfType<CheckRegisterRangeNodeViewModel>().Any()));
+        var dataStage = mainPath.OfType<SubtestNodeViewModel>()
+            .Single(n => n.BodyGraph.Nodes.Contains(data));
         var sensor = mainPath.OfType<SubtestNodeViewModel>()
             .Single(n => n.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Any());
         Assert.True(mainPath.IndexOf(early) < mainPath.IndexOf(poe));
         Assert.True(mainPath.IndexOf(poe) < mainPath.IndexOf(sensor));
-        Assert.True(mainPath.IndexOf(sensor) < mainPath.IndexOf(data));
+        Assert.True(mainPath.IndexOf(sensor) < mainPath.IndexOf(dataStage));
         var hardwareChecks = nodes.OfType<SelfTestCheckNodeViewModel>().Where(n => n.Psw2G6FHardwareChecks).ToArray();
         Assert.Equal(new[] { "Dut", "DutAfterMac" }, hardwareChecks.Select(n => n.OutputPrefix));
         Assert.True(Assert.IsType<SelfTestCheckNodeViewModel>(hardwareChecks[0].Clone()).Psw2G6FHardwareChecks);
