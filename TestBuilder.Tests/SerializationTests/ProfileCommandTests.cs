@@ -15,6 +15,8 @@ public class ProfileCommandTests
 
         vm.RootGraph.Nodes.Add(new DelayNodeViewModel());
         vm.RootGraph.Title = "Loaded profile";
+        vm.RootGraph.DeviceModel = "Previous device";
+        vm.RootGraph.ConfigurationName = "Previous test";
 
         vm.NewProfileCommand.Execute(null);
 
@@ -24,5 +26,7 @@ public class ProfileCommandTests
         Assert.Equal("Новый профиль", vm.CurrentProfileName);
         Assert.Equal("Полный тест", vm.RootGraph.Title);
         Assert.Equal("Полный тест", vm.CurrentGraphPath);
+        Assert.Null(vm.RootGraph.DeviceModel);
+        Assert.Null(vm.RootGraph.ConfigurationName);
     }
 }

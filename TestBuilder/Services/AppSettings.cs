@@ -40,6 +40,9 @@ namespace TestBuilder.Services
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Light";
 
+        [JsonPropertyName("engineerMode")]
+        public bool EngineerMode { get; set; }
+
         [JsonPropertyName("enableFileLogging")]
         public bool EnableFileLogging { get; set; } = false;
 

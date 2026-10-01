@@ -4,38 +4,35 @@
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1440"
-        Height="860"
-        MinWidth="1180"
-        MinHeight="720"
-        Title="TestBuilder"
-        Background="{DynamicResource AppBackgroundBrush}">
-
+        Width="1440" Height="860" MinWidth="1180" MinHeight="720"
+        Title="TestBuilder" Background="{DynamicResource AppBackgroundBrush}">
   <Window.DataContext>
     <vm:MainWindowViewModel />
   </Window.DataContext>
-
-  <Border Background="{DynamicResource AppBackgroundBrush}">
-    <TabControl>
-      <TabItem Header="Тест">
-        <views:TestView x:Name="TestViewControl" />
-      </TabItem>
-
-      <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}">
-        <views:ModbusMonitoringView x:Name="ModbusViewControl" />
-      </TabItem>
-
-      <TabItem Header="Тестовая страница">
-        <views:SelfTestPageView x:Name="SelfTestPageViewControl" />
-      </TabItem>
-
-      <TabItem Header="Сконфигурировать сетевые карты">
-        <views:NetworkSetupView x:Name="NetworkSetupViewControl" />
-      </TabItem>
-
-      <TabItem Header="Настройки">
-        <views:SettingsView x:Name="SettingsViewControl" />
-      </TabItem>
-    </TabControl>
-  </Border>
+  <Grid>
+    <Grid IsVisible="{Binding !IsSettingsOpen}">
+      <Grid IsVisible="{Binding !IsEngineerWorkspace}">
+        <views:StationDashboardView DataContext="{Binding TestVM}" />
+      </Grid>
+      <Grid RowDefinitions="*,Auto" IsVisible="{Binding IsEngineerWorkspace}">
+        <TabControl>
+          <TabItem Header="Тест"><views:TestView x:Name="TestViewControl" /></TabItem>
+          <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></TabItem>
+          <TabItem Header="Тестовая страница"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></TabItem>
+          <TabItem Header="Сконфигурировать сетевые карты"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></TabItem>
+        </TabControl>
+        <Button Grid.Row="1" Content="Настройки" Command="{Binding OpenSettingsCommand}"
+                FontSize="17" MinHeight="44" Margin="16,8" />
+      </Grid>
+    </Grid>
+    <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding IsSettingsOpen}">
+      <Button Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}"
+              Margin="24,16" FontSize="18" MinHeight="48" Padding="20,10" />
+      <views:SettingsView Grid.Row="1" x:Name="ShellSettingsViewControl" />
+      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="20" Margin="24,12">
+        <TextBlock Text="{Binding OperatorName}" FontSize="16" />
+        <TextBlock Text="{Binding SessionStatus}" FontSize="16" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </StackPanel>
+    </Grid>
+  </Grid>
 </Window>

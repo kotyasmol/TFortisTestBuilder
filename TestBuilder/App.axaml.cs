@@ -2,18 +2,19 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using TestBuilder.Views;
+using TestBuilder.Services;
 
 namespace TestBuilder;
 
 public partial class App : Application
 {
-    public static string StartupSessionId { get; private set; } = string.Empty;
+    public static LauncherOptions StartupOptions { get; private set; } = LauncherOptions.Parse(System.Array.Empty<string>());
+    public static string StartupSessionId => StartupOptions.SessionId;
+    public static string StartupUserName => StartupOptions.UserName;
 
     internal static void ConfigureStartupArguments(string[] args)
     {
-        StartupSessionId = args is { Length: > 0 }
-            ? args[0]?.Trim() ?? string.Empty
-            : string.Empty;
+        StartupOptions = LauncherOptions.Parse(args);
     }
 
     public override void Initialize()

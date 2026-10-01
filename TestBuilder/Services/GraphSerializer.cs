@@ -65,6 +65,8 @@ namespace TestBuilder.Services
         public static string Serialize(TestViewModel vm, string profileName)
         {
             var dto = SerializeGraph(vm.RootGraph, profileName);
+            dto.DeviceModel = vm.RootGraph.DeviceModel;
+            dto.ConfigurationName = vm.RootGraph.ConfigurationName;
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
 
@@ -72,6 +74,7 @@ namespace TestBuilder.Services
         {
             var dto = new GraphDto { Name = name };
             var nodeIds = new Dictionary<NodeViewModel, string>();
+            var requiresParallelRuntime = ContainsParallelConnections(graph, new HashSet<GraphWorkspaceViewModel>());
 
             for (var i = 0; i < graph.Nodes.Count; i++)
                 nodeIds[graph.Nodes[i]] = i.ToString();
@@ -81,7 +84,11 @@ namespace TestBuilder.Services
                 var n = new NodeDto
                 {
                     Id = nodeIds[node],
-                    Type = GetNodeType(node),  // всегда английский
+                    // Older executables reject this alias instead of silently dropping
+                    // all but the last branch. It still renders as the ordinary Start.
+                    Type = requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
+                        : requiresParallelRuntime && node is BodyStartNodeViewModel ? "Body Start (parallel v1)"
+                        : GetNodeType(node),
                     X = node.Location.X,
                     Y = node.Location.Y,
                     Color = node.NodeColor
@@ -384,14 +391,49 @@ namespace TestBuilder.Services
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
             RejectRemovedIo2Nodes(dto);
+            // Parse the entire document before replacing the user's open graph.
+            // Malformed links and unsupported runtime versions must not erase it.
+            var loaded = new GraphWorkspaceViewModel();
+            try { DeserializeGraph(dto, loaded, isBodyGraph: false); }
+            catch
+            {
+                DisposeLoadedNodes(loaded);
+                throw;
+            }
             vm.ResetToRootGraph();
             vm.RootGraph.Clear();
-
-            DeserializeGraph(dto, vm.RootGraph, isBodyGraph: false);
+            vm.RootGraph.Title = loaded.Title;
+            vm.RootGraph.IsBodyGraph = false;
+            foreach (var node in loaded.Nodes) vm.RootGraph.Nodes.Add(node);
+            foreach (var connection in loaded.Connections) vm.RootGraph.Connections.Add(connection);
+            var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName);
+            vm.RootGraph.DeviceModel = profile.DeviceModel;
+            vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
+                (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
             vm.ResetToRootGraph();
 
             return dto.Name;
+        }
+
+        private static bool ContainsParallelConnections(GraphWorkspaceViewModel graph, HashSet<GraphWorkspaceViewModel> visited)
+        {
+            if (!visited.Add(graph))
+                throw new InvalidOperationException("Нельзя сохранить рекурсивное вложение графов.");
+            var found = graph.Connections.GroupBy(connection => connection.Source).Any(group => group.Count() > 1);
+            foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
+                found |= ContainsParallelConnections(composite.BodyGraph, visited);
+            visited.Remove(graph);
+            return found;
+        }
+
+        private static void DisposeLoadedNodes(GraphWorkspaceViewModel graph)
+        {
+            foreach (var node in graph.Nodes)
+            {
+                if (node is ICompositeNodeViewModel composite) DisposeLoadedNodes(composite.BodyGraph);
+                node.Dispose();
+            }
         }
 
         private static void RejectRemovedIo2Nodes(GraphDto dto)
@@ -423,11 +465,11 @@ namespace TestBuilder.Services
 
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 
-                    "Body Start" or "Тело: начало" => new BodyStartNodeViewModel { Location = location },
+                    "Body Start" or "Тело: начало" or "Body Start (parallel v1)" => new BodyStartNodeViewModel { Location = location },
 
                     "Body End" or "Тело: конец" => new BodyEndNodeViewModel { Location = location },
 
@@ -701,30 +743,34 @@ namespace TestBuilder.Services
 
                 node.NodeColor = n.Color ?? "blue";
 
-                nodeMap[n.Id] = node;
+                if (!nodeMap.TryAdd(n.Id, node))
+                {
+                    node.Dispose();
+                    throw new InvalidOperationException($"Граф '{dto.Name}': повторный ID ноды '{n.Id}'.");
+                }
                 graph.Nodes.Add(node);
             }
 
             foreach (var c in dto.Connections)
             {
                 if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode))
-                    continue;
+                    throw new InvalidOperationException($"Граф '{dto.Name}': связь ссылается на отсутствующую ноду '{c.SourceNodeId}'.");
 
                 if (!nodeMap.TryGetValue(c.TargetNodeId, out var tgtNode))
-                    continue;
+                    throw new InvalidOperationException($"Граф '{dto.Name}': связь ссылается на отсутствующую ноду '{c.TargetNodeId}'.");
 
                 var srcConn = FindConnector(
                     srcNode,
-                    srcNode.Output.Concat(srcNode.Input),
+                    srcNode.Output,
                     c.SourceConnector);
 
                 var tgtConn = FindConnector(
                     tgtNode,
-                    tgtNode.Input.Concat(tgtNode.Output),
+                    tgtNode.Input,
                     c.TargetConnector);
 
                 if (srcConn == null || tgtConn == null)
-                    continue;
+                    throw new InvalidOperationException($"Граф '{dto.Name}': неизвестный выход '{c.SourceConnector}' или вход '{c.TargetConnector}'.");
 
                 graph.Connections.Add(new ConnectionViewModel(srcConn, tgtConn));
             }
@@ -1042,6 +1088,21 @@ namespace TestBuilder.Services
 
                     return string.Join(",", parts.Select(part => part.Trim()));
                 }));
+        }
+
+        public static GraphProfile ReadProfile(string filePath)
+        {
+            try
+            {
+                var dto = JsonSerializer.Deserialize<GraphDto>(File.ReadAllText(filePath), JsonOptions);
+                return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
+                    dto?.DeviceModel, dto?.ConfigurationName);
+            }
+            catch
+            {
+                // Keep unreadable profiles visible so loading can show its existing error state.
+                return new GraphProfile(filePath, Path.GetFileNameWithoutExtension(filePath));
+            }
         }
 
         public static string? ReadProfileName(string filePath)

@@ -36,6 +36,7 @@ public partial class TestView : UserControl, IDisposable
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not TestViewModel vm) return;
+        if (!IsEffectivelyVisible || !vm.CanEditGraph) return;
         if (e.Key == Key.Delete)
         {
             if (vm.SelectedNodes.Count > 0)

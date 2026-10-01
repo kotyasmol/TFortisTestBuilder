@@ -692,31 +692,10 @@ namespace TestBuilder.Domain.Steps
                     stage => _logger.Info($"[INFO] Selftest browser: {stage}")),
                 CancellationToken.None);
 
-            try
-            {
-                // GetPageWithBrowserAsync already enforces the attempt timeout. Await its
-                // process exit before the polling loop is allowed to start another Chrome.
-                // The whole lifecycle stays on the worker thread so process shutdown and
-                // profile deletion cannot block the Avalonia UI thread.
-                return await work.WaitAsync(cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                _ = ObserveLateBrowserAttemptAsync(work);
-                throw;
-            }
-        }
-
-        private static async Task ObserveLateBrowserAttemptAsync(Task<HttpRequestResult> work)
-        {
-            try
-            {
-                await work.ConfigureAwait(false);
-            }
-            catch
-            {
-                // A cancelled test no longer awaits this worker; observe a late fault.
-            }
+            // Cancellation also waits for GetPageWithBrowserAsync's bounded process cleanup.
+            // Otherwise a failed sibling could start emergency power-off while Chrome is
+            // still operating against the DUT. The worker stays off the Avalonia UI thread.
+            return await work;
         }
 
         private static async Task<bool> ProbeWebEndpointAsync(

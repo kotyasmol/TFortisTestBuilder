@@ -1,0 +1,232 @@
+{
+  "name": "Демонстрация пульта · без оборудования",
+  "nodes": [
+    {
+      "id": "0",
+      "type": "Start",
+      "x": 80,
+      "y": 120
+    },
+    {
+      "id": "1",
+      "type": "Subtest",
+      "x": 420,
+      "y": 120,
+      "name": "Подготовка",
+      "isEnabled": true,
+      "stopOnError": true,
+      "bodyGraph": {
+        "name": "Подготовка",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Operator Action",
+            "x": 420,
+            "y": 120,
+            "text": "Это демонстрация пульта без оборудования.\n\nПроверьте, удобно ли читать инструкцию. Нажмите «Готово · продолжить», чтобы увидеть ход выполнения."
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 760,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "type": "Subtest",
+      "x": 760,
+      "y": 120,
+      "name": "Выполнение программы",
+      "isEnabled": true,
+      "stopOnError": true,
+      "bodyGraph": {
+        "name": "Выполнение программы",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Delay",
+            "x": 420,
+            "y": 120,
+            "milliseconds": 8000
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 760,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "type": "Subtest",
+      "x": 1100,
+      "y": 120,
+      "name": "Завершение",
+      "isEnabled": true,
+      "stopOnError": true,
+      "bodyGraph": {
+        "name": "Завершение",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Operator Action",
+            "x": 420,
+            "y": 120,
+            "text": "Демонстрация завершена. Оборудование, сервер и принтер не использовались.\n\nНажмите «Готово · продолжить», чтобы увидеть итог."
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 760,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Продолжить",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4",
+      "type": "End",
+      "x": 1440,
+      "y": 120
+    },
+    {
+      "id": "5",
+      "type": "Subtest",
+      "x": 1780,
+      "y": 120,
+      "name": "Завершение демонстрации",
+      "runOnFailure": true,
+      "isEnabled": true,
+      "stopOnError": true,
+      "bodyGraph": {
+        "name": "Завершение демонстрации",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 120
+          },
+          {
+            "id": "1",
+            "type": "Delay",
+            "x": 420,
+            "y": 120,
+            "milliseconds": 1000
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 760,
+            "y": 120
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "Success",
+      "targetNodeId": "2",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "2",
+      "sourceConnector": "Success",
+      "targetNodeId": "3",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "Success",
+      "targetNodeId": "4",
+      "targetConnector": "Вход"
+    }
+  ]
+}

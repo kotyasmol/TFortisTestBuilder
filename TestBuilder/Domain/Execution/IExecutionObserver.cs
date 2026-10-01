@@ -9,6 +9,14 @@ namespace TestBuilder.Domain.Execution
     /// </summary>
     public interface IExecutionObserver
     {
+        Task ParallelBranchFinishedAsync(TestContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        Task PauseWaitingChangedAsync(TestContext context, bool isWaiting, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        // NodeFinishedAsync also runs on exceptions; this notification carries a real result.
+        Task NodeCompletedAsync(TestNode node, StepResult result, TestContext context,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
         Task NodeStartedAsync(
             TestNode node,
             TestContext context,

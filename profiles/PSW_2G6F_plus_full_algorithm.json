@@ -1,5 +1,7 @@
 ﻿{
   "name": "PSW_2G6F_plus_full_algorithm",
+  "deviceModel": "PSW-2G6F+",
+  "configurationName": "Полная проверка",
   "nodes": [
     {
       "id": "0",

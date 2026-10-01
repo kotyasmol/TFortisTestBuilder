@@ -9,6 +9,14 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
 
+        [JsonPropertyName("deviceModel")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? DeviceModel { get; set; }
+
+        [JsonPropertyName("configurationName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ConfigurationName { get; set; }
+
         [JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 

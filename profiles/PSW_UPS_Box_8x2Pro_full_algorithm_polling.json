@@ -1,5 +1,7 @@
 ﻿{
   "name": "PSW_UPS_Box_8x2Pro_full_algorithm_polling",
+  "deviceModel": "PSW+UPS-Box 8x2Pro",
+  "configurationName": "Полная проверка",
   "nodes": [
     {
       "id": "0",

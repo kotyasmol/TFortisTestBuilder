@@ -1,0 +1,5 @@
+Material Design Icons by Pictogrammers
+https://github.com/Templarian/MaterialDesign-SVG
+Icons: check-circle, circle-outline, progress-clock, pause-circle-outline, alert-circle-outline, minus-circle-outline, cog-outline, magnify
+See LICENSE for terms.
+Additional icons: chevron-right, chevron-down.

@@ -25,7 +25,7 @@ namespace TestBuilder.Views
             ModbusViewControl.DataContext = vm.ModbusVM;
             SelfTestPageViewControl.DataContext = vm.SelfTestPageVM;
             NetworkSetupViewControl.DataContext = vm.NetworkSetupVM;
-            SettingsViewControl.DataContext = vm.SettingsVM;
+            ShellSettingsViewControl.DataContext = vm.SettingsVM;
         }
 
         protected override void OnClosed(System.EventArgs e)
@@ -37,6 +37,16 @@ namespace TestBuilder.Views
                 disposable.Dispose();
 
             base.OnClosed(e);
+        }
+
+        protected override void OnClosing(WindowClosingEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm && vm.TestVM.IsTestRunning)
+            {
+                e.Cancel = true;
+                vm.TestVM.StopTestCommand.Execute(null);
+            }
+            base.OnClosing(e);
         }
     }
 }

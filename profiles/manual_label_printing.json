@@ -1,5 +1,7 @@
 {
   "name": "Ручная печать 4 этикеток PSW+UPS-Box 8x2Pro",
+  "deviceModel": "PSW+UPS-Box 8x2Pro",
+  "configurationName": "Ручная печать этикеток",
   "nodes": [
     {
       "id": "0",

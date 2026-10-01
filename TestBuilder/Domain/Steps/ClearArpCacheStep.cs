@@ -95,54 +95,98 @@ namespace TestBuilder.Domain.Steps
 
         private async Task<ProcessRunResult> RunProcessAsync(string fileName, string arguments, CancellationToken cancellationToken)
         {
+            using var process = new Process { StartInfo = CreateStartInfo(fileName, arguments) };
+            using var outputCts = new CancellationTokenSource();
+            var started = false;
+            Task<string> stdout = Task.FromResult(string.Empty);
+            Task<string> stderr = Task.FromResult(string.Empty);
             try
             {
-                var startInfo = CreateStartInfo(fileName, arguments);
+                cancellationToken.ThrowIfCancellationRequested();
+                started = process.Start();
+                if (!started) return new ProcessRunResult(-1, string.Empty, $"Не удалось запустить {fileName}.");
 
-                using var process = new Process
-                {
-                    StartInfo = startInfo
-                };
-
-                process.Start();
-
+                // Drain both pipes while the command is running; waiting for exit first can
+                // deadlock when a command fills either OS pipe buffer.
+                stdout = process.StandardOutput.ReadToEndAsync(outputCts.Token);
+                stderr = process.StandardError.ReadToEndAsync(outputCts.Token);
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(_timeoutMs);
-
                 try
                 {
                     await process.WaitForExitAsync(timeoutCts.Token);
+                    await Task.WhenAll(stdout, stderr).WaitAsync(timeoutCts.Token);
+                    return new ProcessRunResult(process.ExitCode, stdout.Result.Trim(), stderr.Result.Trim());
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException cancellation)
                 {
-                    TryKill(process);
-                    return new ProcessRunResult(-1, string.Empty, $"Таймаут процесса {fileName}: {_timeoutMs} мс.");
+                    // Returning from a cancelled branch is a barrier: no ARP helper may
+                    // remain active when the executor starts emergency shutdown.
+                    try { await StopAndDrainAsync(process, stdout, stderr, outputCts); }
+                    catch (ProcessCleanupException cleanup)
+                    {
+                        throw new ProcessCleanupException(
+                            $"Не удалось остановить процесс {fileName} после отмены или таймаута.",
+                            new AggregateException(cancellation, cleanup));
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return new ProcessRunResult(-1, stdout.Result.Trim(),
+                        $"Таймаут процесса {fileName}: {_timeoutMs} мс. {stderr.Result.Trim()}".Trim());
                 }
-
-                var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-                var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
-
-                return new ProcessRunResult(process.ExitCode, stdout.Trim(), stderr.Trim());
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException) { throw; }
+            catch (ProcessCleanupException) { throw; } // Cleanup failures are never downgraded by FailOnError.
+            catch (Exception error)
             {
-                return new ProcessRunResult(-1, string.Empty, ex.Message);
+                if (started)
+                {
+                    try { await StopAndDrainAsync(process, stdout, stderr, outputCts); }
+                    catch (ProcessCleanupException cleanup)
+                    {
+                        throw new ProcessCleanupException($"Не удалось остановить процесс {fileName} после ошибки.",
+                            new AggregateException(error, cleanup));
+                    }
+                }
+                return new ProcessRunResult(-1, string.Empty, error.Message);
             }
         }
 
-        private static void TryKill(Process process)
+        private static async Task StopAndDrainAsync(Process process, Task<string> stdout, Task<string> stderr,
+            CancellationTokenSource outputCts)
         {
+            using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            Exception? cleanupError = null;
             try
             {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
+                if (!process.HasExited) process.Kill(entireProcessTree: true);
             }
-            catch
+            catch (InvalidOperationException) when (process.HasExited)
             {
+                // The process exited between HasExited and Kill.
             }
+            catch (Exception error) { cleanupError = error; }
+            try { await process.WaitForExitAsync(cleanupCts.Token); }
+            catch (Exception error)
+            {
+                cleanupError = cleanupError == null ? error : new AggregateException(cleanupError, error);
+            }
+            try { await Task.WhenAll(stdout, stderr).WaitAsync(cleanupCts.Token); }
+            catch (Exception error)
+            {
+                cleanupError = cleanupError == null ? error : new AggregateException(cleanupError, error);
+                // A descendant retaining inherited handles must not keep managed pipe reads alive.
+                outputCts.Cancel();
+                process.StandardOutput.Dispose();
+                process.StandardError.Dispose();
+                try { await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(1)); }
+                catch { /* The original drain/termination error below remains the cause. */ }
+            }
+            if (cleanupError != null)
+                throw new ProcessCleanupException($"Процесс PID {process.Id} или его потоки не завершились корректно.", cleanupError);
         }
+
+        private sealed class ProcessCleanupException(string message, Exception innerException)
+            : InvalidOperationException(message, innerException);
 
         private static string NormalizeArguments(string command, string? arguments)
         {

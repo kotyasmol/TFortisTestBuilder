@@ -1,4 +1,6 @@
-﻿namespace TestBuilder.Domain.Execution
+﻿using System.Collections.Generic;
+
+namespace TestBuilder.Domain.Execution
 {
     /// <summary>
     /// Узел графа тестирования.
@@ -31,6 +33,9 @@
         /// Узел, выполняемый при результате False.
         /// </summary>
         public TestNode? OnFalse { get; set; }
+
+        /// <summary>Validated fan-outs of one output; each branch stops before its common join.</summary>
+        public Dictionary<StepResult, ParallelFork> ParallelTransitions { get; } = new();
 
         public TestNode(ITestStep? step, object? source = null)
         {

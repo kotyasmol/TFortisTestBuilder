@@ -12,6 +12,10 @@ namespace TestBuilder.ViewModels.Graphs
     {
         public string Title { get; set; } = "Граф";
 
+        public string? DeviceModel { get; set; }
+
+        public string? ConfigurationName { get; set; }
+
         public bool IsBodyGraph { get; set; }
 
         public bool UsesBodyBoundaryNodes { get; set; }

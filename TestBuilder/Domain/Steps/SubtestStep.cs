@@ -50,7 +50,12 @@ namespace TestBuilder.Domain.Steps
                     context,
                     cancellationToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                context.AddReportEntry(_name, false, "Отменён до завершения.");
+                throw;
+            }
+            catch (Exception ex)
             {
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
                 _logger.Warning(message);

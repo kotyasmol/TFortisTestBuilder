@@ -202,7 +202,7 @@
             Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,*">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
 
         <StackPanel Grid.Column="0"
                     Orientation="Horizontal"
@@ -358,11 +358,15 @@
                    VerticalAlignment="Center"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="13" />
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   Text="Несколько стрелок из одного выхода запускают ветви параллельно. Общая следующая нода ждёт завершения всех ветвей." />
       </Grid>
     </Border>
 
     <Grid Grid.Row="1">
       <nodify:NodifyEditor x:Name="Editor"
+                           IsEnabled="{Binding CanEditGraph}"
                            ItemsSource="{Binding Nodes}"
                            Connections="{Binding Connections}"
                            PendingConnection="{Binding PendingConnection}"

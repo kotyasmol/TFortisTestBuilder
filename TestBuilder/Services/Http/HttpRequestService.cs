@@ -13,16 +13,19 @@ namespace TestBuilder.Services.Http
     {
         private readonly HttpClient _httpClient;
         private readonly bool _disposeClient;
+        private readonly Action<HttpRequestMessage>? _configureRequest;
 
         public HttpRequestService()
             : this(new HttpClient(), disposeClient: true)
         {
         }
 
-        public HttpRequestService(HttpClient httpClient, bool disposeClient = false)
+        public HttpRequestService(HttpClient httpClient, bool disposeClient = false,
+            Action<HttpRequestMessage>? configureRequest = null)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _disposeClient = disposeClient;
+            _configureRequest = configureRequest;
         }
 
         public async Task<HttpRequestResult> GetAsync(
@@ -57,6 +60,7 @@ namespace TestBuilder.Services.Http
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                _configureRequest?.Invoke(request);
 
                 using var response = await _httpClient.SendAsync(
                     request,

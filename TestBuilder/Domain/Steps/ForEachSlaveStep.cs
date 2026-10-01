@@ -49,35 +49,40 @@ namespace TestBuilder.Domain.Steps
                 $"[ШАГ] Цикл For → устройства с {_fromSlaveId} по {_toSlaveId}, шаг {_step}.");
 
             var executor = new TestExecutor();
-
-            for (var slaveId = (int)_fromSlaveId; slaveId <= _toSlaveId; slaveId += _step)
+            var previousSlave = context.CurrentSlaveId;
+            var hadPreviousVariable = context.Variables.TryGetValue("slaveId", out var previousVariable);
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                context.CurrentSlaveId = (byte)slaveId;
-                context.SetVariable("slaveId", (byte)slaveId);
-
-                _logger.Info($"[ШАГ] Итерация: устройство {slaveId}.");
-
-                var result = await executor.ExecuteAsync(
-                    _bodyGraph.StartNode,
-                    context,
-                    cancellationToken);
-
-                if (result != ExecutionStatus.Completed)
+                for (var slaveId = (int)_fromSlaveId; slaveId <= _toSlaveId; slaveId += _step)
                 {
-                    _logger.Warning(
-                        $"[ОШИБКА] Итерация устройство {slaveId} — ошибка. Стоп при ошибке: {(_stopOnError ? "да" : "нет")}.");
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    if (_stopOnError)
+                    context.CurrentSlaveId = (byte)slaveId;
+                    context.SetVariable("slaveId", (byte)slaveId);
+
+                    _logger.Info($"[ШАГ] Итерация: устройство {slaveId}.");
+
+                    var result = await executor.ExecuteAsync(
+                        _bodyGraph.StartNode,
+                        context,
+                        cancellationToken);
+
+                    if (result != ExecutionStatus.Completed)
                     {
-                        context.CurrentSlaveId = null;
-                        return StepResult.False;
+                        _logger.Warning(
+                            $"[ОШИБКА] Итерация устройство {slaveId} — ошибка. Стоп при ошибке: {(_stopOnError ? "да" : "нет")}.");
+
+                        if (_stopOnError || (context.IsParallelBranch && context.HasCriticalError))
+                            return StepResult.False;
                     }
                 }
             }
-
-            context.CurrentSlaveId = null;
+            finally
+            {
+                context.CurrentSlaveId = previousSlave;
+                if (hadPreviousVariable) context.Variables["slaveId"] = previousVariable!;
+                else context.Variables.Remove("slaveId");
+            }
 
             _logger.Info(
                 $"[OK] Цикл For завершён. Диапазон {_fromSlaveId}..{_toSlaveId}.");

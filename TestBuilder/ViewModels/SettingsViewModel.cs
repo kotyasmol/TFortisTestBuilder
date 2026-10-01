@@ -3,6 +3,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Threading.Tasks;
 using TestBuilder.Services;
 using TestBuilder.Services.Logging;
@@ -11,6 +12,24 @@ namespace TestBuilder.ViewModels
 {
     public partial class SettingsViewModel : ViewModelBase
     {
+        private readonly Func<bool>? canChangeInterfaceMode;
+        private bool isEngineerMode;
+
+        public bool CanChangeInterfaceMode => canChangeInterfaceMode?.Invoke() ?? true;
+
+        public bool IsEngineerMode
+        {
+            get => isEngineerMode;
+            set
+            {
+                if (!CanChangeInterfaceMode || !SetProperty(ref isEngineerMode, value)) return;
+                AppSettings.Instance.EngineerMode = value;
+                AppSettings.Instance.Save();
+            }
+        }
+
+        public void RefreshModeAvailability() => OnPropertyChanged(nameof(CanChangeInterfaceMode));
+
         [ObservableProperty]
         private string graphsFolder = string.Empty;
 
@@ -32,8 +51,10 @@ namespace TestBuilder.ViewModels
         public IAsyncRelayCommand SelectFolderCommand { get; }
         public IAsyncRelayCommand SelectLogFolderCommand { get; }
 
-        public SettingsViewModel()
+        public SettingsViewModel(Func<bool>? canChangeInterfaceMode = null)
         {
+            this.canChangeInterfaceMode = canChangeInterfaceMode;
+            isEngineerMode = AppSettings.Instance.EngineerMode;
             GraphsFolder = AppSettings.Instance.GraphsFolder;
             ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
             StandId = AppSettings.Instance.StandId;
