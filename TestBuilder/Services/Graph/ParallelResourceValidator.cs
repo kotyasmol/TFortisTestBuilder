@@ -88,17 +88,12 @@ internal static class ParallelResourceValidator
                 return;
             case CheckRegisterRangeNodeViewModel range:
                 AddSlave(usage, range.SlaveId, range.UseCurrentSlaveId, currentSlaves); return;
-            case CheckRegisterEqualityNodeViewModel equality:
-                AddSlave(usage, equality.SlaveId, equality.UseCurrentSlaveId, currentSlaves); return;
             case WaitUntilNodeViewModel wait:
                 AddSlave(usage, wait.SlaveId, wait.UseCurrentSlaveId, currentSlaves); return;
-            case PollRegisterNodeViewModel poll:
-                AddSlave(usage, poll.SlaveId, poll.UseCurrentSlaveId, currentSlaves); return;
             case WaitVariableUntilNodeViewModel waitVariable:
                 if (!string.Equals(waitVariable.PollAction, "None", StringComparison.OrdinalIgnoreCase)) usage.Network = true;
                 return;
             case SelfTestCheckNodeViewModel or ClearArpCacheNodeViewModel or ReadHttpVariableNodeViewModel
-                or GetUpsStatusNodeViewModel or GetUpsVoltageNodeViewModel or GetIrpStatusNodeViewModel
                 or RunDataTestNodeViewModel:
                 usage.Network = true;
                 return;

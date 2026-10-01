@@ -83,16 +83,6 @@ namespace TestBuilder.ViewModels.NodifyVM
                 True идет при успешной проверке, False - при выходе из диапазона.
                 """,
 
-            [typeof(CheckRegisterEqualityNodeViewModel)] = """
-                Проверяет, что значение регистра равно ожидаемому.
-                Slave ID - проверяемое устройство; ID рядом показывает фактическое число.
-                Slave из цикла - брать текущий Slave ID из For Slaves.
-                Live Modbus read - читать регистр прямо при выполнении, а не брать последнее значение мониторинга.
-                Адрес - номер регистра или выбранный регистр из карты устройства.
-                Значение - ожидаемое число.
-                True идет при совпадении, False - если значение другое.
-                """,
-
             [typeof(WaitUntilNodeViewModel)] = """
                 Ждет, пока регистр станет равен ожидаемому значению.
                 Slave ID - проверяемое устройство; ID рядом показывает фактическое число.
@@ -101,16 +91,6 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Адрес - номер регистра или выбранный регистр из карты устройства.
                 Значение - ожидаемое число.
                 Таймаут мс - сколько максимум ждать.
-                """,
-
-            [typeof(PollRegisterNodeViewModel)] = """
-                Несколько раз опрашивает регистр и проверяет стабильный диапазон.
-                Slave ID - проверяемое устройство; ID рядом показывает фактическое число.
-                Slave из цикла - брать текущий Slave ID из For Slaves.
-                Live Modbus read - читать регистр прямо при выполнении.
-                Адрес - номер регистра или выбранный регистр из карты устройства.
-                Минимум и Максимум - допустимые границы каждого замера.
-                Кол-во замеров - сколько чтений сделать.
                 """,
 
             [typeof(SelfTestCheckNodeViewModel)] = """
@@ -223,14 +203,6 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Fail on error - при провале перейти по False; без флага идти по True, сохранив Passed=false.
                 """,
 
-            [typeof(GetUpsStatusNodeViewModel)] = """
-                Читает статус UPS через HTTP API устройства.
-                Base URL - базовый адрес устройства.
-                Timeout ms - лимит запроса.
-                Output var - переменная, куда сохранить статус.
-                Fail on error - считать ошибку запроса провалом теста.
-                """,
-
             [typeof(ReadHttpVariableNodeViewModel)] = """
                 Универсально читает одно значение через HTTP GET и сохраняет его в TestContext.
                 Base URL - базовый адрес устройства.
@@ -239,22 +211,6 @@ namespace TestBuilder.ViewModels.NodifyVM
                 Timeout ms - лимит одного запроса.
                 Output var - переменная, куда сохранить свежее значение.
                 Перед запросом старое значение удаляется; HTTP/parse ошибка идет в False при включенном Fail on error.
-                """,
-
-            [typeof(GetUpsVoltageNodeViewModel)] = """
-                Читает напряжение UPS через HTTP API устройства.
-                Base URL - базовый адрес устройства.
-                Timeout ms - лимит запроса.
-                Output var - переменная, куда сохранить напряжение.
-                Fail on error - считать ошибку запроса провалом теста.
-                """,
-
-            [typeof(GetIrpStatusNodeViewModel)] = """
-                Читает статус IRP через HTTP API устройства.
-                Base URL - базовый адрес устройства.
-                Timeout ms - лимит запроса.
-                Output var - переменная, куда сохранить статус.
-                Fail on error - считать ошибку запроса провалом теста.
                 """,
 
             [typeof(BuildMacFromSerialNodeViewModel)] = """

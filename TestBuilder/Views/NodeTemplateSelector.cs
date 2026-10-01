@@ -34,12 +34,6 @@ namespace TestBuilder.Views
 
         public IDataTemplate? RunDataTestTemplate { get; set; }
 
-        public IDataTemplate? GetUpsStatusTemplate { get; set; }
-
-        public IDataTemplate? GetUpsVoltageTemplate { get; set; }
-
-        public IDataTemplate? GetIrpStatusTemplate { get; set; }
-
         public IDataTemplate? ReadHttpVariableTemplate { get; set; }
 
         public IDataTemplate? BuildMacFromSerialTemplate { get; set; }
@@ -54,11 +48,7 @@ namespace TestBuilder.Views
 
         public IDataTemplate? SendTestReportTemplate { get; set; }
 
-        public IDataTemplate? CheckRegisterEqualityTemplate { get; set; }
-
         public IDataTemplate? WaitUntilTemplate { get; set; }
-
-        public IDataTemplate? PollRegisterTemplate { get; set; }
 
         public IDataTemplate? OperatorActionTemplate { get; set; }
 
@@ -70,9 +60,7 @@ namespace TestBuilder.Views
             {
                 ModbusWriteNodeViewModel => ModbusWriteTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckRegisterRangeNodeViewModel => CheckRegisterRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                CheckRegisterEqualityNodeViewModel => CheckRegisterEqualityTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 WaitUntilNodeViewModel => WaitUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                PollRegisterNodeViewModel => PollRegisterTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 DelayNodeViewModel => DelayTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 LabelNodeViewModel => LabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SubtestNodeViewModel => SubtestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
@@ -86,9 +74,6 @@ namespace TestBuilder.Views
                 SetPswMacNodeViewModel => SetPswMacTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 UpdatePswFirmwareNodeViewModel => UpdatePswFirmwareTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 RunDataTestNodeViewModel => RunDataTestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                GetUpsStatusNodeViewModel => GetUpsStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                GetUpsVoltageNodeViewModel => GetUpsVoltageTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                GetIrpStatusNodeViewModel => GetIrpStatusTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ReadHttpVariableNodeViewModel => ReadHttpVariableTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 BuildMacFromSerialNodeViewModel => BuildMacFromSerialTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CompareVariablesNodeViewModel => CompareVariablesTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

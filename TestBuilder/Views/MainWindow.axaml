@@ -14,15 +14,14 @@
       <Grid IsVisible="{Binding !IsEngineerWorkspace}">
         <views:StationDashboardView DataContext="{Binding TestVM}" />
       </Grid>
-      <Grid RowDefinitions="*,Auto" IsVisible="{Binding IsEngineerWorkspace}">
+      <Grid IsVisible="{Binding IsEngineerWorkspace}">
         <TabControl>
           <TabItem Header="Тест"><views:TestView x:Name="TestViewControl" /></TabItem>
           <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></TabItem>
           <TabItem Header="Тестовая страница"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></TabItem>
           <TabItem Header="Сконфигурировать сетевые карты"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></TabItem>
+          <TabItem Header="Настройки"><views:SettingsView x:Name="EngineerSettingsViewControl" /></TabItem>
         </TabControl>
-        <Button Grid.Row="1" Content="Настройки" Command="{Binding OpenSettingsCommand}"
-                FontSize="17" MinHeight="44" Margin="16,8" />
       </Grid>
     </Grid>
     <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding IsSettingsOpen}">

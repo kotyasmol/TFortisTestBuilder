@@ -97,6 +97,8 @@ public partial class GraphEditorView : UserControl, IDisposable
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not TestViewModel vm) return;
+        // Let text fields handle selection/copy, including read-only fields during a run.
+        if (e.Source is TextBox) return;
 
         if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Z)
         {
@@ -216,6 +218,7 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     public void OnLabelResizePointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (DataContext is not TestViewModel { CanEditGraph: true }) return;
         if (sender is not Control handle) return;
         if (handle.DataContext is not LabelNodeViewModel label) return;
         if (e.GetCurrentPoint(handle).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed) return;

@@ -34,9 +34,7 @@ namespace TestBuilder.Services
             LabelNodeViewModel => "Label",
             ModbusWriteNodeViewModel => "Write Register",
             CheckRegisterRangeNodeViewModel => "Check Register Range",
-            CheckRegisterEqualityNodeViewModel => "Check Register Equality",
             WaitUntilNodeViewModel => "Wait Until",
-            PollRegisterNodeViewModel => "Poll Register",
             OperatorActionNodeViewModel => "Operator Action",
             SelfTestCheckNodeViewModel => "Selftest Check",
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
@@ -47,9 +45,6 @@ namespace TestBuilder.Services
             SetPswMacNodeViewModel => "Set PSW MAC (UDP)",
             UpdatePswFirmwareNodeViewModel => "Update PSW Firmware",
             RunDataTestNodeViewModel => "Run Data Test",
-            GetUpsStatusNodeViewModel => "Get UPS Status",
-            GetUpsVoltageNodeViewModel => "Get UPS Voltage",
-            GetIrpStatusNodeViewModel => "Get IRP Status",
             ReadHttpVariableNodeViewModel => "Read HTTP Variable",
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
             CompareVariablesNodeViewModel => "Compare Variables",
@@ -125,14 +120,6 @@ namespace TestBuilder.Services
                         n.ReadIntervalMs = c.ReadIntervalMs;
                         break;
 
-                    case CheckRegisterEqualityNodeViewModel eq:
-                        n.SlaveId = eq.SlaveId;
-                        n.Address = eq.Address;
-                        n.ExpectedValue = eq.ExpectedValue;
-                        n.UseCurrentSlaveId = eq.UseCurrentSlaveId;
-                        n.LiveRead = eq.LiveRead;
-                        break;
-
                     case WaitUntilNodeViewModel w:
                         n.SlaveId = w.SlaveId;
                         n.Address = w.Address;
@@ -140,16 +127,6 @@ namespace TestBuilder.Services
                         n.DurationMs = w.TimeoutMs;
                         n.UseCurrentSlaveId = w.UseCurrentSlaveId;
                         n.LiveRead = w.LiveRead;
-                        break;
-
-                    case PollRegisterNodeViewModel p:
-                        n.SlaveId = p.SlaveId;
-                        n.Address = p.Address;
-                        n.Min = p.Min;
-                        n.Max = p.Max;
-                        n.SampleCount = p.SampleCount;
-                        n.UseCurrentSlaveId = p.UseCurrentSlaveId;
-                        n.LiveRead = p.LiveRead;
                         break;
 
                     case OperatorActionNodeViewModel op:
@@ -246,27 +223,6 @@ namespace TestBuilder.Services
                         n.PortsText = NormalizeDataTestPortsText(d.PortsText, d.AllowGigabit);
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
-                        break;
-
-                    case GetUpsStatusNodeViewModel us:
-                        n.BaseUrl = us.BaseUrl;
-                        n.TimeoutMs = us.TimeoutMs;
-                        n.OutputVariableName = us.OutputVariableName;
-                        n.FailOnError = us.FailOnError;
-                        break;
-
-                    case GetUpsVoltageNodeViewModel uv:
-                        n.BaseUrl = uv.BaseUrl;
-                        n.TimeoutMs = uv.TimeoutMs;
-                        n.OutputVariableName = uv.OutputVariableName;
-                        n.FailOnError = uv.FailOnError;
-                        break;
-
-                    case GetIrpStatusNodeViewModel irp:
-                        n.BaseUrl = irp.BaseUrl;
-                        n.TimeoutMs = irp.TimeoutMs;
-                        n.OutputVariableName = irp.OutputVariableName;
-                        n.FailOnError = irp.FailOnError;
                         break;
 
                     case ReadHttpVariableNodeViewModel httpRead:
@@ -390,7 +346,7 @@ namespace TestBuilder.Services
             var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
-            RejectRemovedIo2Nodes(dto);
+            RejectRemovedNodes(dto);
             // Parse the entire document before replacing the user's open graph.
             // Malformed links and unsupported runtime versions must not erase it.
             var loaded = new GraphWorkspaceViewModel();
@@ -436,15 +392,29 @@ namespace TestBuilder.Services
             }
         }
 
-        private static void RejectRemovedIo2Nodes(GraphDto dto)
+        private static void RejectRemovedNodes(GraphDto dto)
         {
             foreach (var node in dto.Nodes)
             {
                 var type = string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type;
                 if (type is "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле")
                     throw new InvalidOperationException("Отдельная нода проверки IO-2 удалена. Импортируйте обновлённый профиль: проверка выполняется обычными Write Register и Wait Variable Until.");
-                if (node.BodyGraph != null) RejectRemovedIo2Nodes(node.BodyGraph);
-                if (node.Body != null) RejectRemovedIo2Nodes(node.Body);
+                var replacement = type switch
+                {
+                    "Check Register Equality" or "Проверка равенства" => "Check Register Range с одинаковыми Min и Max",
+                    "Poll Register" or "Опрос регистра" => "явную последовательность проверок Check Register Range с задержками Delay",
+                    "Get UPS Status" or "GET_UPS_STATUS" or "Получить UPS статус" or
+                    "Get UPS Voltage" or "GET_UPS_VOLTAGE" or "Получить UPS напряжение" or
+                    "Get IRP Status" or "GET_IRP_STATUS" or "Получить IRP статус" => "Read HTTP Variable с явно заданными endpoint и типом ответа",
+                    _ => null
+                };
+                if (replacement != null)
+                    throw new InvalidOperationException($"Нода '{type}' удалена. Обновите профиль: используйте {replacement}.");
+                if ((type is "Wait Variable Until" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
+                    node.PollAction?.Trim().ToLowerInvariant() is "getupsstatus" or "getupsvoltage" or "getirpstatus")
+                    throw new InvalidOperationException($"Режим опроса '{node.PollAction}' удалён. Обновите Wait Variable Until: используйте HttpGet с явно заданными endpoint и типом ответа.");
+                if (node.BodyGraph != null) RejectRemovedNodes(node.BodyGraph);
+                if (node.Body != null) RejectRemovedNodes(node.Body);
             }
         }
 
@@ -602,33 +572,6 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
-                    "Get UPS Status" or "GET_UPS_STATUS" or "Получить UPS статус" => new GetUpsStatusNodeViewModel
-                    {
-                        Location = location,
-                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
-                        TimeoutMs = n.TimeoutMs ?? 5000,
-                        OutputVariableName = n.OutputVariableName ?? "Dut.ups_rez",
-                        FailOnError = n.FailOnError ?? true
-                    },
-
-                    "Get UPS Voltage" or "GET_UPS_VOLTAGE" or "Получить UPS напряжение" => new GetUpsVoltageNodeViewModel
-                    {
-                        Location = location,
-                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
-                        TimeoutMs = n.TimeoutMs ?? 5000,
-                        OutputVariableName = n.OutputVariableName ?? "Dut.akb_voltage",
-                        FailOnError = n.FailOnError ?? true
-                    },
-
-                    "Get IRP Status" or "GET_IRP_STATUS" or "Получить IRP статус" => new GetIrpStatusNodeViewModel
-                    {
-                        Location = location,
-                        BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
-                        TimeoutMs = n.TimeoutMs ?? 5000,
-                        OutputVariableName = n.OutputVariableName ?? "Dut.ups_det",
-                        FailOnError = n.FailOnError ?? true
-                    },
-
                     "Read HTTP Variable" or "READ_HTTP_VARIABLE" or "Прочитать HTTP переменную" => new ReadHttpVariableNodeViewModel
                     {
                         Location = location,
@@ -666,12 +609,10 @@ namespace TestBuilder.Services
                         VariableName = n.VariableName ?? "Dut.ups_rez",
                         ExpectedValue = GetExpectedValueAsString(n.ExpectedValue, "1"),
                         ComparisonType = ParseComparisonType(n.ComparisonType),
-                        PollAction = n.PollAction ?? "GetUpsStatus",
+                        PollAction = n.PollAction ?? "HttpGet",
                         BaseUrl = n.BaseUrl ?? "http://192.168.0.1",
-                        Endpoint = n.Endpoint ?? GetLegacyPollEndpoint(n.PollAction),
-                        ResponseType = ParseHttpResponseValueType(
-                            n.ResponseType,
-                            GetLegacyPollResponseType(n.PollAction)),
+                        Endpoint = n.Endpoint ?? "/api/getUpsStatus",
+                        ResponseType = ParseHttpResponseValueType(n.ResponseType),
                         RequestTimeoutMs = n.RequestTimeoutMs ?? 5000,
                         TimeoutMs = n.TimeoutMs ?? 160000,
                         IntervalMs = n.IntervalMs ?? 5000,
@@ -726,11 +667,7 @@ namespace TestBuilder.Services
 
                     "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
-                    "Check Register Equality" or "Проверка равенства" => CreateCheckEqualityNode(n, location),
-
                     "Wait Until" or "Ожидание значения" => CreateWaitUntilNode(n, location),
-
-                    "Poll Register" or "Опрос регистра" => CreatePollRegisterNode(n, location),
 
                     "Operator Action" or "Действие оператора" => new OperatorActionNodeViewModel
                     {
@@ -814,23 +751,6 @@ namespace TestBuilder.Services
             return node;
         }
 
-        private static CheckRegisterEqualityNodeViewModel CreateCheckEqualityNode(NodeDto n, Point location)
-        {
-            var node = new CheckRegisterEqualityNodeViewModel
-            {
-                Location = location,
-                SlaveId = n.SlaveId ?? 0,
-                Address = n.Address ?? 0,
-                ExpectedValue = GetExpectedValueAsInt(n.ExpectedValue),
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
-                LiveRead = n.LiveRead ?? false
-            };
-
-            node.RestoreSelections();
-
-            return node;
-        }
-
         private static WaitUntilNodeViewModel CreateWaitUntilNode(NodeDto n, Point location)
         {
             var node = new WaitUntilNodeViewModel
@@ -840,25 +760,6 @@ namespace TestBuilder.Services
                 Address = n.Address ?? 0,
                 ExpectedValue = GetExpectedValueAsInt(n.ExpectedValue),
                 TimeoutMs = n.DurationMs ?? 5000,
-                UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
-                LiveRead = n.LiveRead ?? false
-            };
-
-            node.RestoreSelections();
-
-            return node;
-        }
-
-        private static PollRegisterNodeViewModel CreatePollRegisterNode(NodeDto n, Point location)
-        {
-            var node = new PollRegisterNodeViewModel
-            {
-                Location = location,
-                SlaveId = n.SlaveId ?? 0,
-                Address = n.Address ?? 0,
-                Min = ToInt(n.Min),
-                Max = ToInt(n.Max),
-                SampleCount = n.SampleCount ?? 10,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
                 LiveRead = n.LiveRead ?? false
             };
@@ -1010,23 +911,6 @@ namespace TestBuilder.Services
             return Enum.TryParse<HttpResponseValueType>(value, ignoreCase: true, out var parsed)
                 ? parsed
                 : fallback;
-        }
-
-        private static string GetLegacyPollEndpoint(string? pollAction)
-        {
-            return pollAction?.ToLowerInvariant() switch
-            {
-                "getupsvoltage" => "/api/getUpsVoltage",
-                "getirpstatus" => "/api/isUPS",
-                _ => "/api/getUpsStatus"
-            };
-        }
-
-        private static HttpResponseValueType GetLegacyPollResponseType(string? pollAction)
-        {
-            return pollAction?.Equals("GetUpsVoltage", StringComparison.OrdinalIgnoreCase) == true
-                ? HttpResponseValueType.Number
-                : HttpResponseValueType.Integer;
         }
 
         private static string GetObjectAsString(object? value, string fallback)

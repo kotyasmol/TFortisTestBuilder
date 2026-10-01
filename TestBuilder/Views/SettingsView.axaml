@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             x:Name="SettingsRoot"
              x:Class="TestBuilder.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
@@ -14,21 +15,13 @@
 
         <TextBlock Text="Режим интерфейса" FontSize="20" FontWeight="SemiBold"/>
         <StackPanel Spacing="8" IsEnabled="{Binding CanChangeInterfaceMode}">
-            <RadioButton Content="Пульт стенда" GroupName="WorkspaceMode"
+            <RadioButton Content="Пульт стенда" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"
                          IsChecked="{Binding !IsEngineerMode, Mode=TwoWay}"
                          FontSize="18" MinHeight="44"/>
-            <TextBlock Text="Крупные инструкции и запуск готовых программ без редактирования графа."
-                       FontSize="16" TextWrapping="Wrap" Margin="28,0,0,4"/>
-            <RadioButton Content="Инженерный режим" GroupName="WorkspaceMode"
+            <RadioButton Content="Инженерный режим" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"
                          IsChecked="{Binding IsEngineerMode, Mode=TwoWay}"
                          FontSize="18" MinHeight="44"/>
-            <TextBlock Text="Редактор графов, параметры алгоритма и диагностика."
-                       FontSize="16" TextWrapping="Wrap" Margin="28,0,0,4"/>
         </StackPanel>
-        <TextBlock Text="Выбор сохраняется автоматически. Перезапуск не нужен."
-                   FontSize="14" TextWrapping="Wrap"/>
-        <TextBlock Text="Во время проверки и подключения к стенду режим нельзя менять."
-                   IsVisible="{Binding !CanChangeInterfaceMode}" FontSize="16" TextWrapping="Wrap"/>
         <Separator Margin="0,8"/>
 
         <!-- Папка с профилями -->
@@ -115,11 +108,11 @@
 
         <StackPanel Orientation="Horizontal" Spacing="12">
             <RadioButton Content="Светлая"
-                         GroupName="Theme"
+                         GroupName="{Binding #SettingsRoot.ThemeGroupName}"
                          IsChecked="{Binding !IsDarkTheme}"
                          FontSize="14"/>
             <RadioButton Content="Тёмная"
-                         GroupName="Theme"
+                         GroupName="{Binding #SettingsRoot.ThemeGroupName}"
                          IsChecked="{Binding IsDarkTheme}"
                          FontSize="14"/>
         </StackPanel>

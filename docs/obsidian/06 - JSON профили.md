@@ -135,9 +135,7 @@ ID, отсутствующие ноды связей и неверные нап�
 | `Label` | `LabelNodeViewModel` |
 | `Write Register` | `ModbusWriteNodeViewModel` |
 | `Check Register Range` | `CheckRegisterRangeNodeViewModel` |
-| `Check Register Equality` | `CheckRegisterEqualityNodeViewModel` |
 | `Wait Until` | `WaitUntilNodeViewModel` |
-| `Poll Register` | `PollRegisterNodeViewModel` |
 | `Operator Action` | `OperatorActionNodeViewModel` |
 | `Selftest Check` | `SelfTestCheckNodeViewModel` |
 | `Check Variable Equality` | `CheckVariableEqualityNodeViewModel` |
@@ -148,9 +146,6 @@ ID, отсутствующие ноды связей и неверные нап�
 | `Set PSW MAC (UDP)` | `SetPswMacNodeViewModel` |
 | `Update PSW Firmware` | `UpdatePswFirmwareNodeViewModel` |
 | `Run Data Test` | `RunDataTestNodeViewModel` |
-| `Get UPS Status` | `GetUpsStatusNodeViewModel` |
-| `Get UPS Voltage` | `GetUpsVoltageNodeViewModel` |
-| `Get IRP Status` | `GetIrpStatusNodeViewModel` |
 | `Read HTTP Variable` | `ReadHttpVariableNodeViewModel` |
 | `Build MAC From Serial` | `BuildMacFromSerialNodeViewModel` |
 | `Compare Variables` | `CompareVariablesNodeViewModel` |
@@ -161,7 +156,7 @@ ID, отсутствующие ноды связей и неверные нап�
 | `Subtest` | `SubtestNodeViewModel` |
 | `For Slaves` | `ForEachSlaveNodeViewModel` |
 
-Deserializer также принимает часть русских и legacy-имен, например `Старт`, `Конец`, `WriteRegister`, `SELFTEST_CHECK`, `GET_UPS_STATUS`. Старые типы `Send UDP Set MAC`, `SEND_UDP_SET_MAC_PACKET` и `UDP установка MAC` загружаются как `Set Pro MAC`; их UDP-поля игнорируются, а таймаут меньше 10 секунд заменяется безопасным значением 60000 мс.
+Deserializer также принимает часть русских и legacy-имен, например `Старт`, `Конец`, `WriteRegister`, `SELFTEST_CHECK`. Старые типы `Send UDP Set MAC`, `SEND_UDP_SET_MAC_PACKET` и `UDP установка MAC` загружаются как `Set Pro MAC`; их UDP-поля игнорируются, а таймаут меньше 10 секунд заменяется безопасным значением 60000 мс.
 
 Канонические типы при сохранении всегда английские. Русские и legacy-имена нужны только для загрузки старых профилей.
 
@@ -174,7 +169,7 @@ Deserializer также принимает часть русских и legacy-�
 | Delay | `milliseconds` |
 | Label | `text`, `labelWidth`, `labelHeight` |
 | Subtest | `name`, `description`, `isEnabled`, `stopOnError`, `runOnFailure`, `bodyGraph` |
-| Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `sampleCount`, `liveRead` |
+| Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `liveRead` |
 | Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
@@ -349,7 +344,6 @@ DUT может быть строкой вроде `20c`.
 | `Label` | `labelWidth`, `labelHeight` | `300`, `120` |
 | `Selftest Check` | `url` | `SelfTestCheckStep.DefaultUrl` |
 | `Selftest Check` | `pollIntervalMs` | `SelfTestCheckStep.DefaultPollIntervalMs` |
-| `Get UPS Status` | `baseUrl` | `http://192.168.0.1` |
 | `Read HTTP Variable` | `baseUrl`, `endpoint`, `responseType` | `http://192.168.0.1`, `/api/getUpsStatus`, `Integer` |
 | `Wait Variable Until` | `pollAction`, `endpoint`, `responseType` | `HttpGet`, `/api/getUpsStatus`, `Integer` |
 | `Build MAC From Serial` | `serialOffset` | `3200000` |
@@ -358,7 +352,7 @@ DUT может быть строкой вроде `20c`.
 | `For Slaves` | `fromSlaveId`, `toSlaveId`, `step` | `1`, `20`, `1` |
 | `Send Test Report` | `endpoint` | `/api/Api.svc/result.json` |
 | `Subtest` | `runOnFailure` | `false` |
-| `Check Register Range` / `Check Register Equality` / `Wait Until` / `Poll Register` | `liveRead` | `false` |
+| `Check Register Range` / `Wait Until` | `liveRead` | `false` |
 | Любая нода | `color` | `blue` |
 
 Полный список дефолтов описан в [[05 - Справочник нод]].
@@ -388,14 +382,33 @@ JSON-deserializer проигнорирует их как неизвестные 
 `{Dut.NewMac}`. Ветка `Отмена` пропускает HTTP POST. Аварийный отчёт дополнительно
 защищён `Check Variable Range` для `SerialNumber = 3200000..3299999`.
 
-Старые `Wait Variable Until` без `endpoint`/`responseType` сохраняют поведение:
-`GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus` автоматически получают прежние
-endpoint и тип ответа. Специализированные типы `Get UPS Status`,
-`Get UPS Voltage`, `Get IRP Status` также десериализуются, но новые графы должны
-использовать `Read HTTP Variable` и `Wait Variable Until` + `HttpGet`.
+`Wait Variable Until` без полей опроса получает универсальные дефолты:
+`HttpGet`, `/api/getUpsStatus`, `Integer`. Endpoint должен существовать на DUT.
 Для прошивок без скалярного DUT API поддерживается `pollAction = SelftestSnapshot`:
 `endpoint` указывает на тестовую страницу, а каждая попытка обновляет все
 переменные указанного output prefix.
+
+## Удалённые типы и режимы опроса
+
+С 2026-10-01 следующие неиспользуемые типы удалены из VM, runtime, палитры,
+XAML и сериализации:
+
+| Удалённая нода | Как переписать старый профиль |
+|---|---|
+| `Check Register Equality` | `Check Register Range` с одинаковыми `Min` и `Max`. |
+| `Poll Register` | Пересобрать из `Check Register Range` и `Delay`, явно задав критерий успеха. Старая нода принимала большинство успешных замеров; автоматической замены нет. |
+| `Get UPS Status`, `Get UPS Voltage`, `Get IRP Status` | `Read HTTP Variable` с явно заданными endpoint и типом ответа либо selftest-проверки под прошивку устройства. |
+
+Все прежние русские и uppercase aliases также отклоняются. В `Wait Variable Until`
+удалены `GetUpsStatus`, `GetUpsVoltage` и `GetIrpStatus`; вместо них
+используется `HttpGet` с явными параметрами. Автоматического перебора IRP
+endpoint больше нет. Поле `sampleCount` удалено из DTO.
+
+Импорт проверяет корневой граф и оба вложенных поля `body`/`bodyGraph`, включая
+выключенные и аварийные подтесты. При обнаружении удалённого типа или режима
+показывается ошибка с подсказкой; открытый граф не заменяется и проверки не
+пропускаются. Все пять текущих файлов `profiles/*.json` обходятся без этих нод
+и режимов; их алгоритмы не менялись.
 
 ## Совместимость и риски
 

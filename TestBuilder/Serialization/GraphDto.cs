@@ -120,7 +120,7 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? Max { get; set; }
 
-        // --- Check Register Equality / Wait Until ---
+        // --- Register / variable comparisons ---
         [JsonPropertyName("expectedValue")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public object? ExpectedValue { get; set; }
@@ -129,11 +129,6 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("durationMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? DurationMs { get; set; }
-
-        // --- Poll Register ---
-        [JsonPropertyName("sampleCount")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? SampleCount { get; set; }
 
         // --- Selftest / HTTP-backed steps ---
         [JsonPropertyName("url")]

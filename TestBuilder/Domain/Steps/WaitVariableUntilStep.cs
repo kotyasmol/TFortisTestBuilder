@@ -170,41 +170,13 @@ namespace TestBuilder.Domain.Steps
                     : "Не удалось обновить selftest-снимок DUT.";
             }
 
-            if (_pollAction.Equals("GetIrpStatus", StringComparison.OrdinalIgnoreCase))
-            {
-                context.Variables.Remove(_variableName);
-
-                var read = await GetIrpStatusStep.ReadStatusAsync(
-                    _httpRequestService,
-                    _logger,
-                    _baseUrl,
-                    _requestTimeoutMs,
-                    cancellationToken);
-
-                context.SetVariable("WaitVariable.RawResponse", read.RawResponse);
-                context.SetVariable("WaitVariable.Url", read.Url);
-                context.SetVariable("WaitVariable.StatusCode", read.StatusCode);
-
-                if (read.Success)
-                {
-                    context.SetVariable(_variableName, read.Value);
-                    return string.Empty;
-                }
-
-                return read.Error;
-            }
-
-            var poll = _pollAction.ToLowerInvariant() switch
-            {
-                "httpget" => (_endpoint, _responseType),
-                "getupsstatus" => ("/api/getUpsStatus", HttpResponseValueType.Integer),
-                "getupsvoltage" => ("/api/getUpsVoltage", HttpResponseValueType.Number),
-                _ => (string.Empty, _responseType)
-            };
-
-            if (string.IsNullOrWhiteSpace(poll.Item1))
+            if (!_pollAction.Equals("HttpGet", StringComparison.OrdinalIgnoreCase))
             {
                 return $"Неизвестное pollAction '{_pollAction}'.";
+            }
+            if (string.IsNullOrWhiteSpace(_endpoint))
+            {
+                return "Endpoint HTTP-опроса не задан.";
             }
 
             context.Variables.Remove(_variableName);
@@ -212,8 +184,8 @@ namespace TestBuilder.Domain.Steps
                 _httpRequestService,
                 _logger,
                 _baseUrl,
-                poll.Item1,
-                poll.Item2,
+                _endpoint,
+                _responseType,
                 _requestTimeoutMs,
                 cancellationToken);
             ReadHttpVariableStep.SaveDiagnostics(
@@ -221,7 +193,7 @@ namespace TestBuilder.Domain.Steps
                 "WaitVariable",
                 httpRead,
                 _variableName,
-                poll.Item2);
+                _responseType);
 
             if (httpRead.Success)
             {

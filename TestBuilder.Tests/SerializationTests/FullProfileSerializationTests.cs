@@ -139,9 +139,6 @@ public class FullProfileSerializationTests
             .Single(node => node.Name == "16. Печать этикеток");
         Assert.Contains(viewModel.AvailableNodes, node => node is ReadHttpVariableNodeViewModel);
         Assert.DoesNotContain(viewModel.AvailableNodes, node => node.Title == "Check IO-2 Sensors and Relay");
-        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsStatusNodeViewModel);
-        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetUpsVoltageNodeViewModel);
-        Assert.DoesNotContain(viewModel.AvailableNodes, node => node is GetIrpStatusNodeViewModel);
         Assert.False(reportSubtest.RunOnFailure);
         Assert.True(emergencyShutdownSubtest.RunOnFailure);
         Assert.True(failureReportSubtest.RunOnFailure);

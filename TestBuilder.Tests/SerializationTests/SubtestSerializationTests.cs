@@ -263,39 +263,6 @@ public class SubtestSerializationTests
     }
 
     [Fact]
-    public void Deserialize_LegacyWaitPollActionInfersEndpointAndResponseType()
-    {
-        const string json = """
-            {
-              "name": "Legacy wait",
-              "nodes": [
-                {
-                  "id": "0",
-                  "type": "Wait Variable Until",
-                  "x": 0,
-                  "y": 0,
-                  "variableName": "Dut.akb_voltage",
-                  "expectedValue": "24.5",
-                  "comparisonType": "Number",
-                  "pollAction": "GetUpsVoltage"
-                }
-              ],
-              "connections": []
-            }
-            """;
-
-        using var modbus = new ModbusService();
-        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
-
-        GraphSerializer.Deserialize(json, vm);
-
-        var wait = vm.RootGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Single();
-        Assert.Equal("GetUpsVoltage", wait.PollAction);
-        Assert.Equal("/api/getUpsVoltage", wait.Endpoint);
-        Assert.Equal(HttpResponseValueType.Number, wait.ResponseType);
-    }
-
-    [Fact]
     public void Deserialize_LegacyReportMigratesShortSerialToFullServerSerial()
     {
         const string json = """

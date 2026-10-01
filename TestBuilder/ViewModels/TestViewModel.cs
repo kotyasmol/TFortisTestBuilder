@@ -176,9 +176,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new LabelNodeViewModel(),
         new SubtestNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
-        new CheckRegisterEqualityNodeViewModel(),
         new WaitUntilNodeViewModel(),
-        new PollRegisterNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
 
@@ -306,9 +304,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Modbus",
             Find("Запись регистра"),
             Find("Проверка диапазона"),
-            Find("Проверка равенства"),
-            Find("Ожидание значения"),
-            Find("Опрос регистра")));
+            Find("Ожидание значения")));
 
         AvailableNodeCategories.Add(new NodePaletteCategoryViewModel(
             "Проверки",
@@ -1591,9 +1587,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Set PSW MAC (UDP)" => new SetPswMacNodeViewModel { Location = location },
             "Update PSW Firmware" => new UpdatePswFirmwareNodeViewModel { Location = location },
             "Run Data Test" => new RunDataTestNodeViewModel { Location = location },
-            "Get UPS Status" => new GetUpsStatusNodeViewModel { Location = location },
-            "Get UPS Voltage" => new GetUpsVoltageNodeViewModel { Location = location },
-            "Get IRP Status" => new GetIrpStatusNodeViewModel { Location = location },
             "Read HTTP Variable" => new ReadHttpVariableNodeViewModel { Location = location },
             "Wait Variable Until" => new WaitVariableUntilNodeViewModel { Location = location },
             "Build MAC From Serial" => new BuildMacFromSerialNodeViewModel { Location = location },
@@ -1604,9 +1597,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Метка" => new LabelNodeViewModel { Location = location },
             "Подтест" => new SubtestNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
-            "Проверка равенства" => new CheckRegisterEqualityNodeViewModel { Location = location },
             "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
-            "Опрос регистра" => new PollRegisterNodeViewModel { Location = location },
             "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null
         };

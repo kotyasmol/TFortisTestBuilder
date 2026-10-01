@@ -5,7 +5,7 @@ tags:
   - dut
   - variables
   - reference
-updated: 2026-09-08
+updated: 2026-10-01
 ---
 
 # Поля тестовой страницы DUT
@@ -265,7 +265,7 @@ Ethernet-трафика.
 считаться в `SelfTest.ParsedFieldCount`:
 
 - `Dut.NewMac`, `SerialNumber`, `SerialShort`;
-- `LastCheck.*`, `WaitVariable.*`, `HttpRead.*`, `GetIrpStatus.*`;
+- `LastCheck.*`, `WaitVariable.*`, `HttpRead.*`;
 - `DataTest.*`;
 - `TestReportText`, `BuildReport.*`, `SendReport.*`, `PrintLabel.*`;
 - `Execution.*` и прочие служебные результаты шагов.

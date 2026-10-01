@@ -184,9 +184,7 @@ API:
 они выполняют прямое Modbus-чтение:
 
 - `Check Register Range`;
-- `Check Register Equality`;
-- `Wait Until`;
-- `Poll Register`.
+- `Wait Until`.
 
 Для чтения через `RegisterState` должны выполняться условия:
 
