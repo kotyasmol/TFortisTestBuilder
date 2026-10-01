@@ -178,12 +178,7 @@ public partial class StationDashboardViewModel : ViewModelBase
     private void RefreshActiveStages()
     {
         foreach (var stage in Stages)
-            stage.ActiveOperationsText = stage.IsActive
-                ? string.Join(" · ", _activeNodes.Select(item => item.Node)
-                    .Where(node => !IsBoundary(node) && node is not ICompositeNodeViewModel &&
-                        node != stage.Source && _stageByNode.GetValueOrDefault(node) == stage)
-                    .Select(DisplayName).Distinct())
-                : string.Empty;
+            stage.RefreshProgress(_activeNodes.Select(item => item.Node));
         var active = Stages.Where(stage => stage.IsActive).Select(stage => stage.Name).ToArray();
         CurrentStage = active.Length == 0 ? "Ожидание следующего этапа" :
             active.Length == 1 ? active[0] : "Одновременно: " + string.Join(" · ", active);

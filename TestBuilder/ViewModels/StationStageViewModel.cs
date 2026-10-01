@@ -1,10 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using TestBuilder.ViewModels.NodifyVM;
-using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
 
@@ -12,17 +10,14 @@ public enum StationStageState { Pending, Running, Completed, Attention, Interrup
 
 public partial class StationStageViewModel : ViewModelBase
 {
+    private readonly Dictionary<NodeViewModel, int> _stepNumbers = new();
     public NodeViewModel Source { get; }
     public string Name { get; }
     public string Caption => Regex.Replace(Name, @"^\d+[a-zа-я]?[.)]\s*", string.Empty, RegexOptions.IgnoreCase);
     public int Number { get; set; }
-    public IReadOnlyList<string> Details { get; }
-    public bool HasDetails => Details.Count > 0;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasActiveOperations))]
-    private string activeOperationsText = string.Empty;
-    public bool HasActiveOperations => !string.IsNullOrWhiteSpace(ActiveOperationsText);
-    [ObservableProperty] private bool isExpanded;
+    public int StepCount => _stepNumbers.Count;
+    public bool HasSteps => StepCount > 0;
+    [ObservableProperty] private string stepProgressText;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     [NotifyPropertyChangedFor(nameof(ShowStatus))]
@@ -59,16 +54,26 @@ public partial class StationStageViewModel : ViewModelBase
         Source = source;
         Name = name;
         IsCleanup = isCleanup;
-        var details = new List<string>();
         if (source is ICompositeNodeViewModel composite)
         {
             foreach (var node in StationDashboardViewModel.OrderedNodes(composite.BodyGraph))
                 if (!StationDashboardViewModel.IsBoundary(node))
-                    details.Add(StationDashboardViewModel.DisplayName(node));
+                    _stepNumbers.Add(node, _stepNumbers.Count + 1);
         }
-        Details = details;
+        stepProgressText = HasSteps ? $"Шагов: {StepCount}" : string.Empty;
     }
 
-    [RelayCommand]
-    private void ToggleDetails() => IsExpanded = !IsExpanded;
+    internal void RefreshProgress(IEnumerable<NodeViewModel> activeNodes)
+    {
+        if (!IsActive) return;
+        // Count the body's own steps. A nested subtest or loop stays one step while its body runs.
+        var steps = activeNodes.Where(_stepNumbers.ContainsKey).Distinct()
+            .OrderBy(node => _stepNumbers[node]).ToArray();
+        // Keep the last step between notifications, on pause, and after completion.
+        if (steps.Length == 0) return;
+        StepProgressText = steps.Length == 1
+            ? $"Шаг {_stepNumbers[steps[0]]} из {StepCount} — {StationDashboardViewModel.DisplayName(steps[0])}"
+            : $"Шаги {string.Join(", ", steps.Select(node => _stepNumbers[node]))} из {StepCount} — " +
+              string.Join(" · ", steps.Select(StationDashboardViewModel.DisplayName));
+    }
 }

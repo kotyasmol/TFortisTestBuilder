@@ -192,7 +192,7 @@ public class ParallelExecutionUiTests
         dashboard.CompleteRun(ExecutionStatus.Failed, root);
         Assert.Equal(StationStageState.Attention, dashboard.Stages.Single(s => s.Source == first).State);
         Assert.Equal(StationStageState.Interrupted, dashboard.Stages.Single(s => s.Source == second).State);
-        Assert.DoesNotContain(dashboard.Stages, s => s.IsActive || s.HasActiveOperations);
+        Assert.DoesNotContain(dashboard.Stages, s => s.IsActive);
         Assert.Equal("Проверка не завершена", dashboard.Headline);
     }
 
