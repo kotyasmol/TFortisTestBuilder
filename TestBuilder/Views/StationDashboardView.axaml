@@ -156,7 +156,8 @@
           <TextBlock Text="{Binding StationProfileName}" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap" />
           <TextBlock Text="{Binding StationConfigurationCaption}" TextWrapping="Wrap" FontSize="18" Foreground="{DynamicResource TextSecondaryBrush}"
                      IsVisible="{Binding HasStationProfile}" />
-          <TextBlock Text="{Binding Station.CurrentStage}" TextWrapping="Wrap" FontSize="17"
+          <TextBlock Text="{Binding Station.CurrentStage}" TextTrimming="CharacterEllipsis" FontSize="17" Height="26"
+                     ToolTip.Tip="{Binding Station.CurrentStage}"
                      Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsTestRunning}" />
         </StackPanel>
         <StackPanel Grid.Column="1" IsVisible="{Binding Station.HasSerialNumber}" Spacing="4" Margin="20,0,0,0">
@@ -173,7 +174,7 @@
                 <Border Classes="stage" Classes.active="{Binding IsActive}" Classes.attention="{Binding NeedsAttention}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="5">
                   <StackPanel>
-                    <Grid ColumnDefinitions="32,42,*,Auto,44" MinHeight="54" Margin="10,2,4,2">
+                    <Grid ColumnDefinitions="32,42,*,140" MinHeight="54" Margin="10,2,14,2">
                       <PathIcon Classes="state" Classes.active="{Binding IsActive}" Classes.completed="{Binding IsCompleted}"
                                 Classes.attention="{Binding NeedsAttention}" Classes.skipped="{Binding IsSkipped}"
                                 Classes.paused="{Binding IsPaused}" Width="28" Height="28"
@@ -182,23 +183,11 @@
                       <TextBlock Grid.Column="2" Text="{Binding Caption}" FontSize="20" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,8,12,8" />
                       <TextBlock Grid.Column="3" Text="{Binding StatusText}" FontSize="16" VerticalAlignment="Center"
                                  TextWrapping="Wrap" MaxWidth="140" IsVisible="{Binding ShowStatus}" />
-                      <Button Grid.Column="4" Command="{Binding ToggleDetailsCommand}" IsVisible="{Binding HasDetails}"
-                              Width="42" MinHeight="44" Padding="10" Background="Transparent" BorderThickness="0"
-                              ToolTip.Tip="Шаги этапа" AutomationProperties.Name="Показать или скрыть шаги этапа">
-                        <PathIcon Classes="detail" Classes.expanded="{Binding IsExpanded}" Width="22" Height="22" />
-                      </Button>
                     </Grid>
-                    <TextBlock Text="{Binding ActiveOperationsText}" IsVisible="{Binding HasActiveOperations}"
-                               TextWrapping="Wrap" FontSize="16" Margin="94,0,44,10"
+                    <TextBlock Text="{Binding StepProgressText}" IsVisible="{Binding HasSteps}"
+                               ToolTip.Tip="{Binding StepProgressText}" TextTrimming="CharacterEllipsis"
+                               FontSize="18" Height="28" Margin="94,0,14,10"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <ItemsControl ItemsSource="{Binding Details}" IsVisible="{Binding IsExpanded}" Margin="94,0,44,14">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                          <TextBlock Text="{Binding}" FontSize="18" TextWrapping="Wrap" Margin="0,6"
-                                     Foreground="{DynamicResource TextSecondaryBrush}" />
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
                   </StackPanel>
                 </Border>
               </DataTemplate>

@@ -138,24 +138,132 @@ public class StationDashboardTests
         Assert.Same(node, vm.RootGraph.Nodes.First());
         Assert.Equal(stages, vm.Station.Stages);
         Assert.Equal(Enumerable.Range(1, 11), vm.Station.Stages.Select(s => s.Number));
-        Assert.All(vm.Station.Stages, s => Assert.True(s.HasDetails));
+        Assert.All(vm.Station.Stages, s => Assert.True(s.HasSteps));
     }
 
     [Fact]
-    public void StageDetails_FollowGraphConnectionsWithoutBoundaryNodes()
+    public void StepProgress_FollowsConnectionsAndExcludesBoundaryAndUnconnectedNodes()
     {
-        var parent = new SubtestNodeViewModel { Name = "04. Этап" };
-        parent.BodyGraph.Nodes.Clear();
-        parent.BodyGraph.Connections.Clear();
-        var start = new StartNodeViewModel();
+        var (graph, parent, _, _) = CreateGraph();
+        parent.Name = "04. Этап";
         var first = new SubtestNodeViewModel { Name = "Первый" };
         var second = new SubtestNodeViewModel { Name = "Второй" };
-        foreach (var node in new NodeViewModel[] { second, start, first }) parent.BodyGraph.Nodes.Add(node);
-        parent.BodyGraph.Connections.Add(new ConnectionViewModel(start.Output[0], first.In));
-        parent.BodyGraph.Connections.Add(new ConnectionViewModel(first.SuccessOut, second.In));
-        var stage = new StationStageViewModel(parent, parent.Name);
+        SetBody(parent.BodyGraph, first, second);
+        parent.BodyGraph.Nodes.Add(new DelayNodeViewModel());
+        parent.BodyGraph.Nodes.Add(new LabelNodeViewModel());
+        var dashboard = new StationDashboardViewModel();
+        var context = new TestContext(new RegisterState());
+        dashboard.BeginRun(graph);
+        var stage = dashboard.Stages[0];
         Assert.Equal("Этап", stage.Caption);
-        Assert.Equal(new[] { "Первый", "Второй" }, stage.Details);
+        Assert.Equal(2, stage.StepCount);
+        Assert.Equal("Шагов: 2", stage.StepProgressText);
+        dashboard.NodeStarted(parent, context);
+        dashboard.NodeStarted(parent.BodyGraph.Nodes.OfType<StartNodeViewModel>().Single(), context);
+        Assert.Equal("Шагов: 2", stage.StepProgressText);
+        dashboard.NodeStarted(first, context);
+        Assert.Equal("Шаг 1 из 2 — Первый", stage.StepProgressText);
+        dashboard.NodeCompleted(first, StepResult.True, context);
+        dashboard.NodeFinished(first, context);
+        Assert.Equal("Шаг 1 из 2 — Первый", stage.StepProgressText);
+        dashboard.SetPaused(true);
+        Assert.Equal("Шаг 1 из 2 — Первый", stage.StepProgressText);
+        dashboard.SetPaused(false);
+        dashboard.NodeStarted(second, context);
+        Assert.Equal("Шаг 2 из 2 — Второй", stage.StepProgressText);
+        dashboard.NodeCompleted(second, StepResult.True, context);
+        dashboard.NodeFinished(second, context);
+        dashboard.NodeCompleted(parent, StepResult.True, context);
+        dashboard.NodeFinished(parent, context);
+        Assert.Equal("Шаг 2 из 2 — Второй", stage.StepProgressText);
+        dashboard.BeginRun(graph);
+        Assert.Equal("Шагов: 2", dashboard.Stages[0].StepProgressText);
+    }
+
+    [Fact]
+    public void StepProgress_NestedLoopOperationsDoNotChangeTheParentStep()
+    {
+        var (graph, parent, _, _) = CreateGraph();
+        var loop = new ForEachSlaveNodeViewModel();
+        var inner = new DelayNodeViewModel();
+        SetBody(loop.BodyGraph, inner);
+        SetBody(parent.BodyGraph, loop, new DelayNodeViewModel());
+        var dashboard = new StationDashboardViewModel();
+        var context = new TestContext(new RegisterState());
+        dashboard.BeginRun(graph);
+        var stage = dashboard.Stages[0];
+        dashboard.NodeStarted(parent, context);
+        dashboard.NodeStarted(loop, context);
+        Assert.Equal(2, stage.StepCount);
+        Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+        for (var iteration = 0; iteration < 4; iteration++)
+        {
+            dashboard.NodeStarted(inner, context);
+            Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+            dashboard.NodeCompleted(inner, StepResult.True, context);
+            dashboard.NodeFinished(inner, context);
+            Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+        }
+    }
+
+    [Fact]
+    public void StepProgress_ParallelStepsStayNumberedAndFinishIndependently()
+    {
+        var (graph, parent, _, _) = CreateGraph();
+        var first = new SubtestNodeViewModel { Name = "Первый" };
+        var second = new SubtestNodeViewModel { Name = "Второй" };
+        var join = new SubtestNodeViewModel { Name = "Завершение" };
+        SetBody(parent.BodyGraph, first, join);
+        parent.BodyGraph.Nodes.Add(second);
+        var start = parent.BodyGraph.Nodes.OfType<StartNodeViewModel>().Single();
+        parent.BodyGraph.Connections.Add(new ConnectionViewModel(start.Output[0], second.In));
+        parent.BodyGraph.Connections.Add(new ConnectionViewModel(second.SuccessOut, join.In));
+        var dashboard = new StationDashboardViewModel();
+        var context = new TestContext(new RegisterState());
+        var left = context.CreateParallelBranch(CancellationToken.None);
+        var right = context.CreateParallelBranch(CancellationToken.None);
+        dashboard.BeginRun(graph);
+        var stage = dashboard.Stages[0];
+        dashboard.NodeStarted(parent, context);
+        dashboard.NodeStarted(second, right);
+        dashboard.NodeStarted(first, left);
+        Assert.Equal("Шаги 1, 2 из 3 — Первый · Второй", stage.StepProgressText);
+        dashboard.NodeCompleted(first, StepResult.True, left);
+        dashboard.NodeFinished(first, left);
+        Assert.Equal("Шаг 2 из 3 — Второй", stage.StepProgressText);
+        dashboard.FinishScope(right);
+        Assert.Equal("Шаг 2 из 3 — Второй", stage.StepProgressText);
+        dashboard.NodeStarted(join, context);
+        Assert.Equal("Шаг 3 из 3 — Завершение", stage.StepProgressText);
+    }
+
+    [Fact]
+    public void StepProgress_SkippedBranchKeepsPlanNumbersAndCancellationKeepsLastStep()
+    {
+        var (graph, parent, _, _) = CreateGraph();
+        var condition = new SubtestNodeViewModel { Name = "Условие" };
+        var success = new SubtestNodeViewModel { Name = "Успех" };
+        var recovery = new SubtestNodeViewModel { Name = "Восстановление" };
+        var join = new SubtestNodeViewModel { Name = "Завершение" };
+        SetBody(parent.BodyGraph, condition, success, join);
+        parent.BodyGraph.Nodes.Add(recovery);
+        parent.BodyGraph.Connections.Add(new ConnectionViewModel(condition.ErrorOut, recovery.In));
+        parent.BodyGraph.Connections.Add(new ConnectionViewModel(recovery.SuccessOut, join.In));
+        var dashboard = new StationDashboardViewModel();
+        var context = new TestContext(new RegisterState());
+        dashboard.BeginRun(graph);
+        var stage = dashboard.Stages[0];
+        dashboard.NodeStarted(parent, context);
+        dashboard.NodeStarted(condition, context);
+        dashboard.NodeCompleted(condition, StepResult.False, context);
+        dashboard.NodeFinished(condition, context);
+        dashboard.NodeStarted(recovery, context);
+        Assert.Equal("Шаг 3 из 4 — Восстановление", stage.StepProgressText);
+        dashboard.NodeFinished(recovery, context);
+        dashboard.NodeFinished(parent, context);
+        dashboard.CompleteRun(ExecutionStatus.Cancelled, context);
+        Assert.Equal(StationStageState.Interrupted, stage.State);
+        Assert.Equal("Шаг 3 из 4 — Восстановление", stage.StepProgressText);
     }
 
     [Fact]
@@ -343,6 +451,22 @@ public class StationDashboardTests
         foreach (var subtest in vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>())
             Assert.All(subtest.BodyGraph.Nodes, node => Assert.True(node is StartNodeViewModel or EndNodeViewModel or
                 DelayNodeViewModel or OperatorActionNodeViewModel));
+    }
+
+    private static void SetBody(GraphWorkspaceViewModel body, params NodeViewModel[] steps)
+    {
+        var start = new StartNodeViewModel();
+        var end = new EndNodeViewModel();
+        body.Nodes.Clear();
+        body.Connections.Clear();
+        // Deliberately store nodes out of execution order.
+        foreach (var node in steps.Reverse().Prepend(end).Append(start)) body.Nodes.Add(node);
+        NodeViewModel previous = start;
+        foreach (var node in steps.Append(end))
+        {
+            body.Connections.Add(new ConnectionViewModel(previous.Output[0], node.Input[0]));
+            previous = node;
+        }
     }
 
     private sealed class ThrowingStep : ITestStep
