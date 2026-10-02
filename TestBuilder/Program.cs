@@ -1,5 +1,6 @@
 ﻿using System;
 using Avalonia;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder
 {
@@ -11,6 +12,11 @@ namespace TestBuilder
         [STAThread]
         public static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                if (e.ExceptionObject is Exception exception)
+                    DiagnosticLog.WriteException("Необработанная ошибка приложения", exception);
+            };
             App.ConfigureStartupArguments(args);
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }

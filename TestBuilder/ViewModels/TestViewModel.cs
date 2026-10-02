@@ -735,7 +735,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         catch (Exception ex)
         {
             StatusMessage = "Не удалось подключить стенд. Проверьте кабель и питание.";
-            TestingLogger.Error(ex.ToString());
+            LogUiException("Подключение/отключение стенда", ex);
         }
         finally { IsConnecting = false; }
     }
@@ -777,9 +777,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
                 return;
             }
-            catch
+            catch (Exception ex)
             {
+                LogUiException($"Подключение к {port}", ex);
+                DisposeRegisterMonitor();
                 await _modbusService.DisconnectAsync();
+                IsConnected = false;
+                IsMonitoringActive = false;
+                SlaveRegistry.Instance.NotifyConnected(false);
             }
         }
 
@@ -1354,9 +1359,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             Station.Prepare(RootGraph);
             StatusMessage = $"Загружен профиль: {name}";
+            CurrentGraphOpened?.Invoke();
         }
         catch (Exception ex)
         {
+            LogUiException($"Загрузка профиля '{filePath}'", ex);
             _profileLoadError = ex.Message;
             _currentProfilePath = null;
             OnPropertyChanged(nameof(CurrentProfileName));
@@ -1367,6 +1374,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             StatusMessage = $"Ошибка загрузки: {ex.Message}";
         }
         RefreshStationAvailability();
+    }
+
+    private void LogUiException(string operation, Exception exception)
+    {
+        var logPath = DiagnosticLog.WriteException(operation, exception);
+        TestingLogger.Error($"{operation}: {exception}");
+        if (logPath != null)
+            TestingLogger.Info($"Подробности ошибки сохранены: {logPath}");
     }
 
     private async Task ImportProfilesAsync()
