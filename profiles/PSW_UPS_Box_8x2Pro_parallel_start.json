@@ -1735,7 +1735,7 @@
             "y": 120,
             "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 180000,
+            "timeoutMs": 300000,
             "pollIntervalMs": 5000,
             "validationRules": "",
             "psw2G6FHardwareChecks": false,
