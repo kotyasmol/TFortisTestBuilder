@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Nodify;
 using System;
 using TestBuilder.ViewModels;
@@ -30,6 +31,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     private double _labelResizeStartHeight;
     private bool _isDisposed;
     private bool _fitPending;
+    private bool _fitScheduled;
 
     public GraphEditorView()
     {
@@ -175,6 +177,21 @@ public partial class GraphEditorView : UserControl, IDisposable
     }
 
     private void OnEditorLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_isDisposed || !_fitPending || _fitScheduled)
+            return;
+
+        // Nodify updates its viewport during layout too. Fitting from inside
+        // LayoutUpdated can use the previous viewport size on the first show.
+        _fitScheduled = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _fitScheduled = false;
+            FitAfterLayout();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void FitAfterLayout()
     {
         if (_isDisposed || !_fitPending || !Editor.IsEffectivelyVisible ||
             !Editor.IsMeasureValid || !Editor.IsArrangeValid ||

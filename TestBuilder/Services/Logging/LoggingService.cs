@@ -31,13 +31,15 @@ namespace TestBuilder.Services.Logging
             Category = category ?? string.Empty;
             Message = message ?? string.Empty;
 
-            // Определяем цвет по содержимому сообщения — только для цветных меток
-            if (message.Contains("[OK]"))
-                HighlightColor = "#16A34A";
-            else if (message.Contains("[ОШИБКА]"))
+            // Error severity wins even when an exception quotes an earlier [OK] message.
+            if (IsFailureSummary || level == LogLevel.Error || Message.Contains("[ОШИБКА]") || Message.Contains("[ERROR]"))
                 HighlightColor = "#DC2626";
-            else if (message.Contains("[ШАГ]"))
+            else if (Message.Contains("[OK]"))
+                HighlightColor = "#16A34A";
+            else if (Message.Contains("[ШАГ]"))
                 HighlightColor = "#2563EB";
+            else if (level == LogLevel.Warning || Message.Contains("[ОСТАНОВ]"))
+                HighlightColor = "#D97706";
             else
                 HighlightColor = null; // null = использовать DynamicResource из XAML
         }
@@ -51,6 +53,7 @@ namespace TestBuilder.Services.Logging
         public string? HighlightColor { get; }
 
         public bool IsHighlighted => HighlightColor != null;
+        public bool IsFailureSummary => Message.StartsWith("[ПРИЧИНА СБОЯ]", StringComparison.Ordinal);
 
         public override string ToString()
             => $"[{Timestamp:HH:mm:ss}] {Message}";

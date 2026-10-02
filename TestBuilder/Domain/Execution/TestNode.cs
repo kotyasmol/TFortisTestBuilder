@@ -19,6 +19,8 @@ namespace TestBuilder.Domain.Execution
         /// </summary>
         public object? Source { get; init; }
 
+        public string DisplayName { get; init; } = string.Empty;
+
         /// <summary>
         /// Следующий узел при линейном выполнении.
         /// </summary>

@@ -48,17 +48,18 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = ResolveSlaveId(context);
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
 
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Запись регистра → устройство не задано, адрес {_address}, значение {_value}.");
+                    $"[ШАГ] Запись регистра → устройство не задано, адрес {registerAddress}, значение {_value}.");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"[ШАГ] Запись регистра → устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
+                $"[ШАГ] Запись регистра → устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}.");
 
             var writeOk = await _modbusService.WriteRegisterAsync(
                 actualSlaveId.Value,
@@ -70,19 +71,20 @@ namespace TestBuilder.Domain.Steps
             if (!writeOk)
             {
                 _logger.Warning(
-                    $"[ОШИБКА] Запись не выполнена. Устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
+                    $"[ОШИБКА] Запись не выполнена. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}.");
 
                 return StepResult.False;
             }
 
             if (!_verifyWrite)
             {
-                _logger.Info("[OK] Запись выполнена.");
+                _logger.Info($"[OK] Запись выполнена. Устройство {actualSlaveId}, адрес {registerAddress}.");
                 return StepResult.True;
             }
 
-            _logger.Info("[OK] Запись выполнена. Проверка значения...");
+            _logger.Info($"[OK] Запись выполнена. Устройство {actualSlaveId}, адрес {registerAddress}. Проверка значения...");
 
+            var lastVerificationError = string.Empty;
             for (var attempt = 1; attempt <= VerifyAttempts; attempt++)
             {
                 if (attempt > 1)
@@ -102,16 +104,18 @@ namespace TestBuilder.Domain.Steps
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
+                    lastVerificationError = $"Ошибка чтения: {ex.Message}";
                     _logger.Warning(
-                        $"[ОШИБКА] Ошибка чтения регистра для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {_address}: {ex.Message}");
+                        $"[ОШИБКА] Ошибка чтения регистра для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}: {ex.Message}");
 
                     continue;
                 }
 
                 if (readValues == null || readValues.Length == 0)
                 {
+                    lastVerificationError = "Регистр не прочитан: получен пустой ответ.";
                     _logger.Warning(
-                        $"[ОШИБКА] Не удалось прочитать регистр для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {_address}.");
+                        $"[ОШИБКА] Не удалось прочитать регистр для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}.");
 
                     continue;
                 }
@@ -123,17 +127,18 @@ namespace TestBuilder.Domain.Steps
                     context.RegisterState.Update(actualSlaveId.Value, _address, actualValue);
 
                     _logger.Info(
-                        $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
+                        $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.");
 
                     return StepResult.True;
                 }
 
+                lastVerificationError = $"Ожидалось {_value}, прочитано {actualValue}.";
                 _logger.Warning(
-                    $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {_address}.");
+                    $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.");
             }
 
             _logger.Warning(
-                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {_address}, значение {_value}.");
+                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. {lastVerificationError}");
 
             return StepResult.False;
         }

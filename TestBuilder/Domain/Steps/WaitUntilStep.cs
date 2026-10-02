@@ -45,17 +45,18 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = _useCurrentSlaveId ? context.CurrentSlaveId : _slaveId;
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
 
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Ожидание значения -> устройство не задано, адрес {_address}, ожидалось {_expectedValue}.");
+                    $"[ШАГ] Ожидание значения -> устройство не задано, адрес {registerAddress}, ожидалось {_expectedValue}.");
 
                 return StepResult.False;
             }
 
             _logger.Info(
-                $"[ШАГ] Ожидание значения -> устройство {actualSlaveId}, адрес {_address}, ожидаемое {_expectedValue}, таймаут {_timeoutMs}мс, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
+                $"[ШАГ] Ожидание значения -> устройство {actualSlaveId}, адрес {registerAddress}, ожидаемое {_expectedValue}, таймаут {_timeoutMs}мс, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
 
             var deadline = DateTime.UtcNow.AddMilliseconds(_timeoutMs);
             string lastError = string.Empty;
@@ -75,7 +76,7 @@ namespace TestBuilder.Domain.Steps
                 if (read.Success && read.Value == _expectedValue)
                 {
                     _logger.Info(
-                        $"[OK] Устройство {actualSlaveId}, адрес {_address}: получено значение {read.Value}.");
+                        $"[OK] Устройство {actualSlaveId}, адрес {registerAddress}: получено значение {read.Value}.");
 
                     return StepResult.True;
                 }
@@ -88,7 +89,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Warning(
-                $"[ОШИБКА] Таймаут {_timeoutMs}мс истёк. Устройство {actualSlaveId}, адрес {_address}, ожидалось {_expectedValue}; {lastError}.");
+                $"[ОШИБКА] Таймаут {_timeoutMs}мс истёк. Устройство {actualSlaveId}, адрес {registerAddress}, ожидалось {_expectedValue}; {lastError}.");
 
             return StepResult.False;
         }

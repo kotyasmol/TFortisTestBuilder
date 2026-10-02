@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TestBuilder.Domain.Execution;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
 
@@ -41,7 +42,16 @@ internal sealed class ExecutionUiState
         }
 
         _active.Add((scope, node));
+        node.HasExecutionSucceeded = false;
         node.IsExecuting = true;
+    }
+
+    public void NodeCompleted(NodeViewModel node, StepResult result)
+    {
+        // A finally notification also happens on cancellation; only a returned
+        // successful result can turn a node green. Disabled subtests are skipped.
+        node.HasExecutionSucceeded = result is StepResult.Next or StepResult.True or StepResult.Stop
+            && !node.HasExecutionError && node is not SubtestNodeViewModel { IsEnabled: false };
     }
 
     public void NodeFinished(NodeViewModel node, Guid scope)

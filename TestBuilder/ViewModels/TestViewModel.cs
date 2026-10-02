@@ -650,7 +650,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _graphPath.Add(RootGraph.Title);
         OnPropertyChanged(nameof(CurrentGraphPath));
 
-        ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
+        ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
         ClearUndoRedoRecursive(RootGraph);
         ResetConnectorsStateRecursive(RootGraph);
 
@@ -935,12 +935,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         TestContext? context = null;
         var runCleanup = false;
         var executionStatus = ExecutionStatus.Failed;
+        ExecutionFailure? runFailure = null;
 
         try
         {
             ResetToRootGraph();
 
-            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
+            ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
             using var compiler = new GraphCompiler(_modbusService, TestingLogger);
             var graph = compiler.Compile(RootGraph);
@@ -952,6 +953,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             context = new TestContext(_registerState)
             {
+                ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                 CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
                 ProfileName = profileName,
@@ -982,13 +984,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context,
                 _testRunCts.Token);
             executionStatus = result;
+            runFailure = context.CriticalFailure ?? context.Failure;
+            if (runFailure == null && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
+                runFailure = new ExecutionFailure(failedCheck.Name, failedCheck.Value);
 
             if (result != ExecutionStatus.Completed)
             {
                 runCleanup = true;
                 context.HasCriticalError = true;
                 context.SetVariable("Execution.Status", result.ToString());
-                TestingLogger.Warning($"[ОШИБКА] Тест завершён с ошибкой. Результат: {result}.");
+                runFailure ??= new ExecutionFailure("Выполнение графа", $"Граф завершён с результатом {result}.");
+                context.SetVariable("Execution.Error", runFailure.Summary);
+                TestingLogger.Error($"[ОШИБКА] Тест завершён: {runFailure.Summary}");
             }
             else
             {
@@ -1011,11 +1018,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         catch (Exception ex)
         {
             runCleanup = true;
+            runFailure = context?.CriticalFailure ?? context?.Failure ??
+                new ExecutionFailure(context == null ? "Подготовка графа" : "Выполнение графа", ex.Message);
             if (context != null)
             {
                 context.HasCriticalError = true;
                 context.SetVariable("Execution.Status", ExecutionStatus.Failed.ToString());
-                context.SetVariable("Execution.Error", ex.Message);
+                context.SetVariable("Execution.Error", runFailure.Summary);
             }
 
             TestingLogger.Error(ex.ToString());
@@ -1039,7 +1048,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _pauseCompletion.TrySetResult(true);
             _testRunCts?.Dispose();
             _testRunCts = null;
-            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: false);
+            ClearExecutionHighlightsRecursive(RootGraph, clearResults: false);
             ResetConnectorsStateRecursive(RootGraph);
             if (context != null && context.Variables.ContainsKey("ReportDelivery.Status"))
             {
@@ -1050,6 +1059,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 if (delivery == "Sent") TestingLogger.Info(StatusMessage);
                 else TestingLogger.Warning(StatusMessage);
             }
+            // Cleanup uses the same context and may fail itself; keep the main run's original cause last.
+            if (runFailure != null)
+                TestingLogger.Error(runFailure.LogMessage);
             LoggingService.Instance.StopFileLogForRun();
         }
     }
@@ -1202,7 +1214,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         CancellationToken cancellationToken)
     {
         if (node.Source is NodeViewModel source)
-            await Dispatcher.UIThread.InvokeAsync(() => Station.NodeCompleted(source, result, context));
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _executionUi.NodeCompleted(source, result);
+                Station.NodeCompleted(source, result, context);
+            });
     }
 
     public async Task NodeFinishedAsync(
@@ -1231,6 +1247,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            nodeViewModel.HasExecutionSucceeded = false;
             nodeViewModel.HasExecutionError = true;
             Station.NodeFailed(nodeViewModel, context);
         });
@@ -1258,7 +1275,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private void RefreshEffectivePause() => IsPauseEffective =
         IsTestPaused && !IsStopping && _executionUi.CanPause(Station.IsAwaitingAction);
 
-    private void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph, bool clearErrors)
+    private void ClearExecutionHighlightsRecursive(GraphWorkspaceViewModel graph, bool clearResults)
     {
         _executionUi.Clear();
 
@@ -1266,12 +1283,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             node.IsExecuting = false;
 
-            if (clearErrors)
+            if (clearResults)
+            {
                 node.HasExecutionError = false;
+                node.HasExecutionSucceeded = false;
+            }
 
             if (node is ICompositeNodeViewModel composite)
             {
-                ClearExecutionHighlightsRecursive(composite.BodyGraph, clearErrors);
+                ClearExecutionHighlightsRecursive(composite.BodyGraph, clearResults);
             }
 
             if (node is SubtestNodeViewModel subtest)
@@ -1340,6 +1360,21 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         finally { _refreshingProfiles = false; }
     }
 
+    public void ShowSelectedProfileGraph()
+    {
+        if (!CanChooseProfile || SelectedProfile == null) return;
+
+        if (_profileLoadError.Length > 0)
+        {
+            LoadProfile(SelectedProfile.FilePath);
+            return;
+        }
+
+        // Re-selecting a loaded profile is navigation, so keep unsaved edits.
+        ResetToRootGraph();
+        CurrentGraphOpened?.Invoke();
+    }
+
     private void LoadProfile(string filePath)
     {
         if (!CanChooseProfile) return;
@@ -1350,7 +1385,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var name = GraphSerializer.Deserialize(json, this);
 
             ResetToRootGraph();
-            ClearExecutionHighlightsRecursive(RootGraph, clearErrors: true);
+            ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
             ResetConnectorsStateRecursive(RootGraph);
             ClearUndoRedoRecursive(RootGraph);
 

@@ -26,18 +26,18 @@ public partial class ProfileListView : UserControl
             handledEventsToo: false);
     }
 
-    private void OnProfileSelectionChanged(object? sender, SelectionChangedEventArgs e) { }
-
     private void OnProfileListPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is not TestViewModel vm) return;
-        _profileBeforeClick = vm.SelectedProfile;
+        _profileBeforeClick = e.GetCurrentPoint(ProfileListBox).Properties.IsLeftButtonPressed &&
+            DataContext is TestViewModel vm ? vm.SelectedProfile : null;
     }
 
     private void OnProfileListPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (DataContext is not TestViewModel vm) return;
-        if (_profileBeforeClick == null) return;
+        var profileBeforeClick = _profileBeforeClick;
+        _profileBeforeClick = null;
+        if (e.InitialPressMouseButton != MouseButton.Left || profileBeforeClick == null ||
+            DataContext is not TestViewModel vm) return;
 
         var visual = ProfileListBox.InputHitTest(e.GetPosition(ProfileListBox));
         var element = visual as Avalonia.Controls.Control;
@@ -55,13 +55,9 @@ public partial class ProfileListView : UserControl
 
         if (clicked == null) return;
 
-        if (ReferenceEquals(clicked, _profileBeforeClick))
+        if (ReferenceEquals(clicked, profileBeforeClick) && ReferenceEquals(clicked, vm.SelectedProfile))
         {
-            var name = clicked.Name;
-            _profileBeforeClick = null;
-            ProfileListBox.SelectedItem = null;
-            vm.ClearGraph();
-            vm.StatusMessage = $"Профиль закрыт: {name}";
+            vm.ShowSelectedProfileGraph();
         }
     }
 }

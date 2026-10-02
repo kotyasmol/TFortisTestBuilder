@@ -26,6 +26,7 @@ namespace TestBuilder.Services
         private readonly IHttpRequestService _serialNumberRequestService;
         private bool _ownsClients;
         private readonly HashSet<GraphWorkspaceViewModel> _compiling = new();
+        private readonly List<string> _graphNames = new();
 
         public GraphCompiler(IModbusService modbusService, ILogger logger)
             : this(modbusService, new HttpRequestService(), logger)
@@ -42,7 +43,7 @@ namespace TestBuilder.Services
             _modbusService = modbusService;
             _httpRequestService = httpRequestService;
             _serialNumberRequestService = httpRequestService;
-            _logger = logger;
+            _logger = logger is StepDiagnosticLogger ? logger : new StepDiagnosticLogger(logger);
         }
 
         public void Dispose()
@@ -57,8 +58,13 @@ namespace TestBuilder.Services
         {
             if (!_compiling.Add(graph))
                 throw new InvalidOperationException($"Граф '{graph.Title}' содержит рекурсивное вложение.");
+            _graphNames.Add(graph.Title);
             try { return CompileCore(graph); }
-            finally { _compiling.Remove(graph); }
+            finally
+            {
+                _graphNames.RemoveAt(_graphNames.Count - 1);
+                _compiling.Remove(graph);
+            }
         }
 
         private CompiledGraph CompileCore(GraphWorkspaceViewModel graph)
@@ -67,7 +73,10 @@ namespace TestBuilder.Services
             if (starts.Count != 1)
                 throw new InvalidOperationException($"В графе '{graph.Title}' должна быть ровно одна стартовая нода (найдено {starts.Count}).");
 
-            var map = graph.Nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node));
+            var map = graph.Nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
+            {
+                DisplayName = $"{string.Join(" / ", _graphNames)} / {node.Title}"
+            });
             var transitions = map.Values.ToDictionary(node => node,
                 _ => new Dictionary<StepResult, List<TestNode>>());
             foreach (var connection in graph.Connections)

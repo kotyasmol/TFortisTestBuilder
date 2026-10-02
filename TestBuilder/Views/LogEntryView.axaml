@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:logging="using:TestBuilder.Services.Logging"
+             x:Class="TestBuilder.Views.LogEntryView"
+             x:DataType="logging:LogEntry">
+  <UserControl.Styles>
+    <Style Selector="Border.failure">
+      <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerTextBrush}" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+      <Setter Property="Padding" Value="8,6" />
+    </Style>
+    <Style Selector="SelectableTextBlock.highlighted">
+      <Setter Property="Foreground" Value="{Binding HighlightColor}" />
+    </Style>
+    <Style Selector="SelectableTextBlock.failure">
+      <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes.failure="{Binding IsFailureSummary}" Margin="2">
+    <SelectableTextBlock Text="{Binding}"
+                         Classes.highlighted="{Binding IsHighlighted}"
+                         Classes.failure="{Binding IsFailureSummary}"
+                         FontFamily="Consolas" FontSize="11" TextWrapping="Wrap">
+      <SelectableTextBlock.Styles>
+        <Style Selector="SelectableTextBlock">
+          <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+      </SelectableTextBlock.Styles>
+    </SelectableTextBlock>
+  </Border>
+</UserControl>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Monitoring;
+using TestBuilder.Domain.Modbus;
 
 namespace TestBuilder.Domain.Execution
 {
@@ -20,6 +21,8 @@ namespace TestBuilder.Domain.Execution
 
         public RegisterState RegisterState { get; }
 
+        public ModbusRegisterCatalog ModbusRegisters { get; init; } = ModbusRegisterCatalog.Empty;
+
         public CancellationToken CancellationToken { get; set; }
 
         public bool IsConnected { get; set; }
@@ -27,6 +30,9 @@ namespace TestBuilder.Domain.Execution
         public string? ProfileName { get; set; }
 
         public bool HasCriticalError { get; set; }
+
+        public ExecutionFailure? Failure { get; internal set; }
+        public ExecutionFailure? CriticalFailure { get; internal set; }
 
         public byte? CurrentSlaveId { get; set; }
 
@@ -50,6 +56,7 @@ namespace TestBuilder.Domain.Execution
             {
                 ParentExecutionScopeId = ExecutionScopeId,
                 RegisterMonitor = RegisterMonitor,
+                ModbusRegisters = ModbusRegisters,
                 CancellationToken = cancellationToken,
                 IsConnected = IsConnected,
                 ProfileName = ProfileName,
@@ -75,6 +82,10 @@ namespace TestBuilder.Domain.Execution
         internal void MergeParallelBranches(IReadOnlyList<TestContext> branches,
             IReadOnlyList<ExecutionStatus> statuses, IReadOnlyList<Exception?> errors)
         {
+            Failure = branches.Where((branch, index) => statuses[index] == ExecutionStatus.Failed && branch.Failure != null)
+                .Select(branch => branch.Failure).OrderBy(failure => failure!.Sequence).FirstOrDefault() ?? Failure;
+            CriticalFailure ??= branches.Select(branch => branch.CriticalFailure)
+                .Where(failure => failure != null).OrderBy(failure => failure!.Sequence).FirstOrDefault();
             var reportPrefixLength = ReportEntries.Count;
             var writes = new Dictionary<string, List<int>>(StringComparer.Ordinal);
             var snapshots = new List<Dictionary<string, object>>();
