@@ -22,7 +22,8 @@ public class Io2ProfileTests
     [Theory]
     [InlineData(FullProfile, false)]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", true)]
-    public void ProfilesUseVisibleWriteAndFreshWebWaitNodes(string file, bool relay)
+    [InlineData("PSW_UPS_Box_8x2Pro_parallel_start.json", true)]
+    public void ProfilesUseVisibleWriteAndFreshWebWaitNodes(string file, bool isPro)
     {
         using var service = new ModbusService();
         var vm = Load(file, service);
@@ -37,14 +38,14 @@ public class Io2ProfileTests
                 Assert.False(n.UseCurrentSlaveId);
                 Assert.True(n.VerifyWrite);
             });
-            var expectedWrites = relay
+            var expectedWrites = isPro
                 ? new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0), (1501, 1), (1501, 0) }
                 : new[] { (1500, 0), (1501, 0), (1500, 1), (1500, 0) };
             Assert.Equal(expectedWrites,
                 writes.Where(n => n.Address is 1500 or 1501).Select(n => ((int)n.Address, (int)n.Value)));
             Assert.IsType<ModbusWriteNodeViewModel>(sequence[1]);
             Assert.IsType<ModbusWriteNodeViewModel>(sequence[2]);
-            if (!relay)
+            if (!isPro)
             {
                 var baseline = Assert.IsType<SelfTestCheckNodeViewModel>(sequence[3]);
                 Assert.Equal("http://192.168.0.1/test.shtml", baseline.Url);
@@ -53,7 +54,7 @@ public class Io2ProfileTests
                 Assert.DoesNotContain(sequence, n => n is CheckVariableEqualityNodeViewModel);
                 Assert.Equal(new[] { "Dut.sensor_1" }, sequence.OfType<WaitVariableUntilNodeViewModel>().Select(n => n.VariableName));
             }
-            foreach (var sensor in relay ? new[] { 1, 2 } : new[] { 1 })
+            foreach (var sensor in isPro ? new[] { 1, 2 } : new[] { 1 })
             {
                 var on = writes.Single(n => n.Address == 1499 + sensor && n.Value == 1);
                 var position = sequence.IndexOf(on);
@@ -61,7 +62,7 @@ public class Io2ProfileTests
                 Assert.Equal($"Dut.sensor_{sensor}", wait.VariableName);
                 Assert.Equal("1", wait.ExpectedValue);
                 Assert.Equal("SelftestSnapshot", wait.PollAction);
-                Assert.Equal(relay ? "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin" : "/test.shtml", wait.Endpoint);
+                Assert.Equal(isPro ? "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin" : "/test.shtml", wait.Endpoint);
                 Assert.Equal(30000, wait.RequestTimeoutMs);
                 Assert.Equal(60000, wait.TimeoutMs);
                 Assert.Equal(1000, wait.IntervalMs);
@@ -78,13 +79,11 @@ public class Io2ProfileTests
             Assert.Contains(cleanupWrites, n => n.Address == 1501);
             foreach (var off in cleanupWrites)
                 Assert.Contains(cleanup.Connections, c => ReferenceEquals(c.Source, off.FalseOut));
-            if (relay)
+            if (isPro)
             {
-                var command = cleanup.Nodes.OfType<ReadHttpVariableNodeViewModel>().Single();
-                Assert.EndsWith("set_mb_output=0", command.Endpoint);
-                var reset = cleanupWrites.Single(n => n.Address == 1507);
-                Assert.Contains(cleanup.Connections, c => ReferenceEquals(c.Source, command.TrueOut) && ReferenceEquals(c.Target.Parent, reset));
-                Assert.DoesNotContain(cleanup.Connections, c => ReferenceEquals(c.Source, command.FalseOut) && ReferenceEquals(c.Target.Parent, reset));
+                Assert.DoesNotContain(graph.Nodes, n => n is ReadHttpVariableNodeViewModel);
+                Assert.DoesNotContain(cleanup.Nodes, n => n is ReadHttpVariableNodeViewModel);
+                Assert.DoesNotContain(cleanupWrites, n => n.Address == 1507);
             }
             Assert.NotNull(new GraphCompiler(service, NullLogger.Instance).Compile(vm.RootGraph));
             var json = GraphSerializer.Serialize(vm, file);

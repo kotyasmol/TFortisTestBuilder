@@ -2242,29 +2242,6 @@
             "id": "io2-cleanup-1",
             "x": 540,
             "y": 600
-          },
-          {
-            "type": "Read HTTP Variable",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml?set_mb_output=0",
-            "responseType": "String",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.RelayCommandResponse",
-            "failOnError": true,
-            "id": "io2-cleanup-2",
-            "x": 1000,
-            "y": 600
-          },
-          {
-            "type": "Write Register",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1507,
-            "value": 0,
-            "verifyWrite": true,
-            "id": "io2-cleanup-3",
-            "x": 1460,
-            "y": 600
           }
         ],
         "connections": [
@@ -2319,35 +2296,11 @@
           {
             "sourceNodeId": "io2-cleanup-1",
             "sourceConnector": "True",
-            "targetNodeId": "io2-cleanup-2",
-            "targetConnector": "In"
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "io2-cleanup-1",
-            "sourceConnector": "False",
-            "targetNodeId": "io2-cleanup-2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "io2-cleanup-2",
-            "sourceConnector": "True",
-            "targetNodeId": "io2-cleanup-3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "io2-cleanup-2",
-            "sourceConnector": "False",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "io2-cleanup-3",
-            "sourceConnector": "True",
-            "targetNodeId": "1",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "io2-cleanup-3",
             "sourceConnector": "False",
             "targetNodeId": "1",
             "targetConnector": "Вход"
@@ -2529,13 +2482,13 @@
       "x": 4400,
       "y": -520,
       "color": "purple",
-      "name": "09a. Проверка Sensor1, Sensor2 и реле",
-      "description": "IO-2 slave 21. Обычные Write Register: исходный ноль 1500/1501, включение каждого выхода, Wait Variable Until со свежим selftest, сброс. Реле: HTTP-команда DUT и live-read входа 1507.",
-      "isEnabled": true,
+      "name": "09a. Проверка Sensor1 и Sensor2",
+      "description": "Отключено для текущего стенда 8x2Pro: Sensor1/Sensor2 физически не подключены. Проверка не выполняется. При подключении входов включить подтест явно.",
+      "isEnabled": false,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "09a. Проверка Sensor1, Sensor2 и реле",
+        "name": "09a. Проверка Sensor1 и Sensor2",
         "nodes": [
           {
             "type": "Start",
@@ -2563,29 +2516,6 @@
             "verifyWrite": true,
             "id": "2",
             "x": 1000,
-            "y": 120
-          },
-          {
-            "type": "Read HTTP Variable",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml?set_mb_output=0",
-            "responseType": "String",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.RelayCommandResponse",
-            "failOnError": true,
-            "id": "3",
-            "x": 1460,
-            "y": 120
-          },
-          {
-            "type": "Write Register",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1507,
-            "value": 0,
-            "verifyWrite": true,
-            "id": "4",
-            "x": 1920,
             "y": 120
           },
           {
@@ -2667,53 +2597,6 @@
             "y": 1040
           },
           {
-            "type": "Read HTTP Variable",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml?set_mb_output=1",
-            "responseType": "String",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.RelayCommandResponse",
-            "failOnError": true,
-            "id": "11",
-            "x": 540,
-            "y": 1040
-          },
-          {
-            "type": "Wait Until",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1507,
-            "expectedValue": 1,
-            "timeoutMs": 30000,
-            "liveRead": true,
-            "id": "12",
-            "x": 1000,
-            "y": 1040
-          },
-          {
-            "type": "Read HTTP Variable",
-            "baseUrl": "http://192.168.0.1",
-            "endpoint": "/test.shtml?set_mb_output=0",
-            "responseType": "String",
-            "timeoutMs": 5000,
-            "outputVariableName": "Dut.RelayCommandResponse",
-            "failOnError": true,
-            "id": "13",
-            "x": 1460,
-            "y": 1040
-          },
-          {
-            "type": "Write Register",
-            "slaveId": 21,
-            "useCurrentSlaveId": false,
-            "address": 1507,
-            "value": 0,
-            "verifyWrite": true,
-            "id": "14",
-            "x": 1920,
-            "y": 1040
-          },
-          {
             "type": "End",
             "id": "15",
             "x": 80,
@@ -2731,24 +2614,6 @@
             "sourceNodeId": "1",
             "sourceConnector": "True",
             "targetNodeId": "2",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "4",
-            "sourceConnector": "True",
-            "targetNodeId": "5",
             "targetConnector": "Вход"
           },
           {
@@ -2782,31 +2647,13 @@
             "targetConnector": "Вход"
           },
           {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
             "sourceNodeId": "10",
-            "sourceConnector": "True",
-            "targetNodeId": "11",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "11",
-            "sourceConnector": "True",
-            "targetNodeId": "12",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "12",
-            "sourceConnector": "True",
-            "targetNodeId": "13",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "13",
-            "sourceConnector": "True",
-            "targetNodeId": "14",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "14",
             "sourceConnector": "True",
             "targetNodeId": "15",
             "targetConnector": "Вход"

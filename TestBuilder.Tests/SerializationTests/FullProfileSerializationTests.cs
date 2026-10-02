@@ -118,7 +118,7 @@ public class FullProfileSerializationTests
             .Single(node => node.Name == "10. DataTest портов 0..9");
         var inOutSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "09a. Проверка Sensor1, Sensor2 и реле");
+            .Single(node => node.Name == "09a. Проверка Sensor1 и Sensor2");
         var batterySubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "проверка акб (упс)");
@@ -245,12 +245,9 @@ public class FullProfileSerializationTests
 
         Assert.All(inOutSubtest.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => Assert.Equal(21, n.SlaveId));
         Assert.Equal(2, inOutSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
-        var relayWait = Assert.Single(inOutSubtest.BodyGraph.Nodes.OfType<WaitUntilNodeViewModel>());
-        Assert.Equal(21, relayWait.SlaveId);
-        Assert.Equal(1507, relayWait.Address);
-        Assert.Equal(1, relayWait.ExpectedValue);
-        Assert.True(relayWait.LiveRead);
-        Assert.Equal(3, inOutSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>().Count());
+        Assert.Empty(inOutSubtest.BodyGraph.Nodes.OfType<WaitUntilNodeViewModel>());
+        Assert.Empty(inOutSubtest.BodyGraph.Nodes.OfType<ReadHttpVariableNodeViewModel>());
+        Assert.DoesNotContain(inOutSubtest.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => n.Address == 1507);
         Assert.Contains(
             viewModel.RootGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, inOutSubtest) &&

@@ -563,7 +563,7 @@ public class ParallelGraphCompilationTests
         var fork = power.ParallelTransitions[StepResult.True];
         Assert.Equal(new[] { "06. Ожидание загрузки DUT и selftest", "08. Проверка нагревателя 1" },
             fork.Branches.Select(n => ((SubtestNodeViewModel)n.Source!).Name));
-        Assert.Equal("09a. Проверка Sensor1, Sensor2 и реле", ((SubtestNodeViewModel)fork.JoinNode.Source!).Name);
+        Assert.Equal("09a. Проверка Sensor1 и Sensor2", ((SubtestNodeViewModel)fork.JoinNode.Source!).Name);
         Assert.Equal("07. Проверка selftest DUT", ((SubtestNodeViewModel)fork.Branches[0].OnTrue!.Source!).Name);
         Assert.Equal("09. Проверка нагревателя 2", ((SubtestNodeViewModel)fork.Branches[1].OnTrue!.Source!).Name);
         Assert.Same(fork.JoinNode, fork.Branches[0].OnTrue!.OnTrue);

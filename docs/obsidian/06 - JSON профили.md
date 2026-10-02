@@ -208,10 +208,10 @@ Pro-профиля 2026-10-01: в этапе 07 также `300000`; прове�
 Pro — LuCI `deviceinfo`. Аварийный `runOnFailure`-подтест также сбрасывает оба
 выхода, продолжая попытки при `False` отдельной записи.
 
-Реле Pro проверяется обычными `Read HTTP Variable` (команды
-`/test.shtml?set_mb_output=0/1`), `Write Register` (сброс `1507=0` после
-выключения) и `Wait Until` (`1507=1`, `liveRead: true`). В PSW-2G6F+ этих
-шагов нет. Старый тип `Check IO-2 Sensors and Relay` и его aliases теперь
+У Pro проверяются Sensor1 и Sensor2 через свежий LuCI selftest. Релейные
+команды `/test.shtml?set_mb_output=0/1` и работа с `1507` удалены из Pro:
+на этой прошивке старый HTTP-адрес возвращает 404. Профиль PSW-2G6F+
+сохраняет свой `/test.shtml` для selftest. Старый тип `Check IO-2 Sensors and Relay` и его aliases теперь
 отклоняются с указанием импортировать обновлённый профиль; проверка не
 пропускается молча. Поля специализированной ноды удалены из DTO.
 
