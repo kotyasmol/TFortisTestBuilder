@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
-using Avalonia.Threading;
 using Nodify;
 using System;
 using TestBuilder.ViewModels;
@@ -30,12 +29,14 @@ public partial class GraphEditorView : UserControl, IDisposable
     private double _labelResizeStartWidth;
     private double _labelResizeStartHeight;
     private bool _isDisposed;
+    private bool _fitPending;
 
     public GraphEditorView()
     {
         InitializeComponent();
 
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
+        Editor.LayoutUpdated += OnEditorLayoutUpdated;
 
         this.AddHandler(KeyDownEvent, OnKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
@@ -90,6 +91,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         _dataContextSubscription.Dispose();
         DetachViewModel();
         Editor.RemoveHandler(DragDrop.DropEvent, OnDropNode);
+        Editor.LayoutUpdated -= OnEditorLayoutUpdated;
         RemoveHandler(KeyDownEvent, OnKeyDown);
         Editor.RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
     }
@@ -149,7 +151,10 @@ public partial class GraphEditorView : UserControl, IDisposable
         _viewModel = dataContext as TestViewModel;
 
         if (_viewModel != null)
+        {
             _viewModel.CurrentGraphOpened += FitCurrentGraph;
+            FitCurrentGraph();
+        }
     }
 
     private void DetachViewModel()
@@ -158,15 +163,31 @@ public partial class GraphEditorView : UserControl, IDisposable
             _viewModel.CurrentGraphOpened -= FitCurrentGraph;
 
         _viewModel = null;
+        _fitPending = false;
     }
 
     private void FitCurrentGraph()
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            Editor.PopAllStates();
-            Editor.FitToScreen();
-        });
+        // A dispatcher callback can run before the first layout or while an ancestor
+        // is hidden. Keep the request until Nodify has measured the current graph.
+        _fitPending = true;
+        Editor.InvalidateArrange();
+    }
+
+    private void OnEditorLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_isDisposed || !_fitPending || !Editor.IsEffectivelyVisible ||
+            !Editor.IsMeasureValid || !Editor.IsArrangeValid ||
+            Editor.Bounds.Width <= 0 || Editor.Bounds.Height <= 0)
+            return;
+
+        if (_viewModel?.Nodes.Count > 0 &&
+            (Editor.ItemsExtent.Width <= 0 || Editor.ItemsExtent.Height <= 0))
+            return;
+
+        _fitPending = false;
+        Editor.PopAllStates();
+        Editor.FitToScreen();
     }
 
     public void OnConnectionPressed(object? sender, PointerPressedEventArgs e)
