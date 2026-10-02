@@ -16,6 +16,7 @@ public class ParallelGraphCompilationTests
 {
     private const string SourceProfile = "PSW_UPS_Box_8x2Pro_full_algorithm_polling.json";
     private const string ParallelProfile = "PSW_UPS_Box_8x2Pro_parallel_start.json";
+    private const string OptimizedProfile = "PSW_UPS_Box_8x2Pro_parallel_el60.json";
 
     [Fact]
     public void SameOutputFanout_CompilesBothBranchesAndNearestJoin()
@@ -412,8 +413,10 @@ public class ParallelGraphCompilationTests
     [Fact]
     public void ParallelProfile_OnlyRewiresStartupAndKeepsOriginalHardwareSettings()
     {
-        var original = JsonNode.Parse(ReadProfile(SourceProfile))!;
-        var parallel = JsonNode.Parse(ReadProfile(ParallelProfile))!;
+        // Compare effective settings: editor saves may add defaults, renumber IDs
+        // and move/recolor nested nodes without changing the hardware sequence.
+        var original = NormalizeProfile(SourceProfile);
+        var parallel = NormalizeProfile(ParallelProfile);
         Assert.Equal(original["deviceModel"]!.GetValue<string>(), parallel["deviceModel"]!.GetValue<string>());
         Assert.NotEqual(original["name"]!.GetValue<string>(), parallel["name"]!.GetValue<string>());
         Assert.Contains("параллельный старт", parallel["configurationName"]!.GetValue<string>());
@@ -453,12 +456,61 @@ public class ParallelGraphCompilationTests
     }
 
     [Fact]
-    public void ParallelProfile_RoundTripKeepsForkJoinAndOldVersionGuard()
+    public void OptimizedProfile_KeepsHardwareSequencesAndOtherStages()
+    {
+        var original = JsonNode.Parse(ReadProfile(ParallelProfile))!;
+        var optimized = JsonNode.Parse(ReadProfile(OptimizedProfile))!;
+        Assert.Equal(original["deviceModel"]!.GetValue<string>(), optimized["deviceModel"]!.GetValue<string>());
+        Assert.NotEqual(original["name"]!.GetValue<string>(), optimized["name"]!.GetValue<string>());
+        Assert.NotEqual(original["configurationName"]!.GetValue<string>(), optimized["configurationName"]!.GetValue<string>());
+        Assert.True(JsonNode.DeepEquals(original["connections"], optimized["connections"]));
+
+        var originalNodes = original["nodes"]!.AsArray();
+        var optimizedNodes = optimized["nodes"]!.AsArray();
+        Assert.Equal(originalNodes.Count, optimizedNodes.Count);
+        foreach (var node in originalNodes)
+        {
+            var id = node!["id"]!.GetValue<string>();
+            var copy = optimizedNodes.Single(n => n!["id"]!.GetValue<string>() == id)!;
+            if (id is not ("2" or "3"))
+            {
+                Assert.True(JsonNode.DeepEquals(node, copy), $"Changed unrelated stage {id}.");
+                continue;
+            }
+
+            var originalLoop = node["bodyGraph"]!["nodes"]!.AsArray()
+                .Single(n => n!["type"]!.GetValue<string>() == "For Slaves")!;
+            var loops = copy["bodyGraph"]!["nodes"]!.AsArray()
+                .Where(n => n!["type"]!.GetValue<string>() == "For Slaves").ToArray();
+            Assert.Equal(3, loops.Length);
+            Assert.Equal("Start (parallel v1)", copy["bodyGraph"]!["nodes"]![0]!["type"]!.GetValue<string>());
+            foreach (var loop in loops)
+            {
+                var normalized = loop!.DeepClone();
+                foreach (var field in new[] { "id", "x", "y", "fromSlaveId", "toSlaveId" })
+                    normalized[field] = originalLoop[field]!.DeepClone();
+                normalized["body"]!["name"] = originalLoop["body"]!["name"]!.DeepClone();
+                Assert.True(JsonNode.DeepEquals(originalLoop, normalized),
+                    $"Changed per-device writes, verification, delays or transitions in stage {id}.");
+            }
+
+            var normalizedStage = copy.DeepClone();
+            normalizedStage["bodyGraph"] = node["bodyGraph"]!.DeepClone();
+            normalizedStage["description"] = node["description"]!.DeepClone();
+            Assert.True(JsonNode.DeepEquals(node, normalizedStage));
+        }
+    }
+
+    [Theory]
+    [InlineData(ParallelProfile)]
+    [InlineData(OptimizedProfile)]
+    public void ParallelProfile_RoundTripKeepsForkJoinAndOldVersionGuard(string file)
     {
         using var modbus = new ModbusService();
         var originalVm = new TestViewModel(modbus, new SlaveManager(modbus));
-        var profileName = GraphSerializer.Deserialize(ReadProfile(ParallelProfile), originalVm);
+        var profileName = GraphSerializer.Deserialize(ReadProfile(file), originalVm);
         AssertProFork(Compile(originalVm.RootGraph));
+        if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
         Assert.Contains("\"type\": \"Start (parallel v1)\"", saved);
@@ -466,6 +518,7 @@ public class ParallelGraphCompilationTests
         GraphSerializer.Deserialize(saved, loadedVm);
 
         AssertProFork(Compile(loadedVm.RootGraph));
+        if (file == OptimizedProfile) AssertEl60Forks(loadedVm.RootGraph);
         Assert.Equal(originalVm.RootGraph.ConfigurationName, loadedVm.RootGraph.ConfigurationName);
         Assert.Equal(originalVm.RootGraph.DeviceModel, loadedVm.RootGraph.DeviceModel);
         Assert.Equal(originalVm.RootGraph.Connections.Count, loadedVm.RootGraph.Connections.Count);
@@ -557,6 +610,29 @@ public class ParallelGraphCompilationTests
         Assert.Equal("Исходная модель", vm.RootGraph.DeviceModel);
     }
 
+    private static void AssertEl60Forks(GraphWorkspaceViewModel root)
+    {
+        foreach (var prefix in new[] { "02.", "04." })
+        {
+            var stage = root.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.Name.StartsWith(prefix));
+            var fork = Compile(stage.BodyGraph).StartNode.ParallelTransitions[StepResult.Next];
+            Assert.IsType<EndNodeViewModel>(fork.JoinNode.Source);
+            var loops = fork.Branches.Select(n => Assert.IsType<ForEachSlaveNodeViewModel>(n.Source)).ToArray();
+            Assert.Equal(new[] { (1, 5), (7, 11), (13, 15) },
+                loops.Select(n => ((int)n.FromSlaveId, (int)n.ToSlaveId)));
+            Assert.All(loops, loop =>
+            {
+                Assert.Equal(2, loop.Step);
+                Assert.True(loop.StopOnError);
+            });
+            Assert.All(fork.Branches, branch =>
+            {
+                Assert.Same(fork.JoinNode, branch.Next);
+                Assert.Null(branch.OnFalse);
+            });
+        }
+    }
+
     private static void AssertProFork(CompiledGraph graph)
     {
         var power = FindNode(graph.StartNode, n => n.Source is SubtestNodeViewModel s && s.Name.StartsWith("05."));
@@ -639,6 +715,27 @@ public class ParallelGraphCompilationTests
 
     private static string ReadProfile(string filename) => File.ReadAllText(Path.GetFullPath(Path.Combine(
         AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", filename)));
+
+    private static JsonNode NormalizeProfile(string filename)
+    {
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        var name = GraphSerializer.Deserialize(ReadProfile(filename), vm);
+        var profile = JsonNode.Parse(GraphSerializer.Serialize(vm, name))!;
+        RemoveLayout(profile);
+        return profile;
+
+        static void RemoveLayout(JsonNode? node)
+        {
+            if (node is JsonObject obj)
+            {
+                foreach (var field in new[] { "x", "y", "color" }) obj.Remove(field);
+                foreach (var property in obj) RemoveLayout(property.Value);
+            }
+            else if (node is JsonArray array)
+                foreach (var item in array) RemoveLayout(item);
+        }
+    }
 
     private static string[] ConnectionKeys(JsonArray connections) => connections.Select(c =>
         string.Join("|", new[] { "sourceNodeId", "sourceConnector", "targetNodeId", "targetConnector" }
