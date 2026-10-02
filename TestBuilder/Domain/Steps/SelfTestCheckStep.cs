@@ -1149,9 +1149,13 @@ namespace TestBuilder.Domain.Steps
             return Encoding.UTF8.GetString(stream.ToArray());
         }
 
-        private static string? FindBrowserExecutable()
+        internal static string? FindBrowserExecutable(
+            string? applicationDirectory = null,
+            IEnumerable<string>? installedBrowsers = null)
         {
-            var candidates = new[]
+            var bundledBrowser = Path.Combine(applicationDirectory ?? AppContext.BaseDirectory,
+                "Browser", "chrome-win64", "chrome.exe");
+            var candidates = installedBrowsers ?? new[]
             {
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Google", "Chrome", "Application", "chrome.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Google", "Chrome", "Application", "chrome.exe"),
@@ -1160,7 +1164,8 @@ namespace TestBuilder.Domain.Steps
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft", "Edge", "Application", "msedge.exe")
             };
 
-            foreach (var candidate in candidates)
+            // Resolve against the executable, independently of the launcher's working directory.
+            foreach (var candidate in candidates.Prepend(bundledBrowser))
             {
                 if (File.Exists(candidate))
                 {

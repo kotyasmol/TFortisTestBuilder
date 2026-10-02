@@ -1,0 +1,57 @@
+[
+  {
+    "component": "AvaloniaBehaviors",
+    "source": "https://raw.githubusercontent.com/wieslawsoltes/Avalonia.Xaml.Behaviors/0e32976d3f77f807bb4c1750add5ba301d9e9ebe/LICENSE.TXT",
+    "file": "AvaloniaBehaviors.txt"
+  },
+  {
+    "component": "MicroCom",
+    "source": "https://raw.githubusercontent.com/kekekeks/MicroCom/master/LICENSE",
+    "file": "MicroCom.txt"
+  },
+  {
+    "component": "NModbus4",
+    "source": "https://raw.githubusercontent.com/NModbus4/NModbus4/master/LICENSE.txt",
+    "file": "NModbus4.txt"
+  },
+  {
+    "component": "PacketDotNet",
+    "source": "https://raw.githubusercontent.com/dotpcap/packetnet/690707ce56d6e9c266daf6236c4f76ac5035334c/LICENSE",
+    "file": "PacketDotNet.txt"
+  },
+  {
+    "component": "System.Reactive",
+    "source": "https://raw.githubusercontent.com/dotnet/reactive/e29c7a50db88513a87651c366088da8b7f40b1f0/LICENSE",
+    "file": "System.Reactive.txt"
+  },
+  {
+    "component": "Tmds.DBus",
+    "source": "https://raw.githubusercontent.com/tmds/Tmds.DBus/ee8c7b698b320c19c0e0e8acb05622d99ee8f157/COPYING",
+    "file": "Tmds.DBus.txt"
+  },
+  {
+    "component": "Inter",
+    "source": "https://raw.githubusercontent.com/rsms/inter/master/LICENSE.txt",
+    "file": "Inter.txt"
+  },
+  {
+    "component": "Avalonia",
+    "source": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/2a8ea17985fd739234fa0d93c3437948535d35c4/licence.md",
+    "file": "Avalonia.txt"
+  },
+  {
+    "component": "Avalonia notice",
+    "source": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/2a8ea17985fd739234fa0d93c3437948535d35c4/NOTICE.md",
+    "file": "Avalonia-NOTICE.md"
+  },
+  {
+    "component": "NodifyAvalonia",
+    "source": "https://raw.githubusercontent.com/BAndysc/nodify-avalonia/avalonia_port/LICENSE",
+    "file": "NodifyAvalonia.txt"
+  },
+  {
+    "component": "SharpPcap",
+    "source": "https://raw.githubusercontent.com/dotpcap/sharppcap/bfedf297e7410ffcf44e05d14f7fbef304f20895/LICENSES/MIT.txt",
+    "file": "SharpPcap-MIT.txt"
+  }
+]
