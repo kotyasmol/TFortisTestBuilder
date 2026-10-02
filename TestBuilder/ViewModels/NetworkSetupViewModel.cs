@@ -73,9 +73,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
                 string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase));
         }
 
-        Status = "Подбор PSW-2G6F+ готов: 6 карт 100 Мбит/с → .2–.7; " +
-            "2 карты 1 Гбит/с → .8–.9; 2 отключённые → .10–.11. " +
-            "Проверьте, какие кабели подключены к каждой паре портов, затем нажмите «Применить адреса».";
+        Status = "Карты подобраны. Проверьте подключение кабелей и примените адреса.";
     }
 
     private void Refresh()
@@ -100,7 +98,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
                         adapter.Ipv4.Split(", ").Contains(row.Ip));
             }
 
-            Status = $"Найдено сетевых адаптеров: {Adapters.Count}. Проверьте соответствие портов и карт.";
+            Status = $"Найдено адаптеров: {Adapters.Count}.";
         }
         catch (Exception ex)
         {
@@ -139,7 +137,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             error = await DataTestNetworkConfigurator.ApplyAsync(assignments, progress);
             IsBusy = false;
             Refresh();
-            Status = error ?? "Адреса настроены. Проверьте физические пары и повторите DataTest.";
+            Status = error ?? "Адреса настроены.";
         }
         catch (Exception ex)
         {
