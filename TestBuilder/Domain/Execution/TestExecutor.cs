@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Execution
 {
@@ -23,11 +24,14 @@ namespace TestBuilder.Domain.Execution
                 await context.WaitWhilePausedAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var result = await ExecuteNodeAsync(current, context, cancellationToken);
+                var (result, failure) = await ExecuteNodeAsync(current, context, cancellationToken);
 
                 cancellationToken.ThrowIfCancellationRequested();
                 if (context.IsParallelBranch && context.HasCriticalError)
+                {
+                    context.Failure = failure;
                     return ExecutionStatus.Failed;
+                }
                 if (result == StepResult.Stop)
                 {
                     if (stopBefore != null)
@@ -51,7 +55,10 @@ namespace TestBuilder.Domain.Execution
                         _ => throw new InvalidOperationException($"Неизвестный результат шага: {result}.")
                     };
                     if (current == null && result == StepResult.False)
+                    {
+                        context.Failure = failure;
                         return ExecutionStatus.Failed;
+                    }
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -60,9 +67,13 @@ namespace TestBuilder.Domain.Execution
             return ExecutionStatus.Completed;
         }
 
-        private static async Task<StepResult> ExecuteNodeAsync(TestNode node, TestContext context,
+        private static async Task<(StepResult Result, ExecutionFailure? Failure)> ExecuteNodeAsync(TestNode node, TestContext context,
             CancellationToken cancellationToken)
         {
+            using var diagnostics = new StepLogScope();
+            context.Failure = null;
+            var stepName = string.IsNullOrWhiteSpace(node.DisplayName)
+                ? node.Step?.GetType().Name ?? "Неизвестный шаг" : node.DisplayName;
             var result = StepResult.Next;
             Exception? failure = null;
             var failureNotificationAttempted = false;
@@ -106,8 +117,20 @@ namespace TestBuilder.Domain.Execution
                     failure = failure == null ? observerError : new AggregateException(failure, observerError);
                 }
             }
-            if (failure != null) ExceptionDispatchInfo.Capture(failure).Throw();
-            return result;
+            if (failure != null)
+            {
+                if (failure is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    context.Failure ??= new ExecutionFailure(stepName, failure.Message, context.CurrentSlaveId);
+                ExceptionDispatchInfo.Capture(failure).Throw();
+            }
+            var detail = result == StepResult.False || (context.IsParallelBranch && context.HasCriticalError)
+                ? context.Failure ?? new ExecutionFailure(stepName, diagnostics.Reason, context.CurrentSlaveId)
+                : null;
+            if (context.HasCriticalError && detail != null)
+                context.CriticalFailure ??= detail;
+            // A handled False is an alternative path, not the cause of a failed run.
+            context.Failure = null;
+            return (result, detail);
         }
 
         private async Task<ExecutionStatus> ExecuteParallelAsync(ParallelFork fork, TestContext context,

@@ -36,15 +36,59 @@ public class ParallelExecutionUiTests
         Assert.True(firstStep.IsExecuting);
         Assert.True(secondStep.IsExecuting);
 
+        state.NodeCompleted(firstStep, StepResult.Next);
         state.NodeFinished(firstStep, firstScope);
+        state.NodeCompleted(first, StepResult.True);
         state.NodeFinished(first, firstScope);
         state.FinishScope(firstScope);
+        Assert.True(firstStep.HasExecutionSucceeded);
+        Assert.True(first.HasExecutionSucceeded);
+        Assert.False(first.IsExecuting);
+        Assert.False(second.HasExecutionSucceeded);
         state.NodeFinished(secondStep, secondScope);
         state.NodeStarted(finalStep, secondScope, parent);
         Assert.Equal(2, second.CurrentStepIndex);
         Assert.Contains("2/2", second.ProgressText);
         Assert.Empty(first.ProgressText);
         Assert.True(second.IsExecuting);
+    }
+
+    [Fact]
+    public void SuccessIsClearedWhenNodeRunsAgain_AndCancellationDoesNotRestoreIt()
+    {
+        var state = new ExecutionUiState();
+        using var node = new DelayNodeViewModel();
+        var scope = Guid.NewGuid();
+        state.NodeStarted(node, scope, null);
+        state.NodeCompleted(node, StepResult.Next);
+        state.NodeFinished(node, scope);
+        state.Clear();
+        Assert.True(node.HasExecutionSucceeded);
+
+        state.NodeStarted(node, scope, null);
+        Assert.False(node.HasExecutionSucceeded);
+        Assert.True(node.IsExecuting);
+        // Cancellation reaches finally without returning a StepResult.
+        state.NodeFinished(node, scope);
+        Assert.False(node.HasExecutionSucceeded);
+        Assert.False(node.IsExecuting);
+    }
+
+    [Fact]
+    public void FailedAndDisabledNodes_AreNotMarkedAsSucceeded()
+    {
+        var state = new ExecutionUiState();
+        var scope = Guid.NewGuid();
+        using var failed = new DelayNodeViewModel();
+        using var disabled = new SubtestNodeViewModel { IsEnabled = false };
+        state.NodeStarted(failed, scope, null);
+        state.NodeCompleted(failed, StepResult.False);
+        state.NodeFinished(failed, scope);
+        state.NodeStarted(disabled, scope, null);
+        state.NodeCompleted(disabled, StepResult.True);
+        state.NodeFinished(disabled, scope);
+        Assert.False(failed.HasExecutionSucceeded);
+        Assert.False(disabled.HasExecutionSucceeded);
     }
 
     [Fact]

@@ -52,11 +52,12 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = ResolveSlaveId(context);
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
 
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Проверка диапазона → устройство не задано, адрес {_address}, диапазон [{_min}..{_max}].");
+                    $"[ШАГ] Проверка диапазона → устройство не задано, адрес {registerAddress}, диапазон [{_min}..{_max}].");
 
                 return StepResult.False;
             }
@@ -77,19 +78,19 @@ namespace TestBuilder.Domain.Steps
                         SavePoeMeasurement(context, actualSlaveId.Value, inRange,
                             System.FormattableString.Invariant($"{read.Value / 1000.0:F3} В; допуск {_min / 1000.0:F3}..{_max / 1000.0:F3} В"));
                     _logger.Info(
-                        $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {_address}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
+                        $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {registerAddress}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
                     if (inRange)
                     {
-                        _logger.Info($"[OK] Значение {read.Value} в диапазоне [{_min}..{_max}].");
+                        _logger.Info($"[OK] Значение {read.Value} в диапазоне [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {registerAddress}.");
                         return StepResult.True;
                     }
                     if (attempt == _readAttempts)
-                        _logger.Warning($"[ОШИБКА] Значение {read.Value} вне диапазона [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {_address}.");
+                        _logger.Warning($"[ОШИБКА] Значение {read.Value} вне диапазона [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {registerAddress}.");
                 }
                 else if (attempt == _readAttempts)
                 {
                     SavePoeMeasurement(context, actualSlaveId.Value, false, "Регистр не прочитан: " + read.Error);
-                    _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {_address}: {read.Error}");
+                    _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {registerAddress}: {read.Error}");
                 }
             }
 

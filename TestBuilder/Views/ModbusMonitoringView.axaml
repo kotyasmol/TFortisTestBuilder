@@ -3,6 +3,8 @@
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:models="using:TestBuilder.Domain.Modbus.Models"
              xmlns:converters="using:TestBuilder.Converters"
+             xmlns:views="using:TestBuilder.Views"
+             xmlns:logging="using:TestBuilder.Services.Logging"
              x:Class="TestBuilder.Views.ModbusMonitoringView"
              x:DataType="vm:ModbusMonitoringViewModel">
 
@@ -199,7 +201,8 @@
           </Grid>
 
           <ListBox Grid.Row="1" ItemsSource="{Binding TestingLogger.Entries}"
-                   Background="Transparent" BorderThickness="0" Padding="0">
+                   Background="Transparent" BorderThickness="0" Padding="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
               </ListBox.ItemsPanel>
@@ -207,16 +210,12 @@
                 <Style Selector="ListBoxItem">
                   <Setter Property="Padding" Value="0" />
                   <Setter Property="MinHeight" Value="0" />
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 </Style>
               </ListBox.Styles>
               <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <SelectableTextBlock Text="{Binding}"
-                                       FontFamily="Consolas"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource SidebarTextMutedBrush}"
-                                       Margin="2,2"
-                                       TextWrapping="Wrap" />
+                <DataTemplate x:DataType="logging:LogEntry">
+                  <views:LogEntryView />
                 </DataTemplate>
               </ListBox.ItemTemplate>
           </ListBox>
