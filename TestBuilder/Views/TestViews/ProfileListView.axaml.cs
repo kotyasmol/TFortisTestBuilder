@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
+using System.Linq;
 using TestBuilder.Services;
 using TestBuilder.ViewModels;
 
@@ -8,10 +10,12 @@ namespace TestBuilder.Views.TestViews;
 public partial class ProfileListView : UserControl
 {
     private GraphProfile? _profileBeforeClick;
+    private bool _syncingSelection;
 
     public ProfileListView()
     {
         InitializeComponent();
+        LayoutUpdated += (_, _) => SyncSelection();
 
         ProfileListBox.AddHandler(
             PointerPressedEvent,
@@ -24,6 +28,25 @@ public partial class ProfileListView : UserControl
             OnProfileListPointerReleased,
             Avalonia.Interactivity.RoutingStrategies.Bubble,
             handledEventsToo: false);
+    }
+
+    private void OnGroupSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingSelection || DataContext is not TestViewModel vm || sender is not ListBox list || list.SelectedItem is not GraphProfile profile) return;
+        vm.SelectedProfile = profile;
+        SyncSelection();
+    }
+
+    private void SyncSelection()
+    {
+        if (DataContext is not TestViewModel vm) return;
+        _syncingSelection = true;
+        try
+        {
+            foreach (var list in this.GetVisualDescendants().OfType<ListBox>())
+                list.SelectedItem = vm.SelectedProfile == null ? null : list.Items.OfType<GraphProfile>().FirstOrDefault(p => p.FilePath == vm.SelectedProfile.FilePath);
+        }
+        finally { _syncingSelection = false; }
     }
 
     private void OnProfileListPointerPressed(object? sender, PointerPressedEventArgs e)

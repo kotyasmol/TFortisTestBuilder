@@ -54,12 +54,12 @@ namespace TestBuilder.Services
             _ownsClients = false;
         }
 
-        public CompiledGraph Compile(GraphWorkspaceViewModel graph)
+        public CompiledGraph Compile(GraphWorkspaceViewModel graph, NodeViewModel? entry = null, bool singleNode = false)
         {
             if (!_compiling.Add(graph))
                 throw new InvalidOperationException($"Граф '{graph.Title}' содержит рекурсивное вложение.");
             _graphNames.Add(graph.Title);
-            try { return CompileCore(graph); }
+            try { return CompileCore(graph, entry, singleNode); }
             finally
             {
                 _graphNames.RemoveAt(_graphNames.Count - 1);
@@ -67,13 +67,14 @@ namespace TestBuilder.Services
             }
         }
 
-        private CompiledGraph CompileCore(GraphWorkspaceViewModel graph)
+        private CompiledGraph CompileCore(GraphWorkspaceViewModel graph, NodeViewModel? entry, bool singleNode)
         {
             var starts = graph.Nodes.Where(n => n is StartNodeViewModel or BodyStartNodeViewModel).ToList();
-            if (starts.Count != 1)
+            if (entry == null && starts.Count != 1)
                 throw new InvalidOperationException($"В графе '{graph.Title}' должна быть ровно одна стартовая нода (найдено {starts.Count}).");
 
-            var map = graph.Nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
+            var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
+            var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
             {
                 DisplayName = $"{string.Join(" / ", _graphNames)} / {node.Title}"
             });
@@ -81,6 +82,7 @@ namespace TestBuilder.Services
                 _ => new Dictionary<StepResult, List<TestNode>>());
             foreach (var connection in graph.Connections)
             {
+                if (entry != null && (singleNode || !nodes.Contains(connection.Source.Parent!))) continue;
                 var sourceVm = connection.Source.Parent;
                 var targetVm = connection.Target.Parent;
                 if (sourceVm == null || targetVm == null || !map.ContainsKey(sourceVm) || !map.ContainsKey(targetVm)
@@ -109,7 +111,23 @@ namespace TestBuilder.Services
                 }
             }
             ParallelGraphPlanner.Plan(transitions);
-            return new CompiledGraph(map[starts[0]]);
+            return new CompiledGraph(map[entry ?? starts[0]]);
+        }
+
+        // Traverse only this workspace. Composite steps compile their complete bodies normally.
+        internal static HashSet<NodeViewModel> GetRunNodes(GraphWorkspaceViewModel graph, NodeViewModel entry, bool singleNode)
+        {
+            if (!graph.Nodes.Contains(entry))
+                throw new InvalidOperationException("Стартовая нода больше не находится в графе.");
+            var nodes = new HashSet<NodeViewModel> { entry };
+            if (singleNode) return nodes;
+            var pending = new Queue<NodeViewModel>();
+            pending.Enqueue(entry);
+            while (pending.TryDequeue(out var node))
+                foreach (var edge in graph.Connections.Where(c => ReferenceEquals(c.Source.Parent, node)))
+                    if (edge.Target.Parent is { } target && graph.Nodes.Contains(target) && nodes.Add(target))
+                        pending.Enqueue(target);
+            return nodes;
         }
 
         private ITestStep CreateStep(NodeViewModel node)

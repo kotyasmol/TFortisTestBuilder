@@ -4,33 +4,43 @@
         xmlns:views="using:TestBuilder.Views"
         x:Class="TestBuilder.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1440" Height="860" MinWidth="1180" MinHeight="720"
-        Title="TestBuilder" Background="{DynamicResource AppBackgroundBrush}">
+        Width="1280" Height="800" MinWidth="1100" MinHeight="680"
+        Icon="/Assets/Brand/tfortis-test-icon.png" Title="{Binding WorkspaceTitle}" Background="{DynamicResource AppBackgroundBrush}">
   <Window.DataContext>
     <vm:MainWindowViewModel />
   </Window.DataContext>
-  <Grid>
-    <Grid IsVisible="{Binding !IsSettingsOpen}">
+  <Grid RowDefinitions="Auto,*">
+    <Border Padding="16,8" Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+          <Image Source="/Assets/Brand/tfortis-test-icon.png" Width="32" Height="32" ToolTip.Tip="Тестирование оборудования TFortis" />
+          <TextBlock Text="{Binding WorkspaceTitle}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="{Binding SwitchWorkspaceTitle}" Command="{Binding SwitchWorkspaceCommand}"
+                Margin="0,0,8,0" IsVisible="{Binding !IsSettingsOpen}" />
+        <Button Grid.Column="2" Content="Настройки" Command="{Binding OpenSettingsCommand}" IsVisible="{Binding !IsSettingsOpen}" />
+        <Button Grid.Column="2" Content="← Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
+      </Grid>
+    </Border>
+    <Grid Grid.Row="1" IsVisible="{Binding !IsSettingsOpen}">
       <Grid IsVisible="{Binding !IsEngineerWorkspace}">
         <views:StationDashboardView DataContext="{Binding TestVM}" />
       </Grid>
       <Grid IsVisible="{Binding IsEngineerWorkspace}">
         <TabControl>
-          <TabItem Header="Тест"><views:TestView x:Name="TestViewControl" /></TabItem>
-          <TabItem Header="Modbus" IsEnabled="{Binding IsSlavesFound}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></TabItem>
-          <TabItem Header="Тестовая страница"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></TabItem>
-          <TabItem Header="Сконфигурировать сетевые карты"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></TabItem>
-          <TabItem Header="Настройки"><views:SettingsView x:Name="EngineerSettingsViewControl" /></TabItem>
+          <TabItem Header="Редактор тестов"><views:TestView x:Name="TestViewControl" /></TabItem>
+          <TabItem Header="Регистры Modbus"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></TabItem>
+          <TabItem Header="Selftest устройства"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></TabItem>
+          <TabItem Header="Сеть стенда"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></TabItem>
         </TabControl>
       </Grid>
     </Grid>
-    <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding IsSettingsOpen}">
-      <Button Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}"
-              Margin="24,16" FontSize="18" MinHeight="48" Padding="20,10" />
-      <views:SettingsView Grid.Row="1" x:Name="ShellSettingsViewControl" />
-      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="20" Margin="24,12">
-        <TextBlock Text="{Binding OperatorName}" FontSize="16" />
-        <TextBlock Text="{Binding SessionStatus}" FontSize="16" Foreground="{DynamicResource TextSecondaryBrush}" />
+    <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">
+      <views:SettingsView x:Name="ShellSettingsViewControl" />
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16" Margin="16,8">
+        <TextBlock Text="{Binding OperatorName}" FontSize="{StaticResource FontSection}" />
+        <TextBlock Text="{Binding SessionStatus}" FontSize="{StaticResource FontSection}" Foreground="{DynamicResource TextSecondaryBrush}" />
       </StackPanel>
     </Grid>
   </Grid>

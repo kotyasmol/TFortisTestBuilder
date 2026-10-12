@@ -1,123 +1,61 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
-             x:Name="SettingsRoot"
-             x:Class="TestBuilder.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
-
-    <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16" MaxWidth="600">
-
-        <TextBlock Text="Настройки"
-                   FontSize="20"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,8"/>
-
-        <TextBlock Text="Режим интерфейса" FontSize="20" FontWeight="SemiBold"/>
-        <StackPanel Spacing="8" IsEnabled="{Binding CanChangeInterfaceMode}">
+             x:Name="SettingsRoot" x:Class="TestBuilder.Views.SettingsView" x:DataType="vm:SettingsViewModel">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Center">
+    <StackPanel Margin="16" Spacing="16" MaxWidth="800" HorizontalAlignment="Stretch">
+      <TextBlock Text="Настройки" Classes="pageTitle" />
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Рабочий режим" Classes="sectionTitle" />
+          <WrapPanel IsEnabled="{Binding CanChangeInterfaceMode}">
             <RadioButton Content="Пульт стенда" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"
-                         IsChecked="{Binding !IsEngineerMode, Mode=TwoWay}"
-                         FontSize="18" MinHeight="44"/>
+                         IsChecked="{Binding !IsEngineerMode, Mode=TwoWay}" Margin="0,0,24,0" />
             <RadioButton Content="Инженерный режим" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"
-                         IsChecked="{Binding IsEngineerMode, Mode=TwoWay}"
-                         FontSize="18" MinHeight="44"/>
+                         IsChecked="{Binding IsEngineerMode, Mode=TwoWay}" />
+          </WrapPanel>
+          <TextBlock Text="Оформление" />
+          <WrapPanel>
+            <RadioButton Content="Светлое" GroupName="{Binding #SettingsRoot.ThemeGroupName}" IsChecked="{Binding !IsDarkTheme}" Margin="0,0,24,0" />
+            <RadioButton Content="Тёмное" GroupName="{Binding #SettingsRoot.ThemeGroupName}" IsChecked="{Binding IsDarkTheme}" />
+          </WrapPanel>
         </StackPanel>
-        <Separator Margin="0,8"/>
-
-        <!-- Папка с профилями -->
-        <TextBlock Text="Папка с профилями тестирования (JSON):"
-                   FontSize="14"/>
-
-        <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0"
-                     Text="{Binding GraphsFolder}"
-                     IsReadOnly="True"
-                     Watermark="Папка не выбрана..."
-                     VerticalContentAlignment="Center"/>
-            <Button Grid.Column="1"
-                    Content="Обзор..."
-                    Command="{Binding SelectFolderCommand}"
-                    Margin="8,0,0,0"
-                    Height="35"/>
-        </Grid>
-
-        <TextBlock Text="Профили из этой папки будут отображаться в списке на вкладке Тест."
-                   FontSize="12"
-                   Opacity="0.6"
-                   TextWrapping="Wrap"/>
-
-        <!-- Тема -->
-        <Separator Margin="0,8"/>
-
-        <TextBlock Text="Server base URL:"
-                   FontSize="14"/>
-
-        <TextBox Text="{Binding ServerBaseUrl}"
-                 Watermark="http://server"
-                 VerticalContentAlignment="Center"/>
-
-        <TextBlock Text="Used by profiles with SERVER_BASE_URL for serial number and report requests."
-                   FontSize="12"
-                   Opacity="0.6"
-                   TextWrapping="Wrap"/>
-
-        <TextBlock Text="Stand ID:"
-                   FontSize="14"/>
-
-        <TextBox Text="{Binding StandId}"
-                 Watermark="123"
-                 VerticalContentAlignment="Center"/>
-
-        <TextBlock Text="Обязательное поле stand_id в производственном отчёте. Session ID берётся из первого аргумента запуска программы."
-                   FontSize="12"
-                   Opacity="0.6"
-                   TextWrapping="Wrap"/>
-
-        <!-- Логи в файл -->
-        <Separator Margin="0,8"/>
-
-        <TextBlock Text="Файл логов:"
-                   FontSize="14"/>
-
-        <CheckBox Content="Включить запись логов выполнения теста в текстовый файл"
-                  IsChecked="{Binding EnableFileLogging}"
-                  FontSize="14"/>
-
-        <TextBlock Text="На каждый запуск создаётся отдельный файл. Для удобства диагностики в логе всегда записываются и UI-сообщения, и сведения от Modbus."
-                   FontSize="12"
-                   Opacity="0.6"
-                   TextWrapping="Wrap"/>
-
-        <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0"
-                     Text="{Binding LogFolder}"
-                     IsReadOnly="True"
-                     Watermark="Папка не выбрана..."
-                     VerticalContentAlignment="Center"/>
-            <Button Grid.Column="1"
-                    Content="Обзор..."
-                    Command="{Binding SelectLogFolderCommand}"
-                    Margin="8,0,0,0"
-                    Height="35"/>
-        </Grid>
-
-        <Separator Margin="0,8"/>
-
-        <TextBlock Text="Тема оформления:"
-                   FontSize="14"/>
-
-        <StackPanel Orientation="Horizontal" Spacing="12">
-            <RadioButton Content="Светлая"
-                         GroupName="{Binding #SettingsRoot.ThemeGroupName}"
-                         IsChecked="{Binding !IsDarkTheme}"
-                         FontSize="14"/>
-            <RadioButton Content="Тёмная"
-                         GroupName="{Binding #SettingsRoot.ThemeGroupName}"
-                         IsChecked="{Binding IsDarkTheme}"
-                         FontSize="14"/>
+      </Border>
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Профили тестирования" Classes="sectionTitle" />
+          <TextBlock Text="Папка с JSON-профилями" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding GraphsFolder}" IsReadOnly="True" Watermark="Папка не выбрана" MinWidth="240" />
+            <Button Grid.Column="1" Content="Выбрать папку" Command="{Binding SelectFolderCommand}" Margin="8,0,0,0" />
+          </Grid>
+          <TextBlock Text="Профили из этой папки доступны в пульте и редакторе тестов." Classes="hint" />
         </StackPanel>
-
+      </Border>
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Сервер и стенд" Classes="sectionTitle" />
+          <TextBlock Text="Адрес сервера" />
+          <TextBox Text="{Binding ServerBaseUrl}" Watermark="http://server" />
+          <TextBlock Text="Используется для получения серийного номера и отправки отчёта в профилях с SERVER_BASE_URL." Classes="hint" />
+          <TextBlock Text="Идентификатор стенда" />
+          <TextBox Text="{Binding StandId}" Watermark="тест" />
+          <TextBlock Text="Задаётся вручную и попадает в отчёт. По умолчанию — «тест»." Classes="hint" />
+        </StackPanel>
+      </Border>
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Журнал выполнения" Classes="sectionTitle" />
+          <CheckBox IsChecked="{Binding EnableFileLogging}">
+            <TextBlock Text="Сохранять журнал каждого запуска в файл" TextWrapping="Wrap" />
+          </CheckBox>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding LogFolder}" IsReadOnly="True" Watermark="Папка не выбрана" />
+            <Button Grid.Column="1" Content="Выбрать папку" Command="{Binding SelectLogFolderCommand}" Margin="8,0,0,0" />
+          </Grid>
+          <TextBlock Text="В журнал входят сообщения приложения и обмен со стендом по Modbus." Classes="hint" />
+        </StackPanel>
+      </Border>
     </StackPanel>
-    </ScrollViewer>
-
+  </ScrollViewer>
 </UserControl>

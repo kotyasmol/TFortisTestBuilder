@@ -9,9 +9,9 @@
   </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="Button.station">
-      <Setter Property="FontSize" Value="18" />
-      <Setter Property="MinHeight" Value="52" />
-      <Setter Property="Padding" Value="18,12" />
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="16,12" />
     </Style>
     <Style Selector="Button.station:disabled">
       <Setter Property="Opacity" Value="1" />
@@ -22,7 +22,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     </Style>
     <Style Selector="Button.model">
-      <Setter Property="Padding" Value="18,12" />
+      <Setter Property="Padding" Value="16,12" />
       <Setter Property="MinHeight" Value="56" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
@@ -30,7 +30,7 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.program">
-      <Setter Property="Padding" Value="42,12,14,12" />
+      <Setter Property="Padding" Value="40,12,16,12" />
       <Setter Property="MinHeight" Value="50" />
       <Setter Property="FontWeight" Value="Normal" />
       <Setter Property="Background" Value="Transparent" />
@@ -90,19 +90,19 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="270,*">
+  <Grid ColumnDefinitions="260,*">
     <Border Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,Auto,*,Auto">
         <TextBox Text="{Binding StationProfileSearch}" Watermark="Найти программу"
-                 FontSize="18" MinHeight="48" Margin="20,24,20,20" IsEnabled="{Binding CanChooseProfile}"
+                 FontSize="{StaticResource FontSection}" MinHeight="48" Margin="16" IsEnabled="{Binding CanChooseProfile}"
                  AutomationProperties.Name="Поиск программы">
           <TextBox.InnerLeftContent>
             <PathIcon Data="{StaticResource StationMagnifyIcon}" Width="22" Height="22"
                       Margin="10,0,2,0" Foreground="{DynamicResource TextSecondaryBrush}" />
           </TextBox.InnerLeftContent>
         </TextBox>
-        <TextBlock Grid.Row="1" Text="Модели устройств" FontSize="16" Margin="22,0,0,10"
+        <TextBlock Grid.Row="1" Text="Модели устройств" FontSize="{StaticResource FontSection}" Margin="16,0,16,12"
                    Foreground="{DynamicResource TextSecondaryBrush}" />
         <Grid Grid.Row="2">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -117,7 +117,7 @@
                         <PathIcon Classes="detail" Classes.expanded="{Binding IsExpanded}" Width="18" Height="18"
                                   Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock Grid.Column="1" Text="{Binding ModelName}" TextWrapping="Wrap"
-                                   FontSize="19" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                   FontSize="{StaticResource FontSection}" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" />
                       </Grid>
                     </Button>
                     <ItemsControl ItemsSource="{Binding Profiles}" IsVisible="{Binding IsExpanded}">
@@ -125,7 +125,7 @@
                         <DataTemplate x:DataType="vm:StationProfileOptionViewModel">
                           <Button Classes="program" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
                                   AutomationProperties.Name="{Binding Profile.ConfigurationName}">
-                            <TextBlock Text="{Binding Profile.ConfigurationName}" FontSize="18" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Profile.ConfigurationName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
                           </Button>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
@@ -135,34 +135,27 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-          <TextBlock Text="Программы не найдены" TextWrapping="Wrap" FontSize="18" Margin="22,20"
+          <TextBlock Text="Программы не найдены" TextWrapping="Wrap" FontSize="{StaticResource FontSection}" Margin="22,20"
                      IsVisible="{Binding StationProfiles.Count, Converter={StaticResource IsEmpty}}"
                      IsHitTestVisible="False" Foreground="{DynamicResource TextSecondaryBrush}" />
         </Grid>
-        <Button Grid.Row="3" Classes="station" Click="OpenSettings" Margin="12,16"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Left">
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <PathIcon Data="{StaticResource StationCogOutlineIcon}" Width="24" Height="24" />
-            <TextBlock Text="Настройки" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
+
       </Grid>
     </Border>
 
-    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="28,24,28,20">
-      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="16">
+      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
         <StackPanel Spacing="6">
-          <TextBlock Text="{Binding StationProfileName}" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding StationConfigurationCaption}" TextWrapping="Wrap" FontSize="18" Foreground="{DynamicResource TextSecondaryBrush}"
+          <TextBlock Text="{Binding StationProfileName}" FontSize="{StaticResource FontTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding StationConfigurationCaption}" TextWrapping="Wrap" FontSize="{StaticResource FontSection}" Foreground="{DynamicResource TextSecondaryBrush}"
                      IsVisible="{Binding HasStationProfile}" />
-          <TextBlock Text="{Binding Station.CurrentStage}" TextTrimming="CharacterEllipsis" FontSize="17" Height="26"
+          <TextBlock Text="{Binding Station.CurrentStage}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontBody}" Height="26"
                      ToolTip.Tip="{Binding Station.CurrentStage}"
                      Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsTestRunning}" />
         </StackPanel>
         <StackPanel Grid.Column="1" IsVisible="{Binding Station.HasSerialNumber}" Spacing="4" Margin="20,0,0,0">
-          <TextBlock Text="Серийный номер" FontSize="15" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <TextBlock Text="{Binding Station.SerialNumber}" FontSize="20" />
+          <TextBlock Text="Серийный номер" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+          <TextBlock Text="{Binding Station.SerialNumber}" FontSize="{StaticResource FontHeading}" />
         </StackPanel>
       </Grid>
 
@@ -179,14 +172,14 @@
                                 Classes.attention="{Binding NeedsAttention}" Classes.skipped="{Binding IsSkipped}"
                                 Classes.paused="{Binding IsPaused}" Width="28" Height="28"
                                 ToolTip.Tip="{Binding StatusText}" AutomationProperties.Name="{Binding StatusText}" />
-                      <TextBlock Grid.Column="1" Text="{Binding Number}" FontSize="19" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Text="{Binding Caption}" FontSize="20" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,8,12,8" />
-                      <TextBlock Grid.Column="3" Text="{Binding StatusText}" FontSize="16" VerticalAlignment="Center"
+                      <TextBlock Grid.Column="1" Text="{Binding Number}" FontSize="{StaticResource FontSection}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Caption}" FontSize="{StaticResource FontHeading}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,8,12,8" />
+                      <TextBlock Grid.Column="3" Text="{Binding StatusText}" FontSize="{StaticResource FontSection}" VerticalAlignment="Center"
                                  TextWrapping="Wrap" MaxWidth="140" IsVisible="{Binding ShowStatus}" />
                     </Grid>
                     <TextBlock Text="{Binding StepProgressText}" IsVisible="{Binding HasSteps}"
                                ToolTip.Tip="{Binding StepProgressText}" TextTrimming="CharacterEllipsis"
-                               FontSize="18" Height="28" Margin="94,0,14,10"
+                               FontSize="{StaticResource FontSection}" Height="28" Margin="94,0,14,10"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                   </StackPanel>
                 </Border>
@@ -194,15 +187,15 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <TextBlock Text="Выберите программу слева" FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center"
+        <TextBlock Text="Выберите программу слева" FontSize="{StaticResource FontTitle}" VerticalAlignment="Center" HorizontalAlignment="Center"
                    IsVisible="{Binding !HasStationProfile}" Foreground="{DynamicResource TextSecondaryBrush}" />
       </Grid>
 
-      <Border Grid.Row="2" IsVisible="{Binding Station.IsAwaitingAction}" Margin="0,12,0,0" Padding="18"
+      <Border Grid.Row="2" IsVisible="{Binding Station.IsAwaitingAction}" Margin="0,12,0,0" Padding="16"
               Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6">
-        <Grid RowDefinitions="*,Auto" MaxHeight="260">
+        <Grid RowDefinitions="*,Auto" MaxHeight="220">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <TextBlock Text="{Binding Station.OperatorMessage}" FontSize="23" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Station.OperatorMessage}" FontSize="{StaticResource FontHeading}" TextWrapping="Wrap" />
           </ScrollViewer>
           <WrapPanel Grid.Row="1" Margin="0,14,0,0">
             <Button Classes="station" Content="Готово · продолжить" Command="{Binding Station.ConfirmActionCommand}"
@@ -214,16 +207,16 @@
       <Border Grid.Row="3" IsVisible="{Binding IsTestPaused}" Margin="0,12,0,0" Padding="16,12"
               Background="{DynamicResource ChangedSoftBrush}" CornerRadius="6">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding PauseStatus}" FontSize="21" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding PauseHint}" FontSize="17" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding PauseStatus}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding PauseHint}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Border Grid.Row="4" Classes="result" Classes.success="{Binding Station.IsSuccessful}"
               Classes.attention="{Binding Station.NeedsAttention}" IsVisible="{Binding Station.HasResult}" Padding="16,12" Margin="0,12,0,0">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding Station.Headline}" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Station.Guidance}" FontSize="17" TextWrapping="Wrap" IsVisible="{Binding Station.NeedsAttention}" />
-          <TextBlock Text="{Binding Station.ReportStatus}" FontSize="17" TextWrapping="Wrap" IsVisible="{Binding Station.HasReportStatus}" />
+          <TextBlock Text="{Binding Station.Headline}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Station.Guidance}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.NeedsAttention}" />
+          <TextBlock Text="{Binding Station.ReportStatus}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.HasReportStatus}" />
         </StackPanel>
       </Border>
 
@@ -231,27 +224,19 @@
         <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <PathIcon Classes="state" Classes.completed="{Binding IsStationReady}" Width="20" Height="20" />
-            <TextBlock Text="{Binding StationConnectionText}" FontSize="16" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding StationConnectionText}" FontSize="{StaticResource FontSection}" VerticalAlignment="Center" />
           </StackPanel>
-          <TextBlock Grid.Column="1" Text="{Binding StationReadiness}" FontSize="16" TextWrapping="Wrap"
+          <TextBlock Grid.Column="1" Text="{Binding StationReadiness}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap"
                      Margin="20,0,0,0" HorizontalAlignment="Right" MaxWidth="450" />
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
-          <Button Classes="station" Content="Подключить" Command="{Binding ConnectStationCommand}" Margin="0,0,8,0" />
-          <Button Grid.Column="1" Classes="station" Content="Отключить" Command="{Binding DisconnectStationCommand}"
-                  ToolTip.Tip="Отключение доступно после завершения теста" />
-          <Button Grid.Column="3" Classes="station" Content="Начать" Command="{Binding RunGraphCommand}"
-                  Background="{DynamicResource PrimaryBrush}" Foreground="White" MinWidth="110" Margin="16,0,8,0" />
-          <Grid Grid.Column="4" MinWidth="146" Margin="0,0,8,0">
-            <Button Classes="station" Content="Пауза" Command="{Binding PauseTestCommand}" IsVisible="{Binding !IsTestPaused}"
-                    HorizontalAlignment="Stretch" ToolTip.Tip="Приостановить перед следующей операцией" />
-            <Button Classes="station" Content="Продолжить" Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}"
-                    HorizontalAlignment="Stretch" />
-          </Grid>
-          <Button Grid.Column="5" Classes="station" Content="Остановить" Command="{Binding StopTestCommand}"
-                  Foreground="{DynamicResource DangerTextBrush}" BorderBrush="{DynamicResource DangerBrush}"
-                  ToolTip.Tip="Прервать тест и выполнить завершающие действия" />
-        </Grid>
+        <WrapPanel Grid.Row="1" Classes="actions" Name="StationActions">
+          <Button Classes="station" Content="Подключить" Command="{Binding ConnectStationCommand}" />
+          <Button Classes="station" Content="Отключить" Command="{Binding DisconnectStationCommand}" />
+          <Button Classes="station primary" Content="Начать" Command="{Binding RunGraphCommand}" MinWidth="100" />
+          <Button Classes="station" Content="Пауза" Command="{Binding PauseTestCommand}" IsVisible="{Binding !IsTestPaused}" />
+          <Button Classes="station" Content="Продолжить" Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" />
+          <Button Classes="station danger" Content="Остановить" Command="{Binding StopTestCommand}" />
+        </WrapPanel>
       </Grid>
     </Grid>
   </Grid>

@@ -18,64 +18,6 @@
                  MinWidth="0">
         <StackPanel DockPanel.Dock="Right"
                     Orientation="Horizontal"
-                    Spacing="5"
-                    VerticalAlignment="Top">
-          <Border Width="14"
-                  Height="14"
-                  CornerRadius="7"
-                  Background="{Binding NodeColorBrush}"
-                  VerticalAlignment="Center" />
-          <ComboBox Width="112"
-                    ItemsSource="{Binding NodeColors}"
-                    SelectedItem="{Binding SelectedColor, Mode=TwoWay}"
-                    FontSize="11"
-                    VerticalAlignment="Center">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="nodifyvm:NodeColorOption">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Border Width="12"
-                          Height="12"
-                          CornerRadius="6"
-                          Background="{Binding Brush}"
-                          VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding Name}" />
-                </StackPanel>
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-        </StackPanel>
-        <Border DockPanel.Dock="Right"
-                Classes="nodeHelpTrigger"
-                Width="22"
-                Height="22"
-                Margin="8,0,0,0"
-                CornerRadius="11"
-                BorderThickness="1"
-                IsVisible="{Binding HasHelpText}"
-                PointerPressed="OnNodeHelpPointerPressed"
-                VerticalAlignment="Top">
-          <PathIcon Width="16"
-                    Height="16"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Foreground="{DynamicResource TextSecondaryBrush}"
-                    Data="M11 10h2v7h-2z M11 7h2v2h-2z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" />
-        </Border>
-        <TextBlock Text="{Binding Title}"
-                   MaxWidth="320"
-                   TextWrapping="Wrap"
-                   LineHeight="17"
-                   FontWeight="SemiBold"
-                   VerticalAlignment="Center" />
-      </DockPanel>
-    </DataTemplate>
-
-    <DataTemplate x:Key="ModbusWriteHeaderTemplate"
-                  x:DataType="stepvm:ModbusWriteNodeViewModel">
-      <DockPanel LastChildFill="True"
-                 MinWidth="0">
-        <StackPanel DockPanel.Dock="Right"
-                    Orientation="Horizontal"
                     Spacing="6"
                     VerticalAlignment="Center">
           <Border Classes="nodeHelpTrigger"
@@ -118,6 +60,10 @@
             </Button.Flyout>
           </Button>
         </StackPanel>
+        <StackPanel Spacing="4">
+          <Border IsVisible="{Binding IsRunStart}" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="6,3">
+            <TextBlock Text="{Binding RunStartLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="Bold" />
+          </Border>
         <TextBlock Text="{Binding Title}"
                    MaxWidth="320"
                    TextWrapping="Wrap"
@@ -125,6 +71,7 @@
                    FontWeight="SemiBold"
                    Foreground="{Binding NodeHeaderTextBrush}"
                    VerticalAlignment="Center" />
+        </StackPanel>
       </DockPanel>
     </DataTemplate>
 
@@ -193,191 +140,58 @@
       <Setter Property="BorderThickness" Value="2" />
     </Style>
 
-    <Style Selector="Border.nodeHelpClose">
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="Transitions">
-        <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.14" />
-          <BrushTransition Property="BorderBrush" Duration="0:0:0.14" />
-        </Transitions>
-      </Setter>
-    </Style>
-
-    <Style Selector="Border.nodeHelpClose:pointerover">
-      <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
-    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
 
-    <Border Grid.Row="0"
-            Padding="12,10"
-            Background="{DynamicResource SurfaceBrush}"
-            BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,*">
-
-        <StackPanel Grid.Column="0"
-                    Orientation="Horizontal"
-                    Spacing="12"
-                    VerticalAlignment="Center">
-          <Button Command="{Binding GoBackGraphCommand}"
-                  IsEnabled="{Binding CanGoBackGraph}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="14"
-                        Height="14"
-                        Data="M11 5l-7 7 7 7v-5h9v-4h-9z"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Назад"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding RunGraphCommand}"
-                  Classes="primary"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="13"
-                        Height="13"
-                        Data="M8 5v14l11-7z"
-                        Foreground="{DynamicResource OnPrimaryBrush}" />
-              <TextBlock Text="Запустить граф"
-                         Foreground="{DynamicResource OnPrimaryBrush}"
-                         FontWeight="SemiBold" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding PauseTestCommand}"
-                  IsVisible="{Binding IsTestRunning}"
-                  IsEnabled="{Binding !IsTestPaused}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="13"
-                        Height="13"
-                        Data="M6 4h4v16H6z M14 4h4v16h-4z"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Пауза"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding ResumeTestCommand}"
-                  IsVisible="{Binding IsTestPaused}"
-                  Classes="primary"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="13"
-                        Height="13"
-                        Data="M8 5v14l11-7z"
-                        Foreground="{DynamicResource OnPrimaryBrush}" />
-              <TextBlock Text="Продолжить"
-                         Foreground="{DynamicResource OnPrimaryBrush}"
-                         FontWeight="SemiBold" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding StopTestCommand}"
-                  IsVisible="{Binding IsTestRunning}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="12"
-                        Height="12"
-                        Data="M6 6h12v12H6z"
-                        Foreground="#DC2626" />
-              <TextBlock Text="Остановить"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
-          <Button Command="{Binding UndoCommand}"
-                  IsEnabled="{Binding CanUndo}"
-                  Classes="ghost icon"
-                  ToolTip.Tip="Отменить (Ctrl+Z)"
-                  Width="38"
-                  Height="36">
-            <Path Fill="{DynamicResource TextPrimaryBrush}"
-                     Data="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"
-                     Width="14" Height="14"
-                     Stretch="Fill" />
-          </Button>
-          <Button Command="{Binding RedoCommand}"
-                  IsEnabled="{Binding CanRedo}"
-                  Classes="ghost icon"
-                  ToolTip.Tip="Повторить (Ctrl+Y)"
-                  Width="38"
-                  Height="36">
-            <Path Fill="{DynamicResource TextPrimaryBrush}"
-                     Data="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"
-                     Width="14" Height="14"
-                     Stretch="Fill" />
-          </Button>
-
-          <Button Command="{Binding NewProfileCommand}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="14"
-                        Height="14"
-                        Data="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Новый"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding ClearGraphCommand}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="14"
-                        Height="14"
-                        Data="M7 4V2h10v2h5v2H2V4h5z M5 8h14l-1 14H6z"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Очистить"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
-
-          <Button Command="{Binding SaveGraphCommand}"
-                  Classes="ghost"
-                  Height="36">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <PathIcon Width="14"
-                        Height="14"
-                        Data="M5 3h12l2 2v16H5z M7 5v6h10V6.5L15.5 5z M8 15h8v4H8z"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="Сохранить"
-                         Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-          </Button>
+    <Border Grid.Row="0" Padding="12,8" Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+        <StackPanel Spacing="5" Margin="0,0,0,12">
+          <TextBlock Text="Название профиля" FontWeight="SemiBold" />
+          <TextBox Text="{Binding CurrentProfileName, UpdateSourceTrigger=LostFocus}" Watermark="Например: Проверка питания PSW-2G6F+"
+                   IsReadOnly="{Binding !CanEditGraph}" AutomationProperties.Name="Название профиля" KeyDown="OnProfileNameKeyDown" />
+          <TextBlock Text="Измените название и нажмите «Сохранить» ниже." Classes="hint" />
         </StackPanel>
-
-
-
-        <TextBlock Grid.Column="1"
-                   Text="{Binding CurrentGraphPath}"
-                   HorizontalAlignment="Right"
-                   VerticalAlignment="Center"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
-                   FontSize="13" />
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,0,0,8" IsVisible="{Binding CanGoBackGraph}">
+          <Button Command="{Binding GoBackGraphCommand}" IsEnabled="{Binding CanGoBackGraph}" ToolTip.Tip="Назад к родительскому графу" AutomationProperties.Name="Назад к родительскому графу" Padding="9,8"><PathIcon Width="18" Height="18" Data="M10 4 L3 11 10 18 12 16 8 12 21 12 21 10 8 10 12 6 Z" /></Button>
+          <TextBlock Grid.Column="1" Text="{Binding CurrentGraphPath}" TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{Binding CurrentGraphPath}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        </Grid>
+        <WrapPanel Grid.Row="2" Classes="actions" Name="GraphActions">
+          <Button Command="{Binding RunGraphCommand}" Classes="primary" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /><TextBlock Text="Запустить" Foreground="{Binding $parent[Button].Foreground}" /></StackPanel></Button>
+          <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза" Padding="9,8"><PathIcon Width="18" Height="18" Data="M5 3 H10 V21 H5 Z M14 3 H19 V21 H14 Z" /></Button>
+          <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="primary" ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /></Button>
+          <Button Command="{Binding StopTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="danger" ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 4 H20 V20 H4 Z" /></Button>
+          <Button Command="{Binding SaveGraphCommand}"  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M3 3 H18 L21 6 V21 H3 Z M6 4 V10 H17 V4 Z M6 14 V20 H18 V14 Z" /><TextBlock Text="Сохранить" /></StackPanel></Button>
+          <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
+          <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
+          <Button Command="{Binding ClearGraphCommand}"  ToolTip.Tip="Очистить граф" AutomationProperties.Name="Очистить граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 6 H20 V8 H4 Z M9 3 H15 V5 H9 Z M6 9 H18 L17 22 H7 Z" /></Button>
+          <Button Click="OnZoomOutClick" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 11 H20 V13 H4 Z" /></Button>
+          <Button Click="OnZoomInClick" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" /></Button>
+          <Button Click="OnCenterGraphClick" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" /></Button>
+          <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,8,8" />
+        </WrapPanel>
+        <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
+                CornerRadius="8" Padding="10" Margin="0,4,0,0">
+          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Text="{Binding PartialRunCaption}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Content="С начала" Command="{Binding ClearPartialRunCommand}" Margin="12,0,0,0"
+                    ToolTip.Tip="Сбросить временный старт и запускать весь профиль" />
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="6" Margin="0,6,0,0">
+              <TextBlock Text="{Binding PartialRunHint}" Classes="hint" TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Slave ID (если нужен)" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding RunSlaveId}" Minimum="1" Maximum="247" Increment="1" FormatString="0"
+                               Width="160" IsEnabled="{Binding CanEditGraph}" Watermark="Не задан" />
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1">
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ClipToBounds="True">
       <nodify:NodifyEditor x:Name="Editor"
                            Classes.inspectOnly="{Binding !CanEditGraph}"
                            ItemsSource="{Binding Nodes}"
@@ -415,7 +229,7 @@
                              Classes="LabelNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -438,14 +252,13 @@
 
             <views:NodeTemplateSelector.ModbusWriteTemplate>
               <DataTemplate x:DataType="stepvm:ModbusWriteNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource ModbusWriteHeaderTemplate}"
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="ModbusNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
-                             HeaderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -463,77 +276,81 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*,Auto">
-                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <StackPanel Margin="12" Spacing="8" Width="280">
+                    <Grid ColumnDefinitions="108,*,Auto">
+                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding IsConnected}"
                                 ItemsSource="{Binding AvailableSlaves}"
                                 SelectedItem="{Binding SelectedSlave}"
-                                FontSize="12"
+                                FontSize="{StaticResource FontCaption}"
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="12" />
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1"
                                IsVisible="{Binding !IsConnected}"
                                Text="{Binding SlaveIdText}"
-                               FontSize="12" />
+                               FontSize="{StaticResource FontCaption}" />
                       <StackPanel Grid.Column="2"
                                   Orientation="Horizontal"
                                   Margin="6,0,0,0"
                                   VerticalAlignment="Center">
                         <TextBlock Text="ID "
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontCaption}"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock Text="{Binding SlaveId}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontCaption}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}" />
                       </StackPanel>
                     </Grid>
 
-                    <CheckBox Content="Slave из цикла"
+                    <CheckBox
                               IsChecked="{Binding UseCurrentSlaveId}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Slave из цикла" TextWrapping="Wrap" /></CheckBox>
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
                                 SelectedItem="{Binding SelectedRegister}"
-                                FontSize="12"
+                                FontSize="{StaticResource FontCaption}"
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="12" />
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1"
                                IsVisible="{Binding ShowAddressTextBox}"
                                Text="{Binding AddressText}"
-                               FontSize="12" />
+                               FontSize="{StaticResource FontCaption}" />
                     </Grid>
+                    <SelectableTextBlock Text="{Binding RegisterDescription}" MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RegisterDescription}"
+                                         FontSize="{StaticResource FontCaption}" TextWrapping="Wrap"
+                                         Foreground="{DynamicResource TextSecondaryBrush}" />
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ValueText}" FontSize="12" />
+
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ValueText}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <TextBlock Text="{Binding IntegerInputError}"
                                IsVisible="{Binding HasIntegerInputError}"
-                               FontSize="11"
+                               FontSize="{StaticResource FontCaption}"
                                Foreground="#DC2626"
                                TextWrapping="Wrap" />
 
-                    <CheckBox Content="Проверка"
+                    <CheckBox
                               IsChecked="{Binding VerifyWrite}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверка" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -547,7 +364,7 @@
                              Classes="HttpNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -565,46 +382,47 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
+                  <StackPanel Margin="12" Spacing="8" Width="320">
                     <Grid ColumnDefinitions="88,*">
-                      <TextBlock Grid.Column="0" Text="URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="URL:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding Url}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Watermark="http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?..." />
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
-                      <TextBlock Grid.Column="0" Text="Timeout:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Timeout:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
-                      <TextBlock Grid.Column="0" Text="Poll ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Poll ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
-                      <TextBlock Grid.Column="0" Text="Prefix:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding OutputPrefix}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Prefix:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding OutputPrefix}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
-                      <TextBlock Grid.Column="0" Text="Min/Max:" VerticalAlignment="Top" Margin="0,5,0,0" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Min/Max:" VerticalAlignment="Top" Margin="0,5,0,0" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" />
                       <TextBox Grid.Column="1"
                                Text="{Binding ValidationRules}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                TextWrapping="NoWrap"
                                AcceptsReturn="True"
                                Height="118" />
                     </Grid>
 
-                    <CheckBox Content="PSW-2G6F+: ADC, SFP и PoE"
+                    <CheckBox
+                              ToolTip.Tip="Дополнительные проверки аппаратуры PSW-2G6F+. Адрес test.shtml задаётся отдельно в URL."
                               IsChecked="{Binding Psw2G6FHardwareChecks}"
-                              FontSize="12" />
-                    <CheckBox Content="Критическая ошибка при провале"
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять питание, SFP и PoE PSW-2G6F+" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox
                               IsChecked="{Binding FailOnError}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -617,7 +435,7 @@
                              Classes="HttpNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -635,65 +453,65 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
+                  <StackPanel Margin="12" Spacing="8" Width="340">
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Server:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Server:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding ServerBaseUrl}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Watermark="пусто = Server base URL из Настроек" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Device:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Device:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding DeviceType}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Watermark="PSW+UPS-Box 8x2Pro" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="CPU var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="CPU var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding CpuIdVariableName}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Watermark="Dut.cpu_id" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding OutputVariableName}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Watermark="SerialNumber" />
                     </Grid>
 
-                    <CheckBox Content="Отладка: не обращаться к серверу"
+                    <CheckBox
                               IsChecked="{Binding UseFixedSerialNumber}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Отладка: не обращаться к серверу" TextWrapping="Wrap" /></CheckBox>
 
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Debug serial:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="0" Text="Debug serial:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding FixedSerialNumber}"
                                IsEnabled="{Binding UseFixedSerialNumber}"
-                               FontSize="12" />
+                               FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Timeout:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Timeout:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*,8,*">
-                      <TextBlock Grid.Column="0" Text="Retry:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding RetryCount}" FontSize="12" />
-                      <TextBox Grid.Column="3" Text="{Binding RetryDelayMs}" FontSize="12" Watermark="delay ms" />
+                      <TextBlock Grid.Column="0" Text="Retry:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding RetryCount}" FontSize="{StaticResource FontCaption}" />
+                      <TextBox Grid.Column="3" Text="{Binding RetryDelayMs}" FontSize="{StaticResource FontCaption}" Watermark="delay ms" />
                     </Grid>
 
-                    <CheckBox Content="Критическая ошибка при провале"
+                    <CheckBox
                               IsChecked="{Binding FailOnError}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -706,7 +524,7 @@
                              Classes="EqualityNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -720,22 +538,22 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="300">
+                  <StackPanel Margin="12" Spacing="8" Width="300">
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="12" Watermark="Dut.init_ok" />
+                      <TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="{StaticResource FontCaption}" Watermark="Dut.init_ok" />
                     </Grid>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Expected:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Expected:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="12" Watermark="Number" />
+                      <TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="{StaticResource FontCaption}" Watermark="Number" />
                     </Grid>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
+                      <TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
                     </Grid>
                   </StackPanel>
                 </nodify:Node>
@@ -750,7 +568,7 @@
                              Classes="RangeNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -764,23 +582,23 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="300">
+                  <StackPanel Margin="12" Spacing="8" Width="300">
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="12" Watermark="Dut.akb_voltage" />
+                      <TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="{StaticResource FontCaption}" Watermark="Dut.akb_voltage" />
                     </Grid>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Min:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Min:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Max:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Max:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <CheckBox Content="Включая границы" IsChecked="{Binding Inclusive}" FontSize="12" />
+                    <CheckBox  IsChecked="{Binding Inclusive}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включая границы" TextWrapping="Wrap" /></CheckBox>
                     <Grid ColumnDefinitions="96,*">
-                      <TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
+                      <TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
                     </Grid>
                   </StackPanel>
                 </nodify:Node>
@@ -795,7 +613,7 @@
                              Classes="RangeNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -813,85 +631,89 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*,Auto">
-                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <StackPanel Margin="12" Spacing="8" Width="280">
+                    <Grid ColumnDefinitions="108,*,Auto">
+                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding IsConnected}"
                                 ItemsSource="{Binding AvailableSlaves}"
                                 SelectedItem="{Binding SelectedSlave}"
-                                FontSize="12"
+                                FontSize="{StaticResource FontCaption}"
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="12" />
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1"
                                IsVisible="{Binding !IsConnected}"
                                Text="{Binding SlaveId}"
-                               FontSize="12" />
+                               FontSize="{StaticResource FontCaption}" />
                       <StackPanel Grid.Column="2"
                                   Orientation="Horizontal"
                                   Margin="6,0,0,0"
                                   VerticalAlignment="Center">
                         <TextBlock Text="ID "
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontCaption}"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock Text="{Binding SlaveId}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontCaption}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}" />
                       </StackPanel>
                     </Grid>
 
-                    <CheckBox Content="Slave из цикла"
+                    <CheckBox
                               IsChecked="{Binding UseCurrentSlaveId}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Slave из цикла" TextWrapping="Wrap" /></CheckBox>
 
-                    <CheckBox Content="Live Modbus read"
+                    <CheckBox
                               IsChecked="{Binding LiveRead}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Live Modbus read" TextWrapping="Wrap" /></CheckBox>
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Попыток:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ReadAttempts}" FontSize="12" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Попыток:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ReadAttempts}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Пауза, мс:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ReadIntervalMs}" FontSize="12" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Пауза, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ReadIntervalMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
                                 SelectedItem="{Binding SelectedRegister}"
-                                FontSize="12"
+                                FontSize="{StaticResource FontCaption}"
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="12" />
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBox Grid.Column="1"
                                IsVisible="{Binding ShowAddressTextBox}"
                                Text="{Binding Address}"
-                               FontSize="12" />
+                               FontSize="{StaticResource FontCaption}" />
+                    </Grid>
+                    <SelectableTextBlock Text="{Binding RegisterDescription}" MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RegisterDescription}"
+                                         FontSize="{StaticResource FontCaption}" TextWrapping="Wrap"
+                                         Foreground="{DynamicResource TextSecondaryBrush}" />
+
+
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Минимум:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Минимум:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Min}" FontSize="12" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Максимум:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="12" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Максимум:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                   </StackPanel>
                 </nodify:Node>
@@ -906,7 +728,7 @@
                              Classes="DelayNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -920,10 +742,10 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="190">
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Мс:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Milliseconds}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="190">
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Milliseconds}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                   </StackPanel>
                 </nodify:Node>
@@ -938,7 +760,7 @@
                              Classes="LabelNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -952,13 +774,13 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <Grid Margin="10,6,10,10"
+                  <Grid Margin="12"
                         Width="{Binding LabelWidth}"
                         Height="{Binding LabelHeight}"
                         MinWidth="190"
                         MinHeight="88">
                     <TextBox Text="{Binding Text}"
-                             FontSize="14"
+                             FontSize="{StaticResource FontBody}"
                              TextWrapping="Wrap"
                              AcceptsReturn="True"
                              VerticalAlignment="Stretch"
@@ -992,7 +814,7 @@
                              Classes="SubtestNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1006,34 +828,34 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="240">
+                  <StackPanel Margin="12" Spacing="8" Width="240">
                     <Grid ColumnDefinitions="78,*">
-                      <TextBlock Grid.Column="0" Text="Название:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Name}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Название:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Name}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <TextBox Text="{Binding Description}"
-                             FontSize="12"
+                             FontSize="{StaticResource FontCaption}"
                              TextWrapping="Wrap"
                              AcceptsReturn="True"
                              Height="48"
                              Watermark="Описание" />
 
                     <Grid ColumnDefinitions="*,*">
-                      <CheckBox Grid.Column="0" Content="Включен" IsChecked="{Binding IsEnabled}" FontSize="12" />
-                      <CheckBox Grid.Column="1" Content="Стоп" IsChecked="{Binding StopOnError}" FontSize="12" Margin="8,0,0,0" />
+                      <CheckBox Grid.Column="0"  IsChecked="{Binding IsEnabled}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включен" TextWrapping="Wrap" /></CheckBox>
+                      <CheckBox Grid.Column="1"  IsChecked="{Binding StopOnError}" FontSize="{StaticResource FontCaption}" Margin="8,0,0,0" ><TextBlock Text="Стоп" TextWrapping="Wrap" /></CheckBox>
                     </Grid>
 
-                    <CheckBox Content="Cleanup on failure/stop"
+                    <CheckBox
                               IsChecked="{Binding RunOnFailure}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Cleanup on failure/stop" TextWrapping="Wrap" /></CheckBox>
 
                     <TextBlock Text="{Binding StepCount, StringFormat='Шагов: {0}'}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding ProgressText, StringFormat='Сейчас: {0}'}"
                                IsVisible="{Binding HasProgress}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource NodeWaitBrush}" />
@@ -1043,7 +865,7 @@
                             Command="{Binding DataContext.OpenCompositeNodeBodyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
                             Classes="ghost"
-                            FontSize="12" />
+                            FontSize="{StaticResource FontCaption}" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1056,7 +878,7 @@
                              Classes="LoopNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1070,32 +892,32 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="220">
+                  <StackPanel Margin="12" Spacing="8" Width="220">
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="С:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding FromSlaveId}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="С:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding FromSlaveId}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="По:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ToSlaveId}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="По:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ToSlaveId}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
                     <Grid ColumnDefinitions="86,*">
-                      <TextBlock Grid.Column="0" Text="Шаг:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Step}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Шаг:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Step}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
-                    <CheckBox Content="Стоп при ошибке"
+                    <CheckBox
                               IsChecked="{Binding StopOnError}"
-                              FontSize="12" />
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Стоп при ошибке" TextWrapping="Wrap" /></CheckBox>
 
                     <Button Content="Редактировать тело"
                             x:CompileBindings="False"
                             Command="{Binding DataContext.OpenCompositeNodeBodyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
                             Classes="ghost"
-                            FontSize="12" />
+                            FontSize="{StaticResource FontCaption}" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1109,7 +931,7 @@
                              Classes="WaitNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1122,34 +944,38 @@
                       <nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" />
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*,Auto">
-                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <ComboBox Grid.Column="1" IsVisible="{Binding IsConnected}" ItemsSource="{Binding AvailableSlaves}" SelectedItem="{Binding SelectedSlave}" FontSize="12" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
+                  <StackPanel Margin="12" Spacing="8" Width="280">
+                    <Grid ColumnDefinitions="108,*,Auto">
+                      <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <ComboBox Grid.Column="1" IsVisible="{Binding IsConnected}" ItemsSource="{Binding AvailableSlaves}" SelectedItem="{Binding SelectedSlave}" FontSize="{StaticResource FontCaption}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="12" />
+                      <TextBox Grid.Column="1" IsVisible="{Binding !IsConnected}" Text="{Binding SlaveId}" FontSize="{StaticResource FontCaption}" />
                       <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="ID " FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding SlaveId}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Text="ID " FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding SlaveId}" FontSize="{StaticResource FontCaption}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
                       </StackPanel>
                     </Grid>
-                    <CheckBox Content="Slave из цикла" IsChecked="{Binding UseCurrentSlaveId}" FontSize="12" />
-                    <CheckBox Content="Live Modbus read" IsChecked="{Binding LiveRead}" FontSize="12" />
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="12" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="12" /></DataTemplate></ComboBox.ItemTemplate>
+                    <CheckBox  IsChecked="{Binding UseCurrentSlaveId}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Slave из цикла" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox  IsChecked="{Binding LiveRead}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Live Modbus read" TextWrapping="Wrap" /></CheckBox>
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="{StaticResource FontCaption}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="12" />
+                      <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" />
+                    <SelectableTextBlock Text="{Binding RegisterDescription}" MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RegisterDescription}"
+                                         FontSize="{StaticResource FontCaption}" TextWrapping="Wrap"
+                                         Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Таймаут мс:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Таймаут мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                   </StackPanel>
                 </nodify:Node>
@@ -1164,7 +990,7 @@
                              Classes="OperatorNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1178,25 +1004,25 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
-                    <CheckBox Content="Run arpd.bat" IsChecked="{Binding RunArpdBat}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="320">
+                    <CheckBox  IsChecked="{Binding RunArpdBat}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Run arpd.bat" TextWrapping="Wrap" /></CheckBox>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Bat path:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding ArpdBatPath}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Bat path:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ArpdBatPath}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Command:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Command}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Command:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Command}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Arguments:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Arguments}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Arguments:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Arguments}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1210,7 +1036,7 @@
                              Classes="HttpNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1224,24 +1050,24 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
+                  <StackPanel Margin="12" Spacing="8" Width="340">
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Batch path:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding BatchPath}" Watermark="set_mac_pro.bat" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Batch path:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding BatchPath}" Watermark="set_mac_pro.bat" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Board version:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding BoardVersion}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Board version:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding BoardVersion}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="104,*">
-                      <TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1252,18 +1078,18 @@
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode"
                              Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="8" Spacing="6" Width="320">
-                    <TextBlock Text="Отправка ≠ подтверждение записи MAC" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="Отправка ≠ подтверждение записи MAC" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" />
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="DUT IPv4:" /><TextBox Grid.Column="1" Text="{Binding DestinationIp}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="Local IPv4:" /><TextBox Grid.Column="1" Text="{Binding LocalIp}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="Local port:" /><TextBox Grid.Column="1" Text="{Binding LocalPort}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="UDP port:" /><TextBox Grid.Column="1" Text="{Binding UdpPort}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="MAC var:" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="Timeout ms:" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" /></Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" />
+                    <CheckBox  IsChecked="{Binding FailOnError}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1274,16 +1100,16 @@
                 <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}"
                              Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode"
                              Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="8" Spacing="6" Width="390">
-                    <TextBlock Text="Старые PSW: проверка версии, загрузка и повторный selftest" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="Старые PSW: проверка версии, загрузка и повторный selftest" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" />
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="DUT URL:" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Файл .img:" /><TextBox Grid.Column="1" Text="{Binding FirmwarePath}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия:" /><TextBox Grid.Column="1" Text="{Binding TargetVersion}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия из:" /><TextBox Grid.Column="1" Text="{Binding VersionVariable}" /></Grid>
-                    <CheckBox Content="Прошивать даже при более новой версии" IsChecked="{Binding ForceUpdate}" />
+                    <CheckBox  IsChecked="{Binding ForceUpdate}" ><TextBlock Text="Прошивать даже при более новой версии" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1297,7 +1123,7 @@
                              Classes="PollNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1311,54 +1137,54 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="370">
+                  <StackPanel Margin="12" Spacing="8" Width="370">
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Mode:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding Mode}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Mode:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding Mode}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Packet size:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding PacketSizeBytes}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Packet size:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding PacketSizeBytes}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="UDP port:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding UdpPort}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="UDP port:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding UdpPort}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Target wire Mbps:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Target wire Mbps:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <CheckBox Content="Allow gigabit (до 1000 Mbps)" IsChecked="{Binding AllowGigabit}" FontSize="12" />
+                    <CheckBox  IsChecked="{Binding AllowGigabit}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Allow gigabit (до 1000 Mbps)" TextWrapping="Wrap" /></CheckBox>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Duration ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding DurationMs}" FontSize="12" />
-                    </Grid>
-                    <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Warmup ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding WarmupMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Duration ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding DurationMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Pair pause ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding InterPairDelayMs}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Warmup ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding WarmupMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Max loss %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Pair pause ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding InterPairDelayMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Max TX deficit %:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding AllowedTxDeficitPercent}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Max loss %:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding AllowedLossPercent}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="12" />
+                      <TextBlock Grid.Column="0" Text="Max TX deficit %:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding AllowedTxDeficitPercent}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Ports:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBox Grid.Column="1" Text="{Binding PortsText}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="72" />
+                      <TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <CheckBox Content="Test both directions" IsChecked="{Binding Bidirectional}" FontSize="12" />
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                    <Grid ColumnDefinitions="128,*">
+                      <TextBlock Grid.Column="0" Text="Ports:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding PortsText}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="72" />
+                    </Grid>
+                    <CheckBox  IsChecked="{Binding Bidirectional}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Test both directions" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1366,16 +1192,16 @@
 
             <views:NodeTemplateSelector.ReadHttpVariableTemplate>
               <DataTemplate x:DataType="stepvm:ReadHttpVariableNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
-                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="12" /></Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="350">
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Output var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1383,16 +1209,16 @@
 
             <views:NodeTemplateSelector.BuildMacFromSerialTemplate>
               <DataTemplate x:DataType="stepvm:BuildMacFromSerialNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial offset:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialOffset}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="MAC prefix:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacPrefix}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Short serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" /></Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="340">
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial offset:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialOffset}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="MAC prefix:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacPrefix}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Short serial var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1400,14 +1226,14 @@
 
             <views:NodeTemplateSelector.CompareVariablesTemplate>
               <DataTemplate x:DataType="stepvm:CompareVariablesNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="EqualityNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="EqualityNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="320">
-                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Left var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding LeftVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Right var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RightVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="12" TextWrapping="Wrap" AcceptsReturn="True" Height="52" /></Grid>
+                  <StackPanel Margin="12" Spacing="8" Width="320">
+                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Left var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding LeftVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Right var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RightVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Fail:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" /></Grid>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1415,21 +1241,21 @@
 
             <views:NodeTemplateSelector.WaitVariableUntilTemplate>
               <DataTemplate x:DataType="stepvm:WaitVariableUntilNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="WaitNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="WaitNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Expected:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Poll action:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding PollActions}" SelectedItem="{Binding PollAction, Mode=TwoWay}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Request ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Interval ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="12" /></Grid>
-                    <CheckBox Content="Fail on timeout" IsChecked="{Binding FailOnTimeout}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="350">
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Variable:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding VariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Expected:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ExpectedValue}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ComparisonType}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Poll action:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><ComboBox Grid.Column="1" ItemsSource="{Binding PollActions}" SelectedItem="{Binding PollAction, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Base URL:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding BaseUrl}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Response type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><ComboBox Grid.Column="1" ItemsSource="{Binding ResponseTypes}" SelectedItem="{Binding ResponseType, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Request ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Interval ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding FailOnTimeout}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on timeout" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1438,14 +1264,14 @@
 
             <views:NodeTemplateSelector.BuildTestReportTemplate>
               <DataTemplate x:DataType="stepvm:BuildTestReportNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="340">
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Report var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Test type:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TestType}" FontSize="12" /></Grid>
-                    <CheckBox Content="Include all variables" IsChecked="{Binding IncludeAllVariables}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="340">
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Report var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Test type:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Include all variables" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1453,21 +1279,21 @@
 
             <views:NodeTemplateSelector.PrintLabelTemplate>
               <DataTemplate x:DataType="stepvm:PrintLabelNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="OperatorNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="350">
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Printer:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding PrinterName}" FontSize="12" /></Grid>
-                    <CheckBox Content="Ввести серийник вручную" IsChecked="{Binding UseManualSerialNumber}" FontSize="12" />
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseManualSerialNumber}"><TextBlock Grid.Column="0" Text="Серийник вручную:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="12" /></Grid>
-                    <CheckBox Content="Производственная ZPL: модель + MAC + SN + штрихкод" IsChecked="{Binding UseQtProZplFormat}" FontSize="12" />
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseQtProZplFormat}"><TextBlock Text="Label model:" /><ComboBox Grid.Column="1" ItemsSource="{Binding LabelModels}" SelectedItem="{Binding LabelModel}" /></Grid>
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualQtProMode}"><TextBlock Grid.Column="0" Text="MAC вручную:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ManualMacAddress}" Watermark="C0:11:A6:20:01:AC" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Short SN var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Copies:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Copies}" FontSize="12" /></Grid>
-                    <CheckBox Content="Fail on printer error" IsChecked="{Binding FailOnPrinterError}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="350">
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Printer:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding PrinterName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding UseManualSerialNumber}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ввести серийник вручную" TextWrapping="Wrap" /></CheckBox>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseManualSerialNumber}"><TextBlock Grid.Column="0" Text="Серийник вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Serial var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding UseQtProZplFormat}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Производственная ZPL: модель + MAC + SN + штрихкод" TextWrapping="Wrap" /></CheckBox>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding UseQtProZplFormat}"><TextBlock Text="Модель этикетки:" /><ComboBox Grid.Column="1" ItemsSource="{Binding LabelModelNames}" SelectedIndex="{Binding SelectedLabelModelIndex}" ToolTip.Tip="Модель задаётся в этой ноде и сохраняется в профиле. Выбирает название изделия, тип в штрихкоде и макет ZPL." /></Grid>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualQtProMode}"><TextBlock Grid.Column="0" Text="MAC вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualMacAddress}" Watermark="C0:11:A6:20:01:AC" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Short SN var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="MAC var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Copies:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding Copies}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding FailOnPrinterError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on printer error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1475,19 +1301,19 @@
 
             <views:NodeTemplateSelector.SendTestReportTemplate>
               <DataTemplate x:DataType="stepvm:SendTestReportNodeViewModel">
-                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
+                <nodify:Node Header="{Binding}" HeaderTemplate="{StaticResource NodeHeaderHelpTemplate}" Input="{Binding Input}" Output="{Binding Output}" Classes="HttpNode" Background="{DynamicResource NodeBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}" BorderThickness="1" CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeInput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.InputConnectorTemplate>
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding Title}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="360">
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Server URL:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ServerBaseUrl}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Report var:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Retry count:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RetryCount}" FontSize="12" /></Grid>
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Retry delay ms:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding RetryDelayMs}" FontSize="12" /></Grid>
-                    <CheckBox Content="Save local copy" IsChecked="{Binding SaveLocalCopy}" FontSize="12" />
-                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Local dir:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" /><TextBox Grid.Column="1" Text="{Binding LocalReportsDirectory}" FontSize="12" /></Grid>
-                    <CheckBox Content="Fail on error" IsChecked="{Binding FailOnError}" FontSize="12" />
+                  <StackPanel Margin="12" Spacing="8" Width="360">
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Server URL:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ServerBaseUrl}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Report var:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Endpoint:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding Endpoint}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Timeout ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Retry count:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RetryCount}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Retry delay ms:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RetryDelayMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding SaveLocalCopy}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Save local copy" TextWrapping="Wrap" /></CheckBox>
+                    <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Local dir:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding LocalReportsDirectory}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Fail on error" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1501,7 +1327,7 @@
                              Classes="OperatorNode"
                              Background="{DynamicResource NodeBackgroundBrush}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
-                             BorderBrush="{Binding NodeColorBrush}"
+                             BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"
                              CornerRadius="8">
                   <nodify:Node.InputConnectorTemplate>
@@ -1519,12 +1345,12 @@
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
 
-                  <StackPanel Margin="10,6,10,10" Spacing="7" Width="230">
-                    <Grid ColumnDefinitions="76,*">
-                      <TextBlock Grid.Column="0" Text="Сообщение:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <StackPanel Margin="12" Spacing="8" Width="280">
+                    <Grid ColumnDefinitions="108,*">
+                      <TextBlock Grid.Column="0" Text="Сообщение:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding Message}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontCaption}"
                                TextWrapping="Wrap"
                                AcceptsReturn="True"
                                Height="60" />
@@ -1560,142 +1386,17 @@
 
       </nodify:NodifyEditor>
 
-      <Grid HorizontalAlignment="Right"
-            VerticalAlignment="Stretch"
-            Margin="0,16,16,16">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-
-        <Button Grid.Column="0"
-                Command="{Binding TogglePaletteCommand}"
-                Content="{Binding PaletteToggleIcon}"
-                ToolTip.Tip="{Binding PaletteToggleTip}"
-                VerticalAlignment="Center"
-                Width="24"
-                Height="56"
-                Padding="0"
-                FontSize="14"
-                Background="{DynamicResource SidebarDarkBrush}"
-                Foreground="{DynamicResource TextSecondaryBrush}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="6,0,0,6" />
-
-        <testviews:NodePaletteView Grid.Column="1"
-                                   IsVisible="{Binding !IsPaletteCollapsed}"
-                                   Width="230"
-                                   VerticalAlignment="Stretch" />
-      </Grid>
-
-      <Border HorizontalAlignment="Left"
-              VerticalAlignment="Top"
-              Width="410"
-              MaxHeight="560"
-              Margin="18"
-              Padding="14"
-              CornerRadius="8"
-              Background="{DynamicResource SurfaceBrush}"
-              BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1"
-              BoxShadow="0 12 30 0 #55000000"
-              DataContext="{Binding HelpNode, ElementName=Root}"
-              IsVisible="{Binding IsNodeHelpOpen, ElementName=Root}">
-        <Grid RowDefinitions="Auto,Auto,*">
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <Border Grid.Column="0"
-                    Width="34"
-                    Height="34"
-                    CornerRadius="17"
-                    Background="{DynamicResource PrimarySoftBrush}"
-                    VerticalAlignment="Top">
-              <PathIcon Width="17"
-                        Height="17"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource PrimaryBrush}"
-                        Data="M11 10h2v7h-2z M11 7h2v2h-2z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" />
-            </Border>
-
-            <StackPanel Grid.Column="1"
-                        Margin="12,0,10,0"
-                        Spacing="3">
-              <TextBlock Text="Справка по ноде"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <TextBlock Text="{Binding Title}"
-                         FontSize="16"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         TextWrapping="Wrap" />
-              <TextBlock Text="{Binding HelpSummary}"
-                         FontSize="12"
-                         LineHeight="17"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-
-            <Border Grid.Column="2"
-                    Classes="nodeHelpClose"
-                    Width="28"
-                    Height="28"
-                    CornerRadius="14"
-                    BorderThickness="1"
-                    PointerPressed="OnNodeHelpClosePointerPressed">
-              <PathIcon Width="12"
-                        Height="12"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource TextSecondaryBrush}"
-                        Data="M6 6l12 12M18 6L6 18" />
-            </Border>
+      <Grid Grid.Column="1" ColumnDefinitions="24,Auto" Name="InspectorPanel">
+        <Button Classes="edgeHandle" Command="{Binding TogglePaletteCommand}"
+                ToolTip.Tip="{Binding PaletteToggleTip}" AutomationProperties.Name="Свернуть или развернуть палитру"
+                Width="24" MinWidth="24" Height="64" Padding="5,12" VerticalAlignment="Center">
+          <Grid>
+            <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding !IsPaletteCollapsed}" Data="M2 0 L10 8 2 16 0 14 6 8 0 2 Z" />
+            <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsPaletteCollapsed}" Data="M8 0 L0 8 8 16 10 14 4 8 10 2 Z" />
           </Grid>
-
-          <Border Grid.Row="1"
-                  Height="1"
-                  Margin="0,12,0,12"
-                  Background="{DynamicResource BorderBrush}"
-                  IsVisible="{Binding HasHelpDetails}" />
-
-          <ScrollViewer Grid.Row="2"
-                        MaxHeight="390"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled"
-                        IsVisible="{Binding HasHelpDetails}">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Параметры и поведение"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-              <ItemsControl ItemsSource="{Binding HelpDetails}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="Auto,*"
-                          Margin="0,2,0,0">
-                      <Border Grid.Column="0"
-                              Width="5"
-                              Height="5"
-                              Margin="0,6,9,0"
-                              CornerRadius="2.5"
-                              Background="{DynamicResource PrimaryBrush}"
-                              Opacity="0.8" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding}"
-                                 FontSize="12"
-                                 LineHeight="17"
-                                 Foreground="{DynamicResource TextPrimaryBrush}"
-                                 TextWrapping="Wrap" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </ScrollViewer>
-        </Grid>
-      </Border>
-
+        </Button>
+        <testviews:NodePaletteView Grid.Column="1" Width="280" IsVisible="{Binding !IsPaletteCollapsed}" />
+      </Grid>
     </Grid>
   </Grid>
 </UserControl>

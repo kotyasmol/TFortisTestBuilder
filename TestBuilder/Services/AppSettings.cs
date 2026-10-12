@@ -13,7 +13,7 @@ namespace TestBuilder.Services
     public class AppSettings
     {
         public const string DefaultServerBaseUrl = "https://iccid.fort-telecom.ru";
-        public const string DefaultStandId = "123";
+        public const string DefaultStandId = "тест";
         public const string DefaultLogFolder = "logs";
 
         private static readonly string SettingsPath = Path.Combine(

@@ -47,6 +47,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private string? _currentProfilePath;
     private RegisterMonitor? _registerMonitor;
     private UndoRedoManager? _currentUndoRedo;
+    private readonly ProfileEditHistory _history;
     private CancellationTokenSource? _testRunCts;
     private Views.ModbusReconnectDialog? _modbusReconnectDialog;
     private TaskCompletionSource<bool> _pauseCompletion =
@@ -65,7 +66,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     [ObservableProperty]
     private bool isMonitoringActive;
 
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
     private string? statusMessage;
 
     [ObservableProperty]
@@ -89,9 +92,25 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public string PaletteToggleIcon => IsPaletteCollapsed ? "‹" : "›";
     public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
     public string CurrentGraphPath => string.Join(" / ", _graphPath);
-    public string CurrentProfileName => string.IsNullOrWhiteSpace(_currentProfilePath)
-        ? "Новый профиль"
-        : Path.GetFileNameWithoutExtension(_currentProfilePath);
+    public string CurrentProfileName
+    {
+        get => RootGraph.Title;
+        set
+        {
+            if (!CanEditGraph || value == CurrentProfileName) return;
+            var old = RootGraph.Title;
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => SetProfileTitle(value), () => SetProfileTitle(old)));
+        }
+    }
+    private void SetProfileTitle(string title)
+    {
+        RootGraph.Title = title;
+        if (_graphPath.Count > 0) _graphPath[0] = title;
+        OnPropertyChanged(nameof(CurrentProfileName));
+        OnPropertyChanged(nameof(CurrentGraphPath));
+    }
+    private sealed class ProfileMetadataCommand(Action apply, Action undo) : IGraphCommand
+    { public void Execute() => apply(); public void Undo() => undo(); }
 
     public ICommand TogglePaletteCommand { get; }
 
@@ -108,7 +127,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
-        Title = "Полный тест",
+        Title = "Новый профиль",
         IsBodyGraph = false
     };
 
@@ -267,7 +286,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         AddNodeCommand = new RelayCommand<string?>(AddNode, _ => CanEditGraph);
         DisconnectConnectorCommand = new RelayCommand<ConnectorViewModel?>(DisconnectConnector, _ => CanEditGraph);
         DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes, () => CanEditGraph);
-        ClearGraphCommand = new RelayCommand(ClearGraph, () => CanEditGraph);
+        ClearGraphCommand = new AsyncRelayCommand(RequestClearGraphAsync, () => CanEditGraph);
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
         NewProfileCommand = new RelayCommand(CreateNewProfile, () => CanEditGraph);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync, () => CanEditGraph);
@@ -277,8 +296,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         UndoCommand = new RelayCommand(UndoAction, () => CanEditGraph && CurrentGraph.UndoRedo.CanUndo);
         RedoCommand = new RelayCommand(RedoAction, () => CanEditGraph && CurrentGraph.UndoRedo.CanRedo);
 
-        AttachUndoRedo(CurrentGraph.UndoRedo);
+        _history = new ProfileEditHistory(RootGraph, () => CanEditGraph, NavigateToGraph);
+        AttachUndoRedo(_history.Manager);
 
+        Profiles.CollectionChanged += (_, _) => { if (!_refreshingProfiles) RefreshEngineerProfileGroups(); };
         BuildNodePaletteCategories();
         RefreshProfiles();
 
@@ -335,6 +356,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void OnUndoRedoStateChanged()
     {
+        if (!IsRunEntryAttached()) ResetPartialRun();
+        else NotifyPartialRun();
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
 
@@ -348,14 +371,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private void UndoAction()
     {
         if (!CanEditGraph) return;
-        CurrentGraph.UndoRedo.Undo();
+        _history.BreakMerge();
+        _history.Manager.Undo();
         ResetConnectorsState();
     }
 
     private void RedoAction()
     {
         if (!CanEditGraph) return;
-        CurrentGraph.UndoRedo.Redo();
+        _history.BreakMerge();
+        _history.Manager.Redo();
         ResetConnectorsState();
     }
 
@@ -426,7 +451,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
         }
 
-        CurrentGraph.UndoRedo.Execute(new PasteNodesCommand(Nodes, Connections, pastedNodes, newConnections));
+        _history.Execute(CurrentGraph, new PasteNodesCommand(Nodes, Connections, pastedNodes, newConnections));
 
         // Select only pasted nodes
         SelectedNodes.Clear();
@@ -518,7 +543,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         CanGoBackGraph = _graphStack.Count > 0;
 
-        AttachUndoRedo(value.UndoRedo);
+        if (_history != null) { _history.BreakMerge(); AttachUndoRedo(_history.Manager); }
         PendingConnection?.Reset();
     }
 
@@ -556,7 +581,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (ReferenceEquals(SelectedConnection, connection))
             SelectedConnection = null;
 
-        CurrentGraph.UndoRedo.Execute(new DeleteConnectionCommand(Connections, connection));
+        _history.Execute(CurrentGraph, new DeleteConnectionCommand(Connections, connection));
 
         ResetConnectorsState();
         StatusMessage = "Соединение удалено.";
@@ -571,6 +596,27 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         if (ReferenceEquals(SelectedConnection, connection))
             SelectedConnection = null;
+    }
+
+    private void NavigateToGraph(GraphWorkspaceViewModel target)
+    {
+        if (ReferenceEquals(CurrentGraph, target)) return;
+        var path = new List<NodeViewModel>();
+        bool Find(GraphWorkspaceViewModel graph)
+        {
+            if (ReferenceEquals(graph, target)) return true;
+            foreach (var node in graph.Nodes.OfType<CompositeNodeViewModel>())
+            {
+                path.Add(node);
+                if (Find(node.BodyGraph)) return true;
+                path.RemoveAt(path.Count - 1);
+            }
+            return false;
+        }
+        if (!Find(RootGraph)) return;
+        ResetToRootGraph();
+        foreach (var node in path) OpenCompositeNodeBody(node);
+        CurrentGraphOpened?.Invoke();
     }
 
     public void ResetToRootGraph()
@@ -619,6 +665,23 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         CurrentGraphOpened?.Invoke();
     }
 
+    internal Func<Task<bool>> ConfirmClearGraphAsync { get; set; } = async () =>
+    {
+        if (Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is { } owner)
+            return await new ClearGraphDialog().ShowDialog<bool>(owner);
+        return false;
+    };
+
+    private async Task RequestClearGraphAsync()
+    {
+        if (!CanEditGraph || Nodes.Count == 0) return;
+        var graph = CurrentGraph;
+        if (await ConfirmClearGraphAsync() && CanEditGraph && ReferenceEquals(graph, CurrentGraph))
+            ClearGraph();
+    }
+
     public void ClearGraph()
     {
         if (!CanEditGraph) return;
@@ -640,9 +703,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (!CanEditGraph) return;
         ResetToRootGraph();
 
+        ResetPartialRun();
         RootGraph.Clear();
-        RootGraph.Title = "Полный тест";
+        RootGraph.Title = "Новый профиль";
         RootGraph.DeviceModel = null;
+        RootGraph.DeviceModelId = null;
+        OnPropertyChanged(nameof(SelectedEquipmentModel));
         RootGraph.ConfigurationName = null;
         RootGraph.IsBodyGraph = false;
         RootGraph.UsesBodyBoundaryNodes = false;
@@ -651,7 +717,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         OnPropertyChanged(nameof(CurrentGraphPath));
 
         ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
-        ClearUndoRedoRecursive(RootGraph);
+        _history.Clear();
         ResetConnectorsStateRecursive(RootGraph);
 
         _currentProfilePath = null;
@@ -681,7 +747,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .Distinct()
             .ToList();
 
-        CurrentGraph.UndoRedo.Execute(new DeleteNodesCommand(Nodes, Connections, selected, removedConnections));
+        _history.Execute(CurrentGraph, new DeleteNodesCommand(Nodes, Connections, selected, removedConnections));
 
         SelectedNodes.Clear();
         ResetConnectorsState();
@@ -708,7 +774,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         SelectedConnection = null;
 
-        CurrentGraph.UndoRedo.Execute(new AddConnectionCommand(Connections, new ConnectionViewModel(source, target)));
+        _history.Execute(CurrentGraph, new AddConnectionCommand(Connections, new ConnectionViewModel(source, target)));
     }
 
     private void DisconnectConnector(ConnectorViewModel? connector)
@@ -905,22 +971,42 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
-        var requiresStandConnection = GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+        if (IsOperatorView) ResetPartialRun();
+        if (!IsRunEntryAttached())
+        {
+            ResetPartialRun();
+            StatusMessage = "Стартовая нода удалена. Выберите ноду заново.";
+            return;
+        }
+        var partialRun = HasPartialRun;
+        var runWorkspace = _runWorkspace ?? RootGraph;
+        var runEntry = _runEntry;
+        var singleNode = _runSingleNode;
+        var runCaption = PartialRunCaption;
+        var slaveId = RunSlaveId;
+        if (partialRun && slaveId.HasValue &&
+            (slaveId < 1 || slaveId > 247 || slaveId != decimal.Truncate(slaveId.Value)))
+        {
+            StatusMessage = "Slave ID должен быть целым числом от 1 до 247 или оставаться пустым.";
+            return;
+        }
+        var requiresStandConnection = partialRun ? PartialRunRequiresStand() : GraphConnectionRequirements.RequiresStandConnection(RootGraph);
         if (!IsConnected && requiresStandConnection)
         {
             StatusMessage = "Этот граф содержит Modbus-ноды. Перед запуском необходимо подключиться к стенду.";
             return;
         }
 
-        var profileName = SelectedProfile?.Name ?? "без профиля";
+        var profileName = CurrentProfileName;
         var logFilePath = LoggingService.Instance.StartFileLogForRun(profileName);
 
         TestingLogger.Info($"Запуск теста: {profileName}");
+        if (partialRun) TestingLogger.Info($"Частичный запуск: {runCaption}. Новый контекст; cleanup при ошибке сохранён.");
         if (!string.IsNullOrWhiteSpace(logFilePath))
             TestingLogger.Info($"Логи записываются в файл: {logFilePath}");
         if (!IsConnected)
         {
-            TestingLogger.Info("Автономный запуск: граф не содержит Modbus-нод, подключение к стенду не требуется.");
+            TestingLogger.Info("Автономный запуск: выбранные действия не требуют подключения к Modbus-стенду.");
         }
 
         _testRunCts?.Dispose();
@@ -939,12 +1025,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         try
         {
-            ResetToRootGraph();
+            if (partialRun) NavigateToGraph(runWorkspace);
+            else ResetToRootGraph();
 
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
             using var compiler = new GraphCompiler(_modbusService, TestingLogger);
-            var graph = compiler.Compile(RootGraph);
+            var graph = compiler.Compile(runWorkspace, runEntry, singleNode);
 
             var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
                 is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktopLife
@@ -978,6 +1065,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 }
             };
 
+            if (partialRun && slaveId is >= 1 and <= 247)
+            {
+                context.CurrentSlaveId = (byte)slaveId.Value;
+                context.SetVariable("slaveId", (byte)slaveId.Value);
+            }
             context.SetVariable("OperatorName", App.StartupUserName);
             var result = await new TestExecutor().ExecuteAsync(
                 graph.StartNode,
@@ -1040,7 +1132,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 await RunFailureCleanupAsync(context);
             }
 
-            Station.CompleteRun(executionStatus, context);
+            Station.CompleteRun(executionStatus, context, partialRun);
             IsTestRunning = false;
             IsStopping = false;
             IsTestPaused = false;
@@ -1058,6 +1150,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     context.GetVariable<string>("ReportDelivery.Message");
                 if (delivery == "Sent") TestingLogger.Info(StatusMessage);
                 else TestingLogger.Warning(StatusMessage);
+            }
+            if (partialRun)
+            {
+                var resultText = executionStatus switch
+                {
+                    ExecutionStatus.Completed => "завершён",
+                    ExecutionStatus.Cancelled => "остановлен",
+                    _ => "завершён с ошибкой"
+                };
+                StatusMessage = $"Частичный запуск {resultText}. {runCaption}.";
+                TestingLogger.Info(StatusMessage);
+                ResetPartialRun();
             }
             // Cleanup uses the same context and may fail itself; keep the main run's original cause last.
             if (runFailure != null)
@@ -1333,6 +1437,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         if (!CanChooseProfile) return;
         var folder = AppSettings.Instance.GraphsFolder;
+        LoadEquipmentCatalog(folder);
         var previous = _profileCatalog.ToDictionary(p => p.FilePath);
         _refreshingProfiles = true;
         try
@@ -1344,17 +1449,21 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 foreach (var file in Directory.GetFiles(folder, "*.json").OrderBy(p => p))
                 {
                     var info = GraphSerializer.ReadProfile(file);
+                    var model = _equipmentCatalog.Resolve(info.DeviceModelId, info.DeviceModel, info.Name + " " + Path.GetFileNameWithoutExtension(file));
+                    if (model != null) info = new GraphProfile(info.FilePath, info.Name, model.Name, info.ConfigurationName, model.Id);
                     var profile = previous.TryGetValue(file, out var old) && old.Name == info.Name &&
-                        old.DeviceModel == info.DeviceModel && old.ConfigurationName == info.ConfigurationName
+                        old.DeviceModelId == info.DeviceModelId && old.DeviceModel == info.DeviceModel && old.ConfigurationName == info.ConfigurationName
                         ? old : info;
                     _profileCatalog.Add(profile);
                     if (string.IsNullOrWhiteSpace(ProfileSearch) ||
-                        profile.DisplayName.Contains(ProfileSearch, StringComparison.OrdinalIgnoreCase) ||
-                        profile.Name.Contains(ProfileSearch, StringComparison.OrdinalIgnoreCase))
+                        EquipmentCatalog.Matches(profile.DisplayName, ProfileSearch) ||
+                        EquipmentCatalog.Matches(profile.Name, ProfileSearch) ||
+                        EquipmentCatalog.Matches(profile.ModelGroup, ProfileSearch))
                         Profiles.Add(profile);
                 }
             }
             RefreshStationProfiles();
+            RefreshEngineerProfileGroups();
             OnPropertyChanged(nameof(SelectedProfile));
         }
         finally { _refreshingProfiles = false; }
@@ -1378,6 +1487,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private void LoadProfile(string filePath)
     {
         if (!CanChooseProfile) return;
+        ResetPartialRun();
         _profileLoadError = string.Empty;
         try
         {
@@ -1387,13 +1497,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             ResetToRootGraph();
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
             ResetConnectorsStateRecursive(RootGraph);
-            ClearUndoRedoRecursive(RootGraph);
+            _history.Clear();
 
             _currentProfilePath = filePath;
+            RefreshSelectedEquipmentModel();
             OnPropertyChanged(nameof(CurrentProfileName));
 
             Station.Prepare(RootGraph);
-            StatusMessage = $"Загружен профиль: {name}";
+            StatusMessage = string.Empty;
             CurrentGraphOpened?.Invoke();
         }
         catch (Exception ex)
@@ -1422,6 +1533,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task ImportProfilesAsync()
     {
         if (!CanEditGraph) return;
+        if (string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         var folder = AppSettings.Instance.GraphsFolder;
 
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
@@ -1499,6 +1611,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task SaveGraphAsync()
     {
         if (!CanEditGraph) return;
+        if (string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         var folder = AppSettings.Instance.GraphsFolder;
 
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
@@ -1525,7 +1638,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             Title = "Сохранить профиль",
             DefaultExtension = "json",
-            SuggestedFileName = CurrentProfileName == "Новый профиль" ? "profile" : CurrentProfileName,
+            SuggestedFileName = CurrentProfileName == "Новый профиль" ? "profile" : string.Join("_", CurrentProfileName.Split(Path.GetInvalidFileNameChars())).Trim(),
             SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(folder),
             FileTypeChoices = new[]
             {
@@ -1547,7 +1660,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         try
         {
-            var profileName = Path.GetFileNameWithoutExtension(file.Name);
+            RefreshSelectedEquipmentModel();
+            var profileName = CurrentProfileName.Trim();
             var json = GraphSerializer.Serialize(this, profileName);
 
             await using var stream = await file.OpenWriteAsync();
@@ -1568,16 +1682,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    private async Task SaveGraphToPathAsync(string filePath)
+    internal async Task SaveGraphToPathAsync(string filePath)
     {
+        if (!CanEditGraph || string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         try
         {
-            var profileName = Path.GetFileNameWithoutExtension(filePath);
+            RefreshSelectedEquipmentModel();
+            var profileName = CurrentProfileName.Trim();
             var json = GraphSerializer.Serialize(this, profileName);
 
             await File.WriteAllTextAsync(filePath, json, System.Text.Encoding.UTF8);
 
             _currentProfilePath = filePath;
+            RefreshSelectedEquipmentModel();
             OnPropertyChanged(nameof(CurrentProfileName));
 
             StatusMessage = $"Профиль сохранён: {profileName}";
@@ -1593,7 +1710,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void SelectProfileByPath(string filePath)
     {
-        var profile = Profiles.FirstOrDefault(item =>
+        var profile = _profileCatalog.FirstOrDefault(item =>
             string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
         SetSelectedProfileWithoutLoading(profile);
@@ -1653,7 +1770,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         };
 
         if (node != null)
-            CurrentGraph.UndoRedo.Execute(new AddNodeCommand(Nodes, node));
+            _history.Execute(CurrentGraph, new AddNodeCommand(Nodes, node));
     }
 
     private void EnsureBodyBoundaryNodesIfNeeded()
@@ -1695,6 +1812,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         if (_currentUndoRedo != null)
             _currentUndoRedo.StateChanged -= OnUndoRedoStateChanged;
+        _history.Dispose();
         DisposeRegisterMonitor();
 
         foreach (var node in AvailableNodes)
@@ -1714,11 +1832,5 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    private static void ClearUndoRedoRecursive(GraphWorkspaceViewModel graph)
-    {
-        graph.UndoRedo.Clear();
 
-        foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
-            ClearUndoRedoRecursive(composite.BodyGraph);
-    }
 }

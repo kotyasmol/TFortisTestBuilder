@@ -9,6 +9,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
 
+        [JsonPropertyName("deviceModelId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? DeviceModelId { get; set; }
+
         [JsonPropertyName("deviceModel")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? DeviceModel { get; set; }

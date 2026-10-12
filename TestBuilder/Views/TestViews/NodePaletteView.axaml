@@ -5,27 +5,26 @@
              x:Class="TestBuilder.Views.TestViews.NodePaletteView"
              x:DataType="vm:TestViewModel">
 
-  <Border CornerRadius="10"
-          BorderThickness="1"
+  <Border CornerRadius="0"
+          BorderThickness="1,0,0,0"
           BorderBrush="{DynamicResource SidebarBorderBrush}"
           Background="{DynamicResource SidebarDarkBrush}"
-          ClipToBounds="True"
-          BoxShadow="0 10 22 0 #0F0F172A">
+          ClipToBounds="True">
 
     <Grid RowDefinitions="Auto,*">
 
       <Border Grid.Row="0"
               Background="{DynamicResource SidebarDarkAltBrush}"
-              Padding="16,14,16,8">
+              Padding="16">
 
-        <StackPanel Spacing="5">
-          <TextBlock Text="Ноды"
-                     FontSize="16"
+        <StackPanel Spacing="4">
+          <TextBlock Text="Добавить ноду"
+                     FontSize="{StaticResource FontSection}"
                      FontWeight="Bold"
                      Foreground="{DynamicResource SidebarTextBrush}" />
 
-          <TextBlock Text="Перетащи элемент на граф"
-                     FontSize="13"
+          <TextBlock Text="Перетащите элемент на граф" TextWrapping="Wrap"
+                     FontSize="{StaticResource FontBody}"
                      Foreground="{DynamicResource SidebarTextMutedBrush}" />
         </StackPanel>
       </Border>
@@ -35,22 +34,26 @@
                     HorizontalScrollBarVisibility="Disabled">
 
         <ItemsControl ItemsSource="{Binding AvailableNodeCategories}"
-                      Margin="12,6,12,12">
+                      Margin="12,0,12,12">
 
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:NodePaletteCategoryViewModel">
 
-              <StackPanel Margin="0,8,0,10"
+              <StackPanel Margin="0,0,0,12"
                           Spacing="6">
 
                 <Button Command="{Binding ToggleCommand}"
-                        Classes="ghost"
-                        Padding="2,2"
+                        Classes="listHeader"
+                        Padding="8,10"
                         HorizontalAlignment="Stretch">
-                  <TextBlock Text="{Binding Title}"
-                             FontSize="12"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource SidebarTextMutedBrush}" />
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Grid Width="14" Height="14" VerticalAlignment="Center">
+  <PathIcon Width="10" Height="10" Data="M2 4 L7 9 12 4 14 6 7 13 0 6 Z" IsVisible="{Binding IsExpanded}" Foreground="{DynamicResource TextSecondaryBrush}" />
+  <PathIcon Width="10" Height="10" Data="M4 0 L11 7 4 14 2 12 7 7 2 2 Z" IsVisible="{Binding !IsExpanded}" Foreground="{DynamicResource TextSecondaryBrush}" />
+</Grid>
+                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0" />
+                    <TextBlock Grid.Column="2" Text="{Binding Nodes.Count}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+                  </Grid>
                 </Button>
 
                 <ItemsControl ItemsSource="{Binding Nodes}"
@@ -58,31 +61,25 @@
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="nodifyvm:NodeViewModel">
 
-                      <Border Margin="0,3"
-                              Padding="12,9"
+                      <Border Classes="nodeEntry" Margin="0,1"
+                              Padding="12,10"
                               CornerRadius="7"
-                              Background="{DynamicResource SurfaceBrush}"
                               BorderBrush="{DynamicResource BorderBrush}"
-                              BorderThickness="1"
-                              BoxShadow="0 4 10 0 #080F172A"
+                              BorderThickness="0"
                               PointerPressed="OnNodePressed"
                               PointerMoved="OnNodeDrag"
                               PointerExited="OnNodeExited">
 
                         <Grid ColumnDefinitions="Auto,*">
 
-                          <Border Grid.Column="0"
-                                  Width="9"
-                                  Height="9"
-                                  CornerRadius="5"
-                                  Background="{DynamicResource PrimaryBrush}"
-                                  VerticalAlignment="Center"
-                                  Margin="0,0,10,0" />
+                          <PathIcon Width="12" Height="16" Margin="0,0,12,0" VerticalAlignment="Center"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Data="M1 1 H3 V3 H1 Z M7 1 H9 V3 H7 Z M1 6 H3 V8 H1 Z M7 6 H9 V8 H7 Z M1 11 H3 V13 H1 Z M7 11 H9 V13 H7 Z" />
 
                           <TextBlock Grid.Column="1"
                                      Text="{Binding Title}"
-                                     FontSize="13"
-                                     FontWeight="SemiBold"
+                                     FontSize="{StaticResource FontBody}"
+                                     FontWeight="Normal"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      TextWrapping="Wrap"
                                      VerticalAlignment="Center" />

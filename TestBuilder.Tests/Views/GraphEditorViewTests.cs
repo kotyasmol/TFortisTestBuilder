@@ -27,10 +27,13 @@ public class GraphEditorUiCollection;
 public class GraphEditorViewTests
 {
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
-        .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        .UseSkia().WithInterFont()
+        .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
-    [Fact]
-    public async Task ProfileClicks_OpenOnFirstClick_AndRepeatedClickKeepsGraphAndEdits()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProfileClicks_OpenOnFirstClick_AndRepeatedClickKeepsGraphAndEdits(bool connecting)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
@@ -51,6 +54,9 @@ public class GraphEditorViewTests
             var window = new Window { Width = 1300, Height = 750, Content = grid };
             try
             {
+                vm.IsConnecting = connecting;
+                Assert.True(vm.CanChooseProfile);
+                if (connecting) Assert.False(vm.CanStartRun);
                 var profile = GraphSerializer.ReadProfile(path);
                 vm.Profiles.Clear();
                 vm.Profiles.Add(profile);
@@ -237,7 +243,8 @@ public class GraphEditorViewTests
                 Layout(window);
                 parent.IsVisible = true;
                 Layout(window);
-                Assert.Equal("Загружен профиль: Offset graph", vm.StatusMessage);
+                Assert.Equal("Offset graph", vm.CurrentProfileName);
+                Assert.Equal(string.Empty, vm.StatusMessage);
                 AssertGraphVisible(view, 2);
 
                 // Loading another profile must also recover a viewport panned away by the operator.
@@ -337,6 +344,181 @@ public class GraphEditorViewTests
                 foreach (var slave in originalSlaves) registry.Slaves.Add(slave);
                 registry.NotifyConnected(wasConnected);
             }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task RegisterHelp_WorksOffline_UpdatesForSlaveAndLoop_AndSurvivesDisconnect()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var registry = SlaveRegistry.Instance;
+            var originalSlaves = registry.Slaves.ToArray();
+            var wasConnected = registry.IsConnected;
+            using var modbus = new ModbusService();
+            registry.NotifyConnected(false);
+            registry.Slaves.Clear();
+            using var write = new ModbusWriteNodeViewModel { SlaveId = 21, Address = 1200 };
+            using var check = new CheckRegisterRangeNodeViewModel { SlaveId = 21, Address = 1200 };
+            using var wait = new WaitUntilNodeViewModel { SlaveId = 21, Address = 1200 };
+            string[] Descriptions() => new[] { write.RegisterDescription, check.RegisterDescription, wait.RegisterDescription };
+            try
+            {
+                Assert.All(Descriptions(), description =>
+                {
+                    Assert.Contains("PS-2:", description);
+                    Assert.Contains("PS-3:", description);
+                    Assert.Contains("RW", description);
+                    Assert.Contains("Выход AC1", description);
+                });
+                Assert.Empty(registry.Slaves);
+                Assert.False(modbus.IsConnected);
+                registry.Slaves.Add(new PS2Model(21, modbus));
+                registry.Slaves.Add(new Ps3Model(23, modbus));
+                registry.NotifyConnected(true);
+                Assert.All(Descriptions(), description => Assert.DoesNotContain("PS-3:", description));
+                write.SlaveId = check.SlaveId = wait.SlaveId = 23;
+                Assert.All(Descriptions(), description =>
+                {
+                    Assert.Contains("PS-3:", description);
+                    Assert.DoesNotContain("PS-2:", description);
+                });
+                write.UseCurrentSlaveId = check.UseCurrentSlaveId = wait.UseCurrentSlaveId = true;
+                Assert.All(Descriptions(), description => Assert.Contains("PS-2:", description));
+                write.UseCurrentSlaveId = check.UseCurrentSlaveId = wait.UseCurrentSlaveId = false;
+                registry.NotifyConnected(false);
+                Assert.All(Descriptions(), description => Assert.Contains("PS-2:", description));
+                registry.Slaves.Clear();
+                write.SyncSlaves(); check.SyncSlaves(); wait.SyncSlaves();
+                Assert.Null(write.SelectedRegister);
+                write.Address = check.Address = wait.Address = 65535;
+                Assert.All(Descriptions(), description => Assert.Contains("описание отсутствует", description));
+                write.Address = check.Address = wait.Address = 1000;
+                Assert.All(Descriptions(), description => Assert.Contains("RO — чтение", description));
+            }
+            finally
+            {
+                registry.NotifyConnected(false);
+                registry.Slaves.Clear();
+                foreach (var slave in originalSlaves) registry.Slaves.Add(slave);
+                registry.NotifyConnected(wasConnected);
+            }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task ClearGraph_CancelPreservesGraph_ConfirmCanBeUndone_AndRunBlocksPendingClear()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(async () =>
+        {
+            using var modbus = new ModbusService();
+            using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+            var node = new ModbusWriteNodeViewModel();
+            vm.Nodes.Add(node);
+            var count = vm.Nodes.Count;
+            var clear = (CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)vm.ClearGraphCommand;
+            vm.ConfirmClearGraphAsync = () => Task.FromResult(false);
+            await clear.ExecuteAsync(null);
+            Assert.Equal(count, vm.Nodes.Count);
+            Assert.Contains(node, vm.Nodes);
+            vm.ConfirmClearGraphAsync = () => Task.FromResult(true);
+            await clear.ExecuteAsync(null);
+            Assert.Empty(vm.Nodes);
+            vm.UndoCommand.Execute(null);
+            Assert.Equal(count, vm.Nodes.Count);
+            Assert.Contains(node, vm.Nodes);
+
+            var confirmation = new TaskCompletionSource<bool>();
+            vm.ConfirmClearGraphAsync = () => confirmation.Task;
+            var pending = clear.ExecuteAsync(null);
+            vm.IsTestRunning = true;
+            confirmation.SetResult(true);
+            await pending;
+            Assert.Equal(count, vm.Nodes.Count);
+            vm.IsTestRunning = false;
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task HelpCard_CopiesWholeText_AndClosesWithButton()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(async () =>
+        {
+            using var modbus = new ModbusService();
+            using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+            using var node = new SelfTestCheckNodeViewModel();
+            using var view = new GraphEditorView { DataContext = vm, HelpNode = node, IsNodeHelpOpen = true };
+            var window = new Window { Width = 1200, Height = 800, Content = view };
+            try
+            {
+                window.Show();
+                Layout(window);
+                Layout(view.HelpWindow!);
+                Assert.Contains(view.HelpWindow!.GetVisualDescendants().OfType<SelectableTextBlock>(),
+                    text => text.Text == node.HelpSummary);
+                var search = view.HelpWindow!.GetVisualDescendants().OfType<TextBox>().Single();
+                search.Text = "несуществующий-раздел-12345"; Layout(view.HelpWindow!);
+                Assert.Empty(view.HelpWindow!.GetVisualDescendants().OfType<SelectableTextBlock>());
+                search.Text = ""; Layout(view.HelpWindow!);
+                var copy = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Копировать"));
+                copy.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal($"{node.Title}\n\n{node.HelpText}", await view.HelpWindow!.Clipboard!.GetTextAsync());
+                var close = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "✕ Закрыть"));
+                close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Assert.False(view.IsNodeHelpOpen);
+                Assert.Null(view.HelpNode);
+            }
+            finally { window.Close(); }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Toolbar_ZoomsCentersAndCollapsesPalette_WithoutChangingGraph()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var modbus = new ModbusService();
+            using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+            vm.AddNodeAtLocation("Задержка", new Point(200, 100));
+            var node = vm.Nodes[0];
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 1100, Height = 700, Content = view };
+            try
+            {
+                window.Show(); Layout(window);
+                var editor = view.FindControl<NodifyEditor>("Editor")!;
+                void Click(string name)
+                {
+                    var button = view.GetVisualDescendants().OfType<Button>().Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == name);
+                    var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+                    window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+                }
+                editor.ViewportZoom = 0.5;
+                Click("Увеличить масштаб"); Assert.True(editor.ViewportZoom > 0.5);
+                var zoom = editor.ViewportZoom;
+                Click("Уменьшить масштаб"); Assert.True(editor.ViewportZoom < zoom);
+                zoom = editor.ViewportZoom;
+                editor.ViewportLocation = new Point(5000, 5000);
+                Click("Центрировать граф");
+                Assert.Equal(zoom, editor.ViewportZoom);
+                Assert.InRange(Math.Abs(editor.ViewportLocation.X + editor.ViewportSize.Width / 2 - editor.ItemsExtent.Center.X), 0, 1);
+                var width = editor.Bounds.Width;
+                Click("Свернуть или развернуть палитру");
+                Assert.True(vm.IsPaletteCollapsed); Assert.True(editor.Bounds.Width > width + 200);
+                Click("Свернуть или развернуть палитру"); Assert.False(vm.IsPaletteCollapsed);
+                Assert.Same(node, Assert.Single(vm.Nodes)); Assert.Equal(new Point(200, 100), node.Location);
+                var title = view.GetVisualDescendants().OfType<TextBox>().Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Название профиля");
+                title.Focus(); title.Text = "Проверка после сборки";
+                view.GetVisualDescendants().OfType<Button>().First(b => b.IsEnabled).Focus(); Layout(window);
+                Assert.Equal("Проверка после сборки", vm.CurrentProfileName);
+            }
+            finally { window.Close(); }
         }, CancellationToken.None);
     }
 

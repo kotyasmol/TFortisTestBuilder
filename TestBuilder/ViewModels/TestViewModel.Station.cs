@@ -34,21 +34,21 @@ public partial class TestViewModel
     {
         var visible = _profileCatalog.Where(p =>
             string.IsNullOrWhiteSpace(StationProfileSearch) ||
-            p.DisplayName.Contains(StationProfileSearch, System.StringComparison.OrdinalIgnoreCase) ||
-            p.ModelGroup.Contains(StationProfileSearch, System.StringComparison.OrdinalIgnoreCase) ||
-            p.ConfigurationName.Contains(StationProfileSearch, System.StringComparison.OrdinalIgnoreCase))
+            EquipmentCatalog.Matches(p.DisplayName, StationProfileSearch) ||
+            EquipmentCatalog.Matches(p.ModelGroup, StationProfileSearch) ||
+            EquipmentCatalog.Matches(p.ConfigurationName, StationProfileSearch))
             .OrderBy(p => p.DeviceModel == null)
-            .ThenBy(p => p.ModelGroup, System.StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), System.StringComparer.Ordinal)
             .ThenBy(p => p.ConfigurationName != "Полная проверка")
             .ThenBy(p => p.ConfigurationName, System.StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.FilePath, System.StringComparer.OrdinalIgnoreCase).ToArray();
         SynchronizeStationItems(StationProfiles, visible);
 
         var groups = new List<StationProfileGroupViewModel>();
-        foreach (var profiles in visible.GroupBy(p => p.ModelGroup, System.StringComparer.OrdinalIgnoreCase))
+        foreach (var profiles in visible.GroupBy(p => p.ModelGroupKey, System.StringComparer.OrdinalIgnoreCase))
         {
             if (!_stationGroups.TryGetValue(profiles.Key, out var group))
-                _stationGroups.Add(profiles.Key, group = new StationProfileGroupViewModel(profiles.Key));
+                _stationGroups.Add(profiles.Key, group = new StationProfileGroupViewModel(profiles.First().ModelGroup));
             var options = profiles.Select(p => group.Profiles.FirstOrDefault(o => ReferenceEquals(o.Profile, p))
                 ?? new StationProfileOptionViewModel(p, selected => SelectedProfile = selected)).ToArray();
             SynchronizeStationItems(group.Profiles, options);
@@ -129,7 +129,7 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(PauseHint));
     }
     public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning;
-    public bool CanChooseProfile => !IsTestRunning && !IsConnecting;
+    public bool CanChooseProfile => !IsTestRunning;
     public bool CanStartRun => !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
@@ -142,7 +142,11 @@ public partial class TestViewModel
         !GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? "Готово · подключение к стенду не требуется" :
         IsConnected && IsMonitoringActive ? "Стенд готов к проверке" : "Подключите стенд перед запуском";
 
-    partial void OnIsOperatorViewChanged(bool value) => RefreshStationAvailability();
+    partial void OnIsOperatorViewChanged(bool value)
+    {
+        if (value && !IsTestRunning) ResetPartialRun();
+        RefreshStationAvailability();
+    }
     partial void OnIsConnectingChanged(bool value) => RefreshStationAvailability();
     partial void OnIsStoppingChanged(bool value) => RefreshStationAvailability();
     partial void OnIsTestRunningChanged(bool value) => RefreshStationAvailability();
@@ -169,7 +173,7 @@ public partial class TestViewModel
         RunGraphCommand?.NotifyCanExecuteChanged();
         ToggleConnectionCommand?.NotifyCanExecuteChanged();
         foreach (var command in new object?[] { AddNodeCommand, DisconnectConnectorCommand,
-            DeleteSelectedNodesCommand, ClearGraphCommand, NewProfileCommand, SaveGraphCommand,
+            DeleteSelectedNodesCommand, ClearGraphCommand, ClearPartialRunCommand, NewProfileCommand, SaveGraphCommand,
             ImportProfilesCommand, UndoCommand, RedoCommand, StopTestCommand, PauseTestCommand, ResumeTestCommand })
             if (command is IRelayCommand relay) relay.NotifyCanExecuteChanged();
     }

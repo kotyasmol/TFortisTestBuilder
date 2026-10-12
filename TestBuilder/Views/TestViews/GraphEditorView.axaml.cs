@@ -4,6 +4,8 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using System.Linq;
 using Nodify;
 using System;
 using TestBuilder.ViewModels;
@@ -29,6 +31,8 @@ public partial class GraphEditorView : UserControl, IDisposable
     private Point _labelResizeStartPoint;
     private double _labelResizeStartWidth;
     private double _labelResizeStartHeight;
+    internal NodeHelpWindow? HelpWindow { get; private set; }
+    internal ContextMenu? NodeRunMenu { get; private set; }
     private bool _isDisposed;
     private bool _fitPending;
     private bool _fitScheduled;
@@ -87,6 +91,8 @@ public partial class GraphEditorView : UserControl, IDisposable
             return;
 
         _isDisposed = true;
+        HelpWindow?.Close();
+        NodeRunMenu?.Close();
 
         _visibilitySubscription.Dispose();
         _themeSubscription.Dispose();
@@ -104,12 +110,13 @@ public partial class GraphEditorView : UserControl, IDisposable
         // Let text fields handle selection/copy, including read-only fields during a run.
         if (e.Source is TextBox) return;
 
-        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Z)
+        if ((e.KeyModifiers == KeyModifiers.Control || e.KeyModifiers == KeyModifiers.Meta) && e.Key == Key.Z)
         {
             if (vm.CanUndo) vm.UndoCommand.Execute(null);
             e.Handled = true;
         }
-        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Y)
+        else if ((e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Y) ||
+                 (e.KeyModifiers == (KeyModifiers.Meta | KeyModifiers.Shift) && e.Key == Key.Z))
         {
             if (vm.CanRedo) vm.RedoCommand.Execute(null);
             e.Handled = true;
@@ -129,6 +136,22 @@ public partial class GraphEditorView : UserControl, IDisposable
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var source = e.Source as Control;
+        if (e.GetCurrentPoint(Editor).Properties.IsRightButtonPressed && DataContext is TestViewModel vm)
+        {
+            var container = source?.GetSelfAndVisualAncestors().OfType<ItemContainer>().FirstOrDefault();
+            if (container?.DataContext is NodeViewModel node && vm.CanConfigureNodeRun(node))
+            {
+                var only = new MenuItem { Header = "Выполнить только эту ноду" };
+                var from = new MenuItem { Header = "Начать с этой ноды" };
+                only.Click += (_, _) => vm.ConfigureNodeRun(node, true);
+                from.Click += (_, _) => vm.ConfigureNodeRun(node, false);
+                NodeRunMenu?.Close();
+                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { only, from } };
+                NodeRunMenu.Open(container);
+                e.Handled = true;
+                return;
+            }
+        }
         while (source != null)
         {
             if (source is ComboBox) { e.Handled = true; return; }
@@ -235,14 +258,51 @@ public partial class GraphEditorView : UserControl, IDisposable
         e.Handled = true;
     }
 
-    public void OnNodeHelpClosePointerPressed(object? sender, PointerPressedEventArgs e)
+    public void OnProfileNameKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed)
-            return;
+        if (e.Key == Key.Enter && sender is TextBox field)
+        {
+            if (_viewModel != null) _viewModel.CurrentProfileName = field.Text ?? "";
+            Editor.Focus();
+            e.Handled = true;
+        }
+    }
 
-        IsNodeHelpOpen = false;
-        HelpNode = null;
-        e.Handled = true;
+    public void OnZoomInClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.ZoomIn();
+    public void OnZoomOutClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.ZoomOut();
+    public void OnCenterGraphClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var center = Editor.ItemsExtent.Center;
+        Editor.ViewportLocation = new Point(center.X - Editor.ViewportSize.Width / 2, center.Y - Editor.ViewportSize.Height / 2);
+    }
+
+    protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    { base.OnAttachedToVisualTree(e); if (IsNodeHelpOpen) ShowHelpWindow(); }
+
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    { HelpWindow?.Close(); NodeRunMenu?.Close(); base.OnDetachedFromVisualTree(e); }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsNodeHelpOpenProperty)
+        {
+            if (IsNodeHelpOpen) ShowHelpWindow(); else HelpWindow?.Close();
+        }
+        else if (change.Property == HelpNodeProperty && IsNodeHelpOpen) ShowHelpWindow();
+    }
+
+    private void ShowHelpWindow()
+    {
+        if (HelpNode == null || TopLevel.GetTopLevel(this) is not Window owner) return;
+        if (HelpWindow == null)
+        {
+            HelpWindow = new NodeHelpWindow();
+            HelpWindow.Closed += (_, _) => { HelpWindow = null; IsNodeHelpOpen = false; HelpNode = null; };
+            HelpWindow.Show(owner);
+        }
+        HelpWindow.SetNode(HelpNode);
+        HelpWindow.Activate();
     }
 
     private void OpenNodeHelp(Control? control)

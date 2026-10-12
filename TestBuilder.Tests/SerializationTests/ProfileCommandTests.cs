@@ -24,8 +24,8 @@ public class ProfileCommandTests
         Assert.Empty(vm.RootGraph.Connections);
         Assert.Null(vm.SelectedProfile);
         Assert.Equal("Новый профиль", vm.CurrentProfileName);
-        Assert.Equal("Полный тест", vm.RootGraph.Title);
-        Assert.Equal("Полный тест", vm.CurrentGraphPath);
+        Assert.Equal("Новый профиль", vm.RootGraph.Title);
+        Assert.Equal("Новый профиль", vm.CurrentGraphPath);
         Assert.Null(vm.RootGraph.DeviceModel);
         Assert.Null(vm.RootGraph.ConfigurationName);
     }

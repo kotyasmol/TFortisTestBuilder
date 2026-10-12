@@ -61,6 +61,7 @@ namespace TestBuilder.Services
         {
             var dto = SerializeGraph(vm.RootGraph, profileName);
             dto.DeviceModel = vm.RootGraph.DeviceModel;
+            dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = vm.RootGraph.ConfigurationName;
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
@@ -362,8 +363,9 @@ namespace TestBuilder.Services
             vm.RootGraph.IsBodyGraph = false;
             foreach (var node in loaded.Nodes) vm.RootGraph.Nodes.Add(node);
             foreach (var connection in loaded.Connections) vm.RootGraph.Connections.Add(connection);
-            var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName);
+            var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName, dto.DeviceModelId);
             vm.RootGraph.DeviceModel = profile.DeviceModel;
+            vm.RootGraph.DeviceModelId = profile.DeviceModelId;
             vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
                 (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
@@ -980,7 +982,7 @@ namespace TestBuilder.Services
             {
                 var dto = JsonSerializer.Deserialize<GraphDto>(File.ReadAllText(filePath), JsonOptions);
                 return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
-                    dto?.DeviceModel, dto?.ConfigurationName);
+                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId);
             }
             catch
             {

@@ -40,6 +40,10 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty] private string title = string.Empty;
         [ObservableProperty] private Point location;
         [ObservableProperty] private bool isSelected;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsRunStart))]
+        private string runStartLabel = string.Empty;
+        public bool IsRunStart => !string.IsNullOrEmpty(RunStartLabel);
         [ObservableProperty] private bool isExecuting;
         [ObservableProperty] private bool hasExecutionError;
         [ObservableProperty] private bool hasExecutionSucceeded;

@@ -22,8 +22,8 @@
 		<None Update="WinSCP\**\*"
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />
-		<Content Include="..\profiles\*.json"
-		         Link="profiles\%(Filename)%(Extension)"
+		<Content Include="..\profiles\**\*.json"
+		         Link="profiles\%(RecursiveDir)%(Filename)%(Extension)"
 		         CopyToOutputDirectory="PreserveNewest"
 		         CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>

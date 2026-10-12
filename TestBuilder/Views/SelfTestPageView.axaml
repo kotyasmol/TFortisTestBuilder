@@ -62,26 +62,25 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*"
-        Margin="12"
+        Margin="16"
         Background="{DynamicResource AppBackgroundBrush}">
     <Border Grid.Row="0"
-            Padding="16,13"
+            Padding="16"
             Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="16"
-            BoxShadow="0 8 22 0 #0D0F172A">
+            CornerRadius="8">
       <Grid ColumnDefinitions="*,Auto,Auto">
-        <StackPanel Spacing="3"
+        <StackPanel Spacing="4"
                     ToolTip.Tip="{Binding SourceUrl}">
           <TextBlock Text="{Binding StatusTitle}"
-                     FontSize="19"
+                     FontSize="{StaticResource FontHeading}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Text="{Binding StatusDetails}"
                      MaxLines="1"
                      TextTrimming="CharacterEllipsis"
-                     FontSize="14"
+                     FontSize="{StaticResource FontBody}"
                      Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>
 
@@ -112,7 +111,7 @@
                 CornerRadius="10"
                 IsVisible="{Binding HasParameters}">
           <TextBlock Text="{Binding ParameterCount, StringFormat='Всего: {0}'}"
-                     FontSize="14"
+                     FontSize="{StaticResource FontBody}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource PrimaryTextBrush}" />
         </Border>
@@ -120,12 +119,12 @@
     </Border>
 
     <Border Grid.Row="1"
-            Margin="0,10,0,0"
+            Margin="0,12,0,0"
             Padding="7"
             Background="{DynamicResource SurfaceMutedBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="16">
+            CornerRadius="8">
       <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
@@ -158,7 +157,7 @@
                           <TextBlock Text="{Binding ToggleIcon}"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"
-                                     FontSize="21"
+                                     FontSize="{StaticResource FontHeading}"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource TextSecondaryBrush}" />
                         </Border>
@@ -166,12 +165,12 @@
                         <StackPanel Grid.Column="1"
                                     Margin="10,0"
                                     Spacing="2">
-                          <TextBlock Text="{Binding Title}"
-                                     FontSize="17"
+                          <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                                     FontSize="{StaticResource FontSection}"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource TextPrimaryBrush}" />
                           <TextBlock Text="{Binding Description}"
-                                     FontSize="12"
+                                     FontSize="{StaticResource FontCaption}"
                                      MaxLines="1"
                                      TextTrimming="CharacterEllipsis"
                                      Foreground="{DynamicResource TextMutedBrush}" />
@@ -187,14 +186,14 @@
                                 IsVisible="{Binding HasRecentChanges}"
                                 VerticalAlignment="Center">
                           <TextBlock Text="{Binding RecentChangeCount, StringFormat='изменено: {0}'}"
-                                     FontSize="11"
+                                     FontSize="{StaticResource FontCaption}"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource ChangedTextBrush}" />
                         </Border>
 
                         <TextBlock Grid.Column="3"
                                    Text="{Binding CountLabel}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontCaption}"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                       </Grid>
@@ -222,7 +221,7 @@
                             <Grid RowDefinitions="Auto,*">
                               <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Text="{Binding Name}"
-                                         FontSize="12"
+                                         FontSize="{StaticResource FontCaption}"
                                          MaxLines="1"
                                          TextTrimming="CharacterEllipsis"
                                          VerticalAlignment="Center"
@@ -244,7 +243,7 @@
                                          Text="{Binding Value}"
                                          MaxLines="1"
                                          TextTrimming="CharacterEllipsis"
-                                         FontSize="17"
+                                         FontSize="{StaticResource FontSection}"
                                          FontWeight="Bold"
                                          VerticalAlignment="Bottom"
                                          Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -265,7 +264,7 @@
                     Spacing="6"
                     IsVisible="{Binding !HasParameters}">
           <TextBlock Text="Нет данных тестовой страницы"
-                     FontSize="17"
+                     FontSize="{StaticResource FontSection}"
                      FontWeight="SemiBold"
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource TextPrimaryBrush}" />

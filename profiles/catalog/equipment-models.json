@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-10-11",
+  "models": [
+    {
+      "id": "psw-2g6f-plus",
+      "name": "PSW-2G6F+",
+      "aliases": [
+        "PSW 2G6F plus"
+      ]
+    },
+    {
+      "id": "psw-ups-box-8x2pro",
+      "name": "PSW+UPS-Box 8x2Pro",
+      "aliases": [
+        "PSW UPS Box 8x2Pro",
+        "PSW-UPS-Box 8x2 Pro"
+      ]
+    }
+  ]
+}

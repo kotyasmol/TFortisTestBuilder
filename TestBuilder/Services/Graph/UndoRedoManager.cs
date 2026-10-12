@@ -7,7 +7,8 @@ namespace TestBuilder.Services.Graph
     {
         private readonly Stack<IGraphCommand> _undoStack = new();
         private readonly Stack<IGraphCommand> _redoStack = new();
-        private const int MaxHistory = 50;
+        public const int MaxHistory = 50;
+        public bool IsApplying { get; private set; }
 
         public bool CanUndo => _undoStack.Count > 0;
         public bool CanRedo => _redoStack.Count > 0;
@@ -16,7 +17,13 @@ namespace TestBuilder.Services.Graph
 
         public void Execute(IGraphCommand command)
         {
-            command.Execute();
+            Apply(command.Execute);
+            Record(command);
+        }
+
+        public void Record(IGraphCommand command)
+        {
+            if (IsApplying) return;
             _undoStack.Push(command);
             _redoStack.Clear();
 
@@ -30,7 +37,7 @@ namespace TestBuilder.Services.Graph
         {
             if (!CanUndo) return;
             var cmd = _undoStack.Pop();
-            cmd.Undo();
+            Apply(cmd.Undo);
             _redoStack.Push(cmd);
             StateChanged?.Invoke();
         }
@@ -39,7 +46,7 @@ namespace TestBuilder.Services.Graph
         {
             if (!CanRedo) return;
             var cmd = _redoStack.Pop();
-            cmd.Execute();
+            Apply(cmd.Execute);
             _undoStack.Push(cmd);
             StateChanged?.Invoke();
         }
@@ -51,11 +58,18 @@ namespace TestBuilder.Services.Graph
             StateChanged?.Invoke();
         }
 
+        private void Apply(Action action)
+        {
+            IsApplying = true;
+            try { action(); }
+            finally { IsApplying = false; }
+        }
+
         private void TrimStack()
         {
             var items = _undoStack.ToArray();
             _undoStack.Clear();
-            for (int i = 0; i < MaxHistory - 1; i++)
+            for (int i = MaxHistory - 1; i >= 0; i--)
                 _undoStack.Push(items[i]);
         }
     }

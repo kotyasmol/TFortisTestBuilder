@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
@@ -37,6 +38,12 @@ namespace TestBuilder.ViewModels.StepVM
         public bool HasSelectedRegister => SelectedRegister != null;
         public bool ShowRegisterSelector => IsConnected && HasSelectedRegister;
         public bool ShowAddressTextBox => !IsConnected || !HasSelectedRegister;
+
+        public string RegisterDescription => RegisterReference.Describe(Address,
+            IsConnected && !UseCurrentSlaveId ? SelectedSlave : null);
+
+        partial void OnUseCurrentSlaveIdChanged(bool value) =>
+            OnPropertyChanged(nameof(RegisterDescription));
 
         private SlaveModelBase? _selectedSlave;
         public SlaveModelBase? SelectedSlave
@@ -78,8 +85,7 @@ namespace TestBuilder.ViewModels.StepVM
         private void RefreshRegisters()
         {
             AvailableRegisters.Clear();
-            if (_selectedSlave == null) return;
-            foreach (var reg in _selectedSlave.RegisterItems.Where(r => !r.IsReadOnly))
+            foreach (var reg in (_selectedSlave?.RegisterItems ?? Enumerable.Empty<RegisterItem>()).Where(r => !r.IsReadOnly))
                 AvailableRegisters.Add(reg);
             _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address);
             OnPropertyChanged(nameof(SelectedRegister));
@@ -101,6 +107,7 @@ namespace TestBuilder.ViewModels.StepVM
             _slaveIdInputInvalid = false;
             UpdateIntegerInputError();
             SlaveIdText = value.ToString(CultureInfo.InvariantCulture);
+            RestoreSelections();
         }
 
         partial void OnValueChanged(ushort value)
@@ -162,6 +169,7 @@ namespace TestBuilder.ViewModels.StepVM
 
         private void OnRegisterSelectionChanged()
         {
+            OnPropertyChanged(nameof(RegisterDescription));
             OnPropertyChanged(nameof(HasSelectedRegister));
             OnPropertyChanged(nameof(ShowRegisterSelector));
             OnPropertyChanged(nameof(ShowAddressTextBox));

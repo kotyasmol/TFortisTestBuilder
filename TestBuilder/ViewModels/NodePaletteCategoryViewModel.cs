@@ -8,6 +8,7 @@ namespace TestBuilder.ViewModels;
 public partial class NodePaletteCategoryViewModel : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ToggleIcon))]
     private bool isExpanded = true;
 
     public NodePaletteCategoryViewModel(string title, params NodeViewModel[] nodes)
@@ -19,6 +20,7 @@ public partial class NodePaletteCategoryViewModel : ObservableObject
     }
 
     public string Title { get; }
+    public string ToggleIcon => IsExpanded ? "▾" : "▸";
 
     public ObservableCollection<NodeViewModel> Nodes { get; } = new();
 

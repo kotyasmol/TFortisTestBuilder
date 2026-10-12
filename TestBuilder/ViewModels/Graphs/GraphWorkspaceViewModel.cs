@@ -13,6 +13,7 @@ namespace TestBuilder.ViewModels.Graphs
         public string Title { get; set; } = "Граф";
 
         public string? DeviceModel { get; set; }
+        public string? DeviceModelId { get; set; }
 
         public string? ConfigurationName { get; set; }
 
@@ -20,7 +21,7 @@ namespace TestBuilder.ViewModels.Graphs
 
         public bool UsesBodyBoundaryNodes { get; set; }
 
-        public UndoRedoManager UndoRedo { get; } = new();
+        public UndoRedoManager UndoRedo { get; internal set; } = new();
 
         public ObservableCollection<NodeViewModel> Nodes { get; } = new();
 

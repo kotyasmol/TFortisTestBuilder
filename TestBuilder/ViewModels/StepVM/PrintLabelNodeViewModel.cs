@@ -18,7 +18,14 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int copies = 4;
         [ObservableProperty] private bool useQtProZplFormat;
         [ObservableProperty] private DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro;
-        public DeviceLabelModel[] LabelModels { get; } = System.Enum.GetValues<DeviceLabelModel>();
+        public string[] LabelModelNames { get; } = { "PSW+UPS-Box 8x2Pro", "PSW-2G6F+" };
+        public int SelectedLabelModelIndex
+        {
+            get => (int)LabelModel;
+            set { if (System.Enum.IsDefined(typeof(DeviceLabelModel), value)) LabelModel = (DeviceLabelModel)value; }
+        }
+        partial void OnLabelModelChanged(DeviceLabelModel value) =>
+            OnPropertyChanged(nameof(SelectedLabelModelIndex));
         [ObservableProperty] private bool failOnPrinterError = true;
 
         public ConnectorViewModel In { get; }

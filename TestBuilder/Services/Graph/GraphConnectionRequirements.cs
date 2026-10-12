@@ -10,7 +10,7 @@ namespace TestBuilder.Services.Graph
         public static bool RequiresStandConnection(GraphWorkspaceViewModel graph) =>
             graph.Nodes.Any(RequiresStandConnection);
 
-        private static bool RequiresStandConnection(NodeViewModel node)
+        internal static bool RequiresStandConnection(NodeViewModel node)
         {
             if (node is ModbusWriteNodeViewModel or
                 CheckRegisterRangeNodeViewModel or

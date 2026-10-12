@@ -222,7 +222,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         foreach (var stage in Stages) stage.IsPaused = paused && stage.IsActive;
     }
 
-    public void CompleteRun(ExecutionStatus status, TestContext? context)
+    public void CompleteRun(ExecutionStatus status, TestContext? context, bool partialRun = false)
     {
         if (context != null) UpdateContext(context);
         foreach (var stage in Stages)
@@ -239,7 +239,7 @@ public partial class StationDashboardViewModel : ViewModelBase
             (!context.Variables.ContainsKey("BuildReport.DevicePassed") || context.GetVariable<bool>("BuildReport.DevicePassed"));
         var delivery = context?.GetVariable<string>("ReportDelivery.Status");
         var reportPending = delivery != null && delivery != "Sent";
-        IsSuccessful = status == ExecutionStatus.Completed && checksPassed && !reportPending && !cleanupFailed;
+        IsSuccessful = !partialRun && status == ExecutionStatus.Completed && checksPassed && !reportPending && !cleanupFailed;
         NeedsAttention = !IsSuccessful;
         if (cleanupFailed)
         {
@@ -260,6 +260,11 @@ public partial class StationDashboardViewModel : ViewModelBase
         {
             Headline = "Проверки не пройдены";
             Guidance = "Передайте изделие инженеру вместе с результатом проверки.";
+        }
+        else if (partialRun)
+        {
+            Headline = "Частичный запуск завершён";
+            Guidance = "Выполнена только выбранная часть графа. Для полной проверки запустите профиль с начала.";
         }
         else if (reportPending)
         {

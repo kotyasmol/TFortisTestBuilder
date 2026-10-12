@@ -27,7 +27,19 @@ namespace TestBuilder.ViewModels
             string.IsNullOrEmpty(App.StartupSessionId) ? "Локальный запуск" : "Сессия лаунчера получена";
         public bool IsEngineerWorkspace => SettingsVM.IsEngineerMode;
 
+        public string WorkspaceTitle => IsSettingsOpen ? "Настройки" :
+            IsEngineerWorkspace ? "Инженерный режим" : "Пульт стенда";
+        public string SwitchWorkspaceTitle => IsEngineerWorkspace ? "Перейти в пульт" : "Открыть редактор";
+        public bool CanSwitchWorkspace => SettingsVM.CanChangeInterfaceMode;
+
+        [RelayCommand(CanExecute = nameof(CanSwitchWorkspace))]
+        private void SwitchWorkspace()
+        {
+            if (CanSwitchWorkspace) SettingsVM.IsEngineerMode = !SettingsVM.IsEngineerMode;
+        }
+
         [ObservableProperty] private bool isSettingsOpen;
+        partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(WorkspaceTitle));
 
         [RelayCommand]
         private void OpenSettings() => IsSettingsOpen = true;
@@ -57,6 +69,8 @@ namespace TestBuilder.ViewModels
             TestVM.IsOperatorView = !IsEngineerWorkspace;
             if (!IsEngineerWorkspace) TestVM.Station.Prepare(TestVM.RootGraph);
             OnPropertyChanged(nameof(IsEngineerWorkspace));
+            OnPropertyChanged(nameof(WorkspaceTitle));
+            OnPropertyChanged(nameof(SwitchWorkspaceTitle));
         }
 
         private void OnTestVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -64,7 +78,11 @@ namespace TestBuilder.ViewModels
             if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
                 IsSlavesFound = TestVM.IsMonitoringActive;
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting))
+            {
                 SettingsVM.RefreshModeAvailability();
+                SwitchWorkspaceCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(CanSwitchWorkspace));
+            }
         }
 
         public void Dispose()

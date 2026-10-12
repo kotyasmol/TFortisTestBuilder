@@ -9,8 +9,10 @@
         public string FilePath { get; }
         public string Name { get; }
         public string? DeviceModel { get; }
+        public string? DeviceModelId { get; }
         public string ConfigurationName { get; }
-        public string ModelGroup => DeviceModel ?? "Без модели";
+        public string ModelGroup => DeviceModel ?? (DeviceModelId == null ? "Без модели" : "Модель " + DeviceModelId);
+        public string ModelGroupKey => DeviceModelId != null ? "id:" + DeviceModelId.ToUpperInvariant() : "name:" + EquipmentCatalog.Normalize(ModelGroup);
         public string StationName => Name switch
         {
             "PSW_2G6F_plus_full_algorithm" => "PSW-2G6F+",
@@ -26,9 +28,10 @@
             _ => Name.Replace('_', ' ')
         };
 
-        public GraphProfile(string filePath, string name, string? deviceModel = null, string? configurationName = null)
+        public GraphProfile(string filePath, string name, string? deviceModel = null, string? configurationName = null, string? deviceModelId = null)
         {
             FilePath = filePath;
+            DeviceModelId = deviceModelId;
             Name = name;
             // Existing profiles remain grouped even before their metadata is saved.
             DeviceModel = Clean(deviceModel) ?? name switch
