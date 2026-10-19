@@ -66,10 +66,11 @@ namespace TestBuilder.Domain.Steps
                 return StepResult.False;
             }
 
+            int? lastLoggedValue = null;
             for (var attempt = 1; attempt <= _readAttempts; attempt++)
             {
                 // The old stand waits before each of its three PoE reads.
-                if (_liveRead && _readIntervalMs > 0)
+                if ((_liveRead || attempt > 1) && _readIntervalMs > 0)
                     await Task.Delay(_readIntervalMs, cancellationToken);
 
                 var read = await ModbusRegisterReadHelper.ReadAsync(
@@ -84,8 +85,15 @@ namespace TestBuilder.Domain.Steps
                         SavePoeMeasurement(context, actualSlaveId.Value, inRange,
                             System.FormattableString.Invariant($"{read.Value / 1000.0:F3} В; допуск {_min / 1000.0:F3}..{_max / 1000.0:F3} В"));
                     }
-                    _logger.Info(
-                        $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {registerAddress}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
+                    if (_liveRead || lastLoggedValue != read.Value || inRange || attempt == _readAttempts)
+                    {
+                        if (!_liveRead && !inRange && attempt < _readAttempts)
+                            _logger.Info($"[ОЖИДАНИЕ] Устройство {actualSlaveId}, адрес {registerAddress}: значение {read.Value}, ждём [{_min}..{_max}] по фоновому опросу.");
+                        else
+                            _logger.Info(
+                                $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {registerAddress}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
+                        lastLoggedValue = read.Value;
+                    }
                     if (inRange)
                     {
                         _logger.Info($"[OK] Значение {read.Value} в диапазоне [{_min}..{_max}]. Устройство {actualSlaveId}, адрес {registerAddress}.");

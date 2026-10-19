@@ -21,9 +21,9 @@ public class RtlFullProfileSimulationTests
     public static IEnumerable<object[]> Cases()
     {
         foreach (var board in new[] { "SW", "POE" })
-        foreach (var fault in new[] { "none", "write-once", "write", "serial", "server", "cancel", "disconnect", "bus-lost", "short-read", "cleanup" })
+        foreach (var fault in new[] { "none", "as-shipped", "write-once", "write", "serial", "server", "cancel", "disconnect", "bus-lost", "short-read", "cleanup" })
             yield return [board, fault, false];
-        foreach (var fault in new[] { "as-shipped", "battery", "k5", "sensor", "console", "json", "printer" }) yield return ["SW", fault, false];
+        foreach (var fault in new[] { "firmware", "battery", "k5", "sensor", "console", "json", "printer" }) yield return ["SW", fault, false];
         foreach (var fault in new[] { "voltage", "poe-line", "led", "uart", "uart-voltage", "print-enabled", "printer" }) yield return ["POE", fault, false];
     }
 
@@ -56,6 +56,7 @@ public class RtlFullProfileSimulationTests
                 {
                     if (n is DelayNodeViewModel delay) delay.Milliseconds = Math.Min(delay.Milliseconds, 50);
                     if (n is ForEachSlaveNodeViewModel loop) loop.RepeatDelayMs = Math.Min(loop.RepeatDelayMs, 15);
+                    if (n is CheckRegisterRangeNodeViewModel range) range.ReadIntervalMs = Math.Min(range.ReadIntervalMs, 15);
                 }
                 if (n is GetSerialNumberFromServerNodeViewModel serial) { serial.ServerBaseUrl = "http://simulation.invalid"; if (!originalTiming) serial.RetryDelayMs = 15; }
                 if (n is SendTestReportNodeViewModel report)
@@ -63,18 +64,18 @@ public class RtlFullProfileSimulationTests
                     report.ServerBaseUrl = "http://simulation.invalid"; report.LocalReportsDirectory = Path.Combine(folder, "local-reports");
                     if (!originalTiming) report.RetryDelayMs = 15;
                 }
-                if (fault != "as-shipped" && n is CheckVariableEqualityNodeViewModel eq)
-                {
-                    if (eq.ExpectedValue == "SET_PRODUCTION_FIRMWARE") { eq.ExpectedValue = RtlSimulatedRig.Firmware; changes.Add("PoeFirmware = SIM-POE-1.0"); }
-                    if (eq.ExpectedValue == "SET_PRODUCTION_MCU") { eq.ExpectedValue = RtlSimulatedRig.Mcu; changes.Add("PoeMcu = SIM-MCU-3"); }
-                }
+                // Exercise optional export failures explicitly; as-shipped runs keep original flags.
+                if (fault != "as-shipped" && n is SubtestNodeViewModel export &&
+                    (export.Name.StartsWith("Отчёт") || board == "SW" && export.Name.StartsWith("Этикетка")))
+                { export.IsEnabled = true; changes.Add("Для проверки экспорта включён подтест: " + export.Name); }
                 if (board == "POE" && fault is "print-enabled" or "printer" && n is SubtestNodeViewModel sub && sub.Name.StartsWith("Этикетка"))
                 { sub.IsEnabled = true; changes.Add("Включена опциональная печать PoE"); }
             }
             changes.Add(originalTiming ? "Все задержки и период опроса исходные" : "Паузы ≤50 мс, интервалы повторов ≤15 мс, опрос 10 мс");
+            changes.Add("Имитация длительности K5/VCC (UART в 4 раза быстрее): " + (originalTiming ? "3 с" : "200 мс") + "; переход состояния зависит от времени, не от числа чтений");
             changes.Add("HTTP и принтер перехвачены в памяти; локальные отчёты в папке сценария; Stand ID = SIMULATION");
             var settings = AppSettings.Instance; var oldStand = settings.StandId; settings.StandId = "SIMULATION";
-            var rig = new RtlSimulatedRig(board == "SW", fault);
+            var rig = new RtlSimulatedRig(board == "SW", fault, originalTiming ? TimeSpan.FromSeconds(3) : TimeSpan.FromMilliseconds(200));
             var manager = new SlaveManager(rig);
             var state = new RegisterState();
             using var monitor = new RegisterMonitor(manager, state, NullLogger.Instance) { PollInterval = originalTiming ? vm.RootGraph.Hardware!.PollIntervalMs : 10 };
@@ -119,7 +120,9 @@ public class RtlFullProfileSimulationTests
                     }
                 }
                 elapsed.Stop(); vm.Station.CompleteRun(status, ctx, elapsed: elapsed.Elapsed);
-                var successExpected = fault is "none" or "write-once" or "print-enabled";
+                // Freeze the trace before assertions; the poller appends status samples concurrently.
+                await monitor.StopAsync();
+                var successExpected = fault is "none" or "as-shipped" or "write-once" or "print-enabled";
                 Assert.True(vm.Station.IsSuccessful == successExpected,
                     $"{key}: {status}; {vm.Station.Headline}; {ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary}\n" + string.Join("\n", ctx.ReportEntries.Where(e => !e.IsSuccess).Select(e => e.Name + ": " + e.Value)));
                 Assert.True(rig.ReadCount > 1);
@@ -137,14 +140,19 @@ public class RtlFullProfileSimulationTests
                     Assert.Equal(ExecutionStatus.Completed, status); Assert.False(ctx.HasCriticalError);
                     Assert.All(ctx.ReportEntries, e => Assert.True(e.IsSuccess, e.Name));
                     Assert.Single(rig.SerialRequests); Assert.Contains(RtlSimulatedRig.CpuId, rig.SerialRequests[0]);
-                    Assert.Single(rig.Reports); Assert.Contains("test_result=true=1", rig.Reports[0]);
-                    Assert.Equal("Sent", ctx.GetVariable<string>("ReportDelivery.Status"));
-                    Assert.NotEmpty(Directory.GetFiles(Path.Combine(folder, "local-reports")));
+                    if (fault == "as-shipped") { Assert.Empty(rig.Reports); Assert.Empty(rig.Labels); }
+                    else
+                    {
+                        Assert.Single(rig.Reports); Assert.Contains("test_result=true=1", rig.Reports[0]);
+                        Assert.Equal("Sent", ctx.GetVariable<string>("ReportDelivery.Status"));
+                        Assert.NotEmpty(Directory.GetFiles(Path.Combine(folder, "local-reports")));
+                    }
                     if (board == "SW")
                     {
                         Assert.Equal(new[] { 2323, 2325, 2327, 2325, 2323 }, rig.Writes.Where(w => w.Value == 1 && w.Address is 2323 or 2325 or 2327).Select(w => w.Address));
                         Assert.DoesNotContain(rig.Writes, w => new[] { 2335, 2338, 2343, 2346, 2349, 2352, 2355, 2358, 2361, 2364, 2367, 2370 }.Contains(w.Address));
-                        foreach (var a in new[] { 2303, 2304, 2305 }) Assert.Equal(new[] { 0, 0, 1, 0 }, rig.Writes.Where(w => w.Address == a).Select(w => w.Value));
+                        foreach (var a in new[] { 2303, 2304 }) Assert.Equal(new[] { 0, 0, 1, 0 }, rig.Writes.Where(w => w.Address == a).Select(w => w.Value));
+                        Assert.Equal(new[] { 0 }, rig.Writes.Where(w => w.Address == 2305).Select(w => w.Value));
                         Assert.Equal(3, rig.Commands.Count(c => c.Contains("setParam")));
                     }
                     else
@@ -154,7 +162,7 @@ public class RtlFullProfileSimulationTests
                     }
                     foreach (var a in board == "SW" ? new[] { 2324, 2326, 2328, 2331 } : new[] { 2494 })
                     { Assert.Contains((a, 1), rig.StatusSamples); Assert.Contains((a, 2), rig.StatusSamples); }
-                    if (board == "SW" || fault == "print-enabled")
+                    if (board == "SW" && fault != "as-shipped" || fault == "print-enabled")
                     { Assert.Single(rig.Labels); Assert.Contains("123456", rig.Labels[0]); Assert.Contains("P1", rig.Labels[0]); }
                     else Assert.Empty(rig.Labels);
                 }
@@ -162,7 +170,7 @@ public class RtlFullProfileSimulationTests
                 {
                     if (fault != "server") Assert.NotEqual(ExecutionStatus.Completed, status);
                     if (fault == "server") { Assert.Equal("Failed", ctx.GetVariable<string>("ReportDelivery.Status")); Assert.True(rig.Reports.Count >= 3); }
-                    if (fault == "as-shipped") Assert.Contains("PoeFirmware", ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary ?? "");
+                    if (fault == "firmware") Assert.Contains("PoeFirmware", ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary ?? "");
                     if (fault == "poe-line") { Assert.Contains(ctx.ReportEntries, e => e.Name == "PoE 1A" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "PoE 8B" && e.IsSuccess); }
                     if (fault == "k5") { Assert.Contains(ctx.ReportEntries, e => e.Name == "K5 VMAIN" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "K5 VRES" && e.IsSuccess); }
                     if (fault == "led") { Assert.Contains(ctx.ReportEntries, e => e.Name == "Цвет Led1A" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "Цвет Led8B" && e.IsSuccess); }

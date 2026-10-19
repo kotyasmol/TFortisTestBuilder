@@ -17,11 +17,12 @@ namespace TestBuilder.Tests.Simulation;
 internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISerialConsoleSession, IRawLabelPrinter
 {
     public const string CpuId = "413148580e5939514c53698b";
-    public const string Firmware = "SIM-POE-1.0";
-    public const string Mcu = "SIM-MCU-3";
+    public const string Firmware = "v16.23";
+    public const string Mcu = "GigaDevice GD32E230";
     readonly object gate = new();
     readonly Dictionary<int, ushort> registers = new();
-    readonly Dictionary<int, int> busyPolls = new();
+    readonly Dictionary<int, long> busyStarted = new();
+    readonly TimeSpan operationTime;
     readonly Stopwatch clock = Stopwatch.StartNew();
     readonly bool sw;
     public string Fault { get; }
@@ -40,13 +41,13 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
     public int WriteAttempts { get; private set; }
     public bool PowerWasEnabled { get; private set; }
 
-    public RtlSimulatedRig(bool isSw, string fault)
+    public RtlSimulatedRig(bool isSw, string fault, TimeSpan operationTime)
     {
-        sw = isSw; Fault = fault;
+        sw = isSw; Fault = fault; this.operationTime = operationTime;
         for (var a = sw ? 2300 : 2400; a <= (sw ? 2385 : 2511); a++) registers[a] = 0;
         registers[0] = (ushort)(sw ? 104 : 105); // controller identification, outside the polling block
         if (sw) registers[2317] = registers[2318] = 3000; // battery is present before power
-        else registers[2486] = 3; // fixture PCB revision, independent of the profile
+        else registers[2486] = 0; // fixture PCB revision, independent of the profile
     }
 
     public void Record(string kind, object data) => Trace.Enqueue(new { ms = clock.Elapsed.TotalMilliseconds, kind, data });
@@ -70,17 +71,17 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
             {
                 ReadErrors++; Record("short-read", new { address, count }); return new ushort[count - 1];
             }
+            // The controller progresses with elapsed time, not with the number of bus reads.
+            foreach (var (status, started) in busyStarted.ToArray())
+                if (Stopwatch.GetElapsedTime(started) >= (status == 2494 ? operationTime / 4 : operationTime))
+                {
+                    registers[status] = (ushort)((Fault == "k5" && status == 2324) || (Fault == "uart" && status == 2494) ? 3 : 2);
+                    busyStarted.Remove(status);
+                }
             UpdateMeasurements();
             var values = Enumerable.Range(address, count).Select(a => registers[a]).ToArray();
             foreach (var status in new[] { 2324, 2326, 2328, 2331, 2494 }.Where(a => a >= address && a < address + count))
-            {
                 StatusSamples.Add((status, registers[status]));
-                if (busyPolls.TryGetValue(status, out var left) && left > 0)
-                {
-                    busyPolls[status] = left - 1;
-                    if (left == 1) registers[status] = (ushort)((Fault == "k5" && status == 2324) || (Fault == "uart" && status == 2494) ? 3 : 2);
-                }
-            }
             Record("read", new { slaveId, address, values }); return values;
         }
     }
@@ -94,15 +95,15 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
             registers[2320] = registers[2319];
             return;
         }
-        registers[2404] = Powered ? (ushort)(Fault == "voltage" ? 2900 : 3300) : (ushort)0;
+        registers[2404] = Powered ? (ushort)(Fault == "voltage" ? 0 : 3300) : (ushort)0;
         for (var i = 0; i < 16; i++)
         {
             registers[2405 + i] = (ushort)(Powered && !(Fault == "poe-line" && i == 0) ? 1 : 0);
             registers[2421 + i] = (ushort)(Powered ? 100 : 0);
             registers[2437 + i] = (ushort)(Powered ? (Fault == "led" && i == 0 ? 120 : 10) : 0);
-            registers[2453 + i] = (ushort)(Powered ? (Fault == "led" && i == 0 ? 10 : 100) : 0);
-            registers[2469 + i] = (ushort)(Powered ? 10 : 0);
-            registers[2495 + i] = (ushort)(Powered && registers[2494] == 2 ? (Fault == "uart-voltage" && i == 15 ? 40000 : 51000) : 0);
+            registers[2453 + i] = (ushort)(Powered ? 10 : 0);
+            registers[2469 + i] = (ushort)(Powered ? 100 : 0);
+            registers[2495 + i] = (ushort)(Powered && registers[2494] == 2 ? (Fault == "uart-voltage" && i == 15 ? 0 : 51000) : 0);
         }
     }
 
@@ -127,14 +128,14 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
             if (sw && value == 1 && address is 2323 or 2325 or 2327 or 2330)
             {
                 if (address == 2330 && !Powered) throw new InvalidOperationException("VCC test started without board power");
-                var status = address + 1; registers[status] = 1; busyPolls[status] = 1;
+                var status = address + 1; registers[status] = 1; busyStarted[status] = Stopwatch.GetTimestamp();
                 ushort[] measured = address == 2330 ? [3300, 1500, 1100, 3000, 3000] : [52000, 55000, 52000, 2048, 12000];
                 for (var i = 0; i < measured.Length; i++) registers[(address == 2330 ? 2376 : 2371) + i] = measured[i];
             }
             if (!sw && address == 2493 && value == 1)
             {
                 if (!Powered) throw new InvalidOperationException("UART started without power/reset release");
-                registers[2494] = 1; busyPolls[2494] = 1;
+                registers[2494] = 1; busyStarted[2494] = Stopwatch.GetTimestamp();
             }
             if (Armed && Fault == "cancel" && address == (sw ? 2301 : 2489) && value == 1) CancelRun?.Invoke();
             return Task.FromResult(true);
@@ -152,7 +153,7 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
             if (Fault == "json") return Task.FromResult("echo\n{invalid json\nroot@TFortis:/#");
             string response;
             if (command == "ubus call system board") response = "{\"release\":{\"version\":\"1.2.3\"}}";
-            else if (command == "ubus call poe info") response = JsonSerializer.Serialize(new { firmware = Firmware, mcu = Mcu });
+            else if (command == "ubus call poe info") response = JsonSerializer.Serialize(new { firmware = Fault == "firmware" ? "wrong-firmware" : Firmware, mcu = Mcu });
             else
             {
                 var name = Regex.Match(command, "\"name\":\"([^\"]+)\"").Groups[1].Value;

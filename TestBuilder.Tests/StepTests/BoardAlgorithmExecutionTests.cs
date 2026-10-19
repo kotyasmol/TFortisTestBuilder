@@ -69,22 +69,35 @@ public class BoardAlgorithmExecutionTests
         {
             if(node is DelayNodeViewModel delay)delay.Milliseconds=0;
             if(node is ForEachSlaveNodeViewModel loop)loop.RepeatDelayMs=0;
+            if(node is CheckRegisterRangeNodeViewModel range)range.ReadIntervalMs=5;
             if(node is SubtestNodeViewModel sub && (sub.Name.StartsWith("Отчёт")||sub.Name.StartsWith("Этикетка")))sub.IsEnabled=false;
             if(node is GetSerialNumberFromServerNodeViewModel serial)serial.ServerBaseUrl="http://offline.test";
         }
     }
     sealed class FakeRig:IModbusService,IHttpRequestService,ISerialConsoleSession
     {
+        readonly ConcurrentDictionary<int,(long Started,int Result)> pending = new();
+        readonly ConcurrentDictionary<int,int> terminalStates = new();
         readonly TestContext context;public ConcurrentDictionary<int,int> Values {get;}=new();public List<string> Commands{get;}=new();public CancellationTokenSource? CancelOnReset;public int CancelAddress=2489;
         public FakeRig(TestContext c)
         {
             context=c;for(int a=2300;a<=2511;a++)Values[a]=0;
-            Values[2317]=Values[2318]=3000;foreach(var a in new[]{2324,2326,2328,2331,2494})Values[a]=2;Values[2404]=3300;Values[2486]=3;
-            for(int i=0;i<16;i++){Values[2405+i]=1;Values[2421+i]=100;Values[2437+i]=10;Values[2453+i]=100;Values[2469+i]=10;Values[2495+i]=51000;}
+            Values[2317]=Values[2318]=3000;foreach(var a in new[]{2324,2326,2328,2331,2494})Values[a]=2;Values[2404]=3300;Values[2486]=0;
+            for(int i=0;i<16;i++){Values[2405+i]=1;Values[2421+i]=100;Values[2437+i]=10;Values[2453+i]=10;Values[2469+i]=100;Values[2495+i]=51000;}
         }
-        public async Task PollAsync(CancellationToken ct){try{while(!ct.IsCancellationRequested){var time=System.Diagnostics.Stopwatch.GetTimestamp();foreach(var (k,v) in Values)context.RegisterState.Update(1,k,v,startedAt:time);await Task.Delay(5,ct);}}catch(OperationCanceledException){}}
+        public async Task PollAsync(CancellationToken ct){try{while(!ct.IsCancellationRequested){var time=System.Diagnostics.Stopwatch.GetTimestamp();foreach(var (k,p) in pending)if(System.Diagnostics.Stopwatch.GetElapsedTime(p.Started).TotalMilliseconds>=100){Values[k]=p.Result;pending.TryRemove(k,out _);}foreach(var (k,v) in Values)context.RegisterState.Update(1,k,v,startedAt:time);await Task.Delay(5,ct);}}catch(OperationCanceledException){}}
         public Task<bool> WriteRegisterAsync(byte slave,ushort address,ushort value,bool verify=true,CancellationToken cancellationToken=default)
-        {cancellationToken.ThrowIfCancellationRequested();Values[address]=value;if(address==CancelAddress&&value==1)CancelOnReset?.Cancel();return Task.FromResult(true);}
+        {
+            cancellationToken.ThrowIfCancellationRequested();Values[address]=value;
+            if(value==1 && address is 2323 or 2325 or 2327)
+            {
+                var status=address+1;
+                var result=terminalStates.GetOrAdd(status, _=>Values[status]);
+                Values[status]=1;
+                pending[status]=(System.Diagnostics.Stopwatch.GetTimestamp(),result);
+            }
+            if(address==CancelAddress&&value==1)CancelOnReset?.Cancel();return Task.FromResult(true);
+        }
         public Task<ushort[]> ReadRegistersAsync(byte s,ushort a,ushort count,CancellationToken ct=default)=>throw new InvalidOperationException("Graph must use polling cache, not a separate read.");
         public Task<bool> CheckPortAsync(CancellationToken ct=default)=>Task.FromResult(true);
         public void SubscribeRegister(byte s,ushort a,Action<ushort[]> cb){}
@@ -93,7 +106,7 @@ public class BoardAlgorithmExecutionTests
         {
             ct.ThrowIfCancellationRequested();Commands.Add(command);
             if(command.Contains("system board"))return Task.FromResult("{\"release\":{\"version\":\"1.2.3\"}}");
-            if(command.Contains("poe info"))return Task.FromResult("{\"firmware\":\"SET_PRODUCTION_FIRMWARE\",\"mcu\":\"SET_PRODUCTION_MCU\"}");
+            if(command.Contains("poe info"))return Task.FromResult("{\"firmware\":\"v16.23\",\"mcu\":\"GigaDevice GD32E230\"}");
             var name=Regex.Match(command,"\"name\":\"([^\"]+)\"").Groups[1].Value;
             if(command.Contains("setParam")){Values[2306]=int.Parse(Regex.Match(command,"\"value\":\"([01])\"").Groups[1].Value);return Task.FromResult("{}");}
             var value=name switch{"sensor1"=>Values[2303].ToString(),"sensor2"=>Values[2304].ToString(),"tamper"=>Values[2305].ToString(),"sensorConnected" or "upsModeAvalible"=>"1","sensorTemperature"=>"23.5","SW_VERS"=>"1.0.0","DEVICE_ID"=>"413148580e5939514c53698b",_=>"0"};

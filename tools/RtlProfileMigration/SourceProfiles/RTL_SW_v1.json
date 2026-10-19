@@ -1,0 +1,98 @@
+{
+	"model_name": "RTL_SW_V0",
+	"model_type": 32,
+
+	"0. Проверка CR2032": true,
+	"cr2032_NoPWR_min": 2900,
+	"cr2032_NoPWR_max": 3400,
+	"cr2032_NoPWR_cpu_min": 2800,
+	"cr2032_NoPWR_cpu_max": 3400,
+
+	"1.Проверка узла K5": true,
+
+	"k5_start_delay": 10,
+	"k5_test_delay": 10,
+
+	"k5_52V_min": 51000,
+	"k5_52V_max": 54500,
+
+	"k5_55V_min": 54000,
+	"k5_55V_max": 56000,
+
+	"v12_min": 11000,
+	"v12_max": 13000,
+
+	"vout_vmain_min": 54000,
+	"vout_vmain_max": 56000,
+
+	"vout_vres_min": 51000,
+	"vout_vres_max": 53000,
+
+	"vref_min": 2000,
+	"vref_max": 2500,
+
+
+
+	"2.Проверка VCC": true,
+
+	"vcc_start_delay": 10,
+	"vcc_3V3_min": 3200,
+	"vcc_3V3_max": 3400,
+	"vcc_1V5_min": 1400,
+	"vcc_1V5_max": 1600,
+	"vcc_1V1_min": 1000,
+	"vcc_1V1_max": 1200,
+	"cr2032_min": 0,
+	"cr2032_max": 10000,
+	"cr2032_cpu_min": 0,
+	"cr2032_cpu_max": 10000,
+
+	"3. Прошивка FLASH": false,
+	"firmware_vers": "0.16.0",
+	"flash_mpj_path": "C:/Users/user/Desktop/prshv.mpj",
+	"flash_instruction_path": "C:/Users/user/Downloads/TFOR-106594650-130525-1429-104.pdf",
+	"flash_delay_timeout": 180,
+
+
+	"4. Прошивка MCU": false,
+	"firmware_swd_vers": "0",
+	"mcu_bat_path": "C:/Users/user/Desktop/xpack-openocd-0.12.0-6/flash.bat",
+	"mcu_bin_path": "C:/FortTelecom/Launcher/TFortis_Board/Firmwares/RTL-SW/SWD/mcu_7.bin",
+	"mcu_id_path": "C:/Users/user/Desktop/xpack-openocd-0.12.0-6/read_id.bat",
+
+
+	"5. Самотестирование": true,
+
+	"dut_selftest": true,
+
+	"dut_start_time": 60,
+	"dut_end_of_new_logs_time": 10,
+
+	"dut_sensor1_test": true,
+	"dut_sensor2_test": true,
+	"dut_relay_test": true,
+
+	"dut_tamper_test": false,
+	"dut_tamper_status_min": 0,
+	"dut_tamper_status_max": 10000,
+	"dut_tamper_led_min": 0,
+	"dut_tamper_led_max": 10000,
+
+	"dut_i2c_test": true,
+	"dut_i2c_temper_min": 15,
+	"dut_i2c_temper_max": 45,
+
+	"dut_poe_test": true,
+	"firmware": "v16.23",
+	"mcu": "GigaDevice GD32E230",
+	"dut_rs485_test": true,
+
+
+
+	"6. отправка отчёта": false,
+
+	"7. печать этикетки": false,
+	"print_label": 1,
+	"label_num": 1,
+	"label_size": 20
+}
