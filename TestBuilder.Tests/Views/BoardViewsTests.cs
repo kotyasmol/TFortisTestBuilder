@@ -23,7 +23,7 @@ public class BoardViewsTests
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/board_highlight_demo.json"));
+            var path = TestBuilder.Tests.Support.TestProfilePaths.Find("board_highlight_demo.json");
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             Assert.True(vm.IsBoardProfile);
             Assert.Equal(6, vm.RootGraph.Board!.Regions.Count);

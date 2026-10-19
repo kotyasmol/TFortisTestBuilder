@@ -12,7 +12,7 @@ generated_profiles=[]
 def n(t,**kw):
  kw.setdefault("runOnlyOnFirstRun",False)
  return dict(type=t,**kw)
-def inp(x): return 'In' if x['type'] in ['Subtest','Serial Console','Run Program','Parse Response','Check LED Color','For Slaves (repeat v1)','Check Variable Equality','Check Variable Range','Get Serial Number','Print Label','Build Test Report','Send Test Report'] else 'Вход'
+def inp(x): return 'In' if x['type'] in ['Subtest','Serial Console','Serial Console (connect v1)','Run Program','Parse Response','Check LED Color','For Slaves (repeat v1)','Check Variable Equality','Check Variable Range','Get Serial Number','Print Label','Build Test Report','Send Test Report'] else 'Вход'
 def success(x):
  t=x['type']
  return 'Success' if t=='Subtest' else ('Продолжить' if t in ['Operator Action','Operator Input (v1)'] else ('Выход' if t in ['Start','Body Start','Delay','Label'] else 'True'))
@@ -38,6 +38,7 @@ def wait(a,v,ms=60000): return n('Wait Until',slaveId=1,address=a,expectedValue=
 def wait_range(a,mi,ma,interval=500,count=120):
  node=check(a,mi,ma);node.update(readAttempts=count,readIntervalMs=interval);return node
 def console(command,output='Console.Response',timeout=10000):return n('Serial Console',serialConsole=dict(deviceId='dut',portName='',baudRate=115200,command=command,responseTerminator='',quietMs=500,timeoutMs=timeout,outputVariableName=output))
+def connect_dut():return sub('Подключение к DUT',[n('Serial Console (connect v1)',serialConsole=dict(deviceId='dut',connectOnly=True,timeoutMs=120000))],description='Ожидание USB-UART после подачи питания.')
 def parse(selector,var='Parsed.Value',source='Console.Response',typ='String',mode='Json'):return n('Parse Response',parseResponse=dict(sourceVariableName=source,parseMode=mode,selector=selector,valueType=typ,outputVariableName=var))
 def eq(var,expected,typ='String'):return n('Check Variable Equality',variableName=var,expectedValue=str(expected),comparisonType=typ)
 def param(name):return "ubus call tf_hwsys getParam '"+json.dumps(dict(name=name),separators=(',',':'))+"'"
@@ -57,14 +58,15 @@ def failure_report(g):
  body['connections'] += [dict(sourceNodeId='1',sourceConnector='False',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='True',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='False',targetNodeId='3',targetConnector='In')]
  stage.update(id='failure-report',x=100,y=2500);g['nodes'].append(stage)
 def label():return n('Print Label',printerName='TSC TE310',serialVariableName='SerialNumber',copies=1,useQtProZplFormat=False,failOnPrinterError=True)
-def hardware(kind):return dict(PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
+def hardware(kind):return dict(PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',PortDescriptionContains='CH340',UsbVendorId='1A86',UsbProductId='7523',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
 board_names = {'ConsoleStatus': 'Консоль', 'CrStatus': 'Батарейка CR2032', 'FlashStatus': 'Флеш-память', 'I2CStatus': 'Датчик I²C', 'K5TestStatus': 'Узел K5', 'PoeStatus': 'Контроллер PoE', 'RelayStatus': 'Реле', 'Rs485Status': 'Интерфейс RS-485', 'RtlStatus': 'Коммутатор', 'Sensor1Status': 'Датчик 1', 'Sensor2Status': 'Датчик 2', 'TamperStatus': 'Датчик вскрытия', 'V11Status': 'Питание 1,1 В', 'V15Status': 'Питание 1,5 В', 'V33Status': 'Питание 3,3 В', '3V3': 'Питание 3,3 В', 'PoeTotal1_4': 'Питание PoE портов 1–4', 'PoeTotal5_8': 'Питание PoE портов 5–8', 'Spi_swd_uart93': 'Интерфейсы SPI, SWD и UART', 'Led1A': 'Светодиод порта 1A', 'Poe1A': 'Питание PoE порта 1A', 'Led1B': 'Светодиод порта 1B', 'Poe1B': 'Питание PoE порта 1B', 'Led2A': 'Светодиод порта 2A', 'Poe2A': 'Питание PoE порта 2A', 'Led2B': 'Светодиод порта 2B', 'Poe2B': 'Питание PoE порта 2B', 'Led3A': 'Светодиод порта 3A', 'Poe3A': 'Питание PoE порта 3A', 'Led3B': 'Светодиод порта 3B', 'Poe3B': 'Питание PoE порта 3B', 'Led4A': 'Светодиод порта 4A', 'Poe4A': 'Питание PoE порта 4A', 'Led4B': 'Светодиод порта 4B', 'Poe4B': 'Питание PoE порта 4B', 'Led5A': 'Светодиод порта 5A', 'Poe5A': 'Питание PoE порта 5A', 'Led5B': 'Светодиод порта 5B', 'Poe5B': 'Питание PoE порта 5B', 'Led6A': 'Светодиод порта 6A', 'Poe6A': 'Питание PoE порта 6A', 'Led6B': 'Светодиод порта 6B', 'Poe6B': 'Питание PoE порта 6B', 'Led7A': 'Светодиод порта 7A', 'Poe7A': 'Питание PoE порта 7A', 'Led7B': 'Светодиод порта 7B', 'Poe7B': 'Питание PoE порта 7B', 'Led8A': 'Светодиод порта 8A', 'Poe8A': 'Питание PoE порта 8A', 'Led8B': 'Светодиод порта 8B', 'Poe8B': 'Питание PoE порта 8B'}
 def save(filename,g):
  if filename in ("RTL_SW_board.json", "RTL_POE_board.json"):
   apply_original(g, "SW" if filename == "RTL_SW_board.json" else "POE")
  for region in g.get("board",{}).get("Regions",[]): region["Name"] = board_names.get(region["Name"],region["Name"])
- out.mkdir(exist_ok=True); (out/filename).write_text(json.dumps(g,ensure_ascii=False,indent=2)+'\n')
- generated_profiles.append(str(out/filename))
+ destination = out if filename in ('RTL_SW_board.json', 'RTL_POE_board.json') else Path('examples/profiles')
+ destination.mkdir(parents=True,exist_ok=True); (destination/filename).write_text(json.dumps(g,ensure_ascii=False,indent=2)+'\n')
+ generated_profiles.append(str(destination/filename))
  print(filename, 'nodes',sum(1 for _ in walk(g)))
 def walk(g):
  for x in g['nodes']:
@@ -105,7 +107,7 @@ sw[-1]['bodyGraph'] = graph('VCC',vcc_items)
 vcc = sw[-1]['bodyGraph']
 for cond in vcc['nodes'][1:3]:
  vcc['connections'].append(dict(sourceNodeId=cond['id'],sourceConnector='False',targetNodeId='4',targetConnector='In'))
-sw.append(sub('Запуск и готовность DUT',[write(2301,0),write(2302,0),delay(10000),write(2301,1),write(2302,1),delay(2000),repeat([console(param('SW_VERS'),timeout=3000),parse('SW_VERS','McuVersion')],30,2000),eq('McuVersion',sw_source['firmware_swd_vers'],'VersionAtLeast')],swreg('ConsoleStatus'),description='Ожидание ответа SW_VERS вместо зависимости от единичной строки загрузочного лога. Версия из RTL_SW_v1.'))
+sw.append(sub('Запуск и готовность DUT',[write(2301,0),write(2302,0),delay(10000),write(2301,1),write(2302,1),delay(2000),connect_dut(),repeat([console(param('SW_VERS'),timeout=3000),parse('SW_VERS','McuVersion')],30,2000),eq('McuVersion',sw_source['firmware_swd_vers'],'VersionAtLeast')],swreg('ConsoleStatus'),description='Ожидание ответа SW_VERS вместо зависимости от единичной строки загрузочного лога. Версия из RTL_SW_v1.'))
 sw.append(sub('DUT self-test',[console('ubus call system board'),parse('release.version','FirmwareVersion'),eq('FirmwareVersion',sw_source['firmware_vers'],'VersionAtLeast')]+[collect('Аппаратные ошибки DUT',[sub(k,paramcheck(k,'0')) for k in ['HW_ERR1','HW_ERR2','HW_ERR3']])],swreg('RtlStatus','FlashStatus'),description='Проверка минимальной версии и трёх HW_ERR. Версия из RTL_SW_v1.'))
 for sensor,addr in [('sensor1',2303),('sensor2',2304)]:
  items=[]

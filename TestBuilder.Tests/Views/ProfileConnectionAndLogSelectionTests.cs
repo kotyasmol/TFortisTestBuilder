@@ -17,6 +17,43 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class ProfileConnectionAndLogSelectionTests
 {
+    [Fact]
+    public async Task AutoSearchFailureKeepsTechnicalDetailsInFile_AndNeutralMessageInUi()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(() =>
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "port-search-" + Guid.NewGuid());
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            try
+            {
+                Dispatcher.UIThread.RunJobs(); vm.TestingLogger.Clear();
+                Exception error;
+                try { throw new TimeoutException("Write timed out at TestViewModel.cs:893"); }
+                catch (Exception ex) { error = ex; }
+                vm.ReportPortSearchFailure("COM-WRONG", error, automatic: true, directory);
+                vm.TestingLogger.Info("Подключено к COM-RIGHT.");
+                Dispatcher.UIThread.RunJobs();
+                Assert.All(vm.TestingLogger.Entries, entry =>
+                {
+                    Assert.Equal(TestBuilder.Services.Logging.LogLevel.Info, entry.Level);
+                    Assert.Null(entry.HighlightColor);
+                    Assert.DoesNotContain("TimeoutException", entry.Message);
+                    Assert.DoesNotContain("TestViewModel.cs", entry.Message);
+                });
+                Assert.Contains(vm.TestingLogger.Entries, e => e.Message.Contains("Поиск продолжается"));
+                var diagnostic = File.ReadAllText(Assert.Single(Directory.GetFiles(directory)));
+                Assert.Contains(error.ToString(), diagnostic);
+                vm.ReportPortSearchFailure("COM-MANUAL", error, automatic: false, directory);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Contains(vm.TestingLogger.Entries, e => e.Level == TestBuilder.Services.Logging.LogLevel.Warning && e.Message.Contains("Проверьте подключение"));
+            }
+            finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData("RTL_SW_board.json")]
     [InlineData("RTL_POE_board.json")]

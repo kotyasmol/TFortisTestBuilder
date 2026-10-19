@@ -12,14 +12,7 @@ public class ManualLabelProfileTests
     [Fact]
     public void ManualLabelProfile_LoadsAsStandaloneFourCopyGraph()
     {
-        var profilePath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "profiles",
-            "manual_label_printing.json"));
+        var profilePath = TestBuilder.Tests.Support.TestProfilePaths.Find("manual_label_printing.json");
         var json = File.ReadAllText(profilePath);
 
         using var modbus = new ModbusService();

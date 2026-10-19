@@ -55,6 +55,7 @@ public sealed class HardwareEditorWindow : Window
         _presets = HardwarePresets.Load();
         _parity.ItemTemplate = new FuncDataTemplate<Parity>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
         _stop.ItemTemplate = new FuncDataTemplate<StopBits>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
+        _preset.ItemTemplate = new FuncDataTemplate<DeviceDefinition>((value, _) => new TextBlock { Text = value?.Name });
         _preset.ItemsSource = _presets; _preset.SelectedIndex = 0;
         _devicesGrid.ItemsSource = _devices;
         AddColumn(_devicesGrid, "Адрес", "SlaveId"); AddColumn(_devicesGrid, "Название", "Name");
@@ -221,23 +222,28 @@ public sealed class HardwareEditorWindow : Window
         };
         left.Children.Add(_consoleList); page.Children.Add(left);
         var right = new StackPanel { Spacing = 16 };
-        right.Children.Add(new TextBlock { Text = "Устройство подключается при выполнении ноды «Консоль». Ожидание загрузки и повтор команды задаются нодами профиля.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        void TextField(string label, string property)
+        right.Children.Add(new TextBlock { Text = "Порт может появиться после включения платы. В ноде «Консоль платы» включите «Дождаться подключения» и задайте время ожидания.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var advanced = new StackPanel { Spacing = 8 };
+        void TextField(string label, string property, bool extra = false)
         {
-            var input = new TextBox(); input.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay });
-            _consoleInputs.Add(input); Field(_consoleFields, label, input);
+            var input = new TextBox { Name = property + "Input" }; input.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay });
+            _consoleInputs.Add(input); Field(extra ? advanced : _consoleFields, label, input);
         }
         TextField("Название устройства", "Name");
-        var port = new AutoCompleteBox { ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray(), Watermark = "Выберите или введите порт USB-UART" };
+        var port = new AutoCompleteBox { ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray(), Watermark = "Пусто — поиск по описанию или USB VID/PID" };
         port.Bind(AutoCompleteBox.TextProperty, new Binding("PortName") { Mode = BindingMode.TwoWay });
-        Field(_consoleFields, "COM-порт консоли", port);
-        TextField("Скорость, бод", "BaudRate"); TextField("Биты данных", "DataBits");
+        Field(advanced, "Фиксированный COM-порт (необязательно)", port);
+        TextField("Автопоиск: часть названия адаптера", "PortDescriptionContains");
+        TextField("Автопоиск: USB VID (4 цифры, например 1A86)", "UsbVendorId", true);
+        TextField("Автопоиск: USB PID (4 цифры, например 7523)", "UsbProductId", true);
+        advanced.Children.Add(new TextBlock { Text = "Для поиска достаточно совпадения названия или пары VID/PID. Указанный COM-порт отключает автопоиск.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        TextField("Скорость, бод", "BaudRate"); TextField("Биты данных", "DataBits", true);
         void Selector<T>(string label, string property, IEnumerable<T> values, Func<T, string> display)
         {
             var input = new ComboBox { ItemsSource = values, HorizontalAlignment = HorizontalAlignment.Stretch,
                 ItemTemplate = new FuncDataTemplate<T>((value, _) => new TextBlock { Text = display(value!) }) };
             input.Bind(ComboBox.SelectedItemProperty, new Binding(property) { Mode = BindingMode.TwoWay });
-            Field(_consoleFields, label, input);
+            Field(advanced, label, input);
         }
         Selector("Чётность", "Parity", Enum.GetValues<Parity>(), p => RussianUiText.Display(p));
         Selector("Стоп-биты", "StopBits", new[] { StopBits.One, StopBits.Two, StopBits.OnePointFive }, p => RussianUiText.Display(p));
@@ -247,8 +253,9 @@ public sealed class HardwareEditorWindow : Window
         foreach (var (label, property) in new[] { ("Включить DTR", "DtrEnable"), ("Включить RTS", "RtsEnable") })
         {
             var input = new CheckBox { Content = label }; input.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay });
-            _consoleFields.Children.Add(input);
+            advanced.Children.Add(input);
         }
+        _consoleFields.Children.Add(new Expander { Header = "Дополнительные параметры", Content = advanced, HorizontalAlignment = HorizontalAlignment.Stretch });
         right.Children.Add(_consoleFields);
         var scroll = new ScrollViewer { Content = right }; Grid.SetColumn(scroll, 2); page.Children.Add(scroll);
         _consoleList.SelectedIndex = _consoles.Count > 0 ? 0 : -1;

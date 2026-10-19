@@ -77,6 +77,8 @@ public class BoardAlgorithmExecutionTests
     }
     sealed class FakeRig:IModbusService,IHttpRequestService,ISerialConsoleSession
     {
+        public Task ConnectAsync(ConsoleDeviceDefinition device, int timeoutMs, CancellationToken token)
+        { token.ThrowIfCancellationRequested(); Assert.Equal(1, Values[2301]); Assert.Equal(1, Values[2302]); return Task.CompletedTask; }
         readonly ConcurrentDictionary<int,(long Started,int Result)> pending = new();
         readonly ConcurrentDictionary<int,int> terminalStates = new();
         readonly TestContext context;public ConcurrentDictionary<int,int> Values {get;}=new();public List<string> Commands{get;}=new();public CancellationTokenSource? CancelOnReset;public int CancelAddress=2489;

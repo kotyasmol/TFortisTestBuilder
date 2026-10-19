@@ -16,7 +16,7 @@ public class BoardProfileTests
     public void BoardProfile_LoadSaveLoadCompile_PreservesHardwareLayoutAndOperations(string file)
     {
         using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));
-        var name=GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,file)),vm);Assert.Equal("Board",vm.RootGraph.ProductKind);
+        var name=GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find(file)),vm);Assert.Equal("Board",vm.RootGraph.ProductKind);
         var nodeCount=All(vm.RootGraph).Count();var regions=vm.RootGraph.Board?.Regions.Count;
         using var compiler=new GraphCompiler(bus,NullLogger.Instance);Assert.NotNull(compiler.Compile(vm.RootGraph));
         var saved=GraphSerializer.Serialize(vm,name);Assert.Contains(vm.RootGraph.Hardware?.PortName != null ? "Start (connections v1)" : "Start (board v1)",saved);

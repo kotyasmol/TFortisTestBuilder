@@ -1,3 +1,4 @@
+using TestBuilder.Domain.Modbus;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -142,6 +143,16 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
         }
     }
 
+    public Task ConnectAsync(ConsoleDeviceDefinition device, int timeoutMs, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        lock (gate)
+        {
+            Assert.Equal(1, registers[2301]); Assert.Equal(1, registers[2302]);
+            Record("console-connect", new { device.Id, device.PortName, timeoutMs });
+        }
+        return Task.CompletedTask;
+    }
     public Task<string> ExchangeAsync(string port, int baud, string command, string terminator, int quiet, int timeout, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

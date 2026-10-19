@@ -14,10 +14,21 @@ public sealed class SerialConsoleStep(SerialConsoleOptions options, ISerialConso
 {
     public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken token)
     {
-        context.Variables.Remove(options.OutputVariableName);
+        if (!options.ConnectOnly) context.Variables.Remove(options.OutputVariableName);
         try
         {
             token.ThrowIfCancellationRequested(); await context.WaitWhilePausedAsync(token);
+            if (options.ConnectOnly)
+            {
+                var target = !string.IsNullOrEmpty(options.DeviceId)
+                    ? device ?? throw new InvalidOperationException($"Консольное устройство «{options.DeviceId}» отсутствует в оборудовании профиля.")
+                    : new TestBuilder.Domain.Modbus.ConsoleDeviceDefinition { PortName = string.IsNullOrWhiteSpace(options.PortName)
+                        ? AppSettings.Instance.ConsolePort : ResponseParser.Expand(options.PortName, context), BaudRate = options.BaudRate };
+                logger.Info($"Ожидание подключения: {target.Name}.");
+                await console.ConnectAsync(target, options.TimeoutMs, token);
+                logger.Info($"[OK] Подключено: {target.Name}.");
+                return StepResult.True;
+            }
             if (string.IsNullOrWhiteSpace(options.OutputVariableName)) throw new InvalidOperationException("Укажите переменную ответа консоли.");
             string response;
             if (!string.IsNullOrEmpty(options.DeviceId))

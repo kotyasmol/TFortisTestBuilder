@@ -44,6 +44,8 @@ public class ProfileSaveViewTests
             try
             {
                 vm.RefreshProfiles(); window.Show(); Layout(window);
+                foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true;
+                Layout(window);
                 var profile = Assert.Single(vm.Profiles);
                 var labels = profiles.GetVisualDescendants().OfType<TextBlock>().ToArray();
                 var name = Assert.Single(labels.Where(x => x.Text == profile.DisplayName));

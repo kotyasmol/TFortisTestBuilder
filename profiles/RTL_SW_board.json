@@ -5271,7 +5271,7 @@
               ]
             },
             "id": "7",
-            "x": 560,
+            "x": 1104,
             "y": 720,
             "runOnlyOnFirstRun": false
           },
@@ -5281,16 +5281,69 @@
             "expectedValue": "0",
             "comparisonType": "VersionAtLeast",
             "id": "8",
-            "x": 1056,
+            "x": 1600,
             "y": 720,
             "runOnlyOnFirstRun": false
           },
           {
             "type": "End",
             "id": "9",
-            "x": 1632,
+            "x": 2176,
             "y": 720,
             "runOnlyOnFirstRun": false
+          },
+          {
+            "type": "Subtest",
+            "id": "dut-connect",
+            "name": "Подключение к DUT",
+            "description": "Ожидание USB-UART после подачи питания.",
+            "isEnabled": true,
+            "stopOnError": true,
+            "runOnlyOnFirstRun": false,
+            "x": 560,
+            "y": 720,
+            "bodyGraph": {
+              "name": "Подключение к DUT",
+              "nodes": [
+                {
+                  "id": "0",
+                  "type": "Start",
+                  "x": 80,
+                  "y": 80
+                },
+                {
+                  "id": "1",
+                  "type": "Serial Console (connect v1)",
+                  "x": 320,
+                  "y": 80,
+                  "serialConsole": {
+                    "deviceId": "dut",
+                    "connectOnly": true,
+                    "timeoutMs": 120000
+                  }
+                },
+                {
+                  "id": "2",
+                  "type": "End",
+                  "x": 848,
+                  "y": 80
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "In"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                }
+              ]
+            }
           }
         ],
         "connections": [
@@ -5333,7 +5386,7 @@
           {
             "sourceNodeId": "6",
             "sourceConnector": "Выход",
-            "targetNodeId": "7",
+            "targetNodeId": "dut-connect",
             "targetConnector": "In"
           },
           {
@@ -5347,6 +5400,12 @@
             "sourceConnector": "True",
             "targetNodeId": "9",
             "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "dut-connect",
+            "sourceConnector": "Success",
+            "targetNodeId": "7",
+            "targetConnector": "In"
           }
         ]
       },
@@ -8149,7 +8208,7 @@
             "type": "End",
             "id": "6",
             "x": 80,
-            "y": 720,
+            "y": 688,
             "runOnlyOnFirstRun": false
           }
         ],
@@ -8283,7 +8342,7 @@
             "type": "End",
             "id": "6",
             "x": 80,
-            "y": 720,
+            "y": 688,
             "runOnlyOnFirstRun": false
           }
         ],
@@ -9913,7 +9972,10 @@
         "EncodingName": "utf-8",
         "LineEnding": "\n",
         "DtrEnable": false,
-        "RtsEnable": false
+        "RtsEnable": false,
+        "PortDescriptionContains": "CH340",
+        "UsbVendorId": "1A86",
+        "UsbProductId": "7523"
       }
     ]
   },

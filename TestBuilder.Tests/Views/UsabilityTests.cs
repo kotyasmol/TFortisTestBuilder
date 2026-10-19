@@ -182,7 +182,7 @@ public class UsabilityTests
     }
     private static double Luminance(Color c) { double Channel(byte x) { var v = x / 255d; return v <= .04045 ? v / 12.92 : Math.Pow((v + .055) / 1.055, 2.4); } return .2126 * Channel(c.R) + .7152 * Channel(c.G) + .0722 * Channel(c.B); }
     private static void Click(Window window, Control control) { var p = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value; window.MouseDown(p, MouseButton.Left); window.MouseUp(p, MouseButton.Left); }
-    private static string Profile(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles", name));
+    private static string Profile(string name) => TestBuilder.Tests.Support.TestProfilePaths.Find(name);
     private static string Output() { var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS") ?? Path.Combine(Path.GetTempPath(), "tfortis-usability-ui"); Directory.CreateDirectory(path); return path; }
     private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
     private static void Capture(Window window, string name) { using var frame = window.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(Path.Combine(Output(), name + ".png")); }

@@ -7,6 +7,7 @@ using TestBuilder.ViewModels.NodifyVM;
 namespace TestBuilder.ViewModels.StepVM;
 public partial class SerialConsoleNodeViewModel : NodeViewModel
 {
+    [ObservableProperty] private bool connectOnly;
     [ObservableProperty] private string deviceId = "";
     public bool UsesLegacyConnection => string.IsNullOrEmpty(DeviceId);
     partial void OnDeviceIdChanged(string value) => OnPropertyChanged(nameof(UsesLegacyConnection));
@@ -26,8 +27,8 @@ public partial class SerialConsoleNodeViewModel : NodeViewModel
         In = new ConnectorViewModel { Title = "In" }; TrueOut = new ConnectorViewModel { Title = "True" }; FalseOut = new ConnectorViewModel { Title = "False" };
         AddInput(In); AddOutput(TrueOut); AddOutput(FalseOut);
     }
-    public SerialConsoleOptions Options => new() { DeviceId = DeviceId, PortName = PortName, BaudRate = BaudRate, Command = Command, ResponseTerminator = ResponseTerminator, QuietMs = QuietMs, TimeoutMs = TimeoutMs, OutputVariableName = OutputVariableName };
+    public SerialConsoleOptions Options => new() { ConnectOnly = ConnectOnly, DeviceId = DeviceId, PortName = PortName, BaudRate = BaudRate, Command = Command, ResponseTerminator = ResponseTerminator, QuietMs = QuietMs, TimeoutMs = TimeoutMs, OutputVariableName = OutputVariableName };
     public ITestStep CreateStep(ISerialConsoleSession console, ILogger logger, TestBuilder.Domain.Modbus.ConsoleDeviceDefinition? device = null) => new SerialConsoleStep(Options, console, logger, device);
-    public static SerialConsoleNodeViewModel FromOptions(SerialConsoleOptions o) => new() { DeviceId = o.DeviceId, PortName = o.PortName, BaudRate = o.BaudRate, Command = o.Command, ResponseTerminator = o.ResponseTerminator, QuietMs = o.QuietMs, TimeoutMs = o.TimeoutMs, OutputVariableName = o.OutputVariableName };
+    public static SerialConsoleNodeViewModel FromOptions(SerialConsoleOptions o) => new() { ConnectOnly = o.ConnectOnly, DeviceId = o.DeviceId, PortName = o.PortName, BaudRate = o.BaudRate, Command = o.Command, ResponseTerminator = o.ResponseTerminator, QuietMs = o.QuietMs, TimeoutMs = o.TimeoutMs, OutputVariableName = o.OutputVariableName };
     public override NodeViewModel Clone() => FromOptions(Options);
 }

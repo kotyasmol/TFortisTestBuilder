@@ -936,16 +936,19 @@
                       <TextBlock Text="Скорость" />
                       <TextBox Text="{Binding BaudRate}" />
                     </StackPanel>
+                    <CheckBox Content="Дождаться подключения" IsChecked="{Binding ConnectOnly}" ToolTip.Tip="Ждать появления USB-UART и открыть порт без отправки команд" />
+                    <StackPanel IsVisible="{Binding !ConnectOnly}" Spacing="6">
                     <TextBlock Text="Команда" TextWrapping="Wrap" />
                     <TextBox Text="{Binding Command}" AcceptsReturn="True" MinHeight="60" />
                     <TextBlock Text="Маркер конца (пусто — тишина)" TextWrapping="Wrap" />
                     <TextBox Text="{Binding ResponseTerminator}" />
                     <TextBlock Text="Тишина, мс" TextWrapping="Wrap" />
                     <TextBox Text="{Binding QuietMs}" />
-                    <TextBlock Text="Таймаут, мс" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding TimeoutMs}" />
                     <TextBlock Text="Переменная ответа" TextWrapping="Wrap" />
                     <TextBox Text="{Binding OutputVariableName}" />
+                    </StackPanel>
+                    <TextBlock Text="Время ожидания, мс" TextWrapping="Wrap" />
+                    <TextBox Text="{Binding TimeoutMs}" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>

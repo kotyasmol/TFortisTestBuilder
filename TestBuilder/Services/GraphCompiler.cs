@@ -32,6 +32,7 @@ namespace TestBuilder.Services
         private readonly HashSet<GraphWorkspaceViewModel> _compiling = new();
         private readonly List<string> _graphNames = new();
         public HardwareConfiguration? ProfileHardware { get; init; }
+        public string? ConnectedStandPort { get; init; }
         private HardwareConfiguration? _activeHardware;
 
         public static void ValidateConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware)
@@ -58,7 +59,7 @@ namespace TestBuilder.Services
                     var device = hardware?.ConsoleDevices.SingleOrDefault(d => d.Id == console.DeviceId)
                         ?? throw new InvalidOperationException($"В оборудовании нет консоли «{console.DeviceId}».");
                     device.Validate(requirePort: true);
-                    if (string.Equals(device.PortName.Trim(), standPort?.Trim(), StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrWhiteSpace(device.PortName) && string.Equals(device.PortName.Trim(), standPort?.Trim(), StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Консоль «{device.Name}» использует порт подключённого стенда. Укажите отдельный порт USB-UART.");
                 }
                 if (node is ICompositeNodeViewModel composite) ValidateRunConnections(composite.BodyGraph, hardware, standPort);
@@ -80,7 +81,10 @@ namespace TestBuilder.Services
             IHttpRequestService httpRequestService,
             ILogger logger, ISerialConsoleSession? console = null, IExternalProgramRunner? programRunner = null)
         {
-            _console = console ?? new SerialConsoleSession();
+            _console = console ?? new SerialConsoleSession(new SystemSerialPortCatalog(),
+                id => new[] { ConnectedStandPort, ProfileHardware?.PortName }
+                    .Concat(ProfileHardware?.ConsoleDevices.Where(d => d.Id != id).Select(d => d.PortName) ?? Enumerable.Empty<string>())
+                    .Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!.Trim()));
             _ownsConsole = console == null;
             _programRunner = programRunner ?? new ExternalProgramRunner();
             _modbusService = modbusService;

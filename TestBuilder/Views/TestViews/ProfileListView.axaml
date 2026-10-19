@@ -31,14 +31,14 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:EngineerProfileGroup">
                 <StackPanel Margin="0,4,0,8">
-                  <Button Classes="listHeader" Command="{Binding ToggleExpandedCommand}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Button Classes="listHeader" Command="{Binding ToggleExpandedCommand}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}"
+                          ToolTip.Tip="{Binding Profiles.Count, StringFormat='Профилей: {0}'}">
+                    <Grid ColumnDefinitions="Auto,*">
                       <Grid Width="14" Height="14" VerticalAlignment="Center">
   <PathIcon Width="10" Height="10" Data="M2 4 L7 9 12 4 14 6 7 13 0 6 Z" IsVisible="{Binding IsExpanded}" Foreground="{DynamicResource TextSecondaryBrush}" />
   <PathIcon Width="10" Height="10" Data="M4 0 L11 7 4 14 2 12 7 7 2 2 Z" IsVisible="{Binding !IsExpanded}" Foreground="{DynamicResource TextSecondaryBrush}" />
 </Grid>
                       <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0" />
-                      <TextBlock Grid.Column="2" Text="{Binding Profiles.Count}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
                     </Grid>
                   </Button>
                   <ListBox ItemContainerTheme="{StaticResource ProfileItemTheme}" IsVisible="{Binding IsExpanded}" ItemsSource="{Binding Profiles}" SelectionChanged="OnGroupSelectionChanged"

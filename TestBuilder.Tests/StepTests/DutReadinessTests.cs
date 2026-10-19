@@ -26,7 +26,9 @@ public class DutReadinessTests
         GraphSerializer.Deserialize(File.ReadAllText(file), vm);
         var stage = Assert.Single(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Where(n => n.Name == "Запуск и готовность DUT"));
         var nodes = BoardProfileTests.All(stage.BodyGraph).ToArray();
-        var console = Assert.Single(nodes.OfType<SerialConsoleNodeViewModel>());
+        var console = Assert.Single(nodes.OfType<SerialConsoleNodeViewModel>().Where(n => !n.ConnectOnly));
+        var connect = Assert.Single(nodes.OfType<SerialConsoleNodeViewModel>().Where(n => n.ConnectOnly));
+        Assert.Equal(120000, connect.TimeoutMs); Assert.Equal("dut", connect.DeviceId);
         Assert.Equal("dut", console.DeviceId);
         Assert.Equal("", vm.RootGraph.Hardware!.ConsoleDevices.Single().PortName);
         Assert.Equal(115200, console.BaudRate);
@@ -57,6 +59,13 @@ public class DutReadinessTests
 
     private sealed class DutRig(string mode) : IModbusService, ISerialConsoleSession
     {
+        public Task ConnectAsync(ConsoleDeviceDefinition device, int timeoutMs, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Assert.Equal(new[] { (2301, 0), (2302, 0), (2301, 1), (2302, 1) }, Writes);
+            Assert.Equal(0, Calls); Assert.Equal("SIM-DUT", device.PortName);
+            return Task.CompletedTask;
+        }
         public int Calls { get; private set; }
         public List<(int, int)> Writes { get; } = new();
         public Task<string> ExchangeAsync(string port, int baudRate, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token)

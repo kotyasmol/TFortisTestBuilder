@@ -161,7 +161,7 @@ public partial class EngineerProfileGroup : ViewModelBase
 {
     public string Name { get; }
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool isExpanded = true;
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool isExpanded;
     public EngineerProfileGroup(string name) => Name = name;
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private void ToggleExpanded() => IsExpanded = !IsExpanded;

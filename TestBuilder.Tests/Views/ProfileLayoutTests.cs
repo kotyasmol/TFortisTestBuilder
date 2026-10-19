@@ -34,7 +34,7 @@ public class ProfileLayoutTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            var source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles", profile));
+            var source = TestBuilder.Tests.Support.TestProfilePaths.Find(profile);
             var copy = Path.Combine(Path.GetTempPath(), "layout-" + Guid.NewGuid().ToString("N") + ".json");
             var original = JsonNode.Parse(File.ReadAllText(source))!.AsObject();
             original["futureMetadata"] = "keep me";

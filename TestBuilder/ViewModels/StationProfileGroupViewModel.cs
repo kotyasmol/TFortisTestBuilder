@@ -10,7 +10,7 @@ public partial class StationProfileGroupViewModel : ViewModelBase
 {
     public string ModelName { get; }
     public ObservableCollection<StationProfileOptionViewModel> Profiles { get; } = new();
-    [ObservableProperty] private bool isExpanded = true;
+    [ObservableProperty] private bool isExpanded;
 
     public StationProfileGroupViewModel(string modelName) => ModelName = modelName;
 

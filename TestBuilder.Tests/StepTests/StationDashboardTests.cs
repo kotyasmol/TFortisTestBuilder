@@ -17,16 +17,19 @@ public class StationDashboardTests
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus)) { IsOperatorView = true };
         var group = vm.StationProfileGroups.Single(g => g.ModelName == "PSW+UPS-Box 8x2Pro");
+        Assert.All(vm.StationProfileGroups, g => Assert.False(g.IsExpanded));
+        Assert.All(vm.EngineerProfileGroups, g => Assert.False(g.IsExpanded));
+        group.ToggleExpandedCommand.Execute(null);
         Assert.Equal("Полная проверка", group.Profiles[0].Profile.ConfigurationName);
         Assert.All(group.Profiles, p => Assert.Equal(group.ModelName, p.Profile.DeviceModel));
         var configurationCount = group.Profiles.Count;
-        var printing = group.Profiles.Single(p => p.Profile.ConfigurationName == "Ручная печать этикеток");
+        var printing = group.Profiles.Single(p => p.Profile.ConfigurationName == "Полная проверка · параллельный старт и нагрузки");
         printing.SelectCommand.Execute(null);
         var rootNode = vm.RootGraph.Nodes.First();
         Assert.Same(printing.Profile, vm.SelectedProfile);
         Assert.True(printing.IsSelected);
         Assert.Equal("PSW+UPS-Box 8x2Pro", vm.StationProfileName);
-        Assert.Contains("Ручная печать этикеток", vm.StationConfigurationCaption);
+        Assert.Contains("Полная проверка · параллельный старт и нагрузки", vm.StationConfigurationCaption);
         group.ToggleExpandedCommand.Execute(null);
         vm.RefreshProfiles();
         Assert.False(group.IsExpanded);
@@ -36,7 +39,7 @@ public class StationDashboardTests
         Assert.Equal(configurationCount, group.Profiles.Count);
         Assert.True(group.IsExpanded);
         vm.ProductFilter = "Коммутаторы";
-        vm.StationProfileSearch = "печать";
+        vm.StationProfileSearch = "нагрузки";
         Assert.Same(group, Assert.Single(vm.StationProfileGroups));
         Assert.True(Assert.Single(group.Profiles).IsSelected);
         vm.StationProfileSearch = "нет совпадений";
@@ -58,7 +61,7 @@ public class StationDashboardTests
         var profile = vm.SelectedProfile;
         var rootNode = vm.RootGraph.Nodes.First();
         vm.IsTestRunning = true;
-        var printing = group.Profiles.Single(p => p.Profile.ConfigurationName == "Ручная печать этикеток");
+        var printing = group.Profiles.Single(p => p.Profile.ConfigurationName == "Полная проверка · параллельный старт и нагрузки");
         printing.SelectCommand.Execute(null);
         Assert.Same(profile, vm.SelectedProfile);
         Assert.Same(rootNode, vm.RootGraph.Nodes.First());
@@ -444,7 +447,7 @@ public class StationDashboardTests
     {
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus), allowEditing: false) { IsOperatorView = true };
-        var file = Path.Combine(TestBuilder.Services.ProfileDirectoryLocator.Resolve(), "station_dashboard_demo.json");
+        var file = TestBuilder.Tests.Support.TestProfilePaths.Find("station_dashboard_demo.json");
         vm.SelectedProfile = new TestBuilder.Services.GraphProfile(file, "Demo");
         Assert.True(vm.CanStartRun);
         Assert.Equal(3, vm.Station.Stages.Count);

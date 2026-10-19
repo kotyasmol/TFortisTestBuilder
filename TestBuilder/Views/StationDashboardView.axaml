@@ -193,8 +193,26 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <Grid Name="BoardWorkspace" ColumnDefinitions="*,12,290" IsVisible="{Binding IsBoardProfile}">
+        <Grid Name="BoardWorkspace" IsVisible="{Binding IsBoardProfile}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="240" />
+            <ColumnDefinition Width="12" />
+            <ColumnDefinition Width="290" MinWidth="220" />
+          </Grid.ColumnDefinitions>
           <views:BoardPreviewView Name="InlineBoard" />
+          <GridSplitter Name="BoardStagesSplitter" Grid.Column="1" ResizeDirection="Columns"
+                        ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        Background="Transparent" Cursor="SizeWestEast" KeyboardIncrement="20"
+                        AutomationProperties.Name="Ширина платы и этапов"
+                        ToolTip.Tip="Перетащите, чтобы изменить ширину платы и этапов">
+            <GridSplitter.Template>
+              <ControlTemplate>
+                <Border Background="{TemplateBinding Background}">
+                  <Border Width="3" CornerRadius="2" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+                </Border>
+              </ControlTemplate>
+            </GridSplitter.Template>
+          </GridSplitter>
           <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"
                   Background="{DynamicResource SurfaceBrush}" Padding="12">
             <Grid RowDefinitions="Auto,*,Auto">

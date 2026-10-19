@@ -25,7 +25,7 @@ public class StationBoardViewTests
     static string Output => Environment.GetEnvironmentVariable("TFORTIS_BOARD_PULT_ARTIFACTS") ?? Path.Combine(Path.GetTempPath(), "tfortis-board-pult");
     static GraphProfile Profile(string file)
     {
-        var path = Path.Combine(Profiles, file);
+        var path = TestBuilder.Tests.Support.TestProfilePaths.Find(file);
         using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
         var root = json.RootElement;
         string? Value(string key) => root.TryGetProperty(key, out var value) ? value.GetString() : null;
@@ -54,6 +54,25 @@ public class StationBoardViewTests
                 Assert.True(canvas.IsEffectivelyVisible); Assert.True(stages.IsEffectivelyVisible);
                 Assert.True(canvas.Bounds.Width >= 450); Assert.True(canvas.Bounds.Height >= 220);
                 Assert.True(stages.Bounds.Width >= 240);
+                var splitter = view.FindControl<GridSplitter>("BoardStagesSplitter")!;
+                var boardWidth = preview.Bounds.Width; var stagesWidth = stages.Bounds.Width;
+                var grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(grip, MouseButton.Left);
+                window.MouseMove(grip.WithX(grip.X - 100));
+                window.MouseUp(grip.WithX(grip.X - 100), MouseButton.Left); Layout(window);
+                Assert.True(preview.Bounds.Width < boardWidth - 80);
+                Assert.True(stages.Bounds.Width > stagesWidth + 80);
+                grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(grip, MouseButton.Left);
+                window.MouseMove(grip.WithX(grip.X - 2000));
+                window.MouseUp(grip.WithX(grip.X - 2000), MouseButton.Left); Layout(window);
+                Assert.True(preview.Bounds.Width >= 240);
+                grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(grip, MouseButton.Left);
+                window.MouseMove(grip.WithX(grip.X + 2000));
+                window.MouseUp(grip.WithX(grip.X + 2000), MouseButton.Left); Layout(window);
+                Assert.True(view.FindControl<Grid>("BoardWorkspace")!.ColumnDefinitions[2].ActualWidth >= 220);
+
                 Assert.Equal("100%", preview.FindControl<TextBlock>("ZoomText")!.Text);
                 Assert.True(preview.FindControl<TextBlock>("ZoomText")!.Bounds.Height > 10);
                 var node = Flatten(vm.RootGraph.Nodes).First(n => !string.IsNullOrWhiteSpace(n.BoardElements));

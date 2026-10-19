@@ -90,7 +90,7 @@ public class RemovedNodeSerializationTests
     {
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file));
+        var path = TestBuilder.Tests.Support.TestProfilePaths.Find(file);
         var json = File.ReadAllText(path);
         GraphSerializer.Deserialize(json, vm);
         using var compiler = new GraphCompiler(modbus, NullLogger.Instance);

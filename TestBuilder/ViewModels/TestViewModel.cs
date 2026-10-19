@@ -880,7 +880,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
                 if (!connected)
                 {
-                    TestingLogger.Warning($"Не удалось открыть {port}: {_modbusService.LastError ?? "порт недоступен"}.");
+                    ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), string.IsNullOrWhiteSpace(configuredPort));
                     continue;
                 }
 
@@ -910,7 +910,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
             catch (Exception ex)
             {
-                LogUiException($"Подключение к {port}", ex);
+                ReportPortSearchFailure(port, ex, string.IsNullOrWhiteSpace(configuredPort));
                 DisposeRegisterMonitor();
                 await _modbusService.DisconnectAsync();
                 IsConnected = false;
@@ -1111,7 +1111,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware };
+            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
             GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
             var graph = compiler.Compile(runWorkspace, runEntry, singleNode);
             if (!partialRun)
@@ -1216,7 +1216,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context.SetVariable("Execution.Error", runFailure.Summary);
             }
 
-            TestingLogger.Error(ex.ToString());
+            DiagnosticLog.WriteException("Выполнение теста", ex);
+            TestingLogger.Error($"[ОШИБКА] {runFailure.Summary}");
         }
         finally
         {
@@ -1276,7 +1277,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    private async Task RunFailureCleanupAsync(TestContext context)
+    internal async Task RunFailureCleanupAsync(TestContext context)
     {
         var cleanupNodes = RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
@@ -1297,7 +1298,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         try
         {
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger);
+            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
 
             foreach (var cleanupNode in cleanupNodes)
             {
@@ -1333,7 +1334,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 }
                 catch (Exception ex)
                 {
-                    TestingLogger.Error($"Cleanup '{cleanupNode.Name}' не выполнен: {ex}");
+                    DiagnosticLog.WriteException($"Завершение: {cleanupNode.Name}", ex);
+                    TestingLogger.Error($"Не удалось выполнить «{cleanupNode.Name}». Проверьте состояние стенда.");
                 }
                 finally { Station.FinishCleanup(cleanupNode, cleanupSucceeded); }
             }
@@ -1653,9 +1655,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private void LogUiException(string operation, Exception exception)
     {
         var logPath = DiagnosticLog.WriteException(operation, exception);
-        TestingLogger.Error($"{operation}: {exception}");
+        TestingLogger.Error($"{operation}: не удалось выполнить операцию.");
         if (logPath != null)
             TestingLogger.Info($"Подробности ошибки сохранены: {logPath}");
+    }
+
+    internal void ReportPortSearchFailure(string port, Exception exception, bool automatic, string? diagnosticDirectory = null)
+    {
+        DiagnosticLog.WriteException($"Подключение к {port}", exception, diagnosticDirectory);
+        if (automatic)
+            TestingLogger.Info($"На порту {port} стенд не обнаружен. Поиск продолжается.");
+        else
+            TestingLogger.Warning($"Не удалось открыть или проверить порт {port}. Проверьте подключение стенда и доступность порта.");
     }
 
     private async Task ImportProfilesAsync()

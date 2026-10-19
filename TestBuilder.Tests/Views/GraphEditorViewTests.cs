@@ -62,6 +62,8 @@ public class GraphEditorViewTests
                 vm.Profiles.Add(profile);
                 window.Show();
                 Layout(window);
+                foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true;
+                Layout(window);
                 var item = profiles.GetVisualDescendants().OfType<ListBoxItem>()
                     .Single(item => ReferenceEquals(item.DataContext, profile));
                 var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
@@ -112,7 +114,7 @@ public class GraphEditorViewTests
             var profiles = view.GetLogicalDescendants().OfType<ProfileListView>().Single();
             var profileFolder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles"));
             var pro = GraphSerializer.ReadProfile(Path.Combine(profileFolder, "PSW_UPS_Box_8x2Pro_parallel_el60.json"));
-            var small = GraphSerializer.ReadProfile(Path.Combine(profileFolder, "manual_label_printing.json"));
+            var small = GraphSerializer.ReadProfile(TestBuilder.Tests.Support.TestProfilePaths.Find("manual_label_printing.json"));
             vm.Profiles.Clear();
             vm.Profiles.Add(pro);
             vm.Profiles.Add(small);
@@ -161,7 +163,9 @@ public class GraphEditorViewTests
 
                 void Click(GraphProfile profile)
                 {
-                    var item = profiles.GetVisualDescendants().OfType<ListBoxItem>()
+                    foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true;
+                Layout(window);
+                var item = profiles.GetVisualDescendants().OfType<ListBoxItem>()
                         .Single(item => ReferenceEquals(item.DataContext, profile));
                     var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
                     window.MouseDown(point, MouseButton.Left);

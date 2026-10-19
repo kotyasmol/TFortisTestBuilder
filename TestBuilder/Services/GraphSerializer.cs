@@ -30,6 +30,7 @@ namespace TestBuilder.Services
         // Маппинг ViewModel -> английский тип для JSON
         private static string GetNodeType(NodeViewModel node) => node switch
         {
+            SerialConsoleNodeViewModel { ConnectOnly: true } => "Serial Console (connect v1)",
             SerialConsoleNodeViewModel => "Serial Console",
             RunProgramNodeViewModel => "Run Program",
             ParseResponseNodeViewModel => "Parse Response",
@@ -722,6 +723,7 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? false
                     },
 
+                    "Serial Console (connect v1)" => SerialConsoleNodeViewModel.FromOptions((n.SerialConsole ?? new SerialConsoleOptions()) with { ConnectOnly = true }),
                     "Serial Console" => SerialConsoleNodeViewModel.FromOptions(n.SerialConsole ?? new SerialConsoleOptions()),
                     "Run Program" => RunProgramNodeViewModel.FromOptions(n.RunProgram ?? new RunProgramOptions()),
                     "Parse Response" => ParseResponseNodeViewModel.FromOptions(n.ParseResponse ?? new ParseResponseOptions()),
