@@ -841,14 +841,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.Hardware?.Validate();
         _registerState.Clear();
         var hardware = RootGraph.Hardware;
-        var ports = string.IsNullOrWhiteSpace(AppSettings.Instance.StandPort)
-            ? SerialPort.GetPortNames().OrderBy(p => p).ToArray() : new[] { AppSettings.Instance.StandPort };
+        var configuredPort = AppSettings.Instance.StandPort?.Trim();
+        var availablePorts = SerialPort.GetPortNames().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
+        var ports = string.IsNullOrWhiteSpace(configuredPort) ? availablePorts : new[] { configuredPort };
 
 
         foreach (var port in ports)
         {
             try
             {
+                TestingLogger.Info(hardware == null
+                    ? $"Проверка COM-порта {port}."
+                    : $"Поиск {hardware.Devices[0].Name} на COM-порту {port} (slave {hardware.Devices[0].SlaveId}).");
                 var connected = await _modbusService.ConnectAsync(
                     port,
                     hardware?.BaudRate ?? 9600,
@@ -857,7 +861,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     hardware?.StopBits ?? StopBits.One);
 
                 if (!connected)
+                {
+                    TestingLogger.Warning($"Не удалось открыть {port}: {_modbusService.LastError ?? "порт недоступен"}.");
                     continue;
+                }
 
                 if (hardware == null && !await _modbusService.CheckPortAsync())
                 {
@@ -865,13 +872,19 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     continue;
                 }
 
+                if (!await StartMonitoringAsync())
+                {
+                    await _modbusService.DisconnectAsync();
+                    IsConnected = false;
+                    IsMonitoringActive = false;
+                    SlaveRegistry.Instance.NotifyConnected(false);
+                    continue;
+                }
+
                 SelectedPort = port;
                 IsConnected = true;
                 _history.Clear(); // A connected hardware map cannot be replaced through metadata undo.
-                StatusMessage = $"Подключено к {port}";
                 TestingLogger.Info($"Подключено к {port}.");
-
-                await StartMonitoringAsync();
                 SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
                 SlaveRegistry.Instance.NotifyConnected(true);
 
@@ -888,11 +901,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
         }
 
-        StatusMessage = "Не удалось подключиться.";
-        TestingLogger.Error("Не удалось подключиться. Проверьте кабель и порт.");
+        StatusMessage = hardware == null ? "Не удалось подключиться." : $"Стенд {hardware.Devices[0].Name} не найден на доступных COM-портах.";
+        TestingLogger.Error(hardware == null
+            ? "Не удалось подключиться. Проверьте кабель и порт."
+            : $"Стенд {hardware.Devices[0].Name} не найден. Проверены доступные COM-порты и параметры Modbus профиля.");
     }
 
-    private async Task StartMonitoringAsync()
+    private async Task<bool> StartMonitoringAsync()
     {
         var count = RootGraph.Hardware == null ? await _slaveManager.ScanAsync() : await _slaveManager.ConfigureAsync(RootGraph.Hardware);
 
@@ -900,7 +915,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             StatusMessage = "Слейвы не найдены.";
             TestingLogger.Warning("Устройства не найдены. Проверьте подключение.");
-            return;
+            return false;
         }
 
         DisposeRegisterMonitor();
@@ -917,6 +932,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         IsMonitoringActive = true;
         StatusMessage = $"Найдено устройств: {count}";
         TestingLogger.Info($"Найдено устройств: {count}. Можно запускать тест.");
+        return true;
     }
 
     private void OnConnectionLost(object? sender, EventArgs e)

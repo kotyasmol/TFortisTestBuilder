@@ -26,6 +26,7 @@ namespace TestBuilder.Domain.Modbus
         public async Task<int> ScanAsync()
         {
             var foundModels = new List<SlaveModelBase>();
+            var presets = HardwarePresets.Load();
 
             for (byte slaveId = 1; slaveId <= 35; slaveId += 2)
             {
@@ -47,6 +48,23 @@ namespace TestBuilder.Domain.Modbus
                         10 => new Simbat48Model(slaveId, _modbus),
                         _ => null
                     };
+
+                    // RTL types 104/105 are defined in the same register-map catalog
+                    // as the editor. Discovery must also work before loading a profile.
+                    if (model == null)
+                    {
+                        var preset = presets.FirstOrDefault(p => p.IdentificationAddress == 0 && p.IdentificationValue == typeValue);
+                        if (preset != null)
+                        {
+                            model = new ConfiguredSlaveModel(new DeviceDefinition
+                            {
+                                Name = preset.Name,
+                                SlaveId = slaveId,
+                                Registers = preset.Registers
+                            }, _modbus);
+                            await model.PollAsync();
+                        }
+                    }
 
                     if (model != null)
                     {

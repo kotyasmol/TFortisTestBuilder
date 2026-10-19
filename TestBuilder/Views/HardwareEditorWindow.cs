@@ -44,8 +44,7 @@ public sealed class HardwareEditorWindow : Window
         _draft = vm.RootGraph.Hardware == null ? new HardwareConfiguration() : TestViewModel.CopyDefinition(vm.RootGraph.Hardware);
         _legacy.IsChecked = vm.RootGraph.Hardware == null;
         _devices = new ObservableCollection<DeviceDefinition>(_draft.Devices);
-        using var resource = AssetLoader.Open(new Uri("avares://TestBuilder/Assets/hardware-presets.json"));
-        _presets = JsonSerializer.Deserialize<List<DeviceDefinition>>(resource) ?? new();
+        _presets = HardwarePresets.Load();
         _parity.ItemTemplate = new FuncDataTemplate<Parity>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
         _stop.ItemTemplate = new FuncDataTemplate<StopBits>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
         _preset.ItemsSource = _presets; _preset.SelectedIndex = 0;
