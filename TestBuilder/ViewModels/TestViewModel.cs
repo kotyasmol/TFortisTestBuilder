@@ -230,21 +230,37 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public GraphProfile? SelectedProfile
     {
         get => _selectedProfile;
-        set
-        {
-            if (_refreshingProfiles || !CanChooseProfile || ReferenceEquals(_selectedProfile, value))
-                return;
+        set => _ = SelectProfileAsync(value);
+    }
 
-            _selectedProfile = value;
+    internal async Task SelectProfileAsync(GraphProfile? profile, bool reload = false)
+    {
+        if (_refreshingProfiles || !CanChooseProfile || (!reload && ReferenceEquals(_selectedProfile, profile)))
+            return;
+
+        var reconnect = IsConnected;
+        IsConnecting = true;
+        try
+        {
+            // The previous poller must finish before replacing its register map.
+            if (reconnect) await DisconnectAsync();
+            _selectedProfile = profile;
             OnPropertyChanged(nameof(SelectedProfile));
             OnPropertyChanged(nameof(SelectedStationProfile));
             UpdateStationProfileSelection();
-
-            if (value != null)
-                LoadProfile(value.FilePath);
-            else
-                RefreshStationAvailability();
+            if (profile != null)
+            {
+                LoadProfile(profile.FilePath);
+                if (reconnect && _profileLoadError.Length == 0 && GraphConnectionRequirements.RequiresStandConnection(RootGraph))
+                    await ConnectAsync();
+            }
         }
+        catch (Exception ex)
+        {
+            StatusMessage = "Не удалось переключить профиль. Подробности в журнале.";
+            LogUiException("Переключение профиля", ex);
+        }
+        finally { IsConnecting = false; }
     }
 
     private ConnectionViewModel? _selectedConnection;
@@ -301,7 +317,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         DeleteSelectedNodesCommand = new RelayCommand(DeleteSelectedNodes, () => CanEditGraph);
         ClearGraphCommand = new AsyncRelayCommand(RequestClearGraphAsync, () => CanEditGraph);
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
-        NewProfileCommand = new RelayCommand(CreateNewProfile, () => CanEditGraph && CanChooseProfile);
+        NewProfileCommand = new RelayCommand(CreateNewProfile, () => CanEditGraph && CanChooseProfile && !IsConnected);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync, () => CanEditGraph);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync, () => CanEditGraph);
@@ -721,7 +737,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void CreateNewProfile()
     {
-        if (!CanEditGraph || !CanChooseProfile) { StatusMessage = "Отключите стенд перед сменой профиля."; return; }
+        if (!CanEditGraph || !CanChooseProfile || IsConnected) { StatusMessage = "Отключите стенд перед сменой профиля."; return; }
         ResetToRootGraph();
 
         ResetPartialRun();
@@ -1582,7 +1598,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         if (_profileLoadError.Length > 0)
         {
-            LoadProfile(SelectedProfile.FilePath);
+            _ = SelectProfileAsync(SelectedProfile, reload: true);
             return;
         }
 
@@ -1593,7 +1609,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void LoadProfile(string filePath)
     {
-        if (!CanChooseProfile) return;
         if (!IsAllowedProfilePath(filePath)) { StatusMessage = "Учебный профиль должен находиться в папке обучения."; return; }
         ResetPartialRun();
         _profileLoadError = string.Empty;

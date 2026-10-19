@@ -13,6 +13,7 @@ public partial class ModbusMonitoringView : UserControl
     public ModbusMonitoringView()
     {
         InitializeComponent();
+        LogSelection.Enable(LogList);
 
         DataContextChanged += OnDataContextChanged;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
@@ -54,17 +55,8 @@ public partial class ModbusMonitoringView : UserControl
     }
 
     private async void OnCopyLogs(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (DataContext is not ModbusMonitoringViewModel vm || vm.TestingLogger.Entries.Count == 0)
-            return;
+        => await LogSelection.CopyAsync(LogList);
 
-        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard == null)
-            return;
-
-        var text = string.Join(Environment.NewLine, vm.TestingLogger.Entries);
-        await clipboard.SetTextAsync(text);
-    }
 
     public ModbusMonitoringViewModel? ViewModel
     {

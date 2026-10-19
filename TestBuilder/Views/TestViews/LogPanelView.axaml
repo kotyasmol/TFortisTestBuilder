@@ -33,7 +33,7 @@
                   MinHeight="28"
                   Padding="8,0"
                   FontSize="{StaticResource FontCaption}"
-                  ToolTip.Tip="Копировать все логи в буфер обмена">
+                  ToolTip.Tip="Копировать выделенные строки; без выделения — весь журнал. Ctrl/⌘+C.">
             <StackPanel Orientation="Horizontal"
                         Spacing="6">
               <PathIcon Width="13"
@@ -76,6 +76,7 @@
         <Grid>
           <ListBox x:Name="LogList"
                    ItemsSource="{Binding TestingLogger.Entries}"
+                   ToolTip.Tip="Shift — диапазон строк, Ctrl/⌘ — отдельные строки. Ctrl/⌘+A — выделить всё."
                    Background="Transparent" BorderThickness="0" Padding="0"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">

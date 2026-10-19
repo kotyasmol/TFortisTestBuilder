@@ -18,6 +18,7 @@ public partial class LogPanelView : UserControl, IDisposable
     public LogPanelView()
     {
         InitializeComponent();
+        LogSelection.Enable(LogList);
         LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
     }
 
@@ -32,17 +33,8 @@ public partial class LogPanelView : UserControl, IDisposable
     }
 
     private async void OnCopyLogs(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (DataContext is not TestViewModel vm || vm.TestingLogger.Entries.Count == 0)
-            return;
+        => await LogSelection.CopyAsync(LogList);
 
-        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard == null)
-            return;
-
-        var text = string.Join(Environment.NewLine, vm.TestingLogger.Entries);
-        await clipboard.SetTextAsync(text);
-    }
 
     protected override void OnDataContextChanged(EventArgs e)
     {

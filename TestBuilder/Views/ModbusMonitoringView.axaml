@@ -197,10 +197,11 @@
                     FontSize="{StaticResource FontCaption}"
                     Foreground="{DynamicResource SidebarTextMutedBrush}"
                     Content="Копировать"
-                    ToolTip.Tip="Копировать все логи в буфер обмена" />
+                    ToolTip.Tip="Копировать выделенные строки; без выделения — весь журнал. Ctrl/⌘+C." />
           </Grid>
 
-          <ListBox Grid.Row="1" ItemsSource="{Binding TestingLogger.Entries}"
+          <ListBox x:Name="LogList" Grid.Row="1" ItemsSource="{Binding TestingLogger.Entries}"
+                   ToolTip.Tip="Shift — диапазон строк, Ctrl/⌘ — отдельные строки. Ctrl/⌘+A — выделить всё."
                    Background="Transparent" BorderThickness="0" Padding="0"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <ListBox.ItemsPanel>

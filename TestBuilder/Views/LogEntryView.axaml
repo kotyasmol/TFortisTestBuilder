@@ -19,7 +19,7 @@
     </Style>
   </UserControl.Styles>
   <Border Classes.failure="{Binding IsFailureSummary}" Margin="2">
-    <SelectableTextBlock Text="{Binding}"
+    <SelectableTextBlock Text="{Binding}" IsHitTestVisible="False"
                          Classes.highlighted="{Binding IsHighlighted}"
                          Classes.failure="{Binding IsFailureSummary}"
                          FontFamily="Consolas" FontSize="11" TextWrapping="Wrap">

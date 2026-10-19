@@ -129,7 +129,7 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(PauseHint));
     }
     public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
-    public bool CanChooseProfile => !IsTestRunning && !IsConnected && !IsConnecting;
+    public bool CanChooseProfile => !IsTestRunning && !IsConnecting;
     public bool CanStartRun => !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&

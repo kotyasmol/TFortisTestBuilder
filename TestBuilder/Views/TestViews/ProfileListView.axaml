@@ -26,7 +26,7 @@
             Background="{DynamicResource SurfaceBrush}"
             ClipToBounds="True">
       <Grid>
-        <ScrollViewer x:Name="ProfileListBox" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer x:Name="ProfileListBox" IsEnabled="{Binding CanChooseProfile}" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding EngineerProfileGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:EngineerProfileGroup">
