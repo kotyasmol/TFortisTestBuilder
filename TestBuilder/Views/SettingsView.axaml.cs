@@ -8,9 +8,21 @@ namespace TestBuilder.Views
         public string WorkspaceModeGroupName { get; } = System.Guid.NewGuid().ToString();
         public string ThemeGroupName { get; } = System.Guid.NewGuid().ToString();
 
+        private void OnOpenUserGuide(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var guide = new UserGuideWindow();
+            if (TopLevel.GetTopLevel(this) is Window owner) guide.Show(owner);
+            else guide.Show();
+        }
+
         public SettingsView()
         {
             InitializeComponent();
+        }
+
+        private async void OnOpenTutorial(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (TopLevel.GetTopLevel(this) is Window owner) await TutorialLauncher.StartAsync(owner);
         }
     }
 }

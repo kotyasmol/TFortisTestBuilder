@@ -45,11 +45,11 @@ public partial class ModbusMonitoringView : UserControl
         if (e.Source is not Control source) return;
         var row = source.FindAncestorOfType<DataGridRow>();
         if (row?.DataContext is not RegisterItem register) return;
-        if (register.IsReadOnly) return;
+        if (register.IsReadOnly || DataContext is not ModbusMonitoringViewModel vm || !vm.CanWrite()) return;
 
         dataGrid.SelectedItem = null;
 
-        var dialog = new WriteRegisterDialog(slave, register);
+        var dialog = new WriteRegisterDialog(slave, register, vm.CanWrite);
         await dialog.ShowDialog(TopLevel.GetTopLevel(this) as Window ?? throw new Exception("No window"));
     }
 

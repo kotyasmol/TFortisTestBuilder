@@ -70,6 +70,12 @@ namespace TestBuilder.Domain.Execution
         private static async Task<(StepResult Result, ExecutionFailure? Failure)> ExecuteNodeAsync(TestNode node, TestContext context,
             CancellationToken cancellationToken)
         {
+            if (node.RunOnlyOnFirstRun && context.SkipFirstRunNodes)
+            {
+                if (context.ExecutionObserver != null)
+                    await context.ExecutionObserver.NodeSkippedAsync(node, context, cancellationToken);
+                return (node.SkippedResult, null);
+            }
             using var diagnostics = new StepLogScope();
             context.Failure = null;
             var stepName = string.IsNullOrWhiteSpace(node.DisplayName)

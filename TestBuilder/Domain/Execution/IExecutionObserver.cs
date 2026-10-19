@@ -9,6 +9,8 @@ namespace TestBuilder.Domain.Execution
     /// </summary>
     public interface IExecutionObserver
     {
+        Task NodeSkippedAsync(TestNode node, TestContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
         Task ParallelBranchFinishedAsync(TestContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
         Task PauseWaitingChangedAsync(TestContext context, bool isWaiting, CancellationToken cancellationToken) => Task.CompletedTask;

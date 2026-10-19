@@ -32,7 +32,7 @@ public partial class TestViewModel
 
     private void RefreshStationProfiles()
     {
-        var visible = _profileCatalog.Where(p =>
+        var visible = _profileCatalog.Where(MatchesProductFilter).Where(p =>
             string.IsNullOrWhiteSpace(StationProfileSearch) ||
             EquipmentCatalog.Matches(p.DisplayName, StationProfileSearch) ||
             EquipmentCatalog.Matches(p.ModelGroup, StationProfileSearch) ||
@@ -83,7 +83,7 @@ public partial class TestViewModel
     public string StationConfigurationCaption => SelectedProfile?.DeviceModel != null
         ? SelectedProfile.ConfigurationName + " · этапы теста" : "Этапы теста";
     public bool HasStationProfile => SelectedProfile != null && _profileLoadError.Length == 0;
-    public bool CanConnectStation => !IsConnected && !IsTestRunning && !IsConnecting;
+    public bool CanConnectStation => !IsTraining && !IsConnected && !IsTestRunning && !IsConnecting;
     public bool CanDisconnectStation => IsConnected && !IsTestRunning && !IsConnecting;
     public bool CanPauseTest => IsTestRunning && !IsTestPaused && !IsStopping;
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
@@ -128,8 +128,8 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(PauseStatus));
         OnPropertyChanged(nameof(PauseHint));
     }
-    public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning;
-    public bool CanChooseProfile => !IsTestRunning;
+    public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
+    public bool CanChooseProfile => !IsTestRunning && !IsConnected && !IsConnecting;
     public bool CanStartRun => !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
@@ -145,6 +145,7 @@ public partial class TestViewModel
     partial void OnIsOperatorViewChanged(bool value)
     {
         if (value && !IsTestRunning) ResetPartialRun();
+        if (value) BoardChanged?.Invoke();
         RefreshStationAvailability();
     }
     partial void OnIsConnectingChanged(bool value) => RefreshStationAvailability();
@@ -156,6 +157,7 @@ public partial class TestViewModel
     private void RefreshStationAvailability()
     {
         OnPropertyChanged(nameof(CanEditGraph));
+        OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(CanChooseProfile));
         OnPropertyChanged(nameof(CanStartRun));
         OnPropertyChanged(nameof(StationReadiness));

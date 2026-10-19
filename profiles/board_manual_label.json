@@ -1,0 +1,48 @@
+{
+  "name": "Ручная печать этикетки платы",
+  "nodes": [
+    {
+      "type": "Start (board v1)",
+      "id": "0",
+      "x": 80,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    },
+    {
+      "type": "Print Label",
+      "printerName": "TSC TE310",
+      "useManualSerialNumber": true,
+      "manualSerialNumber": "",
+      "copies": 1,
+      "useQtProZplFormat": false,
+      "failOnPrinterError": true,
+      "id": "1",
+      "x": 320,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    },
+    {
+      "type": "End",
+      "id": "2",
+      "x": 944,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "True",
+      "targetNodeId": "2",
+      "targetConnector": "Вход"
+    }
+  ],
+  "productKind": "Board",
+  "configurationName": "30×10 мм · полный серийный номер"
+}

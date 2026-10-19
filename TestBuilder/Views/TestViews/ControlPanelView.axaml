@@ -5,9 +5,9 @@
 			 x:DataType="vm:TestViewModel">
 
   <StackPanel Spacing="12">
-    <TextBlock Text="Подключение к стенду" Classes="sectionTitle" />
+    <TextBlock Text="{Binding StandSectionTitle}" Classes="sectionTitle" Foreground="{DynamicResource PrimaryTextBrush}" />
     <Button Content="{Binding ConnectionButtonText}" Command="{Binding ToggleConnectionCommand}"
-            HorizontalAlignment="Stretch" MinHeight="40" />
+            Classes="primary" HorizontalAlignment="Stretch" MinHeight="40" />
     <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}" TextWrapping="Wrap"
                FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
   </StackPanel>

@@ -14,7 +14,7 @@ namespace TestBuilder.Services.Graph
         {
             if (node is ModbusWriteNodeViewModel or
                 CheckRegisterRangeNodeViewModel or
-                WaitUntilNodeViewModel)
+                WaitUntilNodeViewModel or CheckLedColorNodeViewModel)
             {
                 return true;
             }

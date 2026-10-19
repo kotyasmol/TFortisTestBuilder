@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -20,12 +20,17 @@ namespace TestBuilder.Domain.Execution
         public RegisterMonitor? RegisterMonitor { get; set; }
 
         public RegisterState RegisterState { get; }
+        public bool RequireFreshMonitoring { get; set; }
+        public int MaxRegisterAgeMs { get; set; } = 10000;
+        public Dictionary<byte, long> RequiredPollAfter { get; } = new();
 
         public ModbusRegisterCatalog ModbusRegisters { get; init; } = ModbusRegisterCatalog.Empty;
 
         public CancellationToken CancellationToken { get; set; }
 
         public bool IsConnected { get; set; }
+        // Scoped to a full profile run. Manual runs and emergency cleanup never skip preparation.
+        public bool SkipFirstRunNodes { get; set; }
 
         public string? ProfileName { get; set; }
 
@@ -39,6 +44,7 @@ namespace TestBuilder.Domain.Execution
         public IExecutionObserver? ExecutionObserver { get; set; }
 
         public Func<string, Task<bool>>? OperatorPrompt { get; set; }
+        public Func<string, CancellationToken, Task<string?>>? OperatorInput { get; set; }
 
         public Func<CancellationToken, Task>? WaitIfPausedAsync { get; set; }
 
@@ -56,14 +62,18 @@ namespace TestBuilder.Domain.Execution
             {
                 ParentExecutionScopeId = ExecutionScopeId,
                 RegisterMonitor = RegisterMonitor,
+                RequireFreshMonitoring = RequireFreshMonitoring,
+                MaxRegisterAgeMs = MaxRegisterAgeMs,
                 ModbusRegisters = ModbusRegisters,
                 CancellationToken = cancellationToken,
                 IsConnected = IsConnected,
+                SkipFirstRunNodes = SkipFirstRunNodes,
                 ProfileName = ProfileName,
                 HasCriticalError = HasCriticalError,
                 CurrentSlaveId = CurrentSlaveId,
                 ExecutionObserver = ExecutionObserver,
                 OperatorPrompt = OperatorPrompt,
+                OperatorInput = OperatorInput,
                 WaitIfPausedAsync = WaitIfPausedAsync,
                 SelfTestPageState = SelfTestPageState
             };
@@ -75,6 +85,7 @@ namespace TestBuilder.Domain.Execution
                     throw new InvalidOperationException($"Нельзя разделить переменную '{pair.Key}': {error.Message}", error);
                 }
             }
+            foreach (var barrier in RequiredPollAfter) branch.RequiredPollAfter[barrier.Key] = barrier.Value;
             branch.ReportEntries.AddRange(ReportEntries);
             return branch;
         }
@@ -94,6 +105,8 @@ namespace TestBuilder.Domain.Execution
             for (var index = 0; index < branches.Count; index++)
             {
                 var branch = branches[index];
+                foreach (var barrier in branch.RequiredPollAfter)
+                    RequiredPollAfter[barrier.Key] = Math.Max(RequiredPollAfter.GetValueOrDefault(barrier.Key), barrier.Value);
                 HasCriticalError |= branch.HasCriticalError || statuses[index] != ExecutionStatus.Completed;
                 ReportEntries.AddRange(branch.ReportEntries.Skip(reportPrefixLength));
                 ParallelBranchResults.AddRange(branch.ParallelBranchResults);

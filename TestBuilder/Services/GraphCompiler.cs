@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TestBuilder.Domain.Execution;
@@ -24,9 +24,15 @@ namespace TestBuilder.Services
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
         private readonly IHttpRequestService _serialNumberRequestService;
+        private readonly ISerialConsoleSession _console;
+        private readonly bool _ownsConsole;
+        private readonly IExternalProgramRunner _programRunner;
         private bool _ownsClients;
         private readonly HashSet<GraphWorkspaceViewModel> _compiling = new();
         private readonly List<string> _graphNames = new();
+        // Transport substitutions preserve the real report/label steps in integration tests.
+        internal IRawLabelPrinter? LabelPrinter { get; init; }
+        internal Func<System.Net.Http.HttpClient>? ReportClientFactory { get; init; }
 
         public GraphCompiler(IModbusService modbusService, ILogger logger)
             : this(modbusService, new HttpRequestService(), logger)
@@ -38,8 +44,11 @@ namespace TestBuilder.Services
         public GraphCompiler(
             IModbusService modbusService,
             IHttpRequestService httpRequestService,
-            ILogger logger)
+            ILogger logger, ISerialConsoleSession? console = null, IExternalProgramRunner? programRunner = null)
         {
+            _console = console ?? new SerialConsoleSession();
+            _ownsConsole = console == null;
+            _programRunner = programRunner ?? new ExternalProgramRunner();
             _modbusService = modbusService;
             _httpRequestService = httpRequestService;
             _serialNumberRequestService = httpRequestService;
@@ -48,6 +57,7 @@ namespace TestBuilder.Services
 
         public void Dispose()
         {
+            if (_ownsConsole) (_console as IDisposable)?.Dispose();
             if (!_ownsClients) return;
             (_httpRequestService as IDisposable)?.Dispose();
             (_serialNumberRequestService as IDisposable)?.Dispose();
@@ -74,9 +84,15 @@ namespace TestBuilder.Services
                 throw new InvalidOperationException($"В графе '{graph.Title}' должна быть ровно одна стартовая нода (найдено {starts.Count}).");
 
             var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
+            foreach (var node in nodes.Where(n => n.RunOnlyOnFirstRun && !n.CanRunOnlyOnFirstRun))
+                throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение только при первом запуске.");
             var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
             {
-                DisplayName = $"{string.Join(" / ", _graphNames)} / {node.Title}"
+                RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
+                SkippedResult = node.RunOnlyOnFirstRun
+                    ? node.Output.Select(port => ResolveTransition(node, port)).First(result => result != StepResult.False)
+                    : StepResult.Next,
+                DisplayName = $"{string.Join(" / ", _graphNames)} / {node.DisplayTitle}"
             });
             var transitions = map.Values.ToDictionary(node => node,
                 _ => new Dictionary<StepResult, List<TestNode>>());
@@ -134,6 +150,10 @@ namespace TestBuilder.Services
         {
             return node switch
             {
+                SerialConsoleNodeViewModel opSerialConsole => opSerialConsole.CreateStep(_console, _logger),
+                RunProgramNodeViewModel opRunProgram => opRunProgram.CreateStep(_programRunner, _logger),
+                ParseResponseNodeViewModel opParseResponse => opParseResponse.CreateStep(_logger),
+                CheckLedColorNodeViewModel opCheckLedColor => opCheckLedColor.CreateStep(_logger),
                 StartNodeViewModel start => start.CreateStep(_logger),
                 EndNodeViewModel end => end.CreateStep(_logger),
                 BodyStartNodeViewModel => new PassThroughStep(),
@@ -158,8 +178,8 @@ namespace TestBuilder.Services
                 CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
                 WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
                 BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
-                PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger),
-                SendTestReportNodeViewModel report => report.CreateStep(_logger),
+                PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger, LabelPrinter),
+                SendTestReportNodeViewModel report => report.CreateStep(_logger, ReportClientFactory),
                 SubtestNodeViewModel subtest => CreateSubtestStep(subtest),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
@@ -188,7 +208,7 @@ namespace TestBuilder.Services
                 node.Step,
                 node.StopOnError,
                 bodyGraph,
-                _logger);
+                _logger, node.RepeatOnSameSlave, node.RepeatCount, node.IndexVariable, node.UntilSuccess, node.RepeatDelayMs);
         }
 
         private static StepResult ResolveTransition(NodeViewModel node, ConnectorViewModel connector)
@@ -197,10 +217,14 @@ namespace TestBuilder.Services
             {
                 if (connector == loop.SuccessOut) return StepResult.Next;
                 if (connector == loop.ErrorOut) return StepResult.False;
-                throw new InvalidOperationException($"Неизвестный выход ноды '{node.Title}'.");
+                throw new InvalidOperationException($"Неизвестный выход ноды '{node.DisplayTitle}'.");
             }
             (ConnectorViewModel? Success, ConnectorViewModel? Error) ports = node switch
             {
+                SerialConsoleNodeViewModel n => (n.TrueOut, n.FalseOut),
+                RunProgramNodeViewModel n => (n.TrueOut, n.FalseOut),
+                ParseResponseNodeViewModel n => (n.TrueOut, n.FalseOut),
+                CheckLedColorNodeViewModel n => (n.TrueOut, n.FalseOut),
                 ModbusWriteNodeViewModel n => (n.TrueOut, n.FalseOut),
                 CheckRegisterRangeNodeViewModel n => (n.TrueOut, n.FalseOut),
                 WaitUntilNodeViewModel n => (n.TrueOut, n.FalseOut),
@@ -228,7 +252,7 @@ namespace TestBuilder.Services
             if (connector == ports.Error) return StepResult.False;
             if (ports.Success == null && node.Output.Count == 1 && node.Output[0] == connector)
                 return StepResult.Next;
-            throw new InvalidOperationException($"Неизвестный выход '{connector.Title}' ноды '{node.Title}'.");
+            throw new InvalidOperationException($"Неизвестный выход '{connector.DisplayTitle}' ноды '{node.DisplayTitle}'.");
         }
     }
 }

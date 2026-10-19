@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using TestBuilder.ViewModels.StepVM;
 
@@ -6,6 +6,10 @@ namespace TestBuilder.Views
 {
     public class NodeTemplateSelector : IDataTemplate
     {
+        public IDataTemplate? SerialConsoleTemplate { get; set; }
+        public IDataTemplate? RunProgramTemplate { get; set; }
+        public IDataTemplate? ParseResponseTemplate { get; set; }
+        public IDataTemplate? CheckLedColorTemplate { get; set; }
         public IDataTemplate? DefaultTemplate { get; set; }
 
         public IDataTemplate? ModbusWriteTemplate { get; set; }
@@ -58,6 +62,10 @@ namespace TestBuilder.Views
         {
             return param switch
             {
+                SerialConsoleNodeViewModel => SerialConsoleTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                RunProgramNodeViewModel => RunProgramTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                ParseResponseNodeViewModel => ParseResponseTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
+                CheckLedColorNodeViewModel => CheckLedColorTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ModbusWriteNodeViewModel => ModbusWriteTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckRegisterRangeNodeViewModel => CheckRegisterRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 WaitUntilNodeViewModel => WaitUntilTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "PSW_UPS_Box_8x2Pro_parallel_start",
   "deviceModel": "PSW+UPS-Box 8x2Pro",
   "configurationName": "Полная проверка · параллельный старт",
@@ -8,7 +8,8 @@
       "type": "Start (parallel v1)",
       "x": 80,
       "y": 120,
-      "color": "blue"
+      "color": "blue",
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "1",
@@ -29,7 +30,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "purple"
+            "color": "purple",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -39,7 +41,8 @@
             "color": "blue",
             "text": "Профиль: PSW+UPS-Box 8x2Pro; start_delay=160s; AC1=true; AC2=false; PoE lines 0..15; data ports 0..9; UPS=true; heaters=true; print labels=4",
             "labelWidth": 300,
-            "labelHeight": 120
+            "labelHeight": 120,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -51,7 +54,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -63,7 +67,8 @@
             "useCurrentSlaveId": false,
             "address": 1201,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -75,7 +80,8 @@
             "useCurrentSlaveId": false,
             "address": 1215,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -87,7 +93,8 @@
             "useCurrentSlaveId": false,
             "address": 1220,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -99,7 +106,8 @@
             "useCurrentSlaveId": false,
             "address": 1700,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -112,14 +120,16 @@
             "runArpdBat": true,
             "arpdBatPath": "arpd.bat",
             "command": "arp",
-            "arguments": "-d *"
+            "arguments": "-d *",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
             "type": "End",
             "x": 4128,
             "y": -48,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "9",
@@ -131,7 +141,8 @@
             "useCurrentSlaveId": false,
             "address": 1706,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -190,7 +201,8 @@
             "targetConnector": "In"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "2",
@@ -211,7 +223,8 @@
             "type": "Start",
             "x": 48,
             "y": 112,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -231,7 +244,8 @@
                   "type": "Body Start",
                   "x": 80,
                   "y": 120,
-                  "color": "blue"
+                  "color": "blue",
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "1",
@@ -243,7 +257,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1420,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "2",
@@ -255,7 +270,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1421,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "3",
@@ -263,7 +279,8 @@
                   "x": 1460,
                   "y": 120,
                   "color": "blue",
-                  "milliseconds": 1000
+                  "milliseconds": 1000,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "4",
@@ -275,7 +292,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1414,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "5",
@@ -287,7 +305,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1415,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "6",
@@ -299,7 +318,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1412,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "7",
@@ -311,7 +331,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1413,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "8",
@@ -319,7 +340,8 @@
                   "x": 3808,
                   "y": 112,
                   "color": "blue",
-                  "milliseconds": 1000
+                  "milliseconds": 1000,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "9",
@@ -331,7 +353,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1430,
                   "value": 0,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "10",
@@ -339,14 +362,16 @@
                   "x": 4736,
                   "y": 112,
                   "color": "blue",
-                  "milliseconds": 2000
+                  "milliseconds": 2000,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "11",
                   "type": "Body End",
                   "x": 5200,
                   "y": 112,
-                  "color": "blue"
+                  "color": "blue",
+                  "runOnlyOnFirstRun": false
                 }
               ],
               "connections": [
@@ -417,14 +442,16 @@
                   "targetConnector": "Вход"
                 }
               ]
-            }
+            },
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
             "type": "End",
             "x": 768,
             "y": 112,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -441,7 +468,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "3",
@@ -462,7 +490,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -482,7 +511,8 @@
                   "type": "Body Start",
                   "x": 80,
                   "y": 120,
-                  "color": "blue"
+                  "color": "blue",
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "1",
@@ -494,7 +524,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1412,
                   "value": 15000,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "2",
@@ -502,7 +533,8 @@
                   "x": 1000,
                   "y": 120,
                   "color": "blue",
-                  "milliseconds": 100
+                  "milliseconds": 100,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "3",
@@ -514,7 +546,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1413,
                   "value": 15000,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "4",
@@ -522,7 +555,8 @@
                   "x": 1920,
                   "y": 120,
                   "color": "blue",
-                  "milliseconds": 100
+                  "milliseconds": 100,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "5",
@@ -534,7 +568,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1414,
                   "value": 1,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "6",
@@ -542,7 +577,8 @@
                   "x": 2840,
                   "y": 120,
                   "color": "blue",
-                  "milliseconds": 100
+                  "milliseconds": 100,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "7",
@@ -554,7 +590,8 @@
                   "useCurrentSlaveId": true,
                   "address": 1415,
                   "value": 1,
-                  "verifyWrite": true
+                  "verifyWrite": true,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "8",
@@ -562,14 +599,16 @@
                   "x": 3760,
                   "y": 120,
                   "color": "blue",
-                  "milliseconds": 400
+                  "milliseconds": 400,
+                  "runOnlyOnFirstRun": false
                 },
                 {
                   "id": "9",
                   "type": "Body End",
                   "x": 4220,
                   "y": 120,
-                  "color": "blue"
+                  "color": "blue",
+                  "runOnlyOnFirstRun": false
                 }
               ],
               "connections": [
@@ -628,14 +667,16 @@
                   "targetConnector": "Вход"
                 }
               ]
-            }
+            },
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
             "type": "End",
             "x": 1000,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -652,7 +693,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "4",
@@ -673,7 +715,8 @@
             "type": "Start",
             "x": 1232,
             "y": 112,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -685,7 +728,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -697,14 +741,16 @@
             "useCurrentSlaveId": false,
             "address": 1201,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
             "type": "End",
             "x": 2432,
             "y": 128,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -727,7 +773,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "5",
@@ -748,7 +795,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -756,7 +804,8 @@
             "x": 540,
             "y": 120,
             "color": "blue",
-            "milliseconds": 5000
+            "milliseconds": 5000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -769,7 +818,8 @@
             "runArpdBat": true,
             "arpdBatPath": "arpd.bat",
             "command": "arp",
-            "arguments": "-d *"
+            "arguments": "-d *",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -783,7 +833,8 @@
             "validationRules": "",
             "psw2G6FHardwareChecks": false,
             "failOnError": true,
-            "outputPrefix": "Dut"
+            "outputPrefix": "Dut",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -791,14 +842,16 @@
             "x": 2380,
             "y": 120,
             "color": "blue",
-            "milliseconds": 2000
+            "milliseconds": 2000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
             "type": "End",
             "x": 2840,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -833,7 +886,8 @@
             "targetConnector": "In"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "6",
@@ -854,7 +908,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -868,7 +923,8 @@
             "validationRules": "init_ok=1..1\ndev_type=0..65535\nfirmvare_vers=0..65535\nboot_vers=0..65535",
             "psw2G6FHardwareChecks": false,
             "failOnError": true,
-            "outputPrefix": "Dut"
+            "outputPrefix": "Dut",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -879,7 +935,8 @@
             "expectedValue": "1",
             "variableName": "Dut.init_ok",
             "comparisonType": "Number",
-            "failMessage": "Selftest init_ok должен быть 1"
+            "failMessage": "Selftest init_ok должен быть 1",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -890,7 +947,8 @@
             "expectedValue": "0",
             "variableName": "Dut.dev_type",
             "comparisonType": "Number",
-            "failMessage": "Тип устройства должен быть 32 для PSW+UPS-Box 8x2Pro"
+            "failMessage": "Тип устройства должен быть 32 для PSW+UPS-Box 8x2Pro",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -901,7 +959,8 @@
             "expectedValue": "1119",
             "variableName": "Dut.firmvare_vers",
             "comparisonType": "Version",
-            "failMessage": "Версия прошивки должна соответствовать профилю 1.1.0"
+            "failMessage": "Версия прошивки должна соответствовать профилю 1.1.0",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -912,7 +971,8 @@
             "expectedValue": "1",
             "variableName": "Dut.ups_det",
             "comparisonType": "Number",
-            "failMessage": "UPS/АКБ должны быть обнаружены"
+            "failMessage": "UPS/АКБ должны быть обнаружены",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -923,7 +983,8 @@
             "expectedValue": "0",
             "variableName": "Dut.ups_rez",
             "comparisonType": "Number",
-            "failMessage": "До UPS-теста устройство должно работать от сети: ups_rez=0"
+            "failMessage": "До UPS-теста устройство должно работать от сети: ups_rez=0",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -935,14 +996,16 @@
             "max": 100,
             "variableName": "Dut.akb_voltage",
             "failMessage": "Напряжение АКБ должно быть 12..27 В",
-            "inclusive": true
+            "inclusive": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
             "type": "End",
             "x": 3760,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -995,7 +1058,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "7",
@@ -1016,7 +1080,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1031,7 +1096,8 @@
             "readIntervalMs": 0,
             "address": 1216,
             "min": 0,
-            "max": 50
+            "max": 50,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -1043,7 +1109,8 @@
             "useCurrentSlaveId": false,
             "address": 1215,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -1051,7 +1118,8 @@
             "x": 1248,
             "y": 96,
             "color": "blue",
-            "milliseconds": 5000
+            "milliseconds": 5000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -1066,7 +1134,8 @@
             "readIntervalMs": 0,
             "address": 1216,
             "min": 0,
-            "max": 1500
+            "max": 1500,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -1078,7 +1147,8 @@
             "useCurrentSlaveId": false,
             "address": 1215,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -1086,14 +1156,16 @@
             "x": 2576,
             "y": 96,
             "color": "blue",
-            "milliseconds": 2000
+            "milliseconds": 2000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
             "type": "End",
             "x": 3392,
             "y": 96,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
@@ -1108,7 +1180,8 @@
             "readIntervalMs": 0,
             "address": 1216,
             "min": 0,
-            "max": 1500
+            "max": 1500,
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1161,7 +1234,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "8",
@@ -1182,7 +1256,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1197,7 +1272,8 @@
             "readIntervalMs": 0,
             "address": 1221,
             "min": 0,
-            "max": 50
+            "max": 50,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -1209,7 +1285,8 @@
             "useCurrentSlaveId": false,
             "address": 1220,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -1217,7 +1294,8 @@
             "x": 1440,
             "y": 128,
             "color": "blue",
-            "milliseconds": 3000
+            "milliseconds": 3000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -1232,7 +1310,8 @@
             "readIntervalMs": 0,
             "address": 1221,
             "min": 150,
-            "max": 1000
+            "max": 1000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -1244,7 +1323,8 @@
             "useCurrentSlaveId": false,
             "address": 1220,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -1252,14 +1332,16 @@
             "x": 2752,
             "y": 128,
             "color": "blue",
-            "milliseconds": 2000
+            "milliseconds": 2000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
             "type": "End",
             "x": 3616,
             "y": 128,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
@@ -1274,7 +1356,8 @@
             "readIntervalMs": 0,
             "address": 1221,
             "min": 0,
-            "max": 50
+            "max": 50,
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1327,7 +1410,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "9",
@@ -1348,7 +1432,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1371,14 +1456,16 @@
             "allowedLossPercent": 1,
             "allowedTxDeficitPercent": 2,
             "bidirectional": true,
-            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,100"
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,100",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
             "type": "End",
             "x": 1760,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1395,7 +1482,8 @@
             "targetConnector": "In"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "10",
@@ -1416,7 +1504,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1428,7 +1517,8 @@
             "useCurrentSlaveId": false,
             "address": 1706,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -1446,7 +1536,8 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -1458,7 +1549,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -1476,7 +1568,8 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -1488,7 +1581,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -1506,7 +1600,8 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 5000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -1518,14 +1613,16 @@
             "useCurrentSlaveId": false,
             "address": 1706,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
             "type": "End",
             "x": 3760,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1578,7 +1675,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "11",
@@ -1599,7 +1697,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1616,7 +1715,8 @@
             "deviceType": "PSW+UPS-Box 8x2Pro",
             "cpuIdVariableName": "Dut.cpu_id",
             "useFixedSerialNumber": false,
-            "fixedSerialNumber": 3200428
+            "fixedSerialNumber": 3200428,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -1628,7 +1728,8 @@
             "max": 3299999,
             "variableName": "SerialNumber",
             "failMessage": "Серийный номер должен попадать в диапазон 3200000..3299999",
-            "inclusive": true
+            "inclusive": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -1641,7 +1742,8 @@
             "macPrefix": "C0:11:A6:20",
             "serialShortVariableName": "SerialShort",
             "macVariableName": "Dut.NewMac",
-            "serialVariableName": "SerialNumber"
+            "serialVariableName": "SerialNumber",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -1653,7 +1755,8 @@
             "failOnError": true,
             "macVariableName": "Dut.NewMac",
             "batchPath": "set_mac_pro.bat",
-            "boardVersion": "PSW+UPS-Box 8x2Pro"
+            "boardVersion": "PSW+UPS-Box 8x2Pro",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -1661,7 +1764,8 @@
             "x": 2380,
             "y": 120,
             "color": "blue",
-            "milliseconds": 7000
+            "milliseconds": 7000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -1673,7 +1777,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -1685,7 +1790,8 @@
             "useCurrentSlaveId": false,
             "address": 1210,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
@@ -1693,7 +1799,8 @@
             "x": 3760,
             "y": 120,
             "color": "blue",
-            "milliseconds": 10000
+            "milliseconds": 10000,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "9",
@@ -1705,7 +1812,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "10",
@@ -1713,7 +1821,8 @@
             "x": 4680,
             "y": 120,
             "color": "blue",
-            "milliseconds": 100
+            "milliseconds": 100,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "11",
@@ -1726,7 +1835,8 @@
             "runArpdBat": true,
             "arpdBatPath": "arpd.bat",
             "command": "arp",
-            "arguments": "-d *"
+            "arguments": "-d *",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "12",
@@ -1740,7 +1850,8 @@
             "validationRules": "",
             "psw2G6FHardwareChecks": false,
             "failOnError": true,
-            "outputPrefix": "Dut"
+            "outputPrefix": "Dut",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "13",
@@ -1751,14 +1862,16 @@
             "comparisonType": "MacAddress",
             "failMessage": "MAC после перезапуска должен совпасть с рассчитанным",
             "leftVariableName": "Dut.default_mac",
-            "rightVariableName": "Dut.NewMac"
+            "rightVariableName": "Dut.NewMac",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "14",
             "type": "End",
             "x": 6520,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1847,7 +1960,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "12",
@@ -1868,7 +1982,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1886,14 +2001,16 @@
             "copies": 4,
             "useQtProZplFormat": true,
             "labelModel": "PswUpsBox8x2Pro",
-            "failOnPrinterError": true
+            "failOnPrinterError": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
             "type": "End",
             "x": 1000,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -1910,7 +2027,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "13",
@@ -1931,7 +2049,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -1945,7 +2064,8 @@
             "validationRules": "",
             "psw2G6FHardwareChecks": false,
             "failOnError": false,
-            "outputPrefix": "DutFinal"
+            "outputPrefix": "DutFinal",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -1956,7 +2076,8 @@
             "serialVariableName": "SerialNumber",
             "reportVariableName": "TestReportText",
             "includeAllVariables": true,
-            "testType": "production"
+            "testType": "production",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -1964,7 +2085,8 @@
             "x": 1460,
             "y": 120,
             "color": "blue",
-            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
+            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -1980,14 +2102,16 @@
             "reportVariableName": "TestReportText",
             "endpoint": "/api/Api.svc/result.json",
             "saveLocalCopy": true,
-            "localReportsDirectory": "reports"
+            "localReportsDirectory": "reports",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
             "type": "End",
             "x": 2380,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -2034,7 +2158,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "14",
@@ -2055,7 +2180,8 @@
             "type": "Start",
             "x": 256,
             "y": 112,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -2067,7 +2193,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -2079,7 +2206,8 @@
             "useCurrentSlaveId": false,
             "address": 1215,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -2091,14 +2219,16 @@
             "useCurrentSlaveId": false,
             "address": 1220,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
             "type": "End",
             "x": 2336,
             "y": 128,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -2110,7 +2240,8 @@
             "useCurrentSlaveId": false,
             "address": 1706,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -2145,14 +2276,16 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "15",
       "type": "End",
       "x": 7232,
       "y": 144,
-      "color": "blue"
+      "color": "blue",
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "16",
@@ -2173,7 +2306,8 @@
             "type": "Start",
             "x": 80,
             "y": 96,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -2183,7 +2317,8 @@
             "color": "blue",
             "text": "Аварийный cleanup: выключить питание, разряд, заряд, нагреватели и PoE-нагрузки",
             "labelWidth": 300,
-            "labelHeight": 120
+            "labelHeight": 120,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -2195,7 +2330,8 @@
             "useCurrentSlaveId": false,
             "address": 1200,
             "value": 0,
-            "verifyWrite": false
+            "verifyWrite": false,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -2207,7 +2343,8 @@
             "useCurrentSlaveId": false,
             "address": 1215,
             "value": 0,
-            "verifyWrite": false
+            "verifyWrite": false,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -2219,14 +2356,16 @@
             "useCurrentSlaveId": false,
             "address": 1220,
             "value": 0,
-            "verifyWrite": false
+            "verifyWrite": false,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
             "type": "End",
             "x": 2704,
             "y": 112,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -2238,7 +2377,8 @@
             "useCurrentSlaveId": false,
             "address": 1706,
             "value": 0,
-            "verifyWrite": false
+            "verifyWrite": false,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -2250,7 +2390,8 @@
             "useCurrentSlaveId": false,
             "address": 1500,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
@@ -2262,7 +2403,8 @@
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -2327,7 +2469,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "17",
@@ -2337,7 +2480,8 @@
       "color": "blue",
       "text": "ПАРАЛЛЕЛЬНЫЙ СТАРТ\nПосле подачи питания обе ветви идут одновременно:\nсверху — ожидание загрузки и selftest (06 → 07);\nснизу — нагреватели последовательно (08 → 09).\nSensor1/Sensor2 (09a) начнутся один раз, когда обе ветви успешно завершены.",
       "labelWidth": 960,
-      "labelHeight": 216
+      "labelHeight": 216,
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "18",
@@ -2347,7 +2491,8 @@
       "color": "blue",
       "text": "100мбит тесты ок, но гигабит не проверялся пока.  надо? ",
       "labelWidth": 300,
-      "labelHeight": 120
+      "labelHeight": 120,
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "19",
@@ -2357,7 +2502,8 @@
       "color": "blue",
       "text": "не проверялось\r\nнужна либа фортов\r\nнужен принтер",
       "labelWidth": 300,
-      "labelHeight": 120
+      "labelHeight": 120,
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "20",
@@ -2367,7 +2513,8 @@
       "color": "blue",
       "text": "вынести в самое начало в момент подключения к стенду",
       "labelWidth": 300,
-      "labelHeight": 120
+      "labelHeight": 120,
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "21",
@@ -2388,7 +2535,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -2400,7 +2548,8 @@
             "max": 3299999,
             "variableName": "SerialNumber",
             "failMessage": "Отчёт при ошибке не отправлен: серийный номер не относится к коммутатору PSW+UPS-Box 8x2Pro",
-            "inclusive": true
+            "inclusive": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -2411,7 +2560,8 @@
             "serialVariableName": "SerialNumber",
             "reportVariableName": "TestReportText",
             "includeAllVariables": true,
-            "testType": "production"
+            "testType": "production",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "3",
@@ -2419,7 +2569,8 @@
             "x": 1460,
             "y": 120,
             "color": "blue",
-            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?"
+            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
@@ -2435,14 +2586,16 @@
             "reportVariableName": "TestReportText",
             "endpoint": "/api/Api.svc/result.json",
             "saveLocalCopy": true,
-            "localReportsDirectory": "reports"
+            "localReportsDirectory": "reports",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
             "type": "End",
             "x": 2380,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -2495,7 +2648,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "22",
@@ -2516,7 +2670,8 @@
             "type": "Start",
             "x": 80,
             "y": 120,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
@@ -2528,7 +2683,8 @@
             "useCurrentSlaveId": false,
             "address": 1500,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "2",
@@ -2540,7 +2696,8 @@
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "5",
@@ -2552,7 +2709,8 @@
             "useCurrentSlaveId": false,
             "address": 1500,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "6",
@@ -2570,7 +2728,8 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 1000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "7",
@@ -2582,7 +2741,8 @@
             "useCurrentSlaveId": false,
             "address": 1500,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "8",
@@ -2594,7 +2754,8 @@
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 1,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "9",
@@ -2612,7 +2773,8 @@
             "requestTimeoutMs": 30000,
             "intervalMs": 1000,
             "failOnTimeout": true,
-            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin"
+            "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "10",
@@ -2624,14 +2786,16 @@
             "useCurrentSlaveId": false,
             "address": 1501,
             "value": 0,
-            "verifyWrite": true
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false
           },
           {
             "id": "15",
             "type": "End",
             "x": 80,
             "y": 1500,
-            "color": "blue"
+            "color": "blue",
+            "runOnlyOnFirstRun": false
           }
         ],
         "connections": [
@@ -2690,7 +2854,8 @@
             "targetConnector": "Вход"
           }
         ]
-      }
+      },
+      "runOnlyOnFirstRun": false
     }
   ],
   "connections": [

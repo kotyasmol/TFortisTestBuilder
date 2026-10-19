@@ -9,6 +9,7 @@ namespace TestBuilder.Domain.Steps
 {
     public class WaitUntilStep : ITestStep
     {
+        private readonly TestBuilder.Domain.Modbus.ModbusArea _area;
         private readonly byte _slaveId;
         private readonly int _address;
         private readonly int _expectedValue;
@@ -28,8 +29,9 @@ namespace TestBuilder.Domain.Steps
             ILogger logger,
             bool useCurrentSlaveId = false,
             IModbusService? modbusService = null,
-            bool liveRead = false)
+            bool liveRead = false, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding)
         {
+            _area = area;
             _slaveId = slaveId;
             _address = address;
             _expectedValue = expectedValue;
@@ -45,7 +47,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = _useCurrentSlaveId ? context.CurrentSlaveId : _slaveId;
-            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address, _area);
 
             if (actualSlaveId == null)
             {
@@ -58,10 +60,10 @@ namespace TestBuilder.Domain.Steps
             _logger.Info(
                 $"[ШАГ] Ожидание значения -> устройство {actualSlaveId}, адрес {registerAddress}, ожидаемое {_expectedValue}, таймаут {_timeoutMs}мс, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
 
-            var deadline = DateTime.UtcNow.AddMilliseconds(_timeoutMs);
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             string lastError = string.Empty;
 
-            while (DateTime.UtcNow < deadline)
+            while (timer.ElapsedMilliseconds < _timeoutMs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -71,7 +73,7 @@ namespace TestBuilder.Domain.Steps
                     actualSlaveId.Value,
                     _address,
                     _liveRead,
-                    cancellationToken);
+                    cancellationToken, _area, Math.Max(0, _timeoutMs - (int)timer.ElapsedMilliseconds));
 
                 if (read.Success && read.Value == _expectedValue)
                 {
@@ -85,7 +87,8 @@ namespace TestBuilder.Domain.Steps
                     ? $"последнее значение {read.Value}"
                     : read.Error;
 
-                await Task.Delay(PollIntervalMs, cancellationToken);
+                var remaining = _timeoutMs - (int)timer.ElapsedMilliseconds;
+                if (remaining > 0) await Task.Delay(Math.Min(PollIntervalMs, remaining), cancellationToken);
             }
 
             _logger.Warning(

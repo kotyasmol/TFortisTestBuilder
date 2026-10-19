@@ -1,5 +1,8 @@
 # TFortisTestBuilder
 
+Перенос плат RTL-SW/RTL-PoE от 2026-10-14: выбор плат и коммутаторов, редактируемое оборудование Modbus, изображение платы и подсветка проверок. Полная инструкция доступна в **Настройки → Полная инструкция** с поиском, отдельными статьями нод и экспортом для печати. Подробности переноса: [соответствие этапов](docs/RTL_boards_migration.md), [проверка и ограничения](docs/RTL_validation.md). Допуски новых профилей предварительные; перед производственным применением необходима стендовая приёмка.
+
+
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-desktop-239120?style=for-the-badge&logo=csharp&logoColor=white)
 ![Avalonia](https://img.shields.io/badge/Avalonia_UI-11.1-8B44AC?style=for-the-badge)

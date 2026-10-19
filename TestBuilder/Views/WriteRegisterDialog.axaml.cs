@@ -9,11 +9,13 @@ public partial class WriteRegisterDialog : Window
 {
     private readonly SlaveModelBase _slave;
     private readonly RegisterItem _register;
+    private readonly System.Func<bool> _canWrite;
 
-    public WriteRegisterDialog(SlaveModelBase slave, RegisterItem register)
+    public WriteRegisterDialog(SlaveModelBase slave, RegisterItem register, System.Func<bool>? canWrite = null)
     {
         InitializeComponent();
 
+        _canWrite = canWrite ?? (() => true);
         _slave = slave;
         _register = register;
 
@@ -27,6 +29,7 @@ public partial class WriteRegisterDialog : Window
 
     private async void OnSendClick(object? sender, RoutedEventArgs e)
     {
+        if (!_canWrite()) { ResultText.Text = "Ручная запись недоступна во время проверки или подключения."; return; }
         if (!ushort.TryParse(ValueBox.Text, out ushort value))
         {
             ResultText.Text = "Ошибка: неверное значение";
@@ -43,7 +46,7 @@ public partial class WriteRegisterDialog : Window
 
         try
         {
-            await _slave.Modbus.WriteRegisterAsync(slaveId, (ushort)_register.Address, value);
+            await _slave.Modbus.WriteAreaAsync(slaveId, (ushort)_register.Address, value, _register.Area);
             await _slave.PollAsync();
             ResultText.Text = "Запись выполнена успешно";
             ResultText.Foreground = Avalonia.Media.Brushes.Green;

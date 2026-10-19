@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
@@ -12,6 +12,7 @@ namespace TestBuilder.Domain.Steps
     /// </summary>
     public class CheckRegisterRangeStep : ITestStep
     {
+        private readonly TestBuilder.Domain.Modbus.ModbusArea _area;
         private readonly byte _slaveId;
         private readonly int _address;
         private readonly int _min;
@@ -22,6 +23,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _readAttempts;
         private readonly int _readIntervalMs;
         private readonly ILogger _logger;
+        private readonly string _reportName;
 
         public CheckRegisterRangeStep(
             byte slaveId,
@@ -33,8 +35,10 @@ namespace TestBuilder.Domain.Steps
             IModbusService? modbusService = null,
             bool liveRead = false,
             int readAttempts = 1,
-            int readIntervalMs = 0)
+            int readIntervalMs = 0, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding, string reportName = "")
         {
+            _area = area;
+            _reportName = reportName;
             _slaveId = slaveId;
             _address = address;
             _min = min;
@@ -52,7 +56,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = ResolveSlaveId(context);
-            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address, _area);
 
             if (actualSlaveId == null)
             {
@@ -69,14 +73,17 @@ namespace TestBuilder.Domain.Steps
                     await Task.Delay(_readIntervalMs, cancellationToken);
 
                 var read = await ModbusRegisterReadHelper.ReadAsync(
-                    context, _modbusService, actualSlaveId.Value, _address, _liveRead, cancellationToken);
+                    context, _modbusService, actualSlaveId.Value, _address, _liveRead, cancellationToken, _area);
 
                 if (read.Success)
                 {
                     var inRange = read.Value >= _min && read.Value <= _max;
                     if (inRange || attempt == _readAttempts)
+                    {
+                        if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, inRange, $"{read.Value}; диапазон {_min}..{_max}; {registerAddress}");
                         SavePoeMeasurement(context, actualSlaveId.Value, inRange,
                             System.FormattableString.Invariant($"{read.Value / 1000.0:F3} В; допуск {_min / 1000.0:F3}..{_max / 1000.0:F3} В"));
+                    }
                     _logger.Info(
                         $"[ШАГ] Проверка диапазона → устройство {actualSlaveId}, адрес {registerAddress}, значение {read.Value}, диапазон [{_min}..{_max}], попытка {attempt}/{_readAttempts}, источник {(_liveRead ? "live Modbus" : "RegisterState")}.");
                     if (inRange)
@@ -90,6 +97,7 @@ namespace TestBuilder.Domain.Steps
                 else if (attempt == _readAttempts)
                 {
                     SavePoeMeasurement(context, actualSlaveId.Value, false, "Регистр не прочитан: " + read.Error);
+                    if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, false, read.Error);
                     _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {registerAddress}: {read.Error}");
                 }
             }

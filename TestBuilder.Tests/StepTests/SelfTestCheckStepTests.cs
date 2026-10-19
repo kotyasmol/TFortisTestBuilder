@@ -191,6 +191,8 @@ public class SelfTestCheckStepTests
         Assert.Equal(url, startInfo.ArgumentList[^1]);
         Assert.DoesNotContain("about:blank", startInfo.ArgumentList);
         Assert.DoesNotContain("--no-proxy-server", startInfo.ArgumentList);
+        Assert.DoesNotContain("--no-sandbox", startInfo.ArgumentList);
+        Assert.DoesNotContain("--remote-allow-origins=*", startInfo.ArgumentList);
     }
 
     [Fact]

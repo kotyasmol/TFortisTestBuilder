@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -23,9 +23,17 @@ namespace TestBuilder.Services
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        private const string FirstRunPrefix = "First Run (v1): ";
+        private static string UnwrapNodeType(string? type) => type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
+            ? type[FirstRunPrefix.Length..] : type ?? "";
+
         // Маппинг ViewModel -> английский тип для JSON
         private static string GetNodeType(NodeViewModel node) => node switch
         {
+            SerialConsoleNodeViewModel => "Serial Console",
+            RunProgramNodeViewModel => "Run Program",
+            ParseResponseNodeViewModel => "Parse Response",
+            CheckLedColorNodeViewModel => "Check LED Color",
             StartNodeViewModel => "Start",
             EndNodeViewModel => "End",
             BodyStartNodeViewModel => "Body Start",
@@ -35,7 +43,7 @@ namespace TestBuilder.Services
             ModbusWriteNodeViewModel => "Write Register",
             CheckRegisterRangeNodeViewModel => "Check Register Range",
             WaitUntilNodeViewModel => "Wait Until",
-            OperatorActionNodeViewModel => "Operator Action",
+            OperatorActionNodeViewModel o => string.IsNullOrWhiteSpace(o.InputVariable) ? "Operator Action" : "Operator Input (v1)",
             SelfTestCheckNodeViewModel => "Selftest Check",
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
@@ -53,18 +61,36 @@ namespace TestBuilder.Services
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
             SubtestNodeViewModel => "Subtest",
-            ForEachSlaveNodeViewModel => "For Slaves",
+            ForEachSlaveNodeViewModel f => f.RepeatOnSameSlave ? "For Slaves (repeat v1)" : "For Slaves",
             _ => node.Title
         };
 
-        public static string Serialize(TestViewModel vm, string profileName)
+        public static string Serialize(TestViewModel vm, string profileName, DateTimeOffset? updatedAt = null, string? configurationName = null)
         {
             var dto = SerializeGraph(vm.RootGraph, profileName);
+            dto.UpdatedAt = updatedAt ?? vm.RootGraph.UpdatedAt;
+            dto.Hardware = vm.RootGraph.Hardware;
+            dto.Hardware?.Validate();
+            dto.Board = vm.RootGraph.Board;
+            dto.Board?.Validate();
+            dto.ProductKind = vm.RootGraph.ProductKind;
+            // Older runtimes must reject profiles whose equipment/layout they would ignore.
+            if (dto.Hardware != null || dto.Board != null || dto.ProductKind == "Board" || RequiresBoardRuntime(vm.RootGraph))
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (board v1)";
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
-            dto.ConfigurationName = vm.RootGraph.ConfigurationName;
+            dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
+
+        private static bool RequiresBoardRuntime(GraphWorkspaceViewModel graph) => graph.Nodes.Any(n =>
+            n is ModbusWriteNodeViewModel { RegisterArea: not TestBuilder.Domain.Modbus.ModbusArea.Holding } or
+                CheckRegisterRangeNodeViewModel { RegisterArea: not TestBuilder.Domain.Modbus.ModbusArea.Holding } or
+                WaitUntilNodeViewModel { RegisterArea: not TestBuilder.Domain.Modbus.ModbusArea.Holding } or
+                CheckVariableEqualityNodeViewModel { ComparisonType: TestBuilder.Domain.Steps.VariableComparisonType.VersionAtLeast } or
+                CompareVariablesNodeViewModel { ComparisonType: TestBuilder.Domain.Steps.VariableComparisonType.VersionAtLeast } or
+                WaitVariableUntilNodeViewModel { ComparisonType: TestBuilder.Domain.Steps.VariableComparisonType.VersionAtLeast } ||
+            n is ICompositeNodeViewModel c && RequiresBoardRuntime(c.BodyGraph));
 
         private static GraphDto SerializeGraph(GraphWorkspaceViewModel graph, string name)
         {
@@ -82,16 +108,22 @@ namespace TestBuilder.Services
                     Id = nodeIds[node],
                     // Older executables reject this alias instead of silently dropping
                     // all but the last branch. It still renders as the ordinary Start.
-                    Type = requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
+                    Type = node.RunOnlyOnFirstRun ? FirstRunPrefix + GetNodeType(node) : requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
                         : requiresParallelRuntime && node is BodyStartNodeViewModel ? "Body Start (parallel v1)"
                         : GetNodeType(node),
                     X = node.Location.X,
                     Y = node.Location.Y,
+                    BoardElements = node.BoardElements,
+                    RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
                     Color = node.NodeColor
                 };
 
                 switch (node)
                 {
+                    case SerialConsoleNodeViewModel opSerialConsole: n.SerialConsole = opSerialConsole.Options; break;
+                    case RunProgramNodeViewModel opRunProgram: n.RunProgram = opRunProgram.Options; break;
+                    case ParseResponseNodeViewModel opParseResponse: n.ParseResponse = opParseResponse.Options; break;
+                    case CheckLedColorNodeViewModel opCheckLedColor: n.CheckLedColor = opCheckLedColor.Options; break;
                     case DelayNodeViewModel d:
                         n.Milliseconds = d.Milliseconds;
                         break;
@@ -105,6 +137,7 @@ namespace TestBuilder.Services
                     case ModbusWriteNodeViewModel w:
                         n.SlaveId = w.SlaveId;
                         n.Address = w.Address;
+                        n.RegisterArea = w.RegisterArea;
                         n.Value = w.Value;
                         n.UseCurrentSlaveId = w.UseCurrentSlaveId;
                         n.VerifyWrite = w.VerifyWrite;
@@ -113,17 +146,20 @@ namespace TestBuilder.Services
                     case CheckRegisterRangeNodeViewModel c:
                         n.SlaveId = c.SlaveId;
                         n.Address = c.Address;
+                        n.RegisterArea = c.RegisterArea;
                         n.Min = c.Min;
                         n.Max = c.Max;
                         n.UseCurrentSlaveId = c.UseCurrentSlaveId;
                         n.LiveRead = c.LiveRead;
                         n.ReadAttempts = c.ReadAttempts;
                         n.ReadIntervalMs = c.ReadIntervalMs;
+                        n.ReportName = c.ReportName;
                         break;
 
                     case WaitUntilNodeViewModel w:
                         n.SlaveId = w.SlaveId;
                         n.Address = w.Address;
+                        n.RegisterArea = w.RegisterArea;
                         n.ExpectedValue = w.ExpectedValue;
                         n.DurationMs = w.TimeoutMs;
                         n.UseCurrentSlaveId = w.UseCurrentSlaveId;
@@ -131,6 +167,7 @@ namespace TestBuilder.Services
                         break;
 
                     case OperatorActionNodeViewModel op:
+                        n.OutputVariableName = op.InputVariable;
                         n.Text = op.Message;
                         break;
 
@@ -312,6 +349,11 @@ namespace TestBuilder.Services
                         n.ToSlaveId = f.ToSlaveId;
                         n.Step = f.Step;
                         n.StopOnError = f.StopOnError;
+                        n.RepeatOnSameSlave = f.RepeatOnSameSlave;
+                        n.RepeatCount = f.RepeatCount;
+                        n.IndexVariable = f.IndexVariable;
+                        n.UntilSuccess = f.UntilSuccess;
+                        n.RepeatDelayMs = f.RepeatDelayMs;
                         n.Body = SerializeGraph(f.BodyGraph, f.BodyGraph.Title);
                         break;
                 }
@@ -347,6 +389,9 @@ namespace TestBuilder.Services
             var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
+            dto.Hardware?.Validate();
+            dto.Board?.Validate();
+            if (dto.ProductKind is not ("Switch" or "Board")) throw new InvalidOperationException("Неизвестный вид изделия.");
             RejectRemovedNodes(dto);
             // Parse the entire document before replacing the user's open graph.
             // Malformed links and unsupported runtime versions must not erase it.
@@ -360,7 +405,11 @@ namespace TestBuilder.Services
             vm.ResetToRootGraph();
             vm.RootGraph.Clear();
             vm.RootGraph.Title = loaded.Title;
+            vm.RootGraph.UpdatedAt = dto.UpdatedAt;
             vm.RootGraph.IsBodyGraph = false;
+            vm.RootGraph.Hardware = dto.Hardware;
+            vm.RootGraph.Board = dto.Board;
+            vm.RootGraph.ProductKind = dto.ProductKind;
             foreach (var node in loaded.Nodes) vm.RootGraph.Nodes.Add(node);
             foreach (var connection in loaded.Connections) vm.RootGraph.Connections.Add(connection);
             var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName, dto.DeviceModelId);
@@ -369,7 +418,10 @@ namespace TestBuilder.Services
             vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
                 (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
+            vm.NotifyDeviceNameChanged();
             vm.ResetToRootGraph();
+            // Board viewers need the complete graph to resolve region-to-node bindings.
+            vm.NotifyProfileMetadataChanged();
 
             return dto.Name;
         }
@@ -398,7 +450,7 @@ namespace TestBuilder.Services
         {
             foreach (var node in dto.Nodes)
             {
-                var type = string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type;
+                var type = UnwrapNodeType(string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type);
                 if (type is "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле")
                     throw new InvalidOperationException("Отдельная нода проверки IO-2 удалена. Импортируйте обновлённый профиль: проверка выполняется обычными Write Register и Wait Variable Until.");
                 var replacement = type switch
@@ -435,9 +487,11 @@ namespace TestBuilder.Services
                     ? n.NodeType ?? string.Empty
                     : n.Type;
 
+                var wrappedFirstRun = type.StartsWith(FirstRunPrefix, StringComparison.Ordinal);
+                type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 
@@ -665,23 +719,37 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? false
                     },
 
+                    "Serial Console" => SerialConsoleNodeViewModel.FromOptions(n.SerialConsole ?? new SerialConsoleOptions()),
+                    "Run Program" => RunProgramNodeViewModel.FromOptions(n.RunProgram ?? new RunProgramOptions()),
+                    "Parse Response" => ParseResponseNodeViewModel.FromOptions(n.ParseResponse ?? new ParseResponseOptions()),
+                    "Check LED Color" => CheckLedColorNodeViewModel.FromOptions(n.CheckLedColor ?? new CheckLedColorOptions()),
                     "Subtest" or "SUBTEST" or "Подтест" => CreateSubtestNode(n, location),
 
-                    "For Slaves" or "Цикл For" => CreateForEachSlaveNode(n, location),
+                    "For Slaves" or "For Slaves (repeat v1)" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
                     "Wait Until" or "Ожидание значения" => CreateWaitUntilNode(n, location),
 
-                    "Operator Action" or "Действие оператора" => new OperatorActionNodeViewModel
+                    "Operator Action" or "Operator Input (v1)" or "Действие оператора" => new OperatorActionNodeViewModel
                     {
                         Location = location,
-                        Message = n.Text ?? string.Empty
+                        Message = n.Text ?? string.Empty,
+                        InputVariable = n.OutputVariableName ?? string.Empty
                     },
 
                     _ => throw new InvalidOperationException($"Неизвестный тип ноды: {type}")
                 };
 
+                node.BoardElements = n.BoardElements ?? "";
                 node.NodeColor = n.Color ?? "blue";
+                node.RunOnlyOnFirstRun = n.RunOnlyOnFirstRun || wrappedFirstRun;
+                if (node.RunOnlyOnFirstRun && !node.CanRunOnlyOnFirstRun)
+                {
+                    node.Dispose();
+                    throw new InvalidOperationException($"Для ноды '{type}' нельзя задать выполнение только при первом запуске.");
+                }
 
+                node.Location = location;
+                node.BoardElements = n.BoardElements ?? "";
                 if (!nodeMap.TryAdd(n.Id, node))
                 {
                     node.Dispose();
@@ -722,6 +790,7 @@ namespace TestBuilder.Services
                 Location = location,
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
+                RegisterArea = n.RegisterArea ?? TestBuilder.Domain.Modbus.ModbusArea.Holding,
                 Value = n.Value ?? 0,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
                 VerifyWrite = n.VerifyWrite ?? false
@@ -740,12 +809,14 @@ namespace TestBuilder.Services
                 Location = location,
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
+                RegisterArea = n.RegisterArea ?? TestBuilder.Domain.Modbus.ModbusArea.Holding,
                 Min = ToInt(n.Min),
                 Max = ToInt(n.Max),
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
                 LiveRead = n.LiveRead ?? false,
                 ReadAttempts = n.ReadAttempts ?? 1,
-                ReadIntervalMs = n.ReadIntervalMs ?? 0
+                ReadIntervalMs = n.ReadIntervalMs ?? 0,
+                ReportName = n.ReportName ?? ""
             };
 
             node.RestoreSelections();
@@ -760,6 +831,7 @@ namespace TestBuilder.Services
                 Location = location,
                 SlaveId = n.SlaveId ?? 0,
                 Address = n.Address ?? 0,
+                RegisterArea = n.RegisterArea ?? TestBuilder.Domain.Modbus.ModbusArea.Holding,
                 ExpectedValue = GetExpectedValueAsInt(n.ExpectedValue),
                 TimeoutMs = n.DurationMs ?? 5000,
                 UseCurrentSlaveId = n.UseCurrentSlaveId ?? false,
@@ -779,6 +851,11 @@ namespace TestBuilder.Services
                 FromSlaveId = n.FromSlaveId ?? 1,
                 ToSlaveId = n.ToSlaveId ?? 20,
                 Step = n.Step ?? 1,
+                RepeatOnSameSlave = n.RepeatOnSameSlave ?? n.Type == "For Slaves (repeat v1)",
+                RepeatCount = n.RepeatCount ?? 1,
+                IndexVariable = n.IndexVariable ?? "iteration",
+                UntilSuccess = n.UntilSuccess ?? false,
+                RepeatDelayMs = n.RepeatDelayMs ?? 0,
                 StopOnError = n.StopOnError ?? true
             };
 
@@ -978,16 +1055,20 @@ namespace TestBuilder.Services
 
         public static GraphProfile ReadProfile(string filePath)
         {
+            DateTimeOffset? fileModifiedAt = null;
+            try { if (File.Exists(filePath)) fileModifiedAt = new DateTimeOffset(File.GetLastWriteTimeUtc(filePath)); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
             try
             {
                 var dto = JsonSerializer.Deserialize<GraphDto>(File.ReadAllText(filePath), JsonOptions);
                 return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
-                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId);
+                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt);
             }
             catch
             {
                 // Keep unreadable profiles visible so loading can show its existing error state.
-                return new GraphProfile(filePath, Path.GetFileNameWithoutExtension(filePath));
+                return new GraphProfile(filePath, Path.GetFileNameWithoutExtension(filePath), updatedAt: fileModifiedAt);
             }
         }
 

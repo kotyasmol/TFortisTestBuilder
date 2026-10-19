@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Linq;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Monitoring;
 
@@ -22,13 +23,15 @@ public sealed class ModbusRegisterCatalog
         foreach (var slave in slaves)
         foreach (var register in slave.RegisterItems)
             if (!string.IsNullOrWhiteSpace(register.Name))
-                names[new RegisterKey(slave.SlaveId, register.Address)] = register.Name;
+                names[new RegisterKey(slave.SlaveId, register.Address, register.Area)] = register.Name;
         _names = names.ToFrozenDictionary();
     }
 
-    public string FormatAddress(byte? slaveId, int address)
+    public IEnumerable<byte> SlaveIds => _names.Keys.Select(k => k.SlaveId).Distinct();
+
+    public string FormatAddress(byte? slaveId, int address, ModbusArea area = ModbusArea.Holding)
     {
-        var name = slaveId.HasValue && _names.TryGetValue(new RegisterKey(slaveId.Value, address), out var found)
+        var name = slaveId.HasValue && _names.TryGetValue(new RegisterKey(slaveId.Value, address, area), out var found)
             ? found : "описание неизвестно";
         return $"{address} ({name})";
     }

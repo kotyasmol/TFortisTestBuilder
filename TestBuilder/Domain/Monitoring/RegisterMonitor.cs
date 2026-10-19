@@ -17,6 +17,7 @@ namespace TestBuilder.Domain.Monitoring
         private readonly ILogger _logger;
         private CancellationTokenSource? _cts;
         private Task? _monitorTask;
+        private readonly object _publicationGate = new();
 
         private int _consecutiveErrors = 0;
         private const int MaxConsecutiveErrors = 5;
@@ -63,9 +64,22 @@ namespace TestBuilder.Domain.Monitoring
 
             // Отмена без блокирующего ожидания завершения задачи,
             // чтобы не блокировать UI‑поток.
-            _cts.Cancel();
-            _cts.Dispose();
-            _cts = null;
+            lock (_publicationGate)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
+            }
+        }
+
+        public async Task StopAsync()
+        {
+            Stop();
+            if (_monitorTask != null)
+            {
+                try { await _monitorTask; }
+                catch (OperationCanceledException) { }
+            }
         }
 
         /// <summary>
@@ -122,18 +136,24 @@ namespace TestBuilder.Domain.Monitoring
                 token.ThrowIfCancellationRequested();
 
                 // Опрашиваем регистры устройства (1000–1018 для EL‑60 и подобных моделей).
-                await slave.PollAsync();
+                var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                await slave.PollAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Обновляем RegisterState и логируем успешные чтения.
+                lock (_publicationGate)
+                {
+                token.ThrowIfCancellationRequested();
                 foreach (var reg in slave.RegisterItems)
                 {
-                    _registerState.Update(slave.SlaveId, reg.Address, reg.Value);
+                    _registerState.Update(slave.SlaveId, reg.Address, reg.Value, reg.Area, startedAt);
                     if (VerboseLogging)
                         _logger.Debug($"Slave {slave.SlaveId} | {reg.Name} ({reg.Address}) = {reg.Value}");
                 }
+                }
                 _consecutiveErrors = 0; // Успешный опрос — сбрасываем счётчик
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 // Отмена не считается ошибкой.
                 _logger.Info($"Опрос слейва {slave.SlaveId} отменён (TaskCanceledException).");
@@ -141,11 +161,21 @@ namespace TestBuilder.Domain.Monitoring
             catch (TimeoutException ex)
             {
                 _logger.Warning($"Timeout при опросе слейва {slave.SlaveId}: {ex.Message}");
+                lock (_publicationGate)
+                {
+                    if (token.IsCancellationRequested) return;
+                    _registerState.Invalidate(slave.SlaveId);
+                }
                 IncrementErrorCount();
             }
             catch (Exception ex)
             {
                 _logger.Warning($"Ошибка опроса слейва {slave.SlaveId}: {ex.Message}");
+                lock (_publicationGate)
+                {
+                    if (token.IsCancellationRequested) return;
+                    _registerState.Invalidate(slave.SlaveId);
+                }
                 IncrementErrorCount();
             }
         }

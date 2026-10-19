@@ -1,4 +1,4 @@
-﻿<Styles xmlns="https://github.com/avaloniaui"
+<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:nodify="using:Nodify">
 
@@ -35,29 +35,30 @@
         </Setter>
         <Style Selector="^:pointerover"><Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" /></Style>
         <Style Selector="^:selected">
-          <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+          <Setter Property="Background" Value="{DynamicResource ProfileSelectedBrush}" />
           <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
         </Style>
         <Style Selector="^:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" /></Style>
       </ControlTheme>
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Default">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F7F9FD" />
-          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="GridLineBrush" Color="#DCE5F2" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FBFCFF" />
-          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#F2F5FA" />
-          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E2E8F0" />
-          <SolidColorBrush x:Key="BorderBrush" Color="#D7DFEC" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#B8C4D5" />
-          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172033" />
-          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64708A" />
-          <SolidColorBrush x:Key="TextMutedBrush" Color="#96A2B6" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#DDE3E9" />
+          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#E6EBEF" />
+          <SolidColorBrush x:Key="GridLineBrush" Color="#CCD4DE" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#F1F3F5" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E8ECF0" />
+          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#E0E5EB" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#D3DBE5" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#ABB7C6" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7D8EA3" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#202A38" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#46556B" />
+          <SolidColorBrush x:Key="TextMutedBrush" Color="#536279" />
           <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#E8F0FF" />
-          <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#EFF6FF" />
+          <SolidColorBrush x:Key="ProfileSelectedBrush" Color="#CDDEFC" />
+          <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#DCE5F0" />
           <SolidColorBrush x:Key="PrimaryTextBrush" Color="#1D4ED8" />
           <SolidColorBrush x:Key="OnPrimaryBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="SuccessBrush" Color="#10B981" />
@@ -72,12 +73,12 @@
           <SolidColorBrush x:Key="ChangedSoftBrush" Color="#FFF4CC" />
           <SolidColorBrush x:Key="ChangedBorderBrush" Color="#F59E0B" />
           <SolidColorBrush x:Key="ChangedTextBrush" Color="#92400E" />
-          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#D7DFEC" />
+          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#E8ECF0" />
+          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#E8ECF0" />
+          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#ABB7C6" />
           <SolidColorBrush x:Key="SidebarTextBrush" Color="#172033" />
-          <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#7A8599" />
-          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#536279" />
+          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#F1F3F5" />
           <SolidColorBrush x:Key="NodeHeaderBrush" Color="#EEF3FF" />
           <SolidColorBrush x:Key="NodeConnectorTextBrush" Color="#3B465C" />
           <SolidColorBrush x:Key="NodeNeutralBrush" Color="#C9D8F6" />
@@ -93,16 +94,16 @@
           <SolidColorBrush x:Key="NodeOperatorBrush" Color="#BFD2F8" />
           <SolidColorBrush x:Key="ConnectorFillBrush" Color="#E0F2FE" />
           <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#0284C7" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#F1F3F5" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#F1F3F5" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#F1F3F5" />
           <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#F8FAFC" />
           <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#F8FAFC" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#0F172A" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#334155" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#64748B" />
           <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#2563EB" />
-          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#F1F3F5" />
           <SolidColorBrush x:Key="Node.ForegroundBrush" Color="#172033" />
           <SolidColorBrush x:Key="Node.BorderBrush" Color="#AFCBFF" />
           <SolidColorBrush x:Key="ForegroundBrush" Color="#172033" />
@@ -110,21 +111,22 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F172A" />
-          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#111827" />
-          <SolidColorBrush x:Key="GridLineBrush" Color="#26344A" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#151E2E" />
-          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#223049" />
-          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#2B3A56" />
-          <SolidColorBrush x:Key="BorderBrush" Color="#334158" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#51617A" />
-          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E5ECF7" />
-          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A9B5C8" />
-          <SolidColorBrush x:Key="TextMutedBrush" Color="#738199" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#20252D" />
+          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#232A33" />
+          <SolidColorBrush x:Key="GridLineBrush" Color="#343F4C" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#262E38" />
+          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#364150" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#425165" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#58677C" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7D90A8" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E3E8F0" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#BFCBDC" />
+          <SolidColorBrush x:Key="TextMutedBrush" Color="#AFBED2" />
           <SolidColorBrush x:Key="PrimaryBrush" Color="#3B82F6" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#60A5FA" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#1E3A5F" />
+          <SolidColorBrush x:Key="ProfileSelectedBrush" Color="#254F7F" />
           <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#1E3554" />
           <SolidColorBrush x:Key="PrimaryTextBrush" Color="#93C5FD" />
           <SolidColorBrush x:Key="OnPrimaryBrush" Color="#FFFFFF" />
@@ -140,13 +142,13 @@
           <SolidColorBrush x:Key="ChangedSoftBrush" Color="#493512" />
           <SolidColorBrush x:Key="ChangedBorderBrush" Color="#FBBF24" />
           <SolidColorBrush x:Key="ChangedTextBrush" Color="#FDE68A" />
-          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#334158" />
+          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#58677C" />
           <SolidColorBrush x:Key="SidebarTextBrush" Color="#E5ECF7" />
-          <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#A9B5C8" />
-          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#172033" />
-          <SolidColorBrush x:Key="NodeHeaderBrush" Color="#21314C" />
+          <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#BFCBDC" />
+          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="NodeHeaderBrush" Color="#394A63" />
           <SolidColorBrush x:Key="NodeConnectorTextBrush" Color="#C7D2E5" />
           <SolidColorBrush x:Key="NodeNeutralBrush" Color="#4A6BA7" />
           <SolidColorBrush x:Key="NodeStartBrush" Color="#4A6BA7" />
@@ -161,16 +163,16 @@
           <SolidColorBrush x:Key="NodeOperatorBrush" Color="#4A6BA7" />
           <SolidColorBrush x:Key="ConnectorFillBrush" Color="#123554" />
           <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#38BDF8" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#182235" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#151E2E" />
-          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#151E2E" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#262E38" />
+          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#262E38" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#E5ECF7" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#C7D2E5" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#A9B5C8" />
           <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#3B82F6" />
-          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#172033" />
+          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#2C3440" />
           <SolidColorBrush x:Key="Node.ForegroundBrush" Color="#E5ECF7" />
           <SolidColorBrush x:Key="Node.BorderBrush" Color="#5B8EF1" />
           <SolidColorBrush x:Key="ForegroundBrush" Color="#E5ECF7" />
@@ -180,6 +182,21 @@
     </ResourceDictionary>
   </Styles.Resources>
 
+  <Style Selector="Button.workspaceNav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.workspaceNav.active">
+    <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -457,4 +474,20 @@
     <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
   </Style>
 
+  <Style Selector="Button.sidebarAction">
+    <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+  </Style>
+  <Style Selector="Button.sidebarAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ProfileSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+  <Style Selector="Border.profileSidebar ComboBox, Border.profileSidebar TextBox">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+  </Style>
+  <Style Selector="Border.profileSidebar Button.listHeader">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+  </Style>
 </Styles>

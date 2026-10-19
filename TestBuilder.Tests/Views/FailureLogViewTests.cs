@@ -60,7 +60,7 @@ public class FailureLogViewTests
                 var cause = entries.Last();
                 Assert.True(cause.IsFailureSummary);
                 Assert.Contains("Проверка питания", cause.Message);
-                Assert.Contains("Check Variable Equality", cause.Message);
+                Assert.Contains("Проверка значения переменной", cause.Message);
                 Assert.Contains("MissingMainValue", cause.Message);
                 Assert.DoesNotContain("MissingCleanupValue", cause.Message);
                 Assert.Equal(LogLevel.Error, cause.Level);

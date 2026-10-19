@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:views="using:TestBuilder.Views"
              xmlns:converters="using:TestBuilder.Converters"
              x:Class="TestBuilder.Views.StationDashboardView"
              x:DataType="vm:TestViewModel">
@@ -125,7 +126,12 @@
                         <DataTemplate x:DataType="vm:StationProfileOptionViewModel">
                           <Button Classes="program" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
                                   AutomationProperties.Name="{Binding Profile.ConfigurationName}">
-                            <TextBlock Text="{Binding Profile.ConfigurationName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
+                            <StackPanel Spacing="5">
+                              <TextBlock Text="{Binding Profile.ConfigurationName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Profile.UpdatedAtText}" IsVisible="{Binding Profile.HasUpdatedAt}"
+                                         HorizontalAlignment="Right" FontSize="11" Opacity="0.7"
+                                         ToolTip.Tip="{Binding Profile.UpdatedAtTooltip}" />
+                            </StackPanel>
                           </Button>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
@@ -160,7 +166,7 @@
       </Grid>
 
       <Grid Grid.Row="1">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsBoardProfile}">
           <ItemsControl ItemsSource="{Binding Station.Stages}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:StationStageViewModel">
@@ -187,11 +193,56 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
+        <Grid Name="BoardWorkspace" ColumnDefinitions="*,12,290" IsVisible="{Binding IsBoardProfile}">
+          <views:BoardPreviewView Name="InlineBoard" />
+          <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"
+                  Background="{DynamicResource SurfaceBrush}" Padding="12">
+            <Grid RowDefinitions="Auto,*,Auto">
+              <TextBlock Text="Этапы проверки" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+              <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Station.Stages}" Name="BoardStages">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StationStageViewModel">
+                      <Border Classes="stage" Classes.active="{Binding IsActive}" Classes.attention="{Binding NeedsAttention}"
+                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,10" CornerRadius="5">
+                        <Grid ColumnDefinitions="22,*">
+                          <PathIcon Classes="state" Classes.active="{Binding IsActive}" Classes.completed="{Binding IsCompleted}"
+                                    Classes.attention="{Binding NeedsAttention}" Classes.skipped="{Binding IsSkipped}"
+                                    Classes.paused="{Binding IsPaused}" Width="18" Height="18" VerticalAlignment="Top" Margin="0,3,0,0"
+                                    ToolTip.Tip="{Binding StatusText}" AutomationProperties.Name="{Binding StatusText}" />
+                          <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="3">
+                            <TextBlock Text="{Binding Caption}" FontSize="15" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding StatusText}" FontSize="12" IsVisible="{Binding ShowStatus}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Text="{Binding StepProgressText}" IsVisible="{Binding HasSteps}" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StepProgressText}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <Border Grid.Row="2" Name="BoardOperatorPrompt" IsVisible="{Binding Station.IsAwaitingAction}" Padding="10" Margin="0,10,0,0"
+                      Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6">
+                <Grid RowDefinitions="*,Auto" MaxHeight="250">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock Text="{Binding Station.OperatorMessage}" FontSize="15" TextWrapping="Wrap" />
+                  </ScrollViewer>
+                  <StackPanel Grid.Row="1" Margin="0,10,0,0" Spacing="8">
+                    <Button Content="Готово · продолжить" Command="{Binding Station.ConfirmActionCommand}" Classes="primary" HorizontalAlignment="Stretch" />
+                    <Button Content="Не удалось выполнить" Command="{Binding Station.DeclineActionCommand}" HorizontalAlignment="Stretch" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </Grid>
+          </Border>
+        </Grid>
         <TextBlock Text="Выберите программу слева" FontSize="{StaticResource FontTitle}" VerticalAlignment="Center" HorizontalAlignment="Center"
                    IsVisible="{Binding !HasStationProfile}" Foreground="{DynamicResource TextSecondaryBrush}" />
       </Grid>
 
-      <Border Grid.Row="2" IsVisible="{Binding Station.IsAwaitingAction}" Margin="0,12,0,0" Padding="16"
+      <Grid Grid.Row="2" IsVisible="{Binding !IsBoardProfile}">
+      <Border IsVisible="{Binding Station.IsAwaitingAction}" Margin="0,12,0,0" Padding="16"
               Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6">
         <Grid RowDefinitions="*,Auto" MaxHeight="220">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -204,6 +255,7 @@
           </WrapPanel>
         </Grid>
       </Border>
+      </Grid>
       <Border Grid.Row="3" IsVisible="{Binding IsTestPaused}" Margin="0,12,0,0" Padding="16,12"
               Background="{DynamicResource ChangedSoftBrush}" CornerRadius="6">
         <StackPanel Spacing="4">
@@ -215,6 +267,7 @@
               Classes.attention="{Binding Station.NeedsAttention}" IsVisible="{Binding Station.HasResult}" Padding="16,12" Margin="0,12,0,0">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding Station.Headline}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Station.DurationText}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.HasDuration}" />
           <TextBlock Text="{Binding Station.Guidance}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.NeedsAttention}" />
           <TextBlock Text="{Binding Station.ReportStatus}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.HasReportStatus}" />
         </StackPanel>

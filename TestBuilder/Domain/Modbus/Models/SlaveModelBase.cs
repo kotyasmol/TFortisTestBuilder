@@ -66,6 +66,8 @@ namespace TestBuilder.Domain.Modbus.Models
 
         public abstract Task PollAsync();
 
+        public virtual Task PollAsync(System.Threading.CancellationToken token) { token.ThrowIfCancellationRequested(); return PollAsync(); }
+
         /// <summary>
         /// Обновляет RegisterItems из массива значений в UI-потоке.
         /// Вызывай это в конце каждого PollAsync вместо ручного цикла.

@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TestBuilder\TestBuilder.csproj" />
+    <ProjectReference Include="..\tools\ProfileLayout\ProfileLayout.csproj" />
   </ItemGroup>
 
   <ItemGroup>

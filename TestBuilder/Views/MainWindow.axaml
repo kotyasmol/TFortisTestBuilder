@@ -12,15 +12,25 @@
   <Grid RowDefinitions="Auto,*">
     <Border Padding="16,8" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto,Auto">
-        <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-          <Image Source="/Assets/Brand/tfortis-test-icon.png" Width="32" Height="32" ToolTip.Tip="Тестирование оборудования TFortis" />
-          <TextBlock Text="{Binding WorkspaceTitle}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Image Source="/Assets/Brand/tfortis-test-icon.png" Width="28" Height="28" Margin="0,0,16,0" ToolTip.Tip="TFortis TestBuilder" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding !IsSettingsOpen}">
+          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEngineerWorkspace}">
+            <Button Content="Редактор" Classes="workspaceNav" Classes.active="{Binding IsEditorPage}" Command="{Binding SelectPageCommand}" CommandParameter="Editor" />
+            <Button Content="Регистры" Classes="workspaceNav" Classes.active="{Binding IsRegistersPage}" Command="{Binding SelectPageCommand}" CommandParameter="Registers" />
+            <Button Content="Самопроверка" Classes="workspaceNav" Classes.active="{Binding IsSelfTestPage}" Command="{Binding SelectPageCommand}" CommandParameter="SelfTest" IsVisible="{Binding ShowSwitchTools}" />
+            <Button Content="Сеть" Classes="workspaceNav" Classes.active="{Binding IsNetworkPage}" Command="{Binding SelectPageCommand}" CommandParameter="Network" IsVisible="{Binding ShowSwitchTools}" />
+          </StackPanel>
+          <TextBlock Text="Пульт" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding !IsEngineerWorkspace}" />
         </StackPanel>
-        <Button Grid.Column="1" Content="{Binding SwitchWorkspaceTitle}" Command="{Binding SwitchWorkspaceCommand}"
-                Margin="0,0,8,0" IsVisible="{Binding !IsSettingsOpen}" />
-        <Button Grid.Column="2" Content="Настройки" Command="{Binding OpenSettingsCommand}" IsVisible="{Binding !IsSettingsOpen}" />
-        <Button Grid.Column="2" Content="← Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
+        <TextBlock Grid.Column="1" Text="Настройки" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsSettingsOpen}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsSettingsOpen}">
+          <Button Content="Оборудование" Click="OnOpenHardware" IsVisible="{Binding IsEngineerWorkspace}" ToolTip.Tip="Устройства и регистры этого профиля" />
+          <Button Content="Плата" Click="OnOpenBoard" />
+          <Button Content="{Binding SwitchWorkspaceTitle}" Command="{Binding SwitchWorkspaceCommand}" />
+          <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" />
+        </StackPanel>
+        <Button Grid.Column="2" Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
       </Grid>
     </Border>
     <Grid Grid.Row="1" IsVisible="{Binding !IsSettingsOpen}">
@@ -28,12 +38,10 @@
         <views:StationDashboardView DataContext="{Binding TestVM}" />
       </Grid>
       <Grid IsVisible="{Binding IsEngineerWorkspace}">
-        <TabControl>
-          <TabItem Header="Редактор тестов"><views:TestView x:Name="TestViewControl" /></TabItem>
-          <TabItem Header="Регистры Modbus"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></TabItem>
-          <TabItem Header="Selftest устройства"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></TabItem>
-          <TabItem Header="Сеть стенда"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></TabItem>
-        </TabControl>
+        <Grid IsVisible="{Binding IsEditorPage}"><views:TestView x:Name="TestViewControl" /></Grid>
+        <Grid IsVisible="{Binding IsRegistersPage}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></Grid>
+        <Grid IsVisible="{Binding IsSelfTestPage}"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></Grid>
+        <Grid IsVisible="{Binding IsNetworkPage}"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></Grid>
       </Grid>
     </Grid>
     <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">

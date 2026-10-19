@@ -9,6 +9,7 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class OperatorActionNodeViewModel : NodeViewModel
     {
         [ObservableProperty] private string message = string.Empty;
+        [ObservableProperty] private string inputVariable = string.Empty;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -25,8 +26,8 @@ namespace TestBuilder.ViewModels.StepVM
             AddOutput(FalseOut);
         }
 
-        public ITestStep CreateStep(ILogger logger) => new OperatorActionStep(Message, logger);
+        public ITestStep CreateStep(ILogger logger) => new OperatorActionStep(Message, logger, InputVariable);
 
-        public override NodeViewModel Clone() => new OperatorActionNodeViewModel { Message = Message };
+        public override NodeViewModel Clone() => new OperatorActionNodeViewModel { Message = Message, InputVariable = InputVariable };
     }
 }

@@ -46,7 +46,7 @@ namespace TestBuilder.Domain.Steps
                 saveLocalCopy,
                 localReportsDirectory,
                 failOnError,
-                () => new HttpClient())
+                () => new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }))
         {
         }
 
@@ -189,8 +189,15 @@ namespace TestBuilder.Domain.Steps
         {
             Directory.CreateDirectory(_localReportsDirectory);
             var path = Path.Combine(_localReportsDirectory, $"result-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.txt");
-            await File.WriteAllTextAsync(path, report, Encoding.UTF8, cancellationToken);
+            await File.WriteAllTextAsync(path, RedactLocalReport(report), Encoding.UTF8, cancellationToken);
             return Path.GetFullPath(path);
+        }
+
+        internal static string RedactLocalReport(string report)
+        {
+            // The launcher session is a credential. Preserve the wire format only in memory.
+            return System.Text.RegularExpressions.Regex.Replace(report, @"(?im)^session=[^\r\n]*", "session=true=<redacted>",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(200));
         }
 
         private static HttpContent CreateLegacyMultipart(string report)

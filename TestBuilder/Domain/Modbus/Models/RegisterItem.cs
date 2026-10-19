@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace TestBuilder.Domain.Modbus.Models
@@ -12,6 +12,7 @@ namespace TestBuilder.Domain.Modbus.Models
 
         /// <summary>Адрес регистра на слейве</summary>
         public int Address { get; set; }
+        public ModbusArea Area { get; set; }
 
         /// <summary>Название регистра (для UI)</summary>
         public string Name { get; set; } = string.Empty;

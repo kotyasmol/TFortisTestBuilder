@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -28,6 +28,8 @@ namespace TestBuilder.Services
         private static AppSettings? _instance;
         public static AppSettings Instance => _instance ??= Load();
 
+        [JsonPropertyName("standPort")] public string StandPort { get; set; } = "";
+        [JsonPropertyName("consolePort")] public string ConsolePort { get; set; } = "";
         [JsonPropertyName("graphsFolder")]
         public string GraphsFolder { get; set; } = string.Empty;
 
@@ -42,6 +44,12 @@ namespace TestBuilder.Services
 
         [JsonPropertyName("engineerMode")]
         public bool EngineerMode { get; set; }
+
+        [JsonPropertyName("tutorialOfferedVersion")]
+        public int TutorialOfferedVersion { get; set; }
+
+        [JsonPropertyName("tutorialCompletedVersion")]
+        public int TutorialCompletedVersion { get; set; }
 
         [JsonPropertyName("enableFileLogging")]
         public bool EnableFileLogging { get; set; } = false;

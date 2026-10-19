@@ -11,7 +11,7 @@ namespace TestBuilder.Views;
 public sealed class NodeHelpWindow : Window
 {
     private readonly TextBox _search = new() { Watermark = "Найти в справке…", Margin = new Thickness(0, 0, 0, 12) };
-    private readonly StackPanel _paragraphs = new() { Spacing = 16 };
+    private readonly GuideArticleView _paragraphs = new();
     private readonly TextBlock _status = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBlock _title = new() { FontSize = 24, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private NodeViewModel? _node;
@@ -28,7 +28,7 @@ public sealed class NodeHelpWindow : Window
         var copy = new Button { Content = "Копировать", Margin = new Thickness(12, 0, 12, 0) };
         copy.Click += async (_, _) =>
         {
-            try { if (_node != null && Clipboard != null) { await Clipboard.SetTextAsync($"{_node.Title}\n\n{_node.HelpText}"); _status.Text = "Скопировано"; } }
+            try { if (_node != null && Clipboard != null) { await Clipboard.SetTextAsync($"{_node.DisplayTitle}\n\n{_node.HelpText}"); _status.Text = "Скопировано"; } }
             catch { _status.Text = "Не удалось скопировать"; }
         };
         var close = new Button { Content = "✕ Закрыть" }; close.Click += (_, _) => Close();
@@ -37,16 +37,21 @@ public sealed class NodeHelpWindow : Window
         _search.TextChanged += (_, _) => Refresh();
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
     }
-    public void SetNode(NodeViewModel node) { _node = node; _title.Text = node.Title; _search.Text = ""; Refresh(); }
+    public void SetNode(NodeViewModel node) { _node = node; _title.Text = node.DisplayTitle; _search.Text = ""; Refresh(); }
     private void Refresh()
     {
         if (_node == null) return;
         _paragraphs.Children.Clear();
         var query = _search.Text?.Trim() ?? "";
-        var paragraphs = new[] { _node.HelpSummary }.Concat(_node.HelpDetails)
-            .Where(p => query.Length == 0 || p.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-        foreach (var text in paragraphs) _paragraphs.Children.Add(new SelectableTextBlock
-        { Text = text, FontSize = 16, TextWrapping = Avalonia.Media.TextWrapping.Wrap, LineHeight = 25 });
-        _status.Text = query.Length == 0 ? "" : paragraphs.Length == 0 ? "Совпадений нет" : $"Найдено разделов: {paragraphs.Length}";
+        if (TestBuilder.Services.Help.UserGuide.ForNode(_node.GetType()) is { } article)
+        {
+            var count = _paragraphs.ShowArticle(article, query);
+            _status.Text = query.Length == 0 ? "" : count == 0 ? "Совпадений нет" : $"Найдено: {count}";
+        }
+        else
+        {
+            foreach (var text in new[] { _node.HelpSummary }.Concat(_node.HelpDetails).Where(p => query.Length == 0 || p.Contains(query, StringComparison.OrdinalIgnoreCase)))
+                _paragraphs.Children.Add(new SelectableTextBlock { Text = text, FontSize = 16, TextWrapping = Avalonia.Media.TextWrapping.Wrap, LineHeight = 25 });
+        }
     }
 }

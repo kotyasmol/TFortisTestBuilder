@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -18,6 +18,7 @@ namespace TestBuilder.Domain.Steps
         private static readonly TimeSpan VerifyRetryDelay = TimeSpan.FromMilliseconds(300);
 
         private readonly IModbusService _modbusService;
+        private readonly TestBuilder.Domain.Modbus.ModbusArea _area;
         private readonly byte _slaveId;
         private readonly ushort _address;
         private readonly ushort _value;
@@ -32,10 +33,11 @@ namespace TestBuilder.Domain.Steps
             ushort address,
             ushort value,
             bool useCurrentSlaveId = false,
-            bool verifyWrite = false)
+            bool verifyWrite = false, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding)
         {
             _modbusService = modbusService;
             _logger = logger;
+            _area = area;
             _slaveId = slaveId;
             _address = address;
             _value = value;
@@ -48,7 +50,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             var actualSlaveId = ResolveSlaveId(context);
-            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address);
+            var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address, _area);
 
             if (actualSlaveId == null)
             {
@@ -61,11 +63,11 @@ namespace TestBuilder.Domain.Steps
             _logger.Info(
                 $"[ШАГ] Запись регистра → устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}.");
 
-            var writeOk = await _modbusService.WriteRegisterAsync(
+            var writeOk = await _modbusService.WriteAreaAsync(
                 actualSlaveId.Value,
                 _address,
                 _value,
-                false,
+                _area,
                 cancellationToken);
 
             if (!writeOk)
@@ -75,6 +77,8 @@ namespace TestBuilder.Domain.Steps
 
                 return StepResult.False;
             }
+
+            if (context.RequireFreshMonitoring) context.RequiredPollAfter[actualSlaveId.Value] = System.Diagnostics.Stopwatch.GetTimestamp();
 
             if (!_verifyWrite)
             {
@@ -96,10 +100,10 @@ namespace TestBuilder.Domain.Steps
 
                 try
                 {
-                    readValues = await _modbusService.ReadRegistersAsync(
+                    readValues = await _modbusService.ReadAreaAsync(
                         actualSlaveId.Value,
                         _address,
-                        1,
+                        1, _area,
                         cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -124,7 +128,7 @@ namespace TestBuilder.Domain.Steps
 
                 if (actualValue == _value)
                 {
-                    context.RegisterState.Update(actualSlaveId.Value, _address, actualValue);
+                    context.RegisterState.Update(actualSlaveId.Value, _address, actualValue, _area);
 
                     _logger.Info(
                         $"[OK] Значение подтверждено: {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.");

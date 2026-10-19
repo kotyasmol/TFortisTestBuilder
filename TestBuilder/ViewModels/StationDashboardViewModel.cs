@@ -47,6 +47,21 @@ public partial class StationDashboardViewModel : ViewModelBase
     [ObservableProperty] private bool hasResult;
     [ObservableProperty] private bool isSuccessful;
     [ObservableProperty] private bool needsAttention;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DurationText))]
+    [NotifyPropertyChangedFor(nameof(HasDuration))]
+    private TimeSpan? elapsed;
+    public bool HasDuration => Elapsed.HasValue;
+    public string DurationText => Elapsed is { } duration ? "Время проверки: " + FormatDuration(duration) : string.Empty;
+
+    internal static string FormatDuration(TimeSpan duration)
+    {
+        var seconds = Math.Max(0, (long)duration.TotalSeconds);
+        if (seconds == 0) return "меньше 1 с";
+        if (seconds < 60) return $"{seconds} с";
+        if (seconds < 3600) return $"{seconds / 60} мин {seconds % 60:00} с";
+        return $"{seconds / 3600} ч {seconds / 60 % 60:00} мин {seconds % 60:00} с";
+    }
 
     public void Prepare(GraphWorkspaceViewModel graph)
     {
@@ -54,6 +69,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         _activeNodes.Clear();
         Stages.Clear();
         HasResult = IsSuccessful = NeedsAttention = false;
+        Elapsed = null;
         SerialNumber = "Будет получен во время проверки";
         ReportStatus = "Отчёт ещё не сформирован";
         Headline = "Можно начинать подготовку";
@@ -152,6 +168,13 @@ public partial class StationDashboardViewModel : ViewModelBase
         RefreshActiveStages();
     }
 
+    public void NodeSkipped(NodeViewModel node)
+    {
+        if (_stageByNode.TryGetValue(node, out var stage) && ReferenceEquals(stage.Source, node))
+            stage.State = StationStageState.Skipped;
+        RefreshActiveStages();
+    }
+
     public void NodeFailed(NodeViewModel node, TestContext context)
     {
         if (_stageByNode.TryGetValue(node, out var stage) && ReferenceEquals(stage.Source, node))
@@ -222,8 +245,9 @@ public partial class StationDashboardViewModel : ViewModelBase
         foreach (var stage in Stages) stage.IsPaused = paused && stage.IsActive;
     }
 
-    public void CompleteRun(ExecutionStatus status, TestContext? context, bool partialRun = false)
+    public void CompleteRun(ExecutionStatus status, TestContext? context, bool partialRun = false, TimeSpan? elapsed = null)
     {
+        Elapsed = elapsed;
         if (context != null) UpdateContext(context);
         foreach (var stage in Stages)
         {
@@ -233,7 +257,11 @@ public partial class StationDashboardViewModel : ViewModelBase
         HasResult = true;
         _activeNodes.Clear();
         RefreshActiveStages();
-        var cleanupFailed = Stages.Any(s => s.IsCleanup && s.State == StationStageState.Attention);
+        // A RunOnFailure stage may also be connected to the normal success path
+        // (e.g. board power-off). Such a visible stage still represents cleanup.
+        var cleanupFailed = Stages.Any(s =>
+            (s.IsCleanup || s.Source is SubtestNodeViewModel { RunOnFailure: true }) &&
+            s.State == StationStageState.Attention);
         var checksPassed = context != null && !context.HasCriticalError &&
             context.ReportEntries.All(e => e.IsSuccess) &&
             (!context.Variables.ContainsKey("BuildReport.DevicePassed") || context.GetVariable<bool>("BuildReport.DevicePassed"));
@@ -334,6 +362,6 @@ public partial class StationDashboardViewModel : ViewModelBase
         PrintLabelNodeViewModel => "Печать этикеток",
         RunDataTestNodeViewModel => "Проверка сетевых портов",
         SelfTestCheckNodeViewModel => "Встроенная проверка устройства",
-        _ => node.Title
+        _ => node.DisplayTitle
     };
 }

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:TestBuilder.Views"
+             x:Class="TestBuilder.Views.BoardPreviewView">
+  <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}"
+          BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+      <WrapPanel Margin="10,8" VerticalAlignment="Center">
+        <TextBlock Text="Плата" FontWeight="SemiBold" FontSize="16" Margin="2,0,14,0" VerticalAlignment="Center" />
+        <Button Name="ZoomOutButton" Content="−" Click="ZoomOut" AutomationProperties.Name="Уменьшить плату" ToolTip.Tip="Уменьшить" />
+        <TextBlock Name="ZoomText" Text="100%" Width="50" TextAlignment="Center" VerticalAlignment="Center" FontSize="13" />
+        <Button Name="ZoomInButton" Content="+" Click="ZoomIn" AutomationProperties.Name="Увеличить плату" ToolTip.Tip="Увеличить" />
+        <Button Name="FitButton" Content="Общий вид" Click="Fit" Margin="8,0,0,0" ToolTip.Tip="Показать плату целиком" />
+        <Button Name="ExpandButton" Content="Развернуть" Click="Expand" Margin="8,0,0,0" ToolTip.Tip="Открыть плату в большом окне" />
+      </WrapPanel>
+      <Grid Grid.Row="1" ClipToBounds="True" Background="{DynamicResource SurfaceMutedBrush}">
+        <views:BoardCanvas Name="BoardSurface" Margin="8" AutomationProperties.Name="Изображение платы с результатами проверок" />
+        <TextBlock Name="EmptyMessage" Text="В профиле нет изображения платы. Добавьте его в редакторе через кнопку «Плата»."
+                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" Margin="24"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </Grid>
+      <WrapPanel Grid.Row="2" Margin="12,8,12,4">
+        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,12,4"><Ellipse Width="9" Height="9" Fill="Gray" /><TextBlock Text="Не проверен" FontSize="12" /></StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,12,4"><Ellipse Width="9" Height="9" Fill="Gold" /><TextBlock Text="Проверяется" FontSize="12" /></StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,12,4"><Ellipse Width="9" Height="9" Fill="LimeGreen" /><TextBlock Text="Годен" FontSize="12" /></StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,4"><Ellipse Width="9" Height="9" Fill="Red" /><TextBlock Text="Ошибка" FontSize="12" /></StackPanel>
+      </WrapPanel>
+      <TextBlock Grid.Row="3" Name="ElementText" Text="Нажмите на элемент, чтобы увидеть результат."
+                 TextTrimming="CharacterEllipsis" FontSize="13" Margin="12,0,12,10" Foreground="{DynamicResource TextSecondaryBrush}" />
+    </Grid>
+  </Border>
+</UserControl>

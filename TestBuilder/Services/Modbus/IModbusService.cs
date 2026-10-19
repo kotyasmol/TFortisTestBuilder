@@ -9,6 +9,15 @@ namespace TestBuilder.Services.Modbus
 {
     public interface IModbusService
     {
+        Task<ushort[]> ReadAreaAsync(byte slaveId, ushort address, ushort count,
+            TestBuilder.Domain.Modbus.ModbusArea area, CancellationToken cancellationToken = default)
+            => area == TestBuilder.Domain.Modbus.ModbusArea.Holding ? ReadRegistersAsync(slaveId, address, count, cancellationToken)
+                : throw new NotSupportedException("Эта область Modbus не поддерживается сервисом.");
+        Task<bool> WriteAreaAsync(byte slaveId, ushort address, ushort value,
+            TestBuilder.Domain.Modbus.ModbusArea area, CancellationToken cancellationToken = default)
+            => area == TestBuilder.Domain.Modbus.ModbusArea.Holding ? WriteRegisterAsync(slaveId, address, value, false, cancellationToken)
+                : throw new NotSupportedException("Запись этой области Modbus не поддерживается сервисом.");
+
         /// <summary>
         /// Читает последовательный диапазон регистров Holding Registers.
         /// </summary>

@@ -78,6 +78,28 @@ namespace TestBuilder.Domain.Modbus
             return foundModels.Count;
         }
 
+        public async Task<int> ConfigureAsync(HardwareConfiguration configuration)
+        {
+            configuration.Validate();
+            var models = new List<SlaveModelBase>();
+            foreach (var d in configuration.Devices)
+            {
+                if (d.IdentificationValue.HasValue)
+                {
+                    var id = await _modbus.ReadRegistersAsync(d.SlaveId, d.IdentificationAddress, 1);
+                    if (id.Length != 1 || id[0] != d.IdentificationValue)
+                        throw new InvalidOperationException($"Slave {d.SlaveId}: тип оборудования не совпадает с профилем {d.Name}.");
+                }
+                var model = new ConfiguredSlaveModel(d, _modbus);
+                await model.PollAsync();
+                models.Add(model);
+            }
+            await Dispatcher.UIThread.InvokeAsync(() => {
+                lock (_slavesLock) { Slaves.Clear(); foreach (var m in models) Slaves.Add(m); }
+            });
+            return models.Count;
+        }
+
         public IReadOnlyList<SlaveModelBase> GetSlavesSnapshot()
         {
             lock (_slavesLock)

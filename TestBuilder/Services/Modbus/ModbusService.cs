@@ -180,6 +180,37 @@ namespace TestBuilder.Services.Modbus
 
         #region DIRECT IO
 
+        public async Task<ushort[]> ReadAreaAsync(byte slaveId, ushort address, ushort count,
+            TestBuilder.Domain.Modbus.ModbusArea area, CancellationToken cancellationToken = default)
+        {
+            if (area == TestBuilder.Domain.Modbus.ModbusArea.Holding)
+                return await ReadRegistersAsync(slaveId, address, count, cancellationToken);
+            return await ExecuteWithRecoveryAsync($"read {area} slave={slaveId}, address={address}", async master =>
+            {
+                return area switch
+                {
+                    TestBuilder.Domain.Modbus.ModbusArea.Input => await master.ReadInputRegistersAsync(slaveId, address, count),
+                    TestBuilder.Domain.Modbus.ModbusArea.Coil => (await master.ReadCoilsAsync(slaveId, address, count)).Select(x => (ushort)(x ? 1 : 0)).ToArray(),
+                    TestBuilder.Domain.Modbus.ModbusArea.Discrete => (await master.ReadInputsAsync(slaveId, address, count)).Select(x => (ushort)(x ? 1 : 0)).ToArray(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(area))
+                };
+            }, cancellationToken);
+        }
+
+        public async Task<bool> WriteAreaAsync(byte slaveId, ushort address, ushort value,
+            TestBuilder.Domain.Modbus.ModbusArea area, CancellationToken cancellationToken = default)
+        {
+            if (area == TestBuilder.Domain.Modbus.ModbusArea.Holding)
+                return await WriteRegisterAsync(slaveId, address, value, false, cancellationToken);
+            if (area != TestBuilder.Domain.Modbus.ModbusArea.Coil || value > 1)
+                throw new InvalidOperationException("Запись разрешена только в Holding или Coil (0/1).");
+            return await ExecuteWithRecoveryAsync($"write coil slave={slaveId}, address={address}", async master =>
+            {
+                await master.WriteSingleCoilAsync(slaveId, address, value == 1);
+                return true;
+            }, cancellationToken);
+        }
+
         public async Task<ushort[]> ReadRegistersAsync(
             byte slaveId,
             ushort address,

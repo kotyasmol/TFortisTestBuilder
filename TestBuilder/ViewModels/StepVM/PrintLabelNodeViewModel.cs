@@ -43,7 +43,9 @@ namespace TestBuilder.ViewModels.StepVM
             Output.Add(FalseOut);
         }
 
-        public ITestStep CreateStep(ILogger logger) =>
+        public ITestStep CreateStep(ILogger logger) => CreateStep(logger, null);
+
+        internal ITestStep CreateStep(ILogger logger, IRawLabelPrinter? printer) =>
             new PrintLabelStep(
                 logger,
                 PrinterName,
@@ -56,6 +58,8 @@ namespace TestBuilder.ViewModels.StepVM
                 Copies,
                 UseQtProZplFormat,
                 FailOnPrinterError,
+                printer ?? new WindowsRawLabelPrinter(),
+                30000,
                 LabelModel);
 
         public bool IsVariableSerialMode => !UseManualSerialNumber;

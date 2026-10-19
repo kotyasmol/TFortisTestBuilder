@@ -172,6 +172,8 @@ namespace TestBuilder.Services.Logging
         public ILogger CreateLogger(string category)
             => new Logger(category);
 
+        internal ILogger CreateTrainingLogger() => new Logger("Обучение", false);
+
         private static string BuildRunLogFileName(string? profileName)
         {
             var safeProfile = NormalizeProfileName(profileName);
@@ -238,9 +240,11 @@ namespace TestBuilder.Services.Logging
         /// </summary>
         private sealed class Logger : ILogger
         {
-            public Logger(string category)
+            private readonly bool _writeToFile;
+            public Logger(string category, bool writeToFile = true)
             {
                 Category = category ?? string.Empty;
+                _writeToFile = writeToFile;
             }
 
             public string Category { get; }
@@ -251,7 +255,7 @@ namespace TestBuilder.Services.Logging
             {
                 var entry = new LogEntry(DateTime.Now, level, Category, message);
 
-                LoggingService.WriteLogEntry(entry);
+                if (_writeToFile) LoggingService.WriteLogEntry(entry);
 
                 Dispatcher.UIThread.Post(() =>
                 {

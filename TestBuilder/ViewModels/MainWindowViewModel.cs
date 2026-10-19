@@ -27,6 +27,27 @@ namespace TestBuilder.ViewModels
             string.IsNullOrEmpty(App.StartupSessionId) ? "Локальный запуск" : "Сессия лаунчера получена";
         public bool IsEngineerWorkspace => SettingsVM.IsEngineerMode;
 
+        [ObservableProperty] private string selectedPage = "Editor";
+        public bool IsEditorPage => SelectedPage == "Editor";
+        public bool IsRegistersPage => SelectedPage == "Registers";
+        public bool IsSelfTestPage => SelectedPage == "SelfTest" && ShowSwitchTools;
+        public bool IsNetworkPage => SelectedPage == "Network" && ShowSwitchTools;
+        public bool ShowSwitchTools => !TestVM.IsAutonomousStand;
+        partial void OnSelectedPageChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsEditorPage));
+            OnPropertyChanged(nameof(IsRegistersPage));
+            OnPropertyChanged(nameof(IsSelfTestPage));
+            OnPropertyChanged(nameof(IsNetworkPage));
+        }
+        [RelayCommand]
+        private void SelectPage(string page)
+        {
+            if (page is not ("Editor" or "Registers" or "SelfTest" or "Network")) return;
+            if (!ShowSwitchTools && page is "SelfTest" or "Network") return;
+            SelectedPage = page;
+        }
+
         public string WorkspaceTitle => IsSettingsOpen ? "Настройки" :
             IsEngineerWorkspace ? "Инженерный режим" : "Пульт стенда";
         public string SwitchWorkspaceTitle => IsEngineerWorkspace ? "Перейти в пульт" : "Открыть редактор";
@@ -54,6 +75,8 @@ namespace TestBuilder.ViewModels
 
             TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
+            ModbusVM.ManagedMonitorActive = () => TestVM.IsMonitoringActive || TestVM.IsConnecting || TestVM.RootGraph.Hardware != null;
+            ModbusVM.CanWrite = () => !TestVM.IsTestRunning && !TestVM.IsConnecting;
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.IsConnecting);
             NetworkSetupVM = new NetworkSetupViewModel();
@@ -75,6 +98,12 @@ namespace TestBuilder.ViewModels
 
         private void OnTestVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName == nameof(TestVM.IsAutonomousStand))
+            {
+                OnPropertyChanged(nameof(ShowSwitchTools));
+                if (!ShowSwitchTools && SelectedPage is "SelfTest" or "Network") SelectedPage = "Editor";
+                OnSelectedPageChanged(SelectedPage);
+            }
             if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
                 IsSlavesFound = TestVM.IsMonitoringActive;
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting))

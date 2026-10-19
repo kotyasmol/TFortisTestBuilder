@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -30,6 +30,11 @@ namespace TestBuilder.ViewModels
 
         public void RefreshModeAvailability() => OnPropertyChanged(nameof(CanChangeInterfaceMode));
 
+        [ObservableProperty] private string standPort = "";
+        [ObservableProperty] private string consolePort = "";
+        partial void OnStandPortChanged(string value) { AppSettings.Instance.StandPort = value.Trim(); AppSettings.Instance.Save(); }
+        partial void OnConsolePortChanged(string value) { AppSettings.Instance.ConsolePort = value.Trim(); AppSettings.Instance.Save(); }
+
         [ObservableProperty]
         private string graphsFolder = string.Empty;
 
@@ -55,6 +60,8 @@ namespace TestBuilder.ViewModels
         {
             this.canChangeInterfaceMode = canChangeInterfaceMode;
             isEngineerMode = AppSettings.Instance.EngineerMode;
+            StandPort = AppSettings.Instance.StandPort;
+            ConsolePort = AppSettings.Instance.ConsolePort;
             GraphsFolder = AppSettings.Instance.GraphsFolder;
             ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
             StandId = AppSettings.Instance.StandId;

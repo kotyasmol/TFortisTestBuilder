@@ -55,7 +55,7 @@ public class GraphEditorViewTests
             try
             {
                 vm.IsConnecting = connecting;
-                Assert.True(vm.CanChooseProfile);
+                Assert.Equal(!connecting, vm.CanChooseProfile);
                 if (connecting) Assert.False(vm.CanStartRun);
                 var profile = GraphSerializer.ReadProfile(path);
                 vm.Profiles.Clear();
@@ -74,6 +74,13 @@ public class GraphEditorViewTests
                 }
 
                 Click();
+                if (connecting)
+                {
+                    Assert.NotSame(profile, vm.SelectedProfile);
+                    vm.IsConnecting = false;
+                    Layout(window);
+                    Click();
+                }
                 Assert.Same(profile, vm.SelectedProfile);
                 AssertGraphVisible(view, 2);
                 var editedNode = vm.Nodes[0];
@@ -466,7 +473,7 @@ public class GraphEditorViewTests
                 search.Text = ""; Layout(view.HelpWindow!);
                 var copy = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Копировать"));
                 copy.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-                Assert.Equal($"{node.Title}\n\n{node.HelpText}", await view.HelpWindow!.Clipboard!.GetTextAsync());
+                Assert.Equal($"Самопроверка устройства\n\n{node.HelpText}", await view.HelpWindow!.Clipboard!.GetTextAsync());
                 var close = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "✕ Закрыть"));
                 close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Assert.False(view.IsNodeHelpOpen);
@@ -513,7 +520,7 @@ public class GraphEditorViewTests
                 Assert.True(vm.IsPaletteCollapsed); Assert.True(editor.Bounds.Width > width + 200);
                 Click("Свернуть или развернуть палитру"); Assert.False(vm.IsPaletteCollapsed);
                 Assert.Same(node, Assert.Single(vm.Nodes)); Assert.Equal(new Point(200, 100), node.Location);
-                var title = view.GetVisualDescendants().OfType<TextBox>().Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Название профиля");
+                var title = view.GetVisualDescendants().OfType<AutoCompleteBox>().Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Название профиля").GetVisualDescendants().OfType<TextBox>().Single();
                 title.Focus(); title.Text = "Проверка после сборки";
                 view.GetVisualDescendants().OfType<Button>().First(b => b.IsEnabled).Focus(); Layout(window);
                 Assert.Equal("Проверка после сборки", vm.CurrentProfileName);

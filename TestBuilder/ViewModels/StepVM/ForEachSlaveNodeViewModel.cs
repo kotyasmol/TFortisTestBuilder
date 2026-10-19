@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Linq;
 using TestBuilder.ViewModels.Graphs;
@@ -24,6 +24,12 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty]
         private bool stopOnError = true;
 
+        [ObservableProperty] private bool repeatOnSameSlave;
+        [ObservableProperty] private int repeatCount = 1;
+        [ObservableProperty] private string indexVariable = "iteration";
+        [ObservableProperty] private bool untilSuccess;
+        [ObservableProperty] private int repeatDelayMs;
+
         public ConnectorViewModel In { get; }
 
         public ConnectorViewModel SuccessOut { get; }
@@ -33,7 +39,7 @@ namespace TestBuilder.ViewModels.StepVM
         public ForEachSlaveNodeViewModel()
         {
             Title = "Цикл For";
-            BodyGraph.Title = "Тело цикла For Slaves";
+            BodyGraph.Title = "Тело цикла";
             BodyGraph.UsesBodyBoundaryNodes = true;
 
             In = new ConnectorViewModel { Title = "In" };
@@ -71,7 +77,12 @@ namespace TestBuilder.ViewModels.StepVM
             FromSlaveId = FromSlaveId,
             ToSlaveId = ToSlaveId,
             Step = Step,
-            StopOnError = StopOnError
+            StopOnError = StopOnError,
+            RepeatOnSameSlave = RepeatOnSameSlave,
+            RepeatCount = RepeatCount,
+            IndexVariable = IndexVariable,
+            UntilSuccess = UntilSuccess,
+            RepeatDelayMs = RepeatDelayMs
         };
     }
 }

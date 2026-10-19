@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using TestBuilder.Domain.Steps;
 
@@ -8,6 +8,10 @@ namespace TestBuilder.Serialization
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
+
+        [JsonPropertyName("updatedAt")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public System.DateTimeOffset? UpdatedAt { get; set; }
 
         [JsonPropertyName("deviceModelId")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -20,6 +24,12 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("configurationName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ConfigurationName { get; set; }
+
+        [JsonPropertyName("hardware")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Domain.Modbus.HardwareConfiguration? Hardware { get; set; }
+        [JsonPropertyName("board")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Models.BoardDesign? Board { get; set; }
+        [JsonPropertyName("productKind")] public string ProductKind { get; set; } = "Switch";
 
         [JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
@@ -49,6 +59,23 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("color")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Color { get; set; }
+
+        [JsonPropertyName("repeatOnSameSlave")] public bool? RepeatOnSameSlave { get; set; }
+        [JsonPropertyName("repeatCount")] public int? RepeatCount { get; set; }
+        [JsonPropertyName("indexVariable")] public string? IndexVariable { get; set; }
+        [JsonPropertyName("untilSuccess")] public bool? UntilSuccess { get; set; }
+        [JsonPropertyName("repeatDelayMs")] public int? RepeatDelayMs { get; set; }
+
+        [JsonPropertyName("registerArea")] public TestBuilder.Domain.Modbus.ModbusArea? RegisterArea { get; set; }
+
+        [JsonPropertyName("runOnlyOnFirstRun")] public bool RunOnlyOnFirstRun { get; set; }
+
+        [JsonPropertyName("boardElements")] public string? BoardElements { get; set; }
+
+        [JsonPropertyName("serialConsole")] public SerialConsoleOptions? SerialConsole { get; set; }
+        [JsonPropertyName("runProgram")] public RunProgramOptions? RunProgram { get; set; }
+        [JsonPropertyName("parseResponse")] public ParseResponseOptions? ParseResponse { get; set; }
+        [JsonPropertyName("checkLedColor")] public CheckLedColorOptions? CheckLedColor { get; set; }
 
         // --- Delay ---
         [JsonPropertyName("milliseconds")]
@@ -97,6 +124,9 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("readAttempts")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? ReadAttempts { get; set; }
+
+        [JsonPropertyName("reportName")]
+        public string? ReportName { get; set; }
 
         [JsonPropertyName("readIntervalMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

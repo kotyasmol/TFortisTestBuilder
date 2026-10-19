@@ -13,6 +13,9 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class WaitUntilNodeViewModel : NodeViewModel
     {
+        [ObservableProperty] private ModbusArea registerArea;
+        partial void OnRegisterAreaChanged(ModbusArea value) => RestoreSelections();
+        public ModbusArea[] RegisterAreas { get; } = System.Enum.GetValues<ModbusArea>();
         [ObservableProperty] private byte slaveId;
         [ObservableProperty] private ushort address;
         [ObservableProperty] private int expectedValue;
@@ -57,7 +60,7 @@ namespace TestBuilder.ViewModels.StepVM
                 _selectedRegister = value;
                 OnPropertyChanged();
                 OnRegisterSelectionChanged();
-                if (value != null) Address = (ushort)value.Address;
+                if (value != null) { RegisterArea = value.Area; Address = (ushort)value.Address; }
             }
         }
 
@@ -77,14 +80,14 @@ namespace TestBuilder.ViewModels.StepVM
             AvailableRegisters.Clear();
             foreach (var reg in (_selectedSlave?.RegisterItems ?? Enumerable.Empty<RegisterItem>()))
                 AvailableRegisters.Add(reg);
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
 
         partial void OnAddressChanged(ushort value)
         {
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
@@ -121,13 +124,14 @@ namespace TestBuilder.ViewModels.StepVM
                 logger,
                 UseCurrentSlaveId,
                 modbusService,
-                LiveRead);
+                LiveRead, RegisterArea);
         }
 
         public override NodeViewModel Clone() => new WaitUntilNodeViewModel
         {
             SlaveId = SlaveId,
             Address = Address,
+            RegisterArea = RegisterArea,
             ExpectedValue = ExpectedValue,
             TimeoutMs = TimeoutMs,
             UseCurrentSlaveId = UseCurrentSlaveId,

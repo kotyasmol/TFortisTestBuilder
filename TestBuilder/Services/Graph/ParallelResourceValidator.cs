@@ -62,6 +62,7 @@ internal static class ParallelResourceValidator
                 CollectGraph(subtest.BodyGraph, usage, currentSlaves);
                 return;
             case ForEachSlaveNodeViewModel loop:
+                if (loop.RepeatOnSameSlave) { CollectGraph(loop.BodyGraph, usage, currentSlaves); return; }
                 if (loop.Step <= 0 || loop.FromSlaveId > loop.ToSlaveId)
                     Reject(node, "некорректный диапазон slave");
                 var slaves = new List<byte>();
@@ -70,6 +71,7 @@ internal static class ParallelResourceValidator
                 CollectGraph(loop.BodyGraph, usage, slaves);
                 return;
             case ModbusWriteNodeViewModel write:
+                if (write.RegisterArea != TestBuilder.Domain.Modbus.ModbusArea.Holding) Reject(node, "эту область Modbus используйте вне параллельной ветви");
                 // Explicitly allow only known independent sequences. A denylist of
                 // AC registers misses PS-1/RPS power, discharge and IO sensor controls.
                 switch (write.Address)
@@ -134,5 +136,5 @@ internal static class ParallelResourceValidator
     }
 
     private static void Reject(NodeViewModel node, string reason) =>
-        throw new InvalidOperationException($"Нода '{node.Title}' внутри параллельной ветви: {reason}.");
+        throw new InvalidOperationException($"Нода '{node.DisplayTitle}' внутри параллельной ветви: {reason}.");
 }

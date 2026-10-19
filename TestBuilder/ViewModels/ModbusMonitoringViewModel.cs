@@ -18,6 +18,9 @@ namespace TestBuilder.ViewModels
         private CancellationTokenSource? _cts;
         private Task? _monitorTask;
 
+        public Func<bool> ManagedMonitorActive { get; set; } = () => false;
+        public Func<bool> CanWrite { get; set; } = () => true;
+
         public bool IsConnected => _modbusService.IsConnected;
 
         public ObservableCollection<SlaveModelBase> Slaves => _slaveManager.Slaves;
@@ -46,7 +49,7 @@ namespace TestBuilder.ViewModels
 
         public string SelectedSlaveDetails => SelectedSlave is null
             ? "После сканирования выберите устройство слева."
-            : $"Slave ID: {SelectedSlave.SlaveId} · {SelectedSlave.RegisterItems.Count} регистров";
+            : $"Адрес устройства: {SelectedSlave.SlaveId} · {SelectedSlave.RegisterItems.Count} регистров";
 
         private string _registerSearch = string.Empty;
         public string RegisterSearch
@@ -116,6 +119,13 @@ namespace TestBuilder.ViewModels
         {
             if (!_modbusService.IsConnected)
                 return;
+            if (ManagedMonitorActive())
+            {
+                SelectedSlave = Slaves.Contains(SelectedSlave!) ? SelectedSlave : Slaves.FirstOrDefault();
+                RefreshRegisters();
+                return;
+            }
+            if (!CanWrite()) return;
             Stop();
 
             IsScanning = true;
@@ -137,6 +147,7 @@ namespace TestBuilder.ViewModels
 
         public Task StartAsync()
         {
+            if (ManagedMonitorActive()) return Task.CompletedTask;
             if (_monitorTask is { IsCompleted: false })
                 return Task.CompletedTask;
 

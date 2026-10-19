@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using TestBuilder.Services.Graph;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -11,7 +11,11 @@ namespace TestBuilder.ViewModels.Graphs
     public sealed class GraphWorkspaceViewModel
     {
         public string Title { get; set; } = "Граф";
+        public System.DateTimeOffset? UpdatedAt { get; set; }
 
+        public TestBuilder.Domain.Modbus.HardwareConfiguration? Hardware { get; set; }
+        public TestBuilder.Models.BoardDesign? Board { get; set; }
+        public string ProductKind { get; set; } = "Switch";
         public string? DeviceModel { get; set; }
         public string? DeviceModelId { get; set; }
 

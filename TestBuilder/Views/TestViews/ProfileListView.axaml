@@ -10,15 +10,16 @@
     <converters:CollectionEmptyConverter x:Key="CollectionEmptyConverter" />
   </UserControl.Resources>
 
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
-    <TextBlock Text="Профили тестов" Classes="sectionTitle" Margin="0,0,0,12" />
-    <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,0,0,12">
-      <Button HorizontalAlignment="Stretch" Content="Новый" Command="{Binding NewProfileCommand}" Margin="0,0,8,0" ToolTip.Tip="Создать пустой профиль" />
-      <Button Grid.Column="1" HorizontalAlignment="Stretch" Content="Импорт" Command="{Binding ImportProfilesCommand}" ToolTip.Tip="Импортировать JSON-профиль" />
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+    <TextBlock Text="Профили тестов" Classes="sectionTitle" Margin="0,0,0,12" Foreground="{DynamicResource PrimaryTextBrush}" />
+    <ComboBox Grid.Row="1" ItemsSource="{Binding ProductFilters}" SelectedItem="{Binding ProductFilter}" IsEnabled="{Binding CanChooseProfile}" HorizontalAlignment="Stretch" Margin="0,0,0,8" AutomationProperties.Name="Вид изделия" />
+    <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,0,0,12">
+      <Button Classes="sidebarAction" HorizontalAlignment="Stretch" Content="Новый" Command="{Binding NewProfileCommand}" Margin="0,0,8,0" ToolTip.Tip="Создать пустой профиль" />
+      <Button Classes="sidebarAction" Grid.Column="1" HorizontalAlignment="Stretch" Content="Импорт" Command="{Binding ImportProfilesCommand}" ToolTip.Tip="Импортировать JSON-профиль" />
     </Grid>
-    <TextBox Grid.Row="2" Text="{Binding ProfileSearch}" Watermark="Поиск профиля" Margin="0,0,0,12" />
-    <TextBlock Grid.Row="3" Text="{Binding CatalogStatus}" IsVisible="{Binding HasCatalogStatus}" Classes="hint" Margin="0,0,0,8" />
-    <Border Grid.Row="4"
+    <TextBox Grid.Row="3" Text="{Binding ProfileSearch}" Watermark="Поиск профиля" Margin="0,0,0,12" />
+    <TextBlock Grid.Row="4" Text="{Binding CatalogStatus}" IsVisible="{Binding HasCatalogStatus}" Classes="hint" Margin="0,0,0,8" />
+    <Border Grid.Row="5"
             BorderThickness="1"
             BorderBrush="{DynamicResource BorderBrush}"
             CornerRadius="8"
@@ -44,7 +45,12 @@
                            Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="services:GraphProfile">
-                        <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" FontSize="{StaticResource FontBody}" ToolTip.Tip="{Binding FilePath}" />
+                        <StackPanel Spacing="5" ToolTip.Tip="{Binding FilePath}">
+                          <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" FontSize="{StaticResource FontBody}" />
+                          <TextBlock Text="{Binding UpdatedAtText}" IsVisible="{Binding HasUpdatedAt}"
+                                     HorizontalAlignment="Right" FontSize="11"
+                                     Foreground="{DynamicResource TextMutedBrush}" ToolTip.Tip="{Binding UpdatedAtTooltip}" />
+                        </StackPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>

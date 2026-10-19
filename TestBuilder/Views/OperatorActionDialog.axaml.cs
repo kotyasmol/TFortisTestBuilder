@@ -6,11 +6,13 @@ namespace TestBuilder.Views;
 public partial class OperatorActionDialog : Window
 {
     public bool Confirmed { get; private set; }
+    public string InputText => InputBox.Text ?? "";
 
-    public OperatorActionDialog(string message)
+    public OperatorActionDialog(string message, bool requestInput = false)
     {
         DataContext = new OperatorActionDialogModel(message);
         InitializeComponent();
+        InputBox.IsVisible = requestInput;
     }
 
     private void OnConfirm(object? sender, RoutedEventArgs e)

@@ -15,6 +15,7 @@ public sealed class ProfileEditHistory : IDisposable
 {
     private static readonly HashSet<string> StoredProperties = new()
     {
+        "Arguments", "BaudRate", "BlueAddress", "ColorMargin", "Command", "ExpectedColor", "ExpectedExitCode", "GreenAddress", "MinIntensity", "OutputPrefix", "OutputVariableName", "ParseMode", "PortName", "ProgramPath", "QuietMs", "RedAddress", "ResponseTerminator", "Selector", "SlaveId", "SourceVariableName", "TimeoutMs", "UseCurrentSlaveId", "ValueType", "WhiteAddress", "WorkingDirectory",
         "Address", "AllowGigabit", "AllowedLossPercent", "AllowedTxDeficitPercent", "Arguments", "ArpdBatPath",
         "BaseUrl", "BatchPath", "Bidirectional", "BoardVersion", "Command", "ComparisonType",
         "Copies", "CpuIdVariableName", "Description", "DestinationIp", "DeviceType", "DurationMs",
@@ -23,15 +24,15 @@ public sealed class ProfileEditHistory : IDisposable
         "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel",
         "LabelWidth", "LeftVariableName", "LiveRead", "LocalIp", "LocalPort", "LocalReportsDirectory",
         "Location", "MacPrefix", "MacVariableName", "ManualMacAddress", "ManualSerialNumber", "Max",
-        "MaxPortTestTimeMs", "Message", "Milliseconds", "Min", "Mode", "Name",
+        "MaxPortTestTimeMs", "Message", "InputVariable", "Milliseconds", "Min", "Mode", "Name",
         "NodeColor", "NormalizeBandwidth", "OutputPrefix", "OutputVariableName", "PacketSizeBytes", "PollAction",
-        "PollIntervalMs", "PrinterName", "Psw2G6FHardwareChecks", "ReadAttempts", "ReadIntervalMs", "ReportVariableName",
+        "PollIntervalMs", "PrinterName", "Psw2G6FHardwareChecks", "ReadAttempts", "ReadIntervalMs", "ReportName", "ReportVariableName",
         "RequestTimeoutMs", "ResponseType", "RetryCount", "RetryDelayMs", "RightVariableName", "RunArpdBat",
         "RunOnFailure", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
         "SlaveId", "Step", "StopOnError", "TargetVersion", "TestType", "Text",
         "TimeoutMs", "ToSlaveId", "UdpPort", "Url", "UseCurrentSlaveId", "UseFixedSerialNumber",
         "UseManualSerialNumber", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",
-        "VersionVariable", "WarmupMs"
+        "RunOnlyOnFirstRun", "VersionVariable", "WarmupMs", "RegisterArea", "BoardElements", "RepeatOnSameSlave", "RepeatCount", "IndexVariable", "UntilSuccess", "RepeatDelayMs"
     };
     private readonly GraphWorkspaceViewModel _root;
     private readonly Func<bool> _canEdit;

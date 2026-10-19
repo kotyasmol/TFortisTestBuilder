@@ -16,11 +16,13 @@ namespace TestBuilder.Domain.Steps
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private readonly string _message;
+        private readonly string _outputVariable;
         private readonly ILogger _logger;
 
-        public OperatorActionStep(string message, ILogger logger)
+        public OperatorActionStep(string message, ILogger logger, string outputVariable = "")
         {
             _message = message;
+            _outputVariable = outputVariable;
             _logger = logger;
         }
 
@@ -28,6 +30,17 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.IsNullOrWhiteSpace(_outputVariable))
+            {
+                context.Variables.Remove(_outputVariable);
+                if (context.OperatorInput == null) return StepResult.False;
+                var value = await context.OperatorInput(ResolveMessage(context), cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(value)) return StepResult.False;
+                context.SetVariable(_outputVariable, value.Trim());
+                return StepResult.True;
+            }
             if (context.OperatorPrompt == null)
             {
                 _logger.Warning("[ШАГ] Действие оператора → обработчик диалога не задан.");

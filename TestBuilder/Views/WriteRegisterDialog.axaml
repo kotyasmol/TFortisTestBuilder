@@ -9,17 +9,17 @@
 
     <StackPanel Margin="15" Spacing="10">
 
-        <Grid ColumnDefinitions="100,*">
-            <TextBlock Grid.Column="0" Text="Slave ID:" VerticalAlignment="Center" />
+        <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Text="Адрес устройства:" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="SlaveIdBox" />
         </Grid>
 
-        <Grid ColumnDefinitions="100,*">
+        <Grid ColumnDefinitions="140,*">
             <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="AddressBox" IsReadOnly="True" />
         </Grid>
 
-        <Grid ColumnDefinitions="100,*">
+        <Grid ColumnDefinitions="140,*">
             <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="ValueBox" />
         </Grid>

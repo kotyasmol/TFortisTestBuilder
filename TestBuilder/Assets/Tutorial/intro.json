@@ -1,0 +1,53 @@
+{
+  "name": "Учебная проверка",
+  "deviceModel": "Учебное устройство",
+  "configurationName": "Знакомство с программой",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "Start",
+      "x": 80,
+      "y": 80
+    },
+    {
+      "id": "action",
+      "type": "Operator Action",
+      "text": "В настоящей проверке здесь появится задание: установить плату, подключить кабель или проверить индикатор. Сейчас нажмите «Готово · продолжить».",
+      "x": 320,
+      "y": 80
+    },
+    {
+      "id": "delay",
+      "type": "Delay",
+      "milliseconds": 1000,
+      "x": 80,
+      "y": 384
+    },
+    {
+      "id": "end",
+      "type": "End",
+      "x": 560,
+      "y": 384
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "start",
+      "sourceConnector": "Выход",
+      "targetNodeId": "action",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "action",
+      "sourceConnector": "Продолжить",
+      "targetNodeId": "delay",
+      "targetConnector": "Вход"
+    },
+    {
+      "sourceNodeId": "delay",
+      "sourceConnector": "Выход",
+      "targetNodeId": "end",
+      "targetConnector": "Вход"
+    }
+  ]
+}

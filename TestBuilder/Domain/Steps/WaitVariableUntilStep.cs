@@ -274,6 +274,7 @@ namespace TestBuilder.Domain.Steps
             return comparisonType switch
             {
                 VariableComparisonType.Number => CompareNumber(actual, expected),
+                VariableComparisonType.VersionAtLeast => CheckVariableEqualityStep.CompareVersions(actual, expected) >= 0,
                 VariableComparisonType.String => string.Equals(ToInvariantString(actual), expected, StringComparison.Ordinal),
                 VariableComparisonType.Boolean => ParseBoolean(actual) == ParseBoolean(expected),
                 _ => string.Equals(ToInvariantString(actual), expected, StringComparison.Ordinal)

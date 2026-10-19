@@ -28,6 +28,20 @@ namespace TestBuilder.Views
             ShellSettingsViewControl.DataContext = vm.SettingsVM;
         }
 
+        private async void OnOpenHardware(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            if (!vm.TestVM.CanEditHardware) { vm.TestVM.TestingLogger.Warning("Остановите тест и отключите стенд для редактирования оборудования."); return; }
+            await new HardwareEditorWindow(vm.TestVM).ShowDialog(this);
+        }
+        private async void OnOpenBoard(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+                if (vm.IsEngineerWorkspace && vm.TestVM.CanEditGraph)
+                    await new BoardWindow(vm.TestVM, true).ShowDialog(this);
+                else new BoardWindow(vm.TestVM, false).Show(this);
+        }
+
         protected override void OnClosed(System.EventArgs e)
         {
             if (TestViewControl is System.IDisposable testView)

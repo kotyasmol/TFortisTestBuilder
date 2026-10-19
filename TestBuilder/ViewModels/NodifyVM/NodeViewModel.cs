@@ -37,7 +37,16 @@ namespace TestBuilder.ViewModels.NodifyVM
         private static readonly IBrush SucceededBorderBrush =
             new SolidColorBrush(Color.FromRgb(34, 197, 94));
 
-        [ObservableProperty] private string title = string.Empty;
+        [ObservableProperty] private bool runOnlyOnFirstRun;
+        public bool CanRunOnlyOnFirstRun => Output.Count > 0 && this is not
+            (TestBuilder.ViewModels.StepVM.StartNodeViewModel or
+             TestBuilder.ViewModels.StepVM.BodyStartNodeViewModel or
+             TestBuilder.ViewModels.StepVM.LabelNodeViewModel);
+        [ObservableProperty] private string boardElements = "";
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayTitle))]
+        private string title = string.Empty;
+        public string DisplayTitle => TestBuilder.Presentation.RussianUiText.Display(Title);
         [ObservableProperty] private Point location;
         [ObservableProperty] private bool isSelected;
         [ObservableProperty]

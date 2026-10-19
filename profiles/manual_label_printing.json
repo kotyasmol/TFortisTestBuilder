@@ -8,7 +8,8 @@
       "type": "Start",
       "x": 80,
       "y": 160,
-      "color": "blue"
+      "color": "blue",
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "1",
@@ -23,14 +24,16 @@
       "manualMacAddress": "",
       "copies": 4,
       "useQtProZplFormat": true,
-      "failOnPrinterError": true
+      "failOnPrinterError": true,
+      "runOnlyOnFirstRun": false
     },
     {
       "id": "2",
       "type": "End",
       "x": 940,
       "y": 160,
-      "color": "blue"
+      "color": "blue",
+      "runOnlyOnFirstRun": false
     }
   ],
   "connections": [

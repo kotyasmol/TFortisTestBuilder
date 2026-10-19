@@ -43,6 +43,7 @@ public partial class GraphEditorView : UserControl, IDisposable
 
         Editor.AddHandler(DragDrop.DropEvent, OnDropNode);
         Editor.LayoutUpdated += OnEditorLayoutUpdated;
+        Editor.TemplateApplied += OnEditorTemplateApplied;
 
         this.AddHandler(KeyDownEvent, OnKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
@@ -100,8 +101,21 @@ public partial class GraphEditorView : UserControl, IDisposable
         DetachViewModel();
         Editor.RemoveHandler(DragDrop.DropEvent, OnDropNode);
         Editor.LayoutUpdated -= OnEditorLayoutUpdated;
+        Editor.TemplateApplied -= OnEditorTemplateApplied;
         RemoveHandler(KeyDownEvent, OnKeyDown);
         Editor.RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
+    }
+
+    private void OnEditorTemplateApplied(object? sender, Avalonia.Controls.Primitives.TemplateAppliedEventArgs e)
+    {
+        // NodifyAvalonia 6.6 sets a local ZIndex of 0 on this host even when
+        // DisplayConnectionsOnTop is false, overriding XAML styles. Lower it
+        // after the template finishes so existing wires cannot cover ports.
+        var host = e.NameScope.Find<Control>("PART_ConnectionsHost");
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isDisposed && host != null) host.ZIndex = -1;
+        }, DispatcherPriority.Loaded);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -258,11 +272,35 @@ public partial class GraphEditorView : UserControl, IDisposable
         e.Handled = true;
     }
 
-    public void OnProfileNameKeyDown(object? sender, KeyEventArgs e)
+    public void OnProfileFieldDataContextChanged(object? sender, EventArgs e)
     {
-        if (e.Key == Key.Enter && sender is TextBox field)
+        if (sender is not AutoCompleteBox field || field.DataContext is not TestViewModel vm) return;
+        // In a hidden editor, Avalonia can replay a TextBox change from the previous
+        // DataContext after binding the new one. Restore the current document once
+        // that queued template work has settled; never replace text being edited.
+        Dispatcher.UIThread.Post(() =>
         {
-            if (_viewModel != null) _viewModel.CurrentProfileName = field.Text ?? "";
+            if (ReferenceEquals(field.DataContext, vm) && !field.IsKeyboardFocusWithin)
+                field.SetCurrentValue(AutoCompleteBox.TextProperty,
+                    field.Name == "DeviceNameInput" ? vm.DeviceName : vm.ProfileDescription);
+        }, DispatcherPriority.Background);
+    }
+
+    public void OnProfileFieldLostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not AutoCompleteBox field || _viewModel is not { CanEditGraph: true } vm) return;
+        // AutoCompleteBox queues TextChanged work. Read the editor synchronously so a
+        // Save click or fast focus change cannot commit the previous text instead.
+        var text = field.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()?.Text ?? field.Text ?? "";
+        field.SetCurrentValue(AutoCompleteBox.TextProperty, text);
+        if (field.Name == "DeviceNameInput") vm.DeviceName = text;
+        else vm.ProfileDescription = text;
+    }
+
+    public void OnProfileFieldKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is AutoCompleteBox { IsDropDownOpen: false })
+        {
             Editor.Focus();
             e.Handled = true;
         }

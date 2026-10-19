@@ -90,7 +90,7 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding DeviceType}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <TextBlock Text="{Binding SlaveId, StringFormat='Slave ID: {0}'}"
+                    <TextBlock Text="{Binding SlaveId, StringFormat='Адрес устройства: {0}'}"
                                FontSize="{StaticResource FontCaption}"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                   </StackPanel>

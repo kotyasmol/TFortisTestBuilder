@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -14,6 +14,9 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class ModbusWriteNodeViewModel : NodeViewModel
     {
+        [ObservableProperty] private ModbusArea registerArea;
+        partial void OnRegisterAreaChanged(ModbusArea value) => RestoreSelections();
+        public ModbusArea[] RegisterAreas { get; } = System.Enum.GetValues<ModbusArea>();
         [ObservableProperty] private byte slaveId;
         [ObservableProperty] private ushort address;
         [ObservableProperty] private ushort value;
@@ -67,7 +70,7 @@ namespace TestBuilder.ViewModels.StepVM
                 _selectedRegister = value;
                 OnPropertyChanged();
                 OnRegisterSelectionChanged();
-                if (value != null) Address = (ushort)value.Address;
+                if (value != null) { RegisterArea = value.Area; Address = (ushort)value.Address; }
             }
         }
 
@@ -87,7 +90,7 @@ namespace TestBuilder.ViewModels.StepVM
             AvailableRegisters.Clear();
             foreach (var reg in (_selectedSlave?.RegisterItems ?? Enumerable.Empty<RegisterItem>()).Where(r => !r.IsReadOnly))
                 AvailableRegisters.Add(reg);
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
@@ -97,7 +100,7 @@ namespace TestBuilder.ViewModels.StepVM
             _addressInputInvalid = false;
             UpdateIntegerInputError();
             AddressText = value.ToString(CultureInfo.InvariantCulture);
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
@@ -191,13 +194,14 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
         {
-            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId, VerifyWrite);
+            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId, VerifyWrite, RegisterArea);
         }
 
         public override NodeViewModel Clone() => new ModbusWriteNodeViewModel
         {
             SlaveId = SlaveId,
             Address = Address,
+            RegisterArea = RegisterArea,
             Value = Value,
             UseCurrentSlaveId = UseCurrentSlaveId,
             VerifyWrite = VerifyWrite

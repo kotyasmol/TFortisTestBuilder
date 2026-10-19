@@ -488,6 +488,26 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public async Task ReportLocalCopyRedactsSessionWhileServerReceivesOriginal()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "TestBuilder-redact-" + Guid.NewGuid());
+        try
+        {
+            var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+            var context = new TestContext(new RegisterState());
+            const string report = "session=true=fixture-session-secret\r\nserial_num=true=612447\r\n";
+            context.SetVariable("TestReportText", report);
+            var step = new SendTestReportStep(NullLogger.Instance,"http://report-server.local","TestReportText",
+                "/api/Api.svc/result.json",1000,0,0,true,directory,true,()=>new HttpClient(handler,false));
+            Assert.Equal(StepResult.True,await step.ExecuteAsync(context,default));
+            var saved = await File.ReadAllTextAsync(context.GetVariable<string>("SendReport.LocalPath")!);
+            Assert.DoesNotContain("fixture-session-secret",saved);Assert.Contains("serial_num=true=612447",saved);
+            Assert.Equal(report,context.GetVariable<string>("TestReportText"));Assert.Contains("fixture-session-secret",handler.Body);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory,true); }
+    }
+
+    [Fact]
     public async Task ReportLocalWriteFailureIsReportedWithoutPostingOrThrowing()
     {
         var path = Path.GetTempFileName();

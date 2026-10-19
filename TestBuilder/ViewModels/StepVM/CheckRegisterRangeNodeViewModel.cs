@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Linq;
 using TestBuilder.Domain.Execution;
@@ -13,6 +13,9 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class CheckRegisterRangeNodeViewModel : NodeViewModel
     {
+        [ObservableProperty] private ModbusArea registerArea;
+        partial void OnRegisterAreaChanged(ModbusArea value) => RestoreSelections();
+        public ModbusArea[] RegisterAreas { get; } = System.Enum.GetValues<ModbusArea>();
         [ObservableProperty] private byte slaveId;
         [ObservableProperty] private ushort address;
         [ObservableProperty] private int min;
@@ -21,6 +24,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private bool liveRead;
         [ObservableProperty] private int readAttempts = 1;
         [ObservableProperty] private int readIntervalMs;
+        [ObservableProperty] private string reportName = "";
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -59,7 +63,7 @@ namespace TestBuilder.ViewModels.StepVM
                 _selectedRegister = value;
                 OnPropertyChanged();
                 OnRegisterSelectionChanged();
-                if (value != null) Address = (ushort)value.Address;
+                if (value != null) { RegisterArea = value.Area; Address = (ushort)value.Address; }
             }
         }
 
@@ -79,14 +83,14 @@ namespace TestBuilder.ViewModels.StepVM
             AvailableRegisters.Clear();
             foreach (var reg in (_selectedSlave?.RegisterItems ?? Enumerable.Empty<RegisterItem>()))
                 AvailableRegisters.Add(reg);
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
 
         partial void OnAddressChanged(ushort value)
         {
-            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value);
+            _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == value && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
             OnRegisterSelectionChanged();
         }
@@ -127,19 +131,21 @@ namespace TestBuilder.ViewModels.StepVM
                 modbusService,
                 LiveRead,
                 ReadAttempts,
-                ReadIntervalMs);
+                ReadIntervalMs, RegisterArea, ReportName);
         }
 
         public override NodeViewModel Clone() => new CheckRegisterRangeNodeViewModel
         {
             SlaveId = SlaveId,
             Address = Address,
+            RegisterArea = RegisterArea,
             Min = Min,
             Max = Max,
             UseCurrentSlaveId = UseCurrentSlaveId,
             LiveRead = LiveRead,
             ReadAttempts = ReadAttempts,
-            ReadIntervalMs = ReadIntervalMs
+            ReadIntervalMs = ReadIntervalMs,
+            ReportName = ReportName
         };
     }
 }

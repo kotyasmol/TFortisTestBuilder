@@ -19,6 +19,9 @@ namespace TestBuilder.Domain.Execution
         /// </summary>
         public object? Source { get; init; }
 
+        public bool RunOnlyOnFirstRun { get; init; }
+        public StepResult SkippedResult { get; init; } = StepResult.Next;
+
         public string DisplayName { get; init; } = string.Empty;
 
         /// <summary>

@@ -442,7 +442,7 @@ namespace TestBuilder.ViewModels
 
                 default:
                     StatusTitle = "Тестовая страница ещё не загружена";
-                    StatusDetails = "Параметры появятся после первого Selftest Check или SelftestSnapshot.";
+                    StatusDetails = "Параметры появятся после первой самопроверки устройства.";
                     break;
             }
         }

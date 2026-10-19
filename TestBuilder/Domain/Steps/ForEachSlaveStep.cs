@@ -1,4 +1,5 @@
-﻿using System.Threading;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
@@ -10,6 +11,11 @@ namespace TestBuilder.Domain.Steps
     /// </summary>
     public sealed class ForEachSlaveStep : ITestStep
     {
+        private readonly bool _repeat;
+        private readonly int _repeatCount;
+        private readonly string _indexVariable;
+        private readonly bool _untilSuccess;
+        private readonly int _repeatDelayMs;
         private readonly byte _fromSlaveId;
         private readonly byte _toSlaveId;
         private readonly byte _step;
@@ -23,7 +29,8 @@ namespace TestBuilder.Domain.Steps
             byte step,
             bool stopOnError,
             CompiledGraph bodyGraph,
-            ILogger logger)
+            ILogger logger, bool repeatOnSameSlave = false, int repeatCount = 1,
+            string indexVariable = "iteration", bool untilSuccess = false, int repeatDelayMs = 0)
         {
             _fromSlaveId = fromSlaveId;
             _toSlaveId = toSlaveId;
@@ -31,12 +38,18 @@ namespace TestBuilder.Domain.Steps
             _stopOnError = stopOnError;
             _bodyGraph = bodyGraph;
             _logger = logger;
+            _repeat = repeatOnSameSlave;
+            _repeatCount = repeatCount;
+            _indexVariable = indexVariable;
+            _untilSuccess = untilSuccess;
+            _repeatDelayMs = repeatDelayMs;
         }
 
         public async Task<StepResult> ExecuteAsync(
             TestContext context,
             CancellationToken cancellationToken)
         {
+            if (_repeat) return await RepeatAsync(context, cancellationToken);
             if (_fromSlaveId > _toSlaveId)
             {
                 _logger.Warning(
@@ -88,6 +101,61 @@ namespace TestBuilder.Domain.Steps
                 $"[OK] Цикл For завершён. Диапазон {_fromSlaveId}..{_toSlaveId}.");
 
             return StepResult.Next;
+        }
+        private async Task<StepResult> RepeatAsync(TestContext context, CancellationToken token)
+        {
+            if (_repeatCount is < 1 or > 100000 || _repeatDelayMs is < 0 or > 3600000 ||
+                string.IsNullOrWhiteSpace(_indexVariable) || _indexVariable == "slaveId")
+            {
+                _logger.Warning("[ОШИБКА] For: число повторов 1..100000, задержка 0..3600000 мс; нужна отдельная переменная счётчика.");
+                return StepResult.False;
+            }
+            var previousSlave = context.CurrentSlaveId;
+            var hadIndex = context.Variables.TryGetValue(_indexVariable, out var previousIndex);
+            var initialCritical = context.HasCriticalError;
+            var initialFailure = context.Failure;
+            var initialCriticalFailure = context.CriticalFailure;
+            var reportStart = context.ReportEntries.Count;
+            var anyFailure = false;
+            var executor = new TestExecutor();
+            try
+            {
+                for (var i = 1; i <= _repeatCount; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    await context.WaitWhilePausedAsync(token);
+                    if (i > 1 && _repeatDelayMs > 0) await Task.Delay(_repeatDelayMs, token);
+                    context.CurrentSlaveId = previousSlave;
+                    context.SetVariable(_indexVariable, i);
+                    _logger.Info($"[ШАГ] For: повтор {i}/{_repeatCount}, slave не меняется.");
+                    var iterationReportStart = context.ReportEntries.Count;
+                    var result = await executor.ExecuteAsync(_bodyGraph.StartNode, context, token);
+                    token.ThrowIfCancellationRequested();
+                    var success = result == ExecutionStatus.Completed && context.HasCriticalError == initialCritical &&
+                        !System.Linq.Enumerable.Any(System.Linq.Enumerable.Skip(context.ReportEntries, iterationReportStart), entry => !entry.IsSuccess);
+                    if (success && _untilSuccess) return StepResult.Next;
+                    if (!success)
+                    {
+                        anyFailure = true;
+                        if (!_untilSuccess && _stopOnError) return StepResult.False;
+                        if (_untilSuccess && i < _repeatCount)
+                        {
+                            // Failed attempts are diagnostics, not final product failures.
+                            context.HasCriticalError = initialCritical;
+                            context.Failure = initialFailure;
+                            context.CriticalFailure = initialCriticalFailure;
+                            context.ReportEntries.RemoveRange(reportStart, context.ReportEntries.Count - reportStart);
+                        }
+                    }
+                }
+                return anyFailure ? StepResult.False : StepResult.Next;
+            }
+            finally
+            {
+                context.CurrentSlaveId = previousSlave;
+                if (hadIndex) context.Variables[_indexVariable] = previousIndex!;
+                else context.Variables.Remove(_indexVariable);
+            }
         }
     }
 }

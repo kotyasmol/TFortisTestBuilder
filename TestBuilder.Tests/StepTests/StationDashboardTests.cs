@@ -35,6 +35,7 @@ public class StationDashboardTests
         Assert.Same(group, Assert.Single(vm.StationProfileGroups));
         Assert.Equal(configurationCount, group.Profiles.Count);
         Assert.True(group.IsExpanded);
+        vm.ProductFilter = "Коммутаторы";
         vm.StationProfileSearch = "печать";
         Assert.Same(group, Assert.Single(vm.StationProfileGroups));
         Assert.True(Assert.Single(group.Profiles).IsSelected);
@@ -195,14 +196,14 @@ public class StationDashboardTests
         dashboard.NodeStarted(parent, context);
         dashboard.NodeStarted(loop, context);
         Assert.Equal(2, stage.StepCount);
-        Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+        Assert.Equal("Шаг 1 из 2 — Цикл", stage.StepProgressText);
         for (var iteration = 0; iteration < 4; iteration++)
         {
             dashboard.NodeStarted(inner, context);
-            Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+            Assert.Equal("Шаг 1 из 2 — Цикл", stage.StepProgressText);
             dashboard.NodeCompleted(inner, StepResult.True, context);
             dashboard.NodeFinished(inner, context);
-            Assert.Equal("Шаг 1 из 2 — Цикл For", stage.StepProgressText);
+            Assert.Equal("Шаг 1 из 2 — Цикл", stage.StepProgressText);
         }
     }
 

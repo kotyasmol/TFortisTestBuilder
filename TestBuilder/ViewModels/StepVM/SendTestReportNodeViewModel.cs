@@ -34,7 +34,9 @@ namespace TestBuilder.ViewModels.StepVM
             Output.Add(FalseOut);
         }
 
-        public ITestStep CreateStep(ILogger logger) =>
+        public ITestStep CreateStep(ILogger logger) => CreateStep(logger, null);
+
+        internal ITestStep CreateStep(ILogger logger, System.Func<System.Net.Http.HttpClient>? clientFactory) =>
             new SendTestReportStep(
                 logger,
                 ServerBaseUrlResolver.ResolveFromSettings(ServerBaseUrl),
@@ -45,7 +47,8 @@ namespace TestBuilder.ViewModels.StepVM
                 RetryDelayMs,
                 SaveLocalCopy,
                 LocalReportsDirectory,
-                FailOnError);
+                FailOnError,
+                clientFactory ?? (() => new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false })));
 
         public override NodeViewModel Clone() => new SendTestReportNodeViewModel
         {

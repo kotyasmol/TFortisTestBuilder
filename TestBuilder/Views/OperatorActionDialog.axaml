@@ -23,10 +23,12 @@
                       Margin="0,16,0,16"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <TextBlock Text="{Binding Message}"
+            <StackPanel Spacing="12"><TextBlock Text="{Binding Message}"
                        FontSize="14"
                        Opacity="0.8"
                        TextWrapping="Wrap" />
+            <TextBox x:Name="InputBox" Watermark="Введите или отсканируйте значение" MaxLength="1024" />
+            </StackPanel>
         </ScrollViewer>
 
         <StackPanel Grid.Row="2"

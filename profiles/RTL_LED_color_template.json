@@ -1,0 +1,848 @@
+{
+  "name": "Шаблон проверки цвета LED",
+  "nodes": [
+    {
+      "type": "Start (board v1)",
+      "id": "0",
+      "x": 80,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    },
+    {
+      "type": "Subtest",
+      "name": "Цвет LED — две попытки",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "boardElements": "",
+      "bodyGraph": {
+        "name": "Цвет LED — две попытки",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80,
+            "runOnlyOnFirstRun": false
+          },
+          {
+            "type": "Delay",
+            "milliseconds": 2000,
+            "id": "1",
+            "x": 320,
+            "y": 80,
+            "runOnlyOnFirstRun": false
+          },
+          {
+            "type": "For Slaves (repeat v1)",
+            "repeatOnSameSlave": true,
+            "repeatCount": 2,
+            "repeatDelayMs": 2000,
+            "indexVariable": "attempt",
+            "untilSuccess": true,
+            "stopOnError": true,
+            "body": {
+              "name": "Повтор",
+              "nodes": [
+                {
+                  "type": "Body Start",
+                  "id": "0",
+                  "x": 80,
+                  "y": 80,
+                  "runOnlyOnFirstRun": false
+                },
+                {
+                  "type": "Check LED Color",
+                  "checkLedColor": {
+                    "slaveId": 1,
+                    "useCurrentSlaveId": false,
+                    "redAddress": 2437,
+                    "greenAddress": 2453,
+                    "blueAddress": 2469,
+                    "whiteAddress": 2421,
+                    "expectedColor": "green",
+                    "colorMargin": 20,
+                    "minIntensity": 50,
+                    "outputPrefix": "Led1A"
+                  },
+                  "id": "1",
+                  "x": 352,
+                  "y": 80,
+                  "runOnlyOnFirstRun": false
+                },
+                {
+                  "type": "Body End",
+                  "id": "2",
+                  "x": 880,
+                  "y": 80,
+                  "runOnlyOnFirstRun": false
+                }
+              ],
+              "connections": [
+                {
+                  "sourceNodeId": "0",
+                  "sourceConnector": "Выход",
+                  "targetNodeId": "1",
+                  "targetConnector": "In"
+                },
+                {
+                  "sourceNodeId": "1",
+                  "sourceConnector": "True",
+                  "targetNodeId": "2",
+                  "targetConnector": "Вход"
+                }
+              ]
+            },
+            "id": "2",
+            "x": 800,
+            "y": 80,
+            "runOnlyOnFirstRun": false
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1296,
+            "y": 80,
+            "runOnlyOnFirstRun": false
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "Выход",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "1",
+      "x": 320,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    },
+    {
+      "type": "End",
+      "id": "2",
+      "x": 864,
+      "y": 80,
+      "runOnlyOnFirstRun": false
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "Success",
+      "targetNodeId": "2",
+      "targetConnector": "Вход"
+    }
+  ],
+  "productKind": "Board",
+  "deviceModel": "RTL-POE",
+  "hardware": {
+    "BaudRate": 9600,
+    "Parity": 0,
+    "DataBits": 8,
+    "StopBits": 1,
+    "PollIntervalMs": 500,
+    "Devices": [
+      {
+        "Name": "RTL-POE",
+        "SlaveId": 1,
+        "IdentificationValue": 105,
+        "Registers": [
+          {
+            "Address": 2400,
+            "Name": "StandSerialNumber",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2401,
+            "Name": "RunButton",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2402,
+            "Name": "NextButton",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2403,
+            "Name": "Enable52V",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2404,
+            "Name": "Voltage3V3Meas",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2405,
+            "Name": "PowerGood1AChannel1",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2406,
+            "Name": "PowerGood1BChannel2",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2407,
+            "Name": "PowerGood2AChannel3",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2408,
+            "Name": "PowerGood2BChannel4",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2409,
+            "Name": "PowerGood3AChannel5",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2410,
+            "Name": "PowerGood3BChannel6",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2411,
+            "Name": "PowerGood4AChannel7",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2412,
+            "Name": "PowerGood4BChannel8",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2413,
+            "Name": "PowerGood5AChannel9",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2414,
+            "Name": "PowerGood5BChannel10",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2415,
+            "Name": "PowerGood6AChannel11",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2416,
+            "Name": "PowerGood6BChannel12",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2417,
+            "Name": "PowerGood7AChannel13",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2418,
+            "Name": "PowerGood7BChannel14",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2419,
+            "Name": "PowerGood8AChannel15",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2420,
+            "Name": "PowerGood8BChannel16",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2421,
+            "Name": "White1AChannel1",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2422,
+            "Name": "White1BChannel2",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2423,
+            "Name": "White2AChannel3",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2424,
+            "Name": "White2BChannel4",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2425,
+            "Name": "White3AChannel5",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2426,
+            "Name": "White3BChannel6",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2427,
+            "Name": "White4AChannel7",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2428,
+            "Name": "White4BChannel8",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2429,
+            "Name": "White5AChannel9",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2430,
+            "Name": "White5BChannel10",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2431,
+            "Name": "White6AChannel11",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2432,
+            "Name": "White6BChannel12",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2433,
+            "Name": "White7AChannel13",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2434,
+            "Name": "White7BChannel14",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2435,
+            "Name": "White8AChannel15",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2436,
+            "Name": "White8BChannel16",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2437,
+            "Name": "Red1AChannel1",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2438,
+            "Name": "Red1BChannel2",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2439,
+            "Name": "Red2AChannel3",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2440,
+            "Name": "Red2BChannel4",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2441,
+            "Name": "Red3AChannel5",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2442,
+            "Name": "Red3BChannel6",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2443,
+            "Name": "Red4AChannel7",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2444,
+            "Name": "Red4BChannel8",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2445,
+            "Name": "Red5AChannel9",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2446,
+            "Name": "Red5BChannel10",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2447,
+            "Name": "Red6AChannel11",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2448,
+            "Name": "Red6BChannel12",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2449,
+            "Name": "Red7AChannel13",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2450,
+            "Name": "Red7BChannel14",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2451,
+            "Name": "Red8AChannel15",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2452,
+            "Name": "Red8BChannel16",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2453,
+            "Name": "Green1AChannel1",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2454,
+            "Name": "Green1BChannel2",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2455,
+            "Name": "Green2AChannel3",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2456,
+            "Name": "Green2BChannel4",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2457,
+            "Name": "Green3AChannel5",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2458,
+            "Name": "Green3BChannel6",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2459,
+            "Name": "Green4AChannel7",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2460,
+            "Name": "Green4BChannel8",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2461,
+            "Name": "Green5AChannel9",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2462,
+            "Name": "Green5BChannel10",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2463,
+            "Name": "Green6AChannel11",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2464,
+            "Name": "Green6BChannel12",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2465,
+            "Name": "Green7AChannel13",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2466,
+            "Name": "Green7BChannel14",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2467,
+            "Name": "Green8AChannel15",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2468,
+            "Name": "Green8BChannel16",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2469,
+            "Name": "Blue1AChannel1",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2470,
+            "Name": "Blue1BChannel2",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2471,
+            "Name": "Blue2AChannel3",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2472,
+            "Name": "Blue2BChannel4",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2473,
+            "Name": "Blue3AChannel5",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2474,
+            "Name": "Blue3BChannel6",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2475,
+            "Name": "Blue4AChannel7",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2476,
+            "Name": "Blue4BChannel8",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2477,
+            "Name": "Blue5AChannel9",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2478,
+            "Name": "Blue5BChannel10",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2479,
+            "Name": "Blue6AChannel11",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2480,
+            "Name": "Blue6BChannel12",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2481,
+            "Name": "Blue7AChannel13",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2482,
+            "Name": "Blue7BChannel14",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2483,
+            "Name": "Blue8AChannel15",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2484,
+            "Name": "Blue8BChannel16",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2485,
+            "Name": "PoeBank",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2486,
+            "Name": "PoeId",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2487,
+            "Name": "PoePortEn",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2488,
+            "Name": "PoeInt",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2489,
+            "Name": "PoeReset",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2490,
+            "Name": "PoeMode",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2491,
+            "Name": "Voltage3V3MeasCalibr",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2492,
+            "Name": "Voltage3V3Enable",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2493,
+            "Name": "UartTestStart",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 2494,
+            "Name": "UartTestResult",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2495,
+            "Name": "UartCh1Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2496,
+            "Name": "UartCh2Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2497,
+            "Name": "UartCh3Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2498,
+            "Name": "UartCh4Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2499,
+            "Name": "UartCh5Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2500,
+            "Name": "UartCh6Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2501,
+            "Name": "UartCh7Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2502,
+            "Name": "UartCh8Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2503,
+            "Name": "UartCh9Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2504,
+            "Name": "UartCh10Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2505,
+            "Name": "UartCh11Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2506,
+            "Name": "UartCh12Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2507,
+            "Name": "UartCh13Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2508,
+            "Name": "UartCh14Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2509,
+            "Name": "UartCh15Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2510,
+            "Name": "UartCh16Voltage",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 2511,
+            "Name": "PoeProg",
+            "Writable": true,
+            "Category": "Управление"
+          }
+        ],
+        "IdentificationAddress": 0
+      }
+    ]
+  }
+}

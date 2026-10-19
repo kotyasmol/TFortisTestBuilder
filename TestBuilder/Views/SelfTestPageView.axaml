@@ -268,7 +268,7 @@
                      FontWeight="SemiBold"
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <TextBlock Text="Панель заполнится автоматически после получения XML от DUT."
+          <TextBlock Text="Панель заполнится после получения данных самопроверки устройства."
                      HorizontalAlignment="Center"
                      Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>

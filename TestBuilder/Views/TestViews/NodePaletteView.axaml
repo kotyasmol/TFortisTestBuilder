@@ -68,7 +68,14 @@
                               BorderThickness="0"
                               PointerPressed="OnNodePressed"
                               PointerMoved="OnNodeDrag"
-                              PointerExited="OnNodeExited">
+                              PointerExited="OnNodeExited"
+                              ToolTip.ShowDelay="400" ToolTip.Placement="Left">
+                        <ToolTip.Tip>
+                          <StackPanel MaxWidth="300" Spacing="6">
+                            <TextBlock Text="{Binding DisplayTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding HelpSummary}" TextWrapping="Wrap" />
+                          </StackPanel>
+                        </ToolTip.Tip>
 
                         <Grid ColumnDefinitions="Auto,*">
 
@@ -77,7 +84,7 @@
                                     Data="M1 1 H3 V3 H1 Z M7 1 H9 V3 H7 Z M1 6 H3 V8 H1 Z M7 6 H9 V8 H7 Z M1 11 H3 V13 H1 Z M7 11 H9 V13 H7 Z" />
 
                           <TextBlock Grid.Column="1"
-                                     Text="{Binding Title}"
+                                     Text="{Binding DisplayTitle}"
                                      FontSize="{StaticResource FontBody}"
                                      FontWeight="Normal"
                                      Foreground="{DynamicResource TextPrimaryBrush}"

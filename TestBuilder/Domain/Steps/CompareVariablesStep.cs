@@ -103,6 +103,7 @@ namespace TestBuilder.Domain.Steps
                 VariableComparisonType.Boolean => ParseBoolean(left) == ParseBoolean(right),
                 VariableComparisonType.HexString => string.Equals(NormalizeHex(left), NormalizeHex(right), StringComparison.OrdinalIgnoreCase),
                 VariableComparisonType.Version => CompareVersions(left, right) == 0,
+                VariableComparisonType.VersionAtLeast => CompareVersions(left, right) >= 0,
                 VariableComparisonType.MacAddress => string.Equals(NormalizeMac(left), NormalizeMac(right), StringComparison.OrdinalIgnoreCase),
                 _ => throw new FormatException($"Неизвестный тип сравнения: {comparisonType}.")
             };

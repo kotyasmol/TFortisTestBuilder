@@ -16,7 +16,8 @@ namespace TestBuilder.Domain.Steps
         Boolean,
         HexString,
         Version,
-        MacAddress
+        MacAddress,
+        VersionAtLeast
     }
 
     public sealed class CheckVariableEqualityStep : ITestStep
@@ -138,12 +139,13 @@ namespace TestBuilder.Domain.Steps
                 VariableComparisonType.Boolean => ParseBoolean(actual) == ParseBoolean(expected),
                 VariableComparisonType.HexString => string.Equals(NormalizeHex(actual), NormalizeHex(expected), StringComparison.OrdinalIgnoreCase),
                 VariableComparisonType.Version => CompareVersions(actual, expected) == 0,
+                VariableComparisonType.VersionAtLeast => CompareVersions(actual, expected) >= 0,
                 VariableComparisonType.MacAddress => string.Equals(NormalizeMac(actual), NormalizeMac(expected), StringComparison.OrdinalIgnoreCase),
                 _ => throw new FormatException($"Неизвестный тип сравнения: {comparisonType}.")
             };
         }
 
-        private static int CompareVersions(object actual, string expected)
+        internal static int CompareVersions(object actual, string expected)
         {
             var actualVersion = ParseVersion(ToInvariantString(actual));
             var expectedVersion = ParseVersion(expected);
