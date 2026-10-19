@@ -58,7 +58,7 @@ try {
             Result 'WARN' ("Npcap установлен, состояние службы: $($npcap.Status). Проверьте перед DataTest.")
         }
     } else {
-        Result 'WARN' 'Npcap не найден. DataTest требует отдельной установки: https://npcap.com/#download'
+        Result 'WARN' 'Npcap не найден. Нужен для DataTest коммутаторов; для SW/PoE не требуется: https://npcap.com/#download'
     }
 
     $ports = @([System.IO.Ports.SerialPort]::GetPortNames())
@@ -81,8 +81,8 @@ try {
     }
 
     $settings = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'testbuilder.settings') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($settings.standId -eq '123' -or [string]::IsNullOrWhiteSpace($settings.standId)) {
-        Result 'WARN' 'Stand ID оставлен заводским (123). Укажите фактический номер стенда в настройках.'
+    if ($settings.standId -in @('123', 'тест') -or [string]::IsNullOrWhiteSpace($settings.standId)) {
+        Result 'WARN' 'Stand ID оставлен исходным. Перед отправкой производственных отчётов укажите фактический номер стенда.'
     }
     Result 'INFO' 'Сетевые карты компьютера (привязка DataTest выполняется в приложении):'
     foreach ($adapter in @(Get-NetAdapter -Physical)) {

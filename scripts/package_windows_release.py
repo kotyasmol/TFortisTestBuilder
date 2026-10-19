@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build a Windows portable release. Python and .NET SDK are build tools only."""
 import argparse
+import base64
 import hashlib
 import json
 import shutil
@@ -105,6 +106,11 @@ def validate_bundle(bundle, profiles):
     for profile in profiles:
         if sha256(profile) != sha256(bundle / "profiles" / profile.name):
             raise RuntimeError(f"Profile content changed: {profile.name}")
+        data = json.loads(profile.read_text(encoding="utf-8-sig"))
+        if data.get("productKind") == "Board":
+            picture = base64.b64decode(data.get("board", {}).get("ImageBase64", ""), validate=True)
+            if not picture:
+                raise RuntimeError(f"Board picture missing: {profile.name}")
     # Check the apphost architecture without requiring Windows on the build host.
     binary = (bundle / "TestBuilder.exe").read_bytes()
     pe_offset = int.from_bytes(binary[60:64], "little")
@@ -115,14 +121,34 @@ def validate_bundle(bundle, profiles):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--browser-zip", type=Path, required=True, help="Downloaded official chrome-win64.zip")
+    browser_input = parser.add_mutually_exclusive_group(required=True)
+    browser_input.add_argument("--browser-zip", type=Path, help="Downloaded official chrome-win64.zip")
+    browser_input.add_argument("--browser-bundle", type=Path, help="Previous local release with a verified browser manifest")
+    parser.add_argument("--version", help="Release version; defaults to the project version")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts")
     args = parser.parse_args()
     browser = json.loads((PACKAGING / "browser.json").read_text())
-    if sha256(args.browser_zip) != browser["sha256"]:
+    if args.browser_zip and sha256(args.browser_zip) != browser["sha256"]:
         raise RuntimeError("Browser archive SHA-256 does not match packaging/windows/browser.json")
+    browser_files = []
+    if args.browser_bundle:
+        previous = json.loads((args.browser_bundle / "release-manifest.json").read_text())
+        if previous.get("browser") != browser:
+            raise RuntimeError("Previous browser metadata does not match the pinned version")
+        browser_files = [f for f in previous["files"] if f["path"].startswith("Browser/")]
+        if not browser_files:
+            raise RuntimeError("Previous manifest has no browser files")
+        expected = {f["path"] for f in browser_files}
+        actual = {p.relative_to(args.browser_bundle).as_posix()
+                  for p in (args.browser_bundle / "Browser").rglob("*") if p.is_file()}
+        if expected != actual:
+            raise RuntimeError("Previous browser file inventory differs from its manifest")
+        for entry in browser_files:
+            source = (args.browser_bundle / entry["path"]).resolve()
+            if not source.is_relative_to((args.browser_bundle / "Browser").resolve()) or sha256(source) != entry["sha256"]:
+                raise RuntimeError(f"Previous browser file is not verified: {entry['path']}")
     project = ET.parse(ROOT / "TestBuilder/TestBuilder.csproj").getroot()
-    version = project.findtext("PropertyGroup/Version")
+    version = args.version or project.findtext("PropertyGroup/Version")
     if not version:
         raise RuntimeError("Set the release version in TestBuilder.csproj")
     name = f"TFortisTestBuilder-{version}-win-x64"
@@ -137,15 +163,22 @@ def main():
         bundle = Path(temporary) / name
         subprocess.run(["dotnet", "publish", "TestBuilder/TestBuilder.csproj", "-c", "Release",
                         "-r", "win-x64", "--self-contained", "true", "-p:PublishTrimmed=false",
+                        f"-p:Version={version}",
                         "-p:DebugSymbols=false", "-p:DebugType=None", "-o", str(bundle)], cwd=ROOT, check=True)
         browser_root = bundle / "Browser"
         browser_root.mkdir()
-        with zipfile.ZipFile(args.browser_zip) as source:
-            for item in source.infolist():
-                destination = (browser_root / item.filename).resolve()
-                if not destination.is_relative_to(browser_root.resolve()) or not item.filename.startswith("chrome-win64/"):
-                    raise RuntimeError(f"Unexpected browser archive entry: {item.filename}")
-            source.extractall(browser_root)
+        if args.browser_zip:
+            with zipfile.ZipFile(args.browser_zip) as source:
+                for item in source.infolist():
+                    destination = (browser_root / item.filename).resolve()
+                    if not destination.is_relative_to(browser_root.resolve()) or not item.filename.startswith("chrome-win64/"):
+                        raise RuntimeError(f"Unexpected browser archive entry: {item.filename}")
+                source.extractall(browser_root)
+        else:
+            for entry in browser_files:
+                destination = bundle / entry["path"]
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(args.browser_bundle / entry["path"], destination)
         for filename in ("Start-TestBuilder.cmd", "Check-Installation.cmd", "Check-Installation.ps1", "README-FIRST.txt"):
             encoding = "utf-8-sig" if filename.endswith(".ps1") else "utf-8"
             text = (PACKAGING / filename).read_text(encoding="utf-8-sig")
@@ -160,7 +193,7 @@ def main():
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
         write_json(bundle / "testbuilder.settings", {
-            "graphsFolder": "", "serverBaseUrl": "https://iccid.fort-telecom.ru", "standId": "123",
+            "graphsFolder": "", "serverBaseUrl": "https://iccid.fort-telecom.ru", "standId": "тест",
             "theme": "Light", "engineerMode": False, "enableFileLogging": True,
             "logFolder": "", "dataTestAdapterIds": {}})
         profiles = sorted((ROOT / "profiles").glob("*.json"))
