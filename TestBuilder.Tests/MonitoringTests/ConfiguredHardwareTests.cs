@@ -1,4 +1,5 @@
 using Avalonia.Headless;
+using Avalonia.Threading;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Domain.Monitoring;
@@ -11,6 +12,65 @@ namespace TestBuilder.Tests.MonitoringTests;
 [Collection("Graph editor UI")]
 public class ConfiguredHardwareTests
 {
+    [Fact]
+    public async Task CancelAfterReadBeforeUiUpdateDoesNotRaiseUnhandledExceptionOrPublishValues()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var bus = new RecordingBus();
+            var model = new ConfiguredSlaveModel(new() { Registers = new()
+                { new() { Address = 10 }, new() { Address = 20 } } }, bus);
+            using var cancellation = new CancellationTokenSource();
+            using var queued = new ManualResetEventSlim();
+            var unhandled = new List<Exception>();
+            var uiCancellations = new List<Exception>();
+            void OnFirstChance(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+            {
+                if (e.Exception is OperationCanceledException && Dispatcher.UIThread.CheckAccess())
+                    uiCancellations.Add(e.Exception);
+            }
+            void OnUnhandled(object? sender, DispatcherUnhandledExceptionEventArgs e)
+            {
+                unhandled.Add(e.Exception);
+                e.Handled = true;
+            }
+            Dispatcher.UIThread.UnhandledException += OnUnhandled;
+            AppDomain.CurrentDomain.FirstChanceException += OnFirstChance;
+            try
+            {
+                // Keep the UI thread occupied until the background poll queues publication.
+                var poll = Task.Run(() =>
+                {
+                    var pending = model.PollAsync(cancellation.Token);
+                    queued.Set();
+                    return pending;
+                });
+                Assert.True(queued.Wait(TimeSpan.FromSeconds(2)));
+                Assert.False(poll.IsCompleted);
+                Assert.Single(bus.Reads);
+                cancellation.Cancel();
+                Dispatcher.UIThread.RunJobs();
+                Assert.Empty(uiCancellations);
+                AppDomain.CurrentDomain.FirstChanceException -= OnFirstChance;
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => poll.WaitAsync(TimeSpan.FromSeconds(2)));
+                Assert.Empty(unhandled);
+                Assert.All(model.RegisterItems, register => Assert.Equal(0, register.Value));
+                Assert.Single(bus.Reads);
+
+                // Cancellation of the old poll must not prevent the next session from updating.
+                await model.PollAsync();
+                Assert.Equal(new[] { 10, 20 }, model.RegisterItems.Select(register => (int)register.Value));
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.FirstChanceException -= OnFirstChance;
+                Dispatcher.UIThread.UnhandledException -= OnUnhandled;
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public void Apk03PresetsPreserveAllLegacyRegisterAddressesAndAccessModes()
     {

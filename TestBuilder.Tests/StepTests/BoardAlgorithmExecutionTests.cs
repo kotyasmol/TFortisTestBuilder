@@ -64,6 +64,7 @@ public class BoardAlgorithmExecutionTests
     static void LoadFast(TestViewModel vm,string filename)
     {
         var path=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../profiles",filename));GraphSerializer.Deserialize(File.ReadAllText(path),vm);
+        foreach (var console in vm.RootGraph.Hardware!.ConsoleDevices) console.PortName = "SIM-DUT";
         // Only time and external delivery are removed. All hardware operations and decisions remain.
         foreach(var node in BoardProfileTests.All(vm.RootGraph))
         {

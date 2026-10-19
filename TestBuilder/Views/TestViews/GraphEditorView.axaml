@@ -927,10 +927,15 @@
                   </nodify:Node.OutputConnectorTemplate>
 
                   <StackPanel Margin="12" Spacing="6" Width="260">
-                    <TextBlock Text="Порт (пусто — из настроек)" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding PortName}" />
-                    <TextBlock Text="Скорость" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding BaudRate}" />
+                    <TextBlock Text="Устройство из оборудования профиля" TextWrapping="Wrap" />
+                    <views:ConsoleDeviceSelector Devices="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).ConsoleDeviceChoices}"
+                                                 DeviceId="{Binding DeviceId, Mode=TwoWay}" HorizontalAlignment="Stretch" />
+                    <StackPanel IsVisible="{Binding UsesLegacyConnection}" Spacing="6">
+                      <TextBlock Text="Порт (пусто — из старых настроек)" TextWrapping="Wrap" />
+                      <TextBox Text="{Binding PortName}" />
+                      <TextBlock Text="Скорость" />
+                      <TextBox Text="{Binding BaudRate}" />
+                    </StackPanel>
                     <TextBlock Text="Команда" TextWrapping="Wrap" />
                     <TextBox Text="{Binding Command}" AcceptsReturn="True" MinHeight="60" />
                     <TextBlock Text="Маркер конца (пусто — тишина)" TextWrapping="Wrap" />

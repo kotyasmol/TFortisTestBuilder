@@ -29,6 +29,9 @@ public sealed class DeviceDefinition
 }
 public sealed class HardwareConfiguration
 {
+    // Null preserves the workplace port of old profiles; empty explicitly means automatic search.
+    public string? PortName { get; set; }
+    public List<ConsoleDeviceDefinition> ConsoleDevices { get; set; } = new();
     public int BaudRate { get; set; } = 9600;
     public Parity Parity { get; set; } = Parity.None;
     public int DataBits { get; set; } = 8;
@@ -37,6 +40,14 @@ public sealed class HardwareConfiguration
     public List<DeviceDefinition> Devices { get; set; } = new();
     public void Validate()
     {
+        if (ConsoleDevices == null || ConsoleDevices.Count > 64 || ConsoleDevices.Any(d => d == null) ||
+            ConsoleDevices.Select(d => d.Id).Distinct(StringComparer.Ordinal).Count() != ConsoleDevices.Count)
+            throw new InvalidOperationException("Нужны уникальные коды консольных устройств (не более 64).");
+        foreach (var console in ConsoleDevices) console.Validate();
+        var ports = ConsoleDevices.Select(d => d.PortName?.Trim()).Append(PortName?.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+        if (ports.Distinct(StringComparer.OrdinalIgnoreCase).Count() != ports.Length)
+            throw new InvalidOperationException("Modbus и консольные устройства должны использовать разные COM-порты.");
         if (BaudRate is < 300 or > 1000000 || DataBits is < 5 or > 8 ||
             !Enum.IsDefined(Parity) || !Enum.IsDefined(StopBits) || StopBits == StopBits.None ||
             PollIntervalMs is < 100 or > 60000)

@@ -34,9 +34,13 @@ public sealed class ConfiguredSlaveModel : SlaveModelBase
                 if (values.Length != end - i) throw new InvalidOperationException("Неполный ответ Modbus.");
                 var offset = i;
                 await Dispatcher.UIThread.InvokeAsync(() => {
-                    token.ThrowIfCancellationRequested();
+                    // A profile switch can cancel this poll while publication is queued.
+                    // Do not throw from the UI callback: cancellation belongs to the
+                    // awaiting poll, where RegisterMonitor handles it normally.
+                    if (token.IsCancellationRequested) return;
                     for (int j = 0; j < values.Length; j++) ordered[offset + j].Value = values[j];
                 });
+                token.ThrowIfCancellationRequested();
                 i = end;
             }
         }

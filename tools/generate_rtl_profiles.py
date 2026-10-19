@@ -37,7 +37,7 @@ def check(a,mi,ma=None,report_name=''): return n('Check Register Range',slaveId=
 def wait(a,v,ms=60000): return n('Wait Until',slaveId=1,address=a,expectedValue=v,durationMs=ms,liveRead=False)
 def wait_range(a,mi,ma,interval=500,count=120):
  node=check(a,mi,ma);node.update(readAttempts=count,readIntervalMs=interval);return node
-def console(command,output='Console.Response',timeout=10000):return n('Serial Console',serialConsole=dict(portName='',baudRate=115200,command=command,responseTerminator='',quietMs=500,timeoutMs=timeout,outputVariableName=output))
+def console(command,output='Console.Response',timeout=10000):return n('Serial Console',serialConsole=dict(deviceId='dut',portName='',baudRate=115200,command=command,responseTerminator='',quietMs=500,timeoutMs=timeout,outputVariableName=output))
 def parse(selector,var='Parsed.Value',source='Console.Response',typ='String',mode='Json'):return n('Parse Response',parseResponse=dict(sourceVariableName=source,parseMode=mode,selector=selector,valueType=typ,outputVariableName=var))
 def eq(var,expected,typ='String'):return n('Check Variable Equality',variableName=var,expectedValue=str(expected),comparisonType=typ)
 def param(name):return "ubus call tf_hwsys getParam '"+json.dumps(dict(name=name),separators=(',',':'))+"'"
@@ -57,7 +57,7 @@ def failure_report(g):
  body['connections'] += [dict(sourceNodeId='1',sourceConnector='False',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='True',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='False',targetNodeId='3',targetConnector='In')]
  stage.update(id='failure-report',x=100,y=2500);g['nodes'].append(stage)
 def label():return n('Print Label',printerName='TSC TE310',serialVariableName='SerialNumber',copies=1,useQtProZplFormat=False,failOnPrinterError=True)
-def hardware(kind):return dict(BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
+def hardware(kind):return dict(PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
 board_names = {'ConsoleStatus': 'Консоль', 'CrStatus': 'Батарейка CR2032', 'FlashStatus': 'Флеш-память', 'I2CStatus': 'Датчик I²C', 'K5TestStatus': 'Узел K5', 'PoeStatus': 'Контроллер PoE', 'RelayStatus': 'Реле', 'Rs485Status': 'Интерфейс RS-485', 'RtlStatus': 'Коммутатор', 'Sensor1Status': 'Датчик 1', 'Sensor2Status': 'Датчик 2', 'TamperStatus': 'Датчик вскрытия', 'V11Status': 'Питание 1,1 В', 'V15Status': 'Питание 1,5 В', 'V33Status': 'Питание 3,3 В', '3V3': 'Питание 3,3 В', 'PoeTotal1_4': 'Питание PoE портов 1–4', 'PoeTotal5_8': 'Питание PoE портов 5–8', 'Spi_swd_uart93': 'Интерфейсы SPI, SWD и UART', 'Led1A': 'Светодиод порта 1A', 'Poe1A': 'Питание PoE порта 1A', 'Led1B': 'Светодиод порта 1B', 'Poe1B': 'Питание PoE порта 1B', 'Led2A': 'Светодиод порта 2A', 'Poe2A': 'Питание PoE порта 2A', 'Led2B': 'Светодиод порта 2B', 'Poe2B': 'Питание PoE порта 2B', 'Led3A': 'Светодиод порта 3A', 'Poe3A': 'Питание PoE порта 3A', 'Led3B': 'Светодиод порта 3B', 'Poe3B': 'Питание PoE порта 3B', 'Led4A': 'Светодиод порта 4A', 'Poe4A': 'Питание PoE порта 4A', 'Led4B': 'Светодиод порта 4B', 'Poe4B': 'Питание PoE порта 4B', 'Led5A': 'Светодиод порта 5A', 'Poe5A': 'Питание PoE порта 5A', 'Led5B': 'Светодиод порта 5B', 'Poe5B': 'Питание PoE порта 5B', 'Led6A': 'Светодиод порта 6A', 'Poe6A': 'Питание PoE порта 6A', 'Led6B': 'Светодиод порта 6B', 'Poe6B': 'Питание PoE порта 6B', 'Led7A': 'Светодиод порта 7A', 'Poe7A': 'Питание PoE порта 7A', 'Led7B': 'Светодиод порта 7B', 'Poe7B': 'Питание PoE порта 7B', 'Led8A': 'Светодиод порта 8A', 'Poe8A': 'Питание PoE порта 8A', 'Led8B': 'Светодиод порта 8B', 'Poe8B': 'Питание PoE порта 8B'}
 def save(filename,g):
  if filename in ("RTL_SW_board.json", "RTL_POE_board.json"):
@@ -129,7 +129,7 @@ sw.append(sub('Этикетка платы 30×10 мм',[label()]))
 cleanup=collect('Снятие питания SW',[sub('Отключить '+str(a),[write(a,0)]) for a in [2301,2302,2307,2385]])
 cleanup['runOnFailure']=True
 sw.append(cleanup)
-g=graph('RTL-SW · проверка платы · параметры RTL_v1',sw);g.update(productKind='Board',deviceModel='RTL-SW',configurationName='Ручная прошивка · параметры RTL_v1',hardware=hardware('RTL-SW'),board=swboard);g['nodes'][0]['type']='Start (board v1)';failure_report(g);save('RTL_SW_board.json',g)
+g=graph('RTL-SW · проверка платы · параметры RTL_v1',sw);g.update(productKind='Board',deviceModel='RTL-SW',configurationName='Ручная прошивка · параметры RTL_v1',hardware=hardware('RTL-SW'),board=swboard);g['nodes'][0]['type']='Start (connections v1)';failure_report(g);save('RTL_SW_board.json',g)
 # PoE areas come from disjoint contours of the original SVG, converted offline.
 poeboard=json.loads(Path(sys.argv[2]).read_text())
 def poereg(*names):return ','.join(r['Id'] for r in poeboard['Regions'] if r['Name'] in names)
@@ -159,9 +159,9 @@ poe.append(collect('UART — напряжения 16 каналов',[sub('UART 
 poe.append(sub('Отчёт TestBuilder',report()))
 poe.append(sub('Этикетка платы 30×10 мм',[label()],isEnabled=False,description='В исходном PoE алгоритме обязательной печати в конце нет; можно включить по регламенту участка.'))
 cleanup=collect('Снятие питания PoE',[sub('Отключить '+str(a),[write(a,0)]) for a in [2403,2492,2489,2511]]);cleanup['runOnFailure']=True;poe.append(cleanup)
-g=graph('RTL-PoE · проверка платы · параметры RTL_v1',poe);g.update(productKind='Board',deviceModel='RTL-POE',configurationName='Ручная прошивка · параметры RTL_v1',hardware=hardware('RTL-POE'),board=poeboard);g['nodes'][0]['type']='Start (board v1)';failure_report(g);save('RTL_POE_board.json',g)
-template=graph('Шаблон проверки цвета LED',[sub('Цвет LED — две попытки',copy.deepcopy(leds[0]['bodyGraph']['nodes'][1:-1]))]);template.update(productKind='Board',deviceModel='RTL-POE',hardware=hardware('RTL-POE'));template['nodes'][0]['type']='Start (board v1)';save('RTL_LED_color_template.json',template)
-manual=graph('Ручная печать этикетки платы',[n('Print Label',printerName='TSC TE310',useManualSerialNumber=True,manualSerialNumber='',copies=1,useQtProZplFormat=False,failOnPrinterError=True)]);manual.update(productKind='Board',configurationName='30×10 мм · полный серийный номер');manual['nodes'][0]['type']='Start (board v1)';save('board_manual_label.json',manual)
+g=graph('RTL-PoE · проверка платы · параметры RTL_v1',poe);g.update(productKind='Board',deviceModel='RTL-POE',configurationName='Ручная прошивка · параметры RTL_v1',hardware=hardware('RTL-POE'),board=poeboard);g['nodes'][0]['type']='Start (connections v1)';failure_report(g);save('RTL_POE_board.json',g)
+template=graph('Шаблон проверки цвета LED',[sub('Цвет LED — две попытки',copy.deepcopy(leds[0]['bodyGraph']['nodes'][1:-1]))]);template.update(productKind='Board',deviceModel='RTL-POE',hardware=hardware('RTL-POE'));template['nodes'][0]['type']='Start (connections v1)';save('RTL_LED_color_template.json',template)
+manual=graph('Ручная печать этикетки платы',[n('Print Label',printerName='TSC TE310',useManualSerialNumber=True,manualSerialNumber='',copies=1,useQtProZplFormat=False,failOnPrinterError=True)]);manual.update(productKind='Board',configurationName='30×10 мм · полный серийный номер');manual['nodes'][0]['type']='Start (connections v1)';save('board_manual_label.json',manual)
 # Fail generation if any graph cannot be measured or still has spacing conflicts.
 layout_command=['dotnet','run','--project','tools/ProfileLayout/ProfileLayout.csproj']
 subprocess.run(layout_command+['--','--write',*generated_profiles],check=True)

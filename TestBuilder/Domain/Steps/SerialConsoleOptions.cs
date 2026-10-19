@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 namespace TestBuilder.Domain.Steps;
 public sealed record SerialConsoleOptions
 {
+    [JsonPropertyName("deviceId")] public string DeviceId { get; init; } = "";
     [JsonPropertyName("portName")] public string PortName { get; init; } = "";
     [JsonPropertyName("baudRate")] public int BaudRate { get; init; } = 115200;
     [JsonPropertyName("command")] public string Command { get; init; } = "";

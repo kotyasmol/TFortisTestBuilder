@@ -2,7 +2,7 @@
   "name": "RTL-SW · Проверка платы · параметры RTL_v1",
   "nodes": [
     {
-      "type": "Start (board v1)",
+      "type": "Start (connections v1)",
       "id": "0",
       "x": 80,
       "y": 80,
@@ -5219,7 +5219,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 3000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -5380,7 +5381,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "1",
             "x": 320,
@@ -5472,7 +5474,8 @@
                                 "responseTerminator": "",
                                 "quietMs": 500,
                                 "timeoutMs": 10000,
-                                "outputVariableName": "Console.Response"
+                                "outputVariableName": "Console.Response",
+                                "deviceId": "dut"
                               },
                               "id": "1",
                               "x": 320,
@@ -5569,7 +5572,8 @@
                                 "responseTerminator": "",
                                 "quietMs": 500,
                                 "timeoutMs": 10000,
-                                "outputVariableName": "Console.Response"
+                                "outputVariableName": "Console.Response",
+                                "deviceId": "dut"
                               },
                               "id": "1",
                               "x": 320,
@@ -5666,7 +5670,8 @@
                                 "responseTerminator": "",
                                 "quietMs": 500,
                                 "timeoutMs": 10000,
-                                "outputVariableName": "Console.Response"
+                                "outputVariableName": "Console.Response",
+                                "deviceId": "dut"
                               },
                               "id": "1",
                               "x": 320,
@@ -5978,7 +5983,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -6141,7 +6147,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -6304,7 +6311,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -6560,7 +6568,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -6723,7 +6732,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -6886,7 +6896,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -7059,7 +7070,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "1",
             "x": 320,
@@ -7096,7 +7108,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "4",
             "x": 1888,
@@ -7133,7 +7146,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "7",
             "x": 640,
@@ -7372,7 +7386,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -7535,7 +7550,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -7724,7 +7740,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -7939,7 +7956,8 @@
                     "responseTerminator": "",
                     "quietMs": 500,
                     "timeoutMs": 10000,
-                    "outputVariableName": "Console.Response"
+                    "outputVariableName": "Console.Response",
+                    "deviceId": "dut"
                   },
                   "id": "1",
                   "x": 352,
@@ -8064,7 +8082,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "1",
             "x": 320,
@@ -8104,7 +8123,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "4",
             "x": 1952,
@@ -8203,7 +8223,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "1",
             "x": 320,
@@ -8336,7 +8357,8 @@
               "responseTerminator": "",
               "quietMs": 500,
               "timeoutMs": 10000,
-              "outputVariableName": "Console.Response"
+              "outputVariableName": "Console.Response",
+              "deviceId": "dut"
             },
             "id": "1",
             "x": 320,
@@ -9876,6 +9898,22 @@
           }
         ],
         "IdentificationAddress": 0
+      }
+    ],
+    "PortName": "",
+    "ConsoleDevices": [
+      {
+        "Id": "dut",
+        "Name": "Процессор DUT",
+        "PortName": "",
+        "BaudRate": 115200,
+        "Parity": 0,
+        "DataBits": 8,
+        "StopBits": 1,
+        "EncodingName": "utf-8",
+        "LineEnding": "\n",
+        "DtrEnable": false,
+        "RtsEnable": false
       }
     ]
   },

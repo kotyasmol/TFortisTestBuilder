@@ -71,12 +71,15 @@ namespace TestBuilder.Services
             dto.UpdatedAt = updatedAt ?? vm.RootGraph.UpdatedAt;
             dto.Hardware = vm.RootGraph.Hardware;
             dto.Hardware?.Validate();
+            GraphCompiler.ValidateConnections(vm.RootGraph, dto.Hardware);
             dto.Board = vm.RootGraph.Board;
             dto.Board?.Validate();
             dto.ProductKind = vm.RootGraph.ProductKind;
             // Older runtimes must reject profiles whose equipment/layout they would ignore.
             if (dto.Hardware != null || dto.Board != null || dto.ProductKind == "Board" || RequiresBoardRuntime(vm.RootGraph))
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (board v1)";
+            if (dto.Hardware is { PortName: not null } || dto.Hardware?.ConsoleDevices.Count > 0)
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (connections v1)";
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
@@ -396,7 +399,7 @@ namespace TestBuilder.Services
             // Parse the entire document before replacing the user's open graph.
             // Malformed links and unsupported runtime versions must not erase it.
             var loaded = new GraphWorkspaceViewModel();
-            try { DeserializeGraph(dto, loaded, isBodyGraph: false); }
+            try { DeserializeGraph(dto, loaded, isBodyGraph: false); GraphCompiler.ValidateConnections(loaded, dto.Hardware); }
             catch
             {
                 DisposeLoadedNodes(loaded);
@@ -491,7 +494,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 

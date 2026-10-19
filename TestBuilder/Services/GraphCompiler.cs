@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Domain.Modbus;
 using TestBuilder.Services.Http;
 using TestBuilder.Services.Graph;
 using TestBuilder.Services.Logging;
@@ -30,6 +31,39 @@ namespace TestBuilder.Services
         private bool _ownsClients;
         private readonly HashSet<GraphWorkspaceViewModel> _compiling = new();
         private readonly List<string> _graphNames = new();
+        public HardwareConfiguration? ProfileHardware { get; init; }
+        private HardwareConfiguration? _activeHardware;
+
+        public static void ValidateConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware)
+        {
+            foreach (var node in graph.Nodes)
+            {
+                if (node is SerialConsoleNodeViewModel console && !string.IsNullOrEmpty(console.DeviceId) &&
+                    hardware?.ConsoleDevices.Any(d => d.Id == console.DeviceId) != true)
+                    throw new InvalidOperationException($"В графе «{graph.Title}» консоль ссылается на отсутствующее устройство «{console.DeviceId}». Проверьте оборудование профиля.");
+                if (node is ICompositeNodeViewModel composite) ValidateConnections(composite.BodyGraph, hardware);
+            }
+        }
+
+        public static void ValidateRunConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware,
+            string? standPort, NodeViewModel? entry = null, bool singleNode = false)
+        {
+            hardware?.Validate();
+            var nodes = entry == null ? graph.Nodes.AsEnumerable() : GetRunNodes(graph, entry, singleNode);
+            foreach (var node in nodes)
+            {
+                if (node is SubtestNodeViewModel { IsEnabled: false }) continue;
+                if (node is SerialConsoleNodeViewModel console && !string.IsNullOrEmpty(console.DeviceId))
+                {
+                    var device = hardware?.ConsoleDevices.SingleOrDefault(d => d.Id == console.DeviceId)
+                        ?? throw new InvalidOperationException($"В оборудовании нет консоли «{console.DeviceId}».");
+                    device.Validate(requirePort: true);
+                    if (string.Equals(device.PortName.Trim(), standPort?.Trim(), StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException($"Консоль «{device.Name}» использует порт подключённого стенда. Укажите отдельный порт USB-UART.");
+                }
+                if (node is ICompositeNodeViewModel composite) ValidateRunConnections(composite.BodyGraph, hardware, standPort);
+            }
+        }
         // Transport substitutions preserve the real report/label steps in integration tests.
         internal IRawLabelPrinter? LabelPrinter { get; init; }
         internal Func<System.Net.Http.HttpClient>? ReportClientFactory { get; init; }
@@ -66,6 +100,7 @@ namespace TestBuilder.Services
 
         public CompiledGraph Compile(GraphWorkspaceViewModel graph, NodeViewModel? entry = null, bool singleNode = false)
         {
+            if (_compiling.Count == 0) _activeHardware = ProfileHardware ?? graph.Hardware;
             if (!_compiling.Add(graph))
                 throw new InvalidOperationException($"Граф '{graph.Title}' содержит рекурсивное вложение.");
             _graphNames.Add(graph.Title);
@@ -150,7 +185,7 @@ namespace TestBuilder.Services
         {
             return node switch
             {
-                SerialConsoleNodeViewModel opSerialConsole => opSerialConsole.CreateStep(_console, _logger),
+                SerialConsoleNodeViewModel opSerialConsole => opSerialConsole.CreateStep(_console, _logger, ResolveConsole(opSerialConsole)),
                 RunProgramNodeViewModel opRunProgram => opRunProgram.CreateStep(_programRunner, _logger),
                 ParseResponseNodeViewModel opParseResponse => opParseResponse.CreateStep(_logger),
                 CheckLedColorNodeViewModel opCheckLedColor => opCheckLedColor.CreateStep(_logger),
@@ -184,6 +219,15 @@ namespace TestBuilder.Services
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
                 _ => new PassThroughStep()
             };
+        }
+
+        private ConsoleDeviceDefinition? ResolveConsole(SerialConsoleNodeViewModel node)
+        {
+            if (string.IsNullOrEmpty(node.DeviceId)) return null;
+            var device = _activeHardware?.ConsoleDevices.SingleOrDefault(d => d.Id == node.DeviceId)
+                ?? throw new InvalidOperationException($"В оборудовании профиля нет консоли «{node.DeviceId}».");
+            device.Validate();
+            return device with { }; // Running steps keep the compiled profile's connection settings.
         }
 
         private ITestStep CreateSubtestStep(SubtestNodeViewModel node)

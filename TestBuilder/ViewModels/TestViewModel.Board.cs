@@ -27,6 +27,9 @@ public partial class TestViewModel
     public bool IsAutonomousStand => ProductFilter == "Платы" || IsBoardProfile;
     public string StandSectionTitle => IsAutonomousStand ? "Автономный стенд" : "Подключение к стенду";
     public bool CanEditHardware => CanEditGraph && !IsConnected && !IsConnecting;
+    public IEnumerable<ConsoleDeviceDefinition> ConsoleDeviceChoices =>
+        new[] { new ConsoleDeviceDefinition { Id = "", Name = "Порт из ноды / старых настроек" } }
+            .Concat(RootGraph.Hardware?.ConsoleDevices ?? Enumerable.Empty<ConsoleDeviceDefinition>());
     public event Action? BoardChanged;
     private readonly Dictionary<NodeViewModel, string> _boardNodeStates = new();
     public void NotifyProfileMetadataChanged()
@@ -36,6 +39,7 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(IsAutonomousStand));
         OnPropertyChanged(nameof(StandSectionTitle));
         OnPropertyChanged(nameof(CanEditHardware));
+        OnPropertyChanged(nameof(ConsoleDeviceChoices));
         BoardChanged?.Invoke();
     }
     public static T CopyDefinition<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value))!;
@@ -43,6 +47,7 @@ public partial class TestViewModel
     {
         if (!CanEditHardware) throw new InvalidOperationException("Остановите тест и отключите стенд перед изменением оборудования.");
         hardware?.Validate();
+        GraphCompiler.ValidateConnections(RootGraph, hardware);
         var old = RootGraph.Hardware;
         _history.Execute(RootGraph, new ProfileMetadataCommand(
             () => { RootGraph.Hardware = hardware; NotifyProfileMetadataChanged(); },

@@ -19,7 +19,7 @@ public class BoardProfileTests
         var name=GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,file)),vm);Assert.Equal("Board",vm.RootGraph.ProductKind);
         var nodeCount=All(vm.RootGraph).Count();var regions=vm.RootGraph.Board?.Regions.Count;
         using var compiler=new GraphCompiler(bus,NullLogger.Instance);Assert.NotNull(compiler.Compile(vm.RootGraph));
-        var saved=GraphSerializer.Serialize(vm,name);Assert.Contains("Start (board v1)",saved);
+        var saved=GraphSerializer.Serialize(vm,name);Assert.Contains(vm.RootGraph.Hardware?.PortName != null ? "Start (connections v1)" : "Start (board v1)",saved);
         GraphSerializer.Deserialize(saved,vm);Assert.Equal(nodeCount,All(vm.RootGraph).Count());Assert.Equal(regions,vm.RootGraph.Board?.Regions.Count);
         Assert.NotNull(compiler.Compile(vm.RootGraph));
         if(file is "RTL_SW_board.json" or "RTL_POE_board.json")

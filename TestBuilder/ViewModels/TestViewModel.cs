@@ -857,9 +857,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.Hardware?.Validate();
         _registerState.Clear();
         var hardware = RootGraph.Hardware;
-        var configuredPort = AppSettings.Instance.StandPort?.Trim();
+        var configuredPort = (hardware?.PortName ?? AppSettings.Instance.StandPort)?.Trim();
         var availablePorts = SerialPort.GetPortNames().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
-        var ports = string.IsNullOrWhiteSpace(configuredPort) ? availablePorts : new[] { configuredPort };
+        var consolePorts = hardware?.ConsoleDevices.Select(d => d.PortName.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var ports = string.IsNullOrWhiteSpace(configuredPort)
+            ? availablePorts.Where(p => consolePorts?.Contains(p) != true).ToArray() : new[] { configuredPort };
 
 
         foreach (var port in ports)
@@ -1109,7 +1111,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger);
+            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware };
+            GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
             var graph = compiler.Compile(runWorkspace, runEntry, singleNode);
             if (!partialRun)
                 profileSessionKey = FirstRunProfileKey.Create(_currentProfilePath, GraphSerializer.Serialize(this, CurrentProfileName));

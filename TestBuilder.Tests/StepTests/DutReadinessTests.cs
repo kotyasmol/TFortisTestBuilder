@@ -27,7 +27,8 @@ public class DutReadinessTests
         var stage = Assert.Single(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Where(n => n.Name == "Запуск и готовность DUT"));
         var nodes = BoardProfileTests.All(stage.BodyGraph).ToArray();
         var console = Assert.Single(nodes.OfType<SerialConsoleNodeViewModel>());
-        Assert.Equal("", console.PortName); // Uses the workplace's separate ConsolePort setting.
+        Assert.Equal("dut", console.DeviceId);
+        Assert.Equal("", vm.RootGraph.Hardware!.ConsoleDevices.Single().PortName);
         Assert.Equal(115200, console.BaudRate);
         Assert.Equal(3000, console.TimeoutMs);
         Assert.Equal("ubus call tf_hwsys getParam '{\"name\":\"SW_VERS\"}'", console.Command);
@@ -40,10 +41,10 @@ public class DutReadinessTests
             if (node is DelayNodeViewModel delay) delay.Milliseconds = 1;
             if (node is ForEachSlaveNodeViewModel loop) loop.RepeatDelayMs = 2;
         }
-        console.PortName = "SIM-DUT";
+        vm.RootGraph.Hardware!.ConsoleDevices.Single().PortName = "SIM-DUT";
         var rig = new DutRig(response);
         using var http = new HttpRequestService();
-        using var compiler = new GraphCompiler(rig, http, NullLogger.Instance, rig);
+        using var compiler = new GraphCompiler(rig, http, NullLogger.Instance, rig) { ProfileHardware = vm.RootGraph.Hardware };
         var context = new TestContext(new RegisterState());
         context.SetVariable("McuVersion", "99.0"); // Old successful value cannot make silence pass.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

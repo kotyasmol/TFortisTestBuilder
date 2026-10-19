@@ -2,7 +2,7 @@
   "name": "Шаблон проверки цвета LED",
   "nodes": [
     {
-      "type": "Start (board v1)",
+      "type": "Start (connections v1)",
       "id": "0",
       "x": 80,
       "y": 80,
@@ -843,6 +843,8 @@
         ],
         "IdentificationAddress": 0
       }
-    ]
+    ],
+    "PortName": "",
+    "ConsoleDevices": []
   }
 }

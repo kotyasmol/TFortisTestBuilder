@@ -17,6 +17,7 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.ViewModels;
+using TestBuilder.Services;
 
 namespace TestBuilder.Views;
 
@@ -29,6 +30,11 @@ public sealed class HardwareEditorWindow : Window
     private readonly DataGrid _registersGrid = new() { AutoGenerateColumns = false, MinHeight = 220 };
     private readonly TextBlock _status = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBox _baud = new(), _bits = new(), _poll = new();
+    private readonly AutoCompleteBox _port = new() { MinWidth = 320, Watermark = "Пусто — найти Modbus автоматически" };
+    private readonly ObservableCollection<ConsoleDeviceDefinition> _consoles = new();
+    private readonly ListBox _consoleList = new();
+    private readonly StackPanel _consoleFields = new() { Spacing = 10 };
+    private readonly List<Control> _consoleInputs = new();
     private readonly ComboBox _parity = new() { ItemsSource = Enum.GetValues<Parity>() };
     private readonly ComboBox _stop = new() { ItemsSource = new[] { StopBits.One, StopBits.Two, StopBits.OnePointFive } };
     private readonly List<DeviceDefinition> _presets;
@@ -44,6 +50,8 @@ public sealed class HardwareEditorWindow : Window
         _draft = vm.RootGraph.Hardware == null ? new HardwareConfiguration() : TestViewModel.CopyDefinition(vm.RootGraph.Hardware);
         _legacy.IsChecked = vm.RootGraph.Hardware == null;
         _devices = new ObservableCollection<DeviceDefinition>(_draft.Devices);
+        foreach (var console in _draft.ConsoleDevices) _consoles.Add(console);
+        _port.ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray();
         _presets = HardwarePresets.Load();
         _parity.ItemTemplate = new FuncDataTemplate<Parity>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
         _stop.ItemTemplate = new FuncDataTemplate<StopBits>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
@@ -72,9 +80,10 @@ public sealed class HardwareEditorWindow : Window
         connection.Children.Add(_legacy);
         connection.Children.Add(new TextBlock { Text = "Для готового стенда АПК-03 можно оставить автоматическое определение. Для плат и другого оборудования задайте устройства на соседней вкладке.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var serial = new WrapPanel();
+        Field(serial, "COM-порт Modbus", _port);
         Field(serial, "Скорость, бод", _baud); Field(serial, "Биты данных", _bits); Field(serial, "Чётность", _parity); Field(serial, "Стоп-биты", _stop); Field(serial, "Опрос, мс", _poll);
         connection.Children.Add(serial);
-        connection.Children.Add(new TextBlock { Text = "COM-порт выбирается в настройках приложения. Параметры линии и список устройств сохраняются в профиле.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        connection.Children.Add(new TextBlock { Text = "Порт, параметры линии и устройства сохраняются в JSON профиля. При переносе на другой компьютер проверьте названия портов. Отдельный USB-UART процессора добавляется на вкладке «Консоли».", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var transfer = new WrapPanel();
         transfer.Children.Add(Button("Импорт оборудования…", async () => await ImportAsync()));
         var export = Button("Экспорт оборудования…", async () => await ExportAsync()); transfer.Children.Add(export);
@@ -114,8 +123,9 @@ public sealed class HardwareEditorWindow : Window
         DockPanel.SetDock(regTop, Dock.Top); registers.Children.Add(regTop); registers.Children.Add(_registersGrid);
         Grid.SetColumn(registers, 2); devicesPage.Children.Add(registers);
         var deviceTab = new TabItem { Header = "Устройства и регистры", Content = devicesPage };
-        var tabs = new TabControl { Items = { new TabItem { Header = "Подключение", Content = connection }, deviceTab } };
-        void ModeChanged() { var manual = _legacy.IsChecked != true; serial.IsEnabled = manual; deviceTab.IsEnabled = manual; export.IsEnabled = manual; }
+        var consoleTab = new TabItem { Header = "Консоли", Content = CreateConsolePage() };
+        var tabs = new TabControl { Items = { new TabItem { Header = "Подключение", Content = connection }, deviceTab, consoleTab } };
+        void ModeChanged() { var manual = _legacy.IsChecked != true; serial.IsEnabled = manual; deviceTab.IsEnabled = manual; consoleTab.IsEnabled = manual; export.IsEnabled = manual; }
         _legacy.IsCheckedChanged += (_, _) => ModeChanged(); ModeChanged();
         root.Children.Add(tabs); Content = root;
         LoadConnection(); _devicesGrid.SelectedIndex = _devices.Count == 0 ? -1 : 0; ShowRegisters();
@@ -123,15 +133,17 @@ public sealed class HardwareEditorWindow : Window
     }
     private void CommitGrid()
     {
-        if (!_devicesGrid.CommitEdit() || !_registersGrid.CommitEdit() || _identification.Children.OfType<TextBox>().Any(DataValidationErrors.GetHasErrors))
+        if (!_devicesGrid.CommitEdit() || !_registersGrid.CommitEdit() || _identification.Children.OfType<TextBox>().Any(DataValidationErrors.GetHasErrors) || _consoleInputs.Any(DataValidationErrors.GetHasErrors))
             throw new InvalidOperationException("Исправьте некорректное значение в оборудовании.");
     }
-    private void LoadConnection() { _baud.Text = _draft.BaudRate.ToString(); _bits.Text = _draft.DataBits.ToString(); _poll.Text = _draft.PollIntervalMs.ToString(); _parity.SelectedItem = _draft.Parity; _stop.SelectedItem = _draft.StopBits; }
+    private void LoadConnection() { _port.Text = _draft.PortName ?? AppSettings.Instance.StandPort; _baud.Text = _draft.BaudRate.ToString(); _bits.Text = _draft.DataBits.ToString(); _poll.Text = _draft.PollIntervalMs.ToString(); _parity.SelectedItem = _draft.Parity; _stop.SelectedItem = _draft.StopBits; }
     private HardwareConfiguration GetDraft()
     {
         CommitGrid();
         _draft.BaudRate = int.Parse(_baud.Text ?? ""); _draft.DataBits = int.Parse(_bits.Text ?? ""); _draft.PollIntervalMs = int.Parse(_poll.Text ?? "");
         _draft.Parity = (Parity)_parity.SelectedItem!; _draft.StopBits = (StopBits)_stop.SelectedItem!;
+        _draft.PortName = _port.Text?.Trim() ?? "";
+        _draft.ConsoleDevices = _consoles.ToList();
         _draft.Devices = _devices.ToList(); _draft.Validate(); return _draft;
     }
     private void ShowRegisters()
@@ -164,6 +176,7 @@ public sealed class HardwareEditorWindow : Window
             if (stream.Length > 4_000_000) throw new InvalidOperationException("Файл слишком велик.");
             var config = await JsonSerializer.DeserializeAsync<HardwareConfiguration>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("Пустой файл.");
             config.Validate(); _draft = config; _devices.Clear(); foreach (var d in config.Devices) _devices.Add(d);
+            _consoles.Clear(); foreach (var d in config.ConsoleDevices) _consoles.Add(d); _consoleList.SelectedIndex = _consoles.Count > 0 ? 0 : -1;
             LoadConnection(); _devicesGrid.SelectedIndex = 0; _legacy.IsChecked = false; _status.Text = "Таблица загружена. Примените её и сохраните профиль.";
         }
         catch (Exception ex) { _status.Text = ex.Message; }
@@ -180,6 +193,69 @@ public sealed class HardwareEditorWindow : Window
         }
         catch (Exception ex) { _status.Text = ex.Message; }
     }
+    private Control CreateConsolePage()
+    {
+        var page = new Grid { ColumnDefinitions = new ColumnDefinitions("280,20,*"), Margin = new Thickness(8, 20) };
+        var left = new DockPanel();
+        var actions = new WrapPanel();
+        actions.Children.Add(Button("Добавить консоль", () =>
+        {
+            var device = new ConsoleDeviceDefinition(); _consoles.Add(device); _consoleList.SelectedItem = device;
+        }));
+        actions.Children.Add(Button("Удалить", () =>
+        {
+            if (_consoleList.SelectedItem is ConsoleDeviceDefinition device) _consoles.Remove(device);
+            _consoleList.SelectedIndex = _consoles.Count > 0 ? 0 : -1;
+        }));
+        DockPanel.SetDock(actions, Dock.Bottom); left.Children.Add(actions);
+        _consoleList.ItemsSource = _consoles;
+        _consoleList.ItemTemplate = new FuncDataTemplate<ConsoleDeviceDefinition>((device, _) =>
+        {
+            var text = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+            text.Bind(TextBlock.TextProperty, new Binding("Name") { Source = device }); return text;
+        });
+        _consoleList.SelectionChanged += (_, _) =>
+        {
+            _consoleFields.DataContext = _consoleList.SelectedItem;
+            _consoleFields.IsVisible = _consoleList.SelectedItem != null;
+        };
+        left.Children.Add(_consoleList); page.Children.Add(left);
+        var right = new StackPanel { Spacing = 16 };
+        right.Children.Add(new TextBlock { Text = "Устройство подключается при выполнении ноды «Консоль». Ожидание загрузки и повтор команды задаются нодами профиля.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        void TextField(string label, string property)
+        {
+            var input = new TextBox(); input.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay });
+            _consoleInputs.Add(input); Field(_consoleFields, label, input);
+        }
+        TextField("Название устройства", "Name");
+        var port = new AutoCompleteBox { ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray(), Watermark = "Выберите или введите порт USB-UART" };
+        port.Bind(AutoCompleteBox.TextProperty, new Binding("PortName") { Mode = BindingMode.TwoWay });
+        Field(_consoleFields, "COM-порт консоли", port);
+        TextField("Скорость, бод", "BaudRate"); TextField("Биты данных", "DataBits");
+        void Selector<T>(string label, string property, IEnumerable<T> values, Func<T, string> display)
+        {
+            var input = new ComboBox { ItemsSource = values, HorizontalAlignment = HorizontalAlignment.Stretch,
+                ItemTemplate = new FuncDataTemplate<T>((value, _) => new TextBlock { Text = display(value!) }) };
+            input.Bind(ComboBox.SelectedItemProperty, new Binding(property) { Mode = BindingMode.TwoWay });
+            Field(_consoleFields, label, input);
+        }
+        Selector("Чётность", "Parity", Enum.GetValues<Parity>(), p => RussianUiText.Display(p));
+        Selector("Стоп-биты", "StopBits", new[] { StopBits.One, StopBits.Two, StopBits.OnePointFive }, p => RussianUiText.Display(p));
+        Selector("Кодировка", "EncodingName", new[] { "utf-8", "us-ascii", "iso-8859-1" }, s => s);
+        Selector("Окончание команды", "LineEnding", new[] { "\n", "\r", "\r\n", "" }, s => s switch
+        { "\n" => "Перевод строки (LF)", "\r" => "Возврат каретки (CR)", "\r\n" => "Возврат и перевод строки (CR+LF)", _ => "Не добавлять" });
+        foreach (var (label, property) in new[] { ("Включить DTR", "DtrEnable"), ("Включить RTS", "RtsEnable") })
+        {
+            var input = new CheckBox { Content = label }; input.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay });
+            _consoleFields.Children.Add(input);
+        }
+        right.Children.Add(_consoleFields);
+        var scroll = new ScrollViewer { Content = right }; Grid.SetColumn(scroll, 2); page.Children.Add(scroll);
+        _consoleList.SelectedIndex = _consoles.Count > 0 ? 0 : -1;
+        _consoleFields.IsVisible = _consoles.Count > 0;
+        return page;
+    }
+
     private void AddAreaColumn()
     {
         _registersGrid.Columns.Add(new DataGridTemplateColumn

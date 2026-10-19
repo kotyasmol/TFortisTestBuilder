@@ -9,7 +9,8 @@ using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps;
 
-public sealed class SerialConsoleStep(SerialConsoleOptions options, ISerialConsoleSession console, ILogger logger) : ITestStep
+public sealed class SerialConsoleStep(SerialConsoleOptions options, ISerialConsoleSession console, ILogger logger,
+    TestBuilder.Domain.Modbus.ConsoleDeviceDefinition? device = null) : ITestStep
 {
     public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken token)
     {
@@ -18,8 +19,18 @@ public sealed class SerialConsoleStep(SerialConsoleOptions options, ISerialConso
         {
             token.ThrowIfCancellationRequested(); await context.WaitWhilePausedAsync(token);
             if (string.IsNullOrWhiteSpace(options.OutputVariableName)) throw new InvalidOperationException("Укажите переменную ответа консоли.");
-            var port = string.IsNullOrWhiteSpace(options.PortName) ? AppSettings.Instance.ConsolePort : ResponseParser.Expand(options.PortName, context);
-            var response = await console.ExchangeAsync(port, options.BaudRate, ResponseParser.Expand(options.Command, context), options.ResponseTerminator, options.QuietMs, options.TimeoutMs, token);
+            string response;
+            if (!string.IsNullOrEmpty(options.DeviceId))
+            {
+                if (device == null) throw new InvalidOperationException($"Консольное устройство «{options.DeviceId}» отсутствует в оборудовании профиля.");
+                device.Validate(requirePort: true);
+                response = await console.ExchangeAsync(device, ResponseParser.Expand(options.Command, context), options.ResponseTerminator, options.QuietMs, options.TimeoutMs, token);
+            }
+            else
+            {
+                var port = string.IsNullOrWhiteSpace(options.PortName) ? AppSettings.Instance.ConsolePort : ResponseParser.Expand(options.PortName, context);
+                response = await console.ExchangeAsync(port, options.BaudRate, ResponseParser.Expand(options.Command, context), options.ResponseTerminator, options.QuietMs, options.TimeoutMs, token);
+            }
             if (string.IsNullOrEmpty(response)) throw new InvalidOperationException("Пустой ответ консоли.");
             context.SetVariable(options.OutputVariableName, response);
             if (context.RequireFreshMonitoring)

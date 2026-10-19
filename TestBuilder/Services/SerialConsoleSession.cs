@@ -4,34 +4,50 @@ using System.IO.Ports;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TestBuilder.Domain.Modbus;
 
 namespace TestBuilder.Services;
 public interface ISerialConsoleSession
 {
     Task<string> ExchangeAsync(string port, int baudRate, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token);
+    Task<string> ExchangeAsync(ConsoleDeviceDefinition device, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token)
+    {
+        // Old injected transports may only support the original 8N1 protocol. Never silently drop new settings.
+        if (device.Parity != Parity.None || device.DataBits != 8 || device.StopBits != StopBits.One ||
+            device.EncodingName != "utf-8" || device.LineEnding != "\n" || device.DtrEnable || device.RtsEnable)
+            throw new NotSupportedException("Этот транспорт не поддерживает заданные параметры консоли.");
+        return ExchangeAsync(device.PortName, device.BaudRate, command, terminator, quietMs, timeoutMs, token);
+    }
 }
 public sealed class SerialConsoleSession : ISerialConsoleSession, IDisposable
 {
     private SerialPort? _port;
+    private ConsoleDeviceDefinition? _settings;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    public async Task<string> ExchangeAsync(string port, int baudRate, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token)
+    public Task<string> ExchangeAsync(string port, int baudRate, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token)
+        => ExchangeAsync(new ConsoleDeviceDefinition { Id = "legacy", PortName = port, BaudRate = baudRate }, command, terminator, quietMs, timeoutMs, token);
+
+    public async Task<string> ExchangeAsync(ConsoleDeviceDefinition device, string command, string terminator, int quietMs, int timeoutMs, CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(port) || baudRate is < 300 or > 1000000 || timeoutMs is < 100 or > 3600000 || quietMs is < 50 or > 60000)
+        device = device with { PortName = device.PortName.Trim() };
+        device.Validate(requirePort: true);
+        if (timeoutMs is < 100 or > 3600000 || quietMs is < 50 or > 60000)
             throw new InvalidOperationException("Консоль: укажите COM-порт, скорость и допустимые таймауты.");
         await _gate.WaitAsync(token);
         try
         {
             return await Task.Run(async () =>
             {
-                if (_port == null || !_port.IsOpen || _port.PortName != port || _port.BaudRate != baudRate)
+                if (_port == null || !_port.IsOpen || _settings != device)
                 {
                     _port?.Dispose();
-                    _port = new SerialPort(port, baudRate, Parity.None, 8, StopBits.One) { ReadTimeout = 100, WriteTimeout = 1000, Encoding = Encoding.UTF8, NewLine = "\n", DtrEnable = false, RtsEnable = false };
+                    _port = device.CreatePort();
                     _port.Open();
+                    _settings = device;
                 }
                 token.ThrowIfCancellationRequested();
                 _port.DiscardInBuffer();
-                _port.Write(command + "\n");
+                _port.Write(command + device.LineEnding);
                 var elapsed = Stopwatch.StartNew(); var lastData = 0L;
                 var output = new StringBuilder();
                 while (elapsed.ElapsedMilliseconds < timeoutMs)

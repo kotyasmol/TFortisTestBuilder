@@ -14,7 +14,7 @@
           <TextBox Text="{Binding StandPort}" Watermark="COM3" />
           <TextBlock Text="COM консоли платы (отдельный USB-UART)" />
           <TextBox Text="{Binding ConsolePort}" Watermark="COM4" />
-          <TextBlock Text="Эти порты сохраняются на рабочем месте и не переносятся вместе с профилем." TextWrapping="Wrap" />
+          <TextBlock Text="Резервные порты для старых профилей. Для новых задайте подключения через «Оборудование» — они сохранятся в JSON профиля." TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Border Classes="panel">

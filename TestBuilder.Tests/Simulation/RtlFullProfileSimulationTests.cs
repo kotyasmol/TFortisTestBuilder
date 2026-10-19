@@ -49,6 +49,7 @@ public class RtlFullProfileSimulationTests
             using var uiBus = new ModbusService();
             using var vm = new TestViewModel(uiBus, new SlaveManager(uiBus)) { IsOperatorView = false };
             GraphSerializer.Deserialize(source, vm);
+            foreach (var console in vm.RootGraph.Hardware!.ConsoleDevices) console.PortName = "SIM-DUT";
             var changes = new List<string>();
             foreach (var n in BoardProfileTests.All(vm.RootGraph))
             {

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -24,6 +25,7 @@ public class ProfileConnectionAndLogSelectionTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
         {
+            var testProfile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
             var oldPort = AppSettings.Instance.StandPort;
             AppSettings.Instance.StandPort = Path.Combine(Path.GetTempPath(), "nonexistent-tfortis-test-port");
             using var bus = new ModbusService();
@@ -33,7 +35,11 @@ public class ProfileConnectionAndLogSelectionTests
                 vm.IsConnected = true;
                 vm.IsMonitoringActive = true;
                 Assert.True(vm.CanChooseProfile);
-                var profile = GraphSerializer.ReadProfile(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles", file)));
+                var source = JsonNode.Parse(File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles", file))))!;
+                // New profiles own their port; never enumerate physical ports in this UI test.
+                source["hardware"]!["PortName"] = AppSettings.Instance.StandPort;
+                File.WriteAllText(testProfile, source.ToJsonString());
+                var profile = GraphSerializer.ReadProfile(testProfile);
                 await vm.SelectProfileAsync(profile);
                 Dispatcher.UIThread.RunJobs();
                 Assert.Same(profile, vm.SelectedProfile);
@@ -46,7 +52,7 @@ public class ProfileConnectionAndLogSelectionTests
                 Assert.Contains(vm.TestingLogger.Entries, e => e.ToString().Contains("Не удалось открыть"));
                 Assert.DoesNotContain(vm.TestingLogger.Entries, e => e.ToString().Contains("Загрузка профиля"));
             }
-            finally { AppSettings.Instance.StandPort = oldPort; }
+            finally { AppSettings.Instance.StandPort = oldPort; File.Delete(testProfile); }
             return true;
         }, CancellationToken.None);
     }
