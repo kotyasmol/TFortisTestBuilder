@@ -27,6 +27,11 @@ namespace TestBuilder.Domain.Execution
                 var (result, failure) = await ExecuteNodeAsync(current, context, cancellationToken);
 
                 cancellationToken.ThrowIfCancellationRequested();
+                if (context.HasExecutionException && !context.IsCleanup)
+                {
+                    context.Failure = failure;
+                    return ExecutionStatus.Failed;
+                }
                 if (context.IsParallelBranch && context.HasCriticalError)
                 {
                     context.Failure = failure;

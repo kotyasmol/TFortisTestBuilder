@@ -31,6 +31,8 @@ namespace TestBuilder.Domain.Execution
         public bool IsConnected { get; set; }
         // Scoped to a full profile run. Manual runs and emergency cleanup never skip preparation.
         public bool SkipFirstRunNodes { get; set; }
+        public bool IsCleanup { get; set; }
+        public bool HasExecutionException { get; set; }
 
         public string? ProfileName { get; set; }
 
@@ -68,6 +70,8 @@ namespace TestBuilder.Domain.Execution
                 CancellationToken = cancellationToken,
                 IsConnected = IsConnected,
                 SkipFirstRunNodes = SkipFirstRunNodes,
+                IsCleanup = IsCleanup,
+                HasExecutionException = HasExecutionException,
                 ProfileName = ProfileName,
                 HasCriticalError = HasCriticalError,
                 CurrentSlaveId = CurrentSlaveId,

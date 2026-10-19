@@ -51,6 +51,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private UndoRedoManager? _currentUndoRedo;
     private readonly ProfileEditHistory _history;
     private CancellationTokenSource? _testRunCts;
+    private string? _runConnectionFailure;
     private Views.ModbusReconnectDialog? _modbusReconnectDialog;
     private TaskCompletionSource<bool> _pauseCompletion =
         CreateCompletedPauseCompletion();
@@ -303,6 +304,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         TestingLogger = IsTraining ? LoggingService.Instance.CreateTrainingLogger() : LoggingService.Instance.CreateLogger("Testing");
         _modbusService.ReconnectStatusChanged += OnReconnectStatusChanged;
+        _slaveManager.Slaves.CollectionChanged += OnStandDevicesChanged;
+        RefreshStandIdentity();
 
         ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync, () => !IsTraining && !IsTestRunning && !IsConnecting);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync, () => CanStartRun);
@@ -770,7 +773,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         Station.Prepare(RootGraph);
         RefreshStationAvailability();
 
-        StatusMessage = "Создан новый профиль. Укажите устройство и название, затем нажмите «Сохранить».";
+        StatusMessage = "Создан новый профиль. Укажите устройство, тип изделия и название проверки, затем нажмите «Сохранить».";
     }
 
     public void DeleteSelectedNodes()
@@ -958,6 +961,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             IsMonitoringActive = false;
+            StopRunForConnectionFailure();
             StatusMessage = "Связь Modbus потеряна. Выполняется автоматическое восстановление.";
             TestingLogger.Warning("[MODBUS] Мониторинг обнаружил потерю связи. Автоматическое восстановление выполнится при следующей Modbus-операции.");
         });
@@ -967,6 +971,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         Dispatcher.UIThread.Post(() =>
         {
+            if (!message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase)) StopRunForConnectionFailure();
+            if (IsStopping)
+            {
+                CloseReconnectDialog();
+                return;
+            }
             StatusMessage = message;
 
             if (message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase))
@@ -987,6 +997,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 ShowReconnectDialog(message, canClose: false);
             }
         });
+    }
+
+    private void StopRunForConnectionFailure()
+    {
+        if (!IsTestRunning || IsStopping) return;
+        _runConnectionFailure = "Потеряна связь со стендом. Проверка остановлена для снятия питания.";
+        TestingLogger.Error(_runConnectionFailure);
+        StopTestCommand.Execute(null);
     }
 
     private void ShowReconnectDialog(string message, bool canClose)
@@ -1089,6 +1107,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         _testRunCts?.Dispose();
         _testRunCts = new CancellationTokenSource();
+        _runConnectionFailure = null;
         _pauseCompletion = CreateCompletedPauseCompletion();
         IsTestRunning = true;
         IsStopping = false;
@@ -1177,11 +1196,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (runFailure == null && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
                 runFailure = new ExecutionFailure(failedCheck.Name, failedCheck.Value);
 
-            if (result != ExecutionStatus.Completed)
+            if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess))
             {
                 runCleanup = true;
+                executionStatus = ExecutionStatus.Failed;
                 context.HasCriticalError = true;
-                context.SetVariable("Execution.Status", result.ToString());
+                context.SetVariable("Execution.Status", executionStatus.ToString());
                 runFailure ??= new ExecutionFailure("Выполнение графа", $"Граф завершён с результатом {result}.");
                 context.SetVariable("Execution.Error", runFailure.Summary);
                 TestingLogger.Error($"[ОШИБКА] Тест завершён: {runFailure.Summary}");
@@ -1191,7 +1211,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context.SetVariable("Execution.Status", result.ToString());
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_testRunCts?.IsCancellationRequested == true)
         {
             executionStatus = ExecutionStatus.Cancelled;
             runCleanup = true;
@@ -1201,7 +1221,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context.SetVariable("Execution.Status", ExecutionStatus.Cancelled.ToString());
             }
 
-            TestingLogger.Warning("[ОСТАНОВ] Выполнение теста остановлено пользователем.");
+            if (_runConnectionFailure != null)
+            {
+                executionStatus = ExecutionStatus.Failed;
+                runFailure = new ExecutionFailure("Связь со стендом", _runConnectionFailure);
+                context?.SetVariable("Execution.Status", executionStatus.ToString());
+            }
+            TestingLogger.Warning(_runConnectionFailure ?? "[ОСТАНОВ] Выполнение теста остановлено пользователем.");
             StatusMessage = "Выполнение теста остановлено.";
         }
         catch (Exception ex)
@@ -1221,14 +1247,54 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
         finally
         {
-            if (runCleanup && context != null)
+            if (runCleanup)
             {
+                context ??= new TestContext(_registerState)
+                {
+                    IsConnected = IsConnected, ProfileName = profileName, HasCriticalError = true,
+                    ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
+                    ExecutionObserver = this
+                };
                 _preparedProfileVersions.Clear();
                 IsStopping = true;
                 IsTestPaused = false;
                 IsPauseEffective = false;
                 _pauseCompletion.TrySetResult(true);
-                await RunFailureCleanupAsync(context);
+                try
+                {
+                    try
+                    {
+                        if (_registerMonitor != null) await _registerMonitor.StopAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagnosticLog.WriteException("Остановка мониторинга перед завершением", ex);
+                        TestingLogger.Warning("Мониторинг завершился с ошибкой. Выполняется отключение выходов стенда.");
+                    }
+                    IsMonitoringActive = false;
+                    NeedsStandInspection = !await RunFailureCleanupAsync(context);
+                }
+                catch (Exception ex)
+                {
+                    NeedsStandInspection = true;
+                    context.SetVariable("Cleanup.Succeeded", false);
+                    DiagnosticLog.WriteException("Аварийное завершение стенда", ex);
+                    TestingLogger.Error("Завершение стенда не подтверждено. Отключите питание стенда и обратитесь к инженеру.");
+                }
+                finally
+                {
+                    CloseReconnectDialog();
+                    if (!NeedsStandInspection && IsConnected && _registerMonitor != null)
+                    {
+                        try { _registerMonitor.Start(); IsMonitoringActive = true; }
+                        catch (Exception ex)
+                        {
+                            DiagnosticLog.WriteException("Возобновление мониторинга", ex);
+                            IsMonitoringActive = false;
+                            TestingLogger.Warning("Мониторинг не возобновлён. Переподключитесь к стенду перед запуском.");
+                        }
+                    }
+                }
             }
 
             runTimer.Stop();
@@ -1247,7 +1313,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _testRunCts = null;
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: false);
             ResetConnectorsStateRecursive(RootGraph);
-            if (context != null && context.Variables.ContainsKey("ReportDelivery.Status"))
+            if (!NeedsStandInspection && context != null && context.Variables.ContainsKey("ReportDelivery.Status"))
             {
                 var delivery = context.GetVariable<string>("ReportDelivery.Status");
                 var devicePassed = !context.HasCriticalError && context.GetVariable<bool>("BuildReport.DevicePassed");
@@ -1256,7 +1322,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 if (delivery == "Sent") TestingLogger.Info(StatusMessage);
                 else TestingLogger.Warning(StatusMessage);
             }
-            if (partialRun)
+            if (partialRun && !NeedsStandInspection)
             {
                 var resultText = executionStatus switch
                 {
@@ -1277,7 +1343,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    internal async Task RunFailureCleanupAsync(TestContext context)
+    internal async Task<bool> RunFailureCleanupAsync(TestContext context)
     {
         var cleanupNodes = RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
@@ -1285,13 +1351,20 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .ToList();
 
         if (cleanupNodes.Count == 0)
-            return;
+        {
+            var noHardware = !GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+            context.SetVariable("Cleanup.Succeeded", noHardware);
+            return noHardware;
+        }
 
         TestingLogger.Warning($"[ШАГ] Запуск cleanup-подтестов: {cleanupNodes.Count}.");
 
         var previousToken = context.CancellationToken;
         var previousPause = context.WaitIfPausedAsync;
         var previousSkipFirstRunNodes = context.SkipFirstRunNodes;
+        var previousCleanup = context.IsCleanup;
+        var allSucceeded = true;
+        context.IsCleanup = true;
         context.SkipFirstRunNodes = false;
 
         context.WaitIfPausedAsync = _ => Task.CompletedTask;
@@ -1306,7 +1379,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 var cleanupSucceeded = false;
                 using var cleanupCts = new CancellationTokenSource(
                     cleanupNode.BodyGraph.Nodes.OfType<OperatorActionNodeViewModel>().Any()
-                        ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(60));
+                        ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(Math.Clamp(
+                            BoardNodes(cleanupNode.BodyGraph).OfType<ModbusWriteNodeViewModel>().Count() * 20, 60, 300)));
                 context.CancellationToken = cleanupCts.Token;
                 try
                 {
@@ -1337,7 +1411,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     DiagnosticLog.WriteException($"Завершение: {cleanupNode.Name}", ex);
                     TestingLogger.Error($"Не удалось выполнить «{cleanupNode.Name}». Проверьте состояние стенда.");
                 }
-                finally { Station.FinishCleanup(cleanupNode, cleanupSucceeded); }
+                finally { allSucceeded &= cleanupSucceeded; Station.FinishCleanup(cleanupNode, cleanupSucceeded); }
             }
         }
         finally
@@ -1345,7 +1419,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             context.CancellationToken = previousToken;
             context.WaitIfPausedAsync = previousPause;
             context.SkipFirstRunNodes = previousSkipFirstRunNodes;
+            context.IsCleanup = previousCleanup;
         }
+        context.SetVariable("Cleanup.Succeeded", allSucceeded);
+        return allSucceeded;
     }
 
     private static TaskCompletionSource<bool> CreateCompletedPauseCompletion()
@@ -1921,6 +1998,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
+        _slaveManager.Slaves.CollectionChanged -= OnStandDevicesChanged;
+        if (_standSerialRegister != null) _standSerialRegister.PropertyChanged -= OnStandSerialChanged;
         _modbusService.ReconnectStatusChanged -= OnReconnectStatusChanged;
         CloseReconnectDialog();
 

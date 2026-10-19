@@ -243,7 +243,7 @@ namespace TestBuilder.Services
                 node.IsEnabled,
                 node.StopOnError,
                 bodyGraph,
-                _logger);
+                _logger, node.RunOnFailure);
         }
 
         private ITestStep CreateForEachSlaveStep(ForEachSlaveNodeViewModel node)

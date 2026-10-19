@@ -14,6 +14,14 @@ namespace TestBuilder.ViewModels
     {
         private readonly Func<bool>? canChangeInterfaceMode;
         private bool isEngineerMode;
+        [ObservableProperty] private string profileContext = "Коммутатор";
+        [ObservableProperty] private bool showConsoleSettings;
+
+        public void SetProfileContext(string kind, bool hasConsole)
+        {
+            ProfileContext = "Тип открытого профиля: " + kind;
+            ShowConsoleSettings = hasConsole;
+        }
 
         public bool CanChangeInterfaceMode => canChangeInterfaceMode?.Invoke() ?? true;
 

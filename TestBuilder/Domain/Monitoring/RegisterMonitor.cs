@@ -43,6 +43,7 @@ namespace TestBuilder.Domain.Monitoring
             if (_monitorTask != null && !_monitorTask.IsCompleted)
                 throw new InvalidOperationException("Мониторинг уже запущен.");
 
+            _cts?.Dispose();
             _cts = externalToken.CanBeCanceled
                 ? CancellationTokenSource.CreateLinkedTokenSource(externalToken)
                 : new CancellationTokenSource();

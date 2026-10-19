@@ -24,11 +24,15 @@ public sealed class DeviceDefinition
     public byte SlaveId { get; set; } = 1;
     public ushort? IdentificationValue { get; set; }
     public ushort IdentificationAddress { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ushort? StandSerialNumberAddress { get; set; }
     public List<RegisterDefinition> Registers { get; set; } = new();
     public override string ToString() => $"{SlaveId} — {Name}";
 }
 public sealed class HardwareConfiguration
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StandName { get; set; }
     // Null preserves the workplace port of old profiles; empty explicitly means automatic search.
     public string? PortName { get; set; }
     public List<ConsoleDeviceDefinition> ConsoleDevices { get; set; } = new();
@@ -62,10 +66,14 @@ public sealed class HardwareConfiguration
                 throw new InvalidOperationException($"Устройство {d.Name}: нужны имя, slave 1..247 и 1..4096 регистров.");
             if (d.Registers.Select(x => (x.Area, x.Address)).Distinct().Count() != d.Registers.Count)
                 throw new InvalidOperationException($"Устройство {d.Name}: повтор адреса в одной области Modbus.");
+            if (d.StandSerialNumberAddress is { } serial && !d.Registers.Any(r => r.Address == serial && r.Area == ModbusArea.Holding))
+                throw new InvalidOperationException($"Устройство {d.Name}: добавьте регистр серийного номера стенда {serial} в область Holding.");
             foreach (var reg in d.Registers)
                 if (reg.Address is < 0 or > 65535 || !Enum.IsDefined(reg.Area) || string.IsNullOrWhiteSpace(reg.Name) ||
                     (reg.Writable && reg.Area is ModbusArea.Input or ModbusArea.Discrete))
                     throw new InvalidOperationException($"Устройство {d.Name}: некорректный регистр {reg.Address}.");
         }
+        if (Devices.Count(d => d.StandSerialNumberAddress.HasValue) > 1)
+            throw new InvalidOperationException("Укажите источник серийного номера стенда только у одного устройства.");
     }
 }

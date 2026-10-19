@@ -110,7 +110,7 @@ public class ExecutionFailureTests
     }
 
     [Fact]
-    public async Task NestedException_StaysAttachedToOriginalStep_AfterErrorPath()
+    public async Task NestedException_StopsNormalExecution_AndPreservesOriginalStep()
     {
         var logger = new StepDiagnosticLogger(NullLogger.Instance);
         var leaf = Node("Read register", (_, _) => throw new InvalidOperationException("COM connection closed"));
@@ -121,8 +121,9 @@ public class ExecutionFailureTests
         };
         var context = Context();
 
-        Assert.Equal(ExecutionStatus.Completed, await Execute(parent, context));
-        Assert.Null(context.Failure); // Error was handled, but the product still failed the critical check.
+        Assert.Equal(ExecutionStatus.Failed, await Execute(parent, context));
+        Assert.True(context.HasExecutionException);
+        Assert.Equal("Read register", context.Failure?.StepName);
         Assert.Equal("Read register", context.CriticalFailure?.StepName);
         Assert.Equal("COM connection closed", context.CriticalFailure?.Reason);
     }

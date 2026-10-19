@@ -13,19 +13,21 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _stopOnError;
         private readonly CompiledGraph _bodyGraph;
         private readonly ILogger _logger;
+        private readonly bool _runOnFailure;
 
         public SubtestStep(
             string name,
             bool isEnabled,
             bool stopOnError,
             CompiledGraph bodyGraph,
-            ILogger logger)
+            ILogger logger, bool runOnFailure = false)
         {
             _name = string.IsNullOrWhiteSpace(name) ? "Подтест" : name;
             _isEnabled = isEnabled;
             _stopOnError = stopOnError;
             _bodyGraph = bodyGraph;
             _logger = logger;
+            _runOnFailure = runOnFailure;
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -43,6 +45,8 @@ namespace TestBuilder.Domain.Steps
             var executor = new TestExecutor();
             ExecutionStatus status;
 
+            var previousCleanup = context.IsCleanup;
+            context.IsCleanup |= _runOnFailure;
             try
             {
                 status = await executor.ExecuteAsync(
@@ -57,6 +61,7 @@ namespace TestBuilder.Domain.Steps
             }
             catch (Exception ex)
             {
+                context.HasExecutionException = true;
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
                 _logger.Warning(message);
                 context.AddReportEntry(_name, false, ex.Message);
@@ -66,6 +71,7 @@ namespace TestBuilder.Domain.Steps
 
                 return StepResult.False;
             }
+            finally { context.IsCleanup = previousCleanup; }
 
             if (status == ExecutionStatus.Completed)
             {

@@ -10,9 +10,11 @@ public sealed class ConfiguredSlaveModel : SlaveModelBase
 {
     private readonly string _name;
     public override string DeviceType => _name;
+    public ushort? StandSerialNumberAddress { get; }
     public ConfiguredSlaveModel(DeviceDefinition definition, IModbusService modbus) : base(definition.SlaveId, modbus)
     {
         _name = definition.Name;
+        StandSerialNumberAddress = definition.StandSerialNumberAddress;
         foreach (var reg in definition.Registers)
             RegisterItems.Add(new RegisterItem { Address = reg.Address, Area = reg.Area,
                 Name = TestBuilder.Presentation.RussianUiText.Display(reg.Name) + (string.IsNullOrWhiteSpace(reg.Unit) ? "" : $", {reg.Unit}"),

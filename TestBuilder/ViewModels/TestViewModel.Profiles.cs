@@ -64,14 +64,18 @@ public partial class TestViewModel
             var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
             var newTitle = ComposeProfileName(name, description);
-            void Set(string? modelId, string? modelName, string title, string? detail)
+            var oldKind = RootGraph.ProductKind;
+            var kind = saved?.ProductKind ?? oldKind;
+            void Set(string? modelId, string? modelName, string title, string? detail, string productKind)
             {
                 RootGraph.DeviceModelId = modelId; RootGraph.DeviceModel = modelName;
+                RootGraph.ProductKind = productKind;
                 SetProfileIdentity(title, detail);
                 NotifyDeviceNameChanged();
+                NotifyProfileMetadataChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(id, name, newTitle, description), () => Set(oldId, oldName, oldTitle, oldDescription)));
+                () => Set(id, name, newTitle, description, kind), () => Set(oldId, oldName, oldTitle, oldDescription, oldKind)));
         }
     }
 

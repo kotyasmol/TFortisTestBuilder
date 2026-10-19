@@ -37,6 +37,9 @@ public class DeviceProfileTests
             try
             {
                 vm.NewProfileCommand.Execute(null); window.Show(); Layout();
+                var kind = view.FindControl<ComboBox>("ProfileProductKindInput")!;
+                kind.SelectedItem = "Плата"; Layout();
+                Assert.Equal("Board", vm.RootGraph.ProductKind);
                 var model = Field("Устройство");
                 var title = Field("Название профиля");
                 var modelText = model.GetVisualDescendants().OfType<TextBox>().Single();
@@ -53,6 +56,7 @@ public class DeviceProfileTests
                 Assert.Equal("PSV2G4H+", Assert.Single(vm.EngineerProfileGroups).Name);
                 Assert.Single(vm.Profiles);
                 var first = vm.SelectedProfile!;
+                Assert.Equal("Board", first.ProductKind);
                 var bytes = File.ReadAllBytes(first.FilePath);
                 Assert.Equal("PSV2G4H+", first.DeviceModel);
                 Assert.Contains("PSV2G4H+", vm.DeviceNameSuggestions);
@@ -68,14 +72,17 @@ public class DeviceProfileTests
                 Assert.Equal(bytes, File.ReadAllBytes(first.FilePath));
                 Assert.Equal(2, Assert.Single(vm.StationProfileGroups).Profiles.Count);
                 vm.NewProfileCommand.Execute(null); Layout(); Assert.Empty(model.Text!);
+                Assert.Equal("Коммутатор", vm.ProfileProductKind);
                 modelText.Focus(); window.KeyTextInput("psv"); Layout(); Assert.True(model.IsDropDownOpen);
                 // Keyboard selection must commit the suggested device, not the typed prefix.
                 window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None); window.KeyReleaseQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
                 window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None); window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
                 titleText.Focus(); Layout(); Assert.Equal("PSV2G4H+", vm.DeviceName);
+                Assert.Equal("Плата", vm.ProfileProductKind);
                 using var reloaded = new TestViewModel(bus, new SlaveManager(bus));
                 reloaded.SelectedProfile = reloaded.Profiles.First();
                 Assert.Equal("PSV2G4H+", reloaded.DeviceName);
+                Assert.Equal("Board", reloaded.RootGraph.ProductKind);
                 Assert.Contains("PSV2G4H+", reloaded.DeviceNameSuggestions);
                 var artifacts = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
                 if (artifacts != null)

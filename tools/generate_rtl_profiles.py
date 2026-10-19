@@ -5,6 +5,7 @@ Production values come from the original RTL_v1 profiles supplied by the owner.
 from pathlib import Path
 import json, sys, base64, re, copy, subprocess, xml.etree.ElementTree as ET
 from rtl_source_profiles import apply_original, SOURCES, SW_WRITES
+from rtl_shutdown import apply_shutdown
 sw_source=json.loads((SOURCES / "RTL_SW_v1.json").read_text())
 poe_source=json.loads((SOURCES / "RTL_POE_v1.json").read_text())
 rtl=Path(sys.argv[1]); out=Path('profiles'); presets=json.loads(Path('TestBuilder/Assets/hardware-presets.json').read_text())
@@ -58,11 +59,12 @@ def failure_report(g):
  body['connections'] += [dict(sourceNodeId='1',sourceConnector='False',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='True',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='False',targetNodeId='3',targetConnector='In')]
  stage.update(id='failure-report',x=100,y=2500);g['nodes'].append(stage)
 def label():return n('Print Label',printerName='TSC TE310',serialVariableName='SerialNumber',copies=1,useQtProZplFormat=False,failOnPrinterError=True)
-def hardware(kind):return dict(PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',PortDescriptionContains='CH340',UsbVendorId='1A86',UsbProductId='7523',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
+def hardware(kind):return dict(StandName=kind,PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',PortDescriptionContains='CH340',UsbVendorId='1A86',UsbProductId='7523',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])
 board_names = {'ConsoleStatus': 'Консоль', 'CrStatus': 'Батарейка CR2032', 'FlashStatus': 'Флеш-память', 'I2CStatus': 'Датчик I²C', 'K5TestStatus': 'Узел K5', 'PoeStatus': 'Контроллер PoE', 'RelayStatus': 'Реле', 'Rs485Status': 'Интерфейс RS-485', 'RtlStatus': 'Коммутатор', 'Sensor1Status': 'Датчик 1', 'Sensor2Status': 'Датчик 2', 'TamperStatus': 'Датчик вскрытия', 'V11Status': 'Питание 1,1 В', 'V15Status': 'Питание 1,5 В', 'V33Status': 'Питание 3,3 В', '3V3': 'Питание 3,3 В', 'PoeTotal1_4': 'Питание PoE портов 1–4', 'PoeTotal5_8': 'Питание PoE портов 5–8', 'Spi_swd_uart93': 'Интерфейсы SPI, SWD и UART', 'Led1A': 'Светодиод порта 1A', 'Poe1A': 'Питание PoE порта 1A', 'Led1B': 'Светодиод порта 1B', 'Poe1B': 'Питание PoE порта 1B', 'Led2A': 'Светодиод порта 2A', 'Poe2A': 'Питание PoE порта 2A', 'Led2B': 'Светодиод порта 2B', 'Poe2B': 'Питание PoE порта 2B', 'Led3A': 'Светодиод порта 3A', 'Poe3A': 'Питание PoE порта 3A', 'Led3B': 'Светодиод порта 3B', 'Poe3B': 'Питание PoE порта 3B', 'Led4A': 'Светодиод порта 4A', 'Poe4A': 'Питание PoE порта 4A', 'Led4B': 'Светодиод порта 4B', 'Poe4B': 'Питание PoE порта 4B', 'Led5A': 'Светодиод порта 5A', 'Poe5A': 'Питание PoE порта 5A', 'Led5B': 'Светодиод порта 5B', 'Poe5B': 'Питание PoE порта 5B', 'Led6A': 'Светодиод порта 6A', 'Poe6A': 'Питание PoE порта 6A', 'Led6B': 'Светодиод порта 6B', 'Poe6B': 'Питание PoE порта 6B', 'Led7A': 'Светодиод порта 7A', 'Poe7A': 'Питание PoE порта 7A', 'Led7B': 'Светодиод порта 7B', 'Poe7B': 'Питание PoE порта 7B', 'Led8A': 'Светодиод порта 8A', 'Poe8A': 'Питание PoE порта 8A', 'Led8B': 'Светодиод порта 8B', 'Poe8B': 'Питание PoE порта 8B'}
 def save(filename,g):
  if filename in ("RTL_SW_board.json", "RTL_POE_board.json"):
   apply_original(g, "SW" if filename == "RTL_SW_board.json" else "POE")
+  apply_shutdown(g, "SW" if filename == "RTL_SW_board.json" else "POE")
  for region in g.get("board",{}).get("Regions",[]): region["Name"] = board_names.get(region["Name"],region["Name"])
  destination = out if filename in ('RTL_SW_board.json', 'RTL_POE_board.json') else Path('examples/profiles')
  destination.mkdir(parents=True,exist_ok=True); (destination/filename).write_text(json.dumps(g,ensure_ascii=False,indent=2)+'\n')

@@ -59,7 +59,7 @@ public sealed class BoardWindow : Window
         _regions.CellEditEnded += (_, _) => _canvas.InvalidateVisual();
         var root = new DockPanel { Margin = new Thickness(16) };
         var top = new StackPanel { Spacing = 8 }; top.Children.Add(_board);
-        top.Children.Add(new TextBlock { Text = editing ? "Загрузите фото и обведите элемент мышью. Перетащите область за середину, чтобы передвинуть её, или за угловой маркер, чтобы изменить размер. На свободном месте можно нарисовать новую область. Правая кнопка перемещает изображение, колесо меняет масштаб. Координаты и размер можно уточнить в таблице. В ноде нажмите ▧ и укажите ID элемента. Один элемент можно связать с несколькими проверками." : "Серый — не проверен; жёлтый — проверяется; зелёный — все связанные проверки пройдены; красный — отказ. Непривязанный элемент не получает результат. Колесо мыши — масштаб; правая кнопка — перемещение; щелчок — выбор элемента.", TextWrapping = TextWrapping.Wrap });
+        top.Children.Add(new TextBlock { Text = editing ? "Загрузите фото и обведите элемент мышью. Перетащите область за середину, чтобы передвинуть её, или за угловой маркер, чтобы изменить размер. На свободном месте можно нарисовать новую область. Правая кнопка перемещает изображение, колесо меняет масштаб. Координаты и размер можно уточнить в таблице. В ноде нажмите шестерёнку «Настройки ноды» и укажите код области в поле «Элементы платы через запятую». Один элемент можно связать с несколькими проверками." : "Серый — не проверен; жёлтый — проверяется; зелёный — все связанные проверки пройдены; красный — отказ. Непривязанный элемент не получает результат. Колесо мыши — масштаб; правая кнопка — перемещение; щелчок — выбор элемента.", TextWrapping = TextWrapping.Wrap });
         var buttons = new WrapPanel();
         if (editing)
         {
@@ -78,7 +78,7 @@ public sealed class BoardWindow : Window
             buttons.Children.Add(Button("Удалить область", DeleteSelectedRegion));
             buttons.Children.Add(Button("Применить к профилю", () => { try { if (!_regions.CommitEdit()) throw new InvalidOperationException("Исправьте координаты области."); _vm.ApplyBoard(_draft, _board.IsChecked == true); Close(); } catch (Exception ex) { _status.Text = ex.Message; } }));
         }
-        buttons.Children.Add(Button("Показать целиком", _canvas.ResetView));
+        if (!editing) buttons.Children.Add(Button("Показать целиком", _canvas.ResetView));
         buttons.Children.Add(Button(editing ? "Отмена" : "Закрыть", Close)); top.Children.Add(buttons);
         DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);

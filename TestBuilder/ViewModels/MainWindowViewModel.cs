@@ -26,6 +26,7 @@ namespace TestBuilder.ViewModels
         public string SessionStatus => !App.StartupOptions.IsValid ? "Ошибка параметров запуска" :
             string.IsNullOrEmpty(App.StartupSessionId) ? "Локальный запуск" : "Сессия лаунчера получена";
         public bool IsEngineerWorkspace => SettingsVM.IsEngineerMode;
+        public bool ShowBoardEditor => IsEngineerWorkspace && TestVM.IsBoardProfile;
 
         [ObservableProperty] private string selectedPage = "Editor";
         public bool IsEditorPage => SelectedPage == "Editor";
@@ -84,6 +85,7 @@ namespace TestBuilder.ViewModels
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
             SettingsVM.PropertyChanged += OnSettingsPropertyChanged;
             TestVM.IsOperatorView = !IsEngineerWorkspace;
+            RefreshProfileSettings();
         }
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -92,12 +94,18 @@ namespace TestBuilder.ViewModels
             TestVM.IsOperatorView = !IsEngineerWorkspace;
             if (!IsEngineerWorkspace) TestVM.Station.Prepare(TestVM.RootGraph);
             OnPropertyChanged(nameof(IsEngineerWorkspace));
+            OnPropertyChanged(nameof(ShowBoardEditor));
             OnPropertyChanged(nameof(WorkspaceTitle));
             OnPropertyChanged(nameof(SwitchWorkspaceTitle));
         }
 
         private void OnTestVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName is nameof(TestVM.IsBoardProfile) or nameof(TestVM.HasConsoleSettings))
+            {
+                OnPropertyChanged(nameof(ShowBoardEditor));
+                RefreshProfileSettings();
+            }
             if (e.PropertyName == nameof(TestVM.IsAutonomousStand))
             {
                 OnPropertyChanged(nameof(ShowSwitchTools));
@@ -113,6 +121,9 @@ namespace TestBuilder.ViewModels
                 OnPropertyChanged(nameof(CanSwitchWorkspace));
             }
         }
+
+        private void RefreshProfileSettings() =>
+            SettingsVM.SetProfileContext(TestVM.ProfileProductKind, TestVM.HasConsoleSettings);
 
         public void Dispose()
         {

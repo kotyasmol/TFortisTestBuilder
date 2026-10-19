@@ -259,7 +259,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         RefreshActiveStages();
         // A RunOnFailure stage may also be connected to the normal success path
         // (e.g. board power-off). Such a visible stage still represents cleanup.
-        var cleanupFailed = Stages.Any(s =>
+        var cleanupFailed = (context?.Variables.ContainsKey("Cleanup.Succeeded") == true && !context.GetVariable<bool>("Cleanup.Succeeded")) || Stages.Any(s =>
             (s.IsCleanup || s.Source is SubtestNodeViewModel { RunOnFailure: true }) &&
             s.State == StationStageState.Attention);
         var checksPassed = context != null && !context.HasCriticalError &&

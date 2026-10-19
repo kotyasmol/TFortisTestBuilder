@@ -101,7 +101,14 @@ public class BoardAlgorithmExecutionTests
             }
             if(address==CancelAddress&&value==1)CancelOnReset?.Cancel();return Task.FromResult(true);
         }
-        public Task<ushort[]> ReadRegistersAsync(byte s,ushort a,ushort count,CancellationToken ct=default)=>throw new InvalidOperationException("Graph must use polling cache, not a separate read.");
+        public Task<ushort[]> ReadRegistersAsync(byte s,ushort a,ushort count,CancellationToken ct=default)
+        {
+            ct.ThrowIfCancellationRequested();
+            Assert.Equal((ushort)1, count);
+            Assert.Contains((int)a, new[] { 2301,2302,2303,2304,2305,2307,2308,2385,2403,2492,2487,2489,2511 });
+            Assert.Equal(0, Values[a]); // Only shutdown readback may bypass the ordinary polling cache.
+            return Task.FromResult(new[] { (ushort)Values[a] });
+        }
         public Task<bool> CheckPortAsync(CancellationToken ct=default)=>Task.FromResult(true);
         public void SubscribeRegister(byte s,ushort a,Action<ushort[]> cb){}
         public Task<HttpRequestResult> GetAsync(string url,TimeSpan timeout,CancellationToken ct)=>Task.FromResult(HttpRequestResult.Success(200,"123456",TimeSpan.Zero));

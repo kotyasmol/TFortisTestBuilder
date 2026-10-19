@@ -89,7 +89,7 @@ public partial class TestViewModel
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
     public string StationConnectionText => IsConnecting ? "Подключение…" :
         IsConnected ? (IsMonitoringActive ? "Стенд подключён" : "Стенд подключён · нет обмена") : "Стенд отключён";
-    public bool IsStationReady => IsConnected && IsMonitoringActive && !IsConnecting;
+    public bool IsStationReady => !NeedsStandInspection && IsConnected && IsMonitoringActive && !IsConnecting;
     public string PauseStatus => IsPauseEffective ? "На паузе" : "Ожидание завершения текущих операций";
     public string PauseHint => IsPauseEffective ? "Нажмите «Продолжить», чтобы продолжить тест." :
         "Текущие операции во всех ветвях завершатся. Следующие будут ждать продолжения.";
@@ -130,11 +130,22 @@ public partial class TestViewModel
     }
     public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
     public bool CanChooseProfile => !IsTestRunning && !IsConnecting;
-    public bool CanStartRun => !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
+    [ObservableProperty] private bool needsStandInspection;
+    public string StandInspectionMessage => "Отключение стенда не подтверждено. Выключите питание стенда и обратитесь к инженеру перед следующим запуском.";
+    partial void OnNeedsStandInspectionChanged(bool value) => RefreshStationAvailability();
+    [RelayCommand]
+    private void ConfirmStandInspection()
+    {
+        if (!NeedsStandInspection || IsOperatorView || IsTestRunning || IsConnecting || IsConnected) return;
+        NeedsStandInspection = false;
+        TestingLogger.Warning("Инженер подтвердил проверку и ручное обесточивание стенда. Перед запуском подключитесь заново.");
+    }
+    public bool CanStartRun => !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
             (!GraphConnectionRequirements.RequiresStandConnection(RootGraph) || (IsConnected && IsMonitoringActive))));
     public string StationReadiness => !App.StartupOptions.IsValid ? App.StartupOptions.Error :
+        NeedsStandInspection ? StandInspectionMessage :
         _profileLoadError.Length > 0 ? "Программа не загружена. Выберите другой профиль или обратитесь к инженеру." :
         IsConnecting ? "Ищем стенд. Дождитесь окончания подключения." :
         IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : "Стенд занят проверкой") :
@@ -151,7 +162,11 @@ public partial class TestViewModel
     partial void OnIsConnectingChanged(bool value) => RefreshStationAvailability();
     partial void OnIsStoppingChanged(bool value) => RefreshStationAvailability();
     partial void OnIsTestRunningChanged(bool value) => RefreshStationAvailability();
-    partial void OnIsConnectedChanged(bool value) => RefreshStationAvailability();
+    partial void OnIsConnectedChanged(bool value)
+    {
+        RefreshStationAvailability();
+        RefreshStandIdentity();
+    }
     partial void OnIsMonitoringActiveChanged(bool value) => RefreshStationAvailability();
 
     private void RefreshStationAvailability()

@@ -94,6 +94,9 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
+    <Style Selector="AutoCompleteBox.profileIdentity /template/ TextBox">
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
     <!-- Keep the running graph readable and navigable without disabled-control dimming. -->
     <Style Selector="nodify|NodifyEditor.inspectOnly TextBox">
       <Setter Property="IsReadOnly" Value="True" />
@@ -168,13 +171,13 @@
             <PathIcon Width="18" Height="18" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
           </Button>
           <TextBlock Grid.Column="1" Text="Устройство" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <AutoCompleteBox x:Name="DeviceNameInput" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="2" Margin="0,0,12,0" ItemsSource="{Binding DeviceNameSuggestions}"
+          <AutoCompleteBox x:Name="DeviceNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="2" Margin="0,0,12,0" ItemsSource="{Binding DeviceNameSuggestions}"
                    Text="{Binding DeviceName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Watermark="Устройство"
                    FilterMode="ContainsOrdinal" IsTextCompletionEnabled="False" MinimumPrefixLength="1"
                    Padding="10,5" MinHeight="32" IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Устройство"
                    ToolTip.Tip="Выберите устройство или введите новое название. После сохранения появится раздел с этим названием." />
           <TextBlock Grid.Column="3" Text="·" FontSize="18" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <AutoCompleteBox x:Name="ProfileNameInput" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="4" ItemsSource="{Binding ProfileNameSuggestions}"
+          <AutoCompleteBox x:Name="ProfileNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="4" ItemsSource="{Binding ProfileNameSuggestions}"
                    Text="{Binding ProfileDescription, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Watermark="Название проверки"
                    FilterMode="ContainsOrdinal" IsTextCompletionEnabled="False" MinimumPrefixLength="1"
                    Padding="10,5" MinHeight="32" IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Название профиля"
@@ -186,6 +189,11 @@
                      ToolTip.Tip="{Binding CurrentGraphPath}" Margin="12,0,0,0" VerticalAlignment="Center" />
         </Grid>
         <WrapPanel Grid.Row="2" Classes="actions" Name="GraphActions">
+          <TextBlock Text="Тип изделия" VerticalAlignment="Center" Margin="0,0,6,8" />
+          <ComboBox x:Name="ProfileProductKindInput" ItemsSource="{Binding ProductKinds}"
+                    SelectedItem="{Binding ProfileProductKind, Mode=TwoWay}" IsEnabled="{Binding CanEditGraph}"
+                    MinWidth="145" Margin="0,0,12,8" VerticalContentAlignment="Center" AutomationProperties.Name="Тип изделия"
+                    ToolTip.Tip="Тип сохраняется в профиле и определяет доступные разделы программы." />
           <Button Command="{Binding RunGraphCommand}" Classes="primary" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /><TextBlock Text="Запустить" Foreground="{Binding $parent[Button].Foreground}" /></StackPanel></Button>
           <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза" Padding="9,8"><PathIcon Width="18" Height="18" Data="M5 3 H10 V21 H5 Z M14 3 H19 V21 H14 Z" /></Button>
           <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="primary" ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /></Button>

@@ -5,10 +5,21 @@
 			 x:DataType="vm:TestViewModel">
 
   <StackPanel Spacing="12">
-    <TextBlock Text="{Binding StandSectionTitle}" Classes="sectionTitle" Foreground="{DynamicResource PrimaryTextBrush}" />
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding StandSectionTitle}" TextWrapping="Wrap" Classes="sectionTitle" Foreground="{DynamicResource PrimaryTextBrush}" />
+      <TextBlock Text="{Binding StandSerialCaption}" IsVisible="{Binding HasStandSerial}" TextWrapping="Wrap"
+                 FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+    </StackPanel>
     <Button Content="{Binding ConnectionButtonText}" Command="{Binding ToggleConnectionCommand}"
             Classes="primary" HorizontalAlignment="Stretch" MinHeight="40" />
     <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}" TextWrapping="Wrap"
                FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+    <StackPanel IsVisible="{Binding NeedsStandInspection}" Spacing="8">
+      <TextBlock Text="{Binding StandInspectionMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DangerTextBrush}" />
+      <TextBlock Text="После ручного обесточивания и проверки отключитесь от стенда в программе и подтвердите:" TextWrapping="Wrap" />
+      <Button Command="{Binding ConfirmStandInspectionCommand}" IsEnabled="{Binding !IsConnected}">
+        <TextBlock Text="Стенд проверен и обесточен" TextWrapping="Wrap" />
+      </Button>
+    </StackPanel>
   </StackPanel>
 </UserControl>

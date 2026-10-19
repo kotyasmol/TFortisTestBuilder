@@ -18,14 +18,26 @@ public partial class TestViewModel
     partial void OnProductFilterChanged(string value)
     {
         RefreshProfiles();
-        OnPropertyChanged(nameof(IsAutonomousStand));
-        OnPropertyChanged(nameof(StandSectionTitle));
+    }
+    public string[] ProductKinds { get; } = { "Коммутатор", "Плата" };
+    public string ProfileProductKind
+    {
+        get => IsBoardProfile ? "Плата" : "Коммутатор";
+        set
+        {
+            if (!CanEditGraph || value is not ("Плата" or "Коммутатор")) return;
+            var kind = value == "Плата" ? "Board" : "Switch";
+            var previous = RootGraph.ProductKind;
+            if (kind == previous) return;
+            void Set(string type) { RootGraph.ProductKind = type; NotifyProfileMetadataChanged(); }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(kind), () => Set(previous)));
+        }
     }
     private bool MatchesProductFilter(GraphProfile p) => ProductFilter == "Все изделия" ||
         (ProductFilter == "Платы" ? p.ProductKind == "Board" : p.ProductKind != "Board");
     public bool IsBoardProfile => RootGraph.ProductKind == "Board";
-    public bool IsAutonomousStand => ProductFilter == "Платы" || IsBoardProfile;
-    public string StandSectionTitle => IsAutonomousStand ? "Автономный стенд" : "Подключение к стенду";
+    public bool IsAutonomousStand => IsBoardProfile;
+    public bool HasConsoleSettings => IsBoardProfile || RootGraph.Hardware?.ConsoleDevices.Count > 0;
     public bool CanEditHardware => CanEditGraph && !IsConnected && !IsConnecting;
     public IEnumerable<ConsoleDeviceDefinition> ConsoleDeviceChoices =>
         new[] { new ConsoleDeviceDefinition { Id = "", Name = "Порт из ноды / старых настроек" } }
@@ -36,8 +48,10 @@ public partial class TestViewModel
     {
         _boardNodeStates.Clear();
         OnPropertyChanged(nameof(IsBoardProfile));
+        OnPropertyChanged(nameof(ProfileProductKind));
+        OnPropertyChanged(nameof(HasConsoleSettings));
         OnPropertyChanged(nameof(IsAutonomousStand));
-        OnPropertyChanged(nameof(StandSectionTitle));
+        RefreshStandIdentity();
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(ConsoleDeviceChoices));
         BoardChanged?.Invoke();

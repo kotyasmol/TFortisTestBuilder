@@ -49,6 +49,25 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
+            if (!context.IsCleanup) return await ExecuteCoreAsync(context, cancellationToken);
+            // Bound each attempt, including recovery and readback, so one missing output
+            // cannot consume the entire shutdown budget. Await transport completion;
+            // never abandon a write that could continue after the next action starts.
+            using var attempt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            attempt.CancelAfter(TimeSpan.FromSeconds(5));
+            try { return await ExecuteCoreAsync(context, attempt.Token); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException("Аварийная запись регистра", ex);
+                _logger.Warning($"Не подтверждено отключение: устройство {ResolveSlaveId(context)}, регистр {_address}. " +
+                    (attempt.IsCancellationRequested ? "Истекло время попытки." : "Ошибка обмена со стендом."));
+                return StepResult.False;
+            }
+        }
+
+        private async Task<StepResult> ExecuteCoreAsync(TestContext context, CancellationToken cancellationToken)
+        {
             var actualSlaveId = ResolveSlaveId(context);
             var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address, _area);
 
@@ -70,6 +89,7 @@ namespace TestBuilder.Domain.Steps
                 _area,
                 cancellationToken);
 
+            cancellationToken.ThrowIfCancellationRequested();
             if (!writeOk)
             {
                 _logger.Warning(
@@ -105,6 +125,7 @@ namespace TestBuilder.Domain.Steps
                         _address,
                         1, _area,
                         cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

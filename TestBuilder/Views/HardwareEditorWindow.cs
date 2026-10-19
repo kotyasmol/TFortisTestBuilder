@@ -30,6 +30,7 @@ public sealed class HardwareEditorWindow : Window
     private readonly DataGrid _registersGrid = new() { AutoGenerateColumns = false, MinHeight = 220 };
     private readonly TextBlock _status = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBox _baud = new(), _bits = new(), _poll = new();
+    private readonly TextBox _standName = new() { Watermark = "Например, RTL-SW", MinWidth = 300 };
     private readonly AutoCompleteBox _port = new() { MinWidth = 320, Watermark = "Пусто — найти Modbus автоматически" };
     private readonly ObservableCollection<ConsoleDeviceDefinition> _consoles = new();
     private readonly ListBox _consoleList = new();
@@ -79,6 +80,10 @@ public sealed class HardwareEditorWindow : Window
 
         var connection = new StackPanel { Spacing = 18, Margin = new Thickness(8, 20), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Left };
         connection.Children.Add(_legacy);
+        var stand = new StackPanel { Spacing = 6 };
+        stand.Children.Add(new TextBlock { Text = "Название стенда" });
+        stand.Children.Add(_standName);
+        connection.Children.Add(stand);
         connection.Children.Add(new TextBlock { Text = "Для готового стенда АПК-03 можно оставить автоматическое определение. Для плат и другого оборудования задайте устройства на соседней вкладке.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var serial = new WrapPanel();
         Field(serial, "COM-порт Modbus", _port);
@@ -103,12 +108,12 @@ public sealed class HardwareEditorWindow : Window
         DockPanel.SetDock(deviceActions, Dock.Top); devices.Children.Add(deviceActions);
         var deviceBottom = new StackPanel { Spacing = 8 };
         deviceBottom.Children.Add(Button("Удалить устройство", () => { if (_devicesGrid.SelectedItem is DeviceDefinition d) { _devices.Remove(d); _devicesGrid.SelectedIndex = _devices.Count > 0 ? 0 : -1; ShowRegisters(); } }));
-        foreach (var (label, property) in new[] { ("Регистр типа", "IdentificationAddress"), ("Ожидаемое значение", "IdentificationValue") })
+        foreach (var (label, property) in new[] { ("Регистр типа", "IdentificationAddress"), ("Ожидаемое значение", "IdentificationValue"), ("Регистр серийного номера стенда (Holding, необязательно)", "StandSerialNumberAddress") })
         {
             var input = new TextBox(); input.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay });
             _identification.Children.Add(new TextBlock { Text = label }); _identification.Children.Add(input);
         }
-        deviceBottom.Children.Add(new Expander { Header = "Проверка типа устройства", Content = _identification, HorizontalAlignment = HorizontalAlignment.Stretch });
+        deviceBottom.Children.Add(new Expander { Header = "Тип устройства и номер стенда", Content = _identification, HorizontalAlignment = HorizontalAlignment.Stretch });
         DockPanel.SetDock(deviceBottom, Dock.Bottom); devices.Children.Add(deviceBottom);
         devices.Children.Add(_devicesGrid); devicesPage.Children.Add(devices);
 
@@ -126,7 +131,7 @@ public sealed class HardwareEditorWindow : Window
         var deviceTab = new TabItem { Header = "Устройства и регистры", Content = devicesPage };
         var consoleTab = new TabItem { Header = "Консоли", Content = CreateConsolePage() };
         var tabs = new TabControl { Items = { new TabItem { Header = "Подключение", Content = connection }, deviceTab, consoleTab } };
-        void ModeChanged() { var manual = _legacy.IsChecked != true; serial.IsEnabled = manual; deviceTab.IsEnabled = manual; consoleTab.IsEnabled = manual; export.IsEnabled = manual; }
+        void ModeChanged() { var manual = _legacy.IsChecked != true; stand.IsEnabled = manual; serial.IsEnabled = manual; deviceTab.IsEnabled = manual; consoleTab.IsEnabled = manual; export.IsEnabled = manual; }
         _legacy.IsCheckedChanged += (_, _) => ModeChanged(); ModeChanged();
         root.Children.Add(tabs); Content = root;
         LoadConnection(); _devicesGrid.SelectedIndex = _devices.Count == 0 ? -1 : 0; ShowRegisters();
@@ -137,13 +142,14 @@ public sealed class HardwareEditorWindow : Window
         if (!_devicesGrid.CommitEdit() || !_registersGrid.CommitEdit() || _identification.Children.OfType<TextBox>().Any(DataValidationErrors.GetHasErrors) || _consoleInputs.Any(DataValidationErrors.GetHasErrors))
             throw new InvalidOperationException("Исправьте некорректное значение в оборудовании.");
     }
-    private void LoadConnection() { _port.Text = _draft.PortName ?? AppSettings.Instance.StandPort; _baud.Text = _draft.BaudRate.ToString(); _bits.Text = _draft.DataBits.ToString(); _poll.Text = _draft.PollIntervalMs.ToString(); _parity.SelectedItem = _draft.Parity; _stop.SelectedItem = _draft.StopBits; }
+    private void LoadConnection() { _standName.Text = _draft.StandName; _port.Text = _draft.PortName ?? AppSettings.Instance.StandPort; _baud.Text = _draft.BaudRate.ToString(); _bits.Text = _draft.DataBits.ToString(); _poll.Text = _draft.PollIntervalMs.ToString(); _parity.SelectedItem = _draft.Parity; _stop.SelectedItem = _draft.StopBits; }
     private HardwareConfiguration GetDraft()
     {
         CommitGrid();
         _draft.BaudRate = int.Parse(_baud.Text ?? ""); _draft.DataBits = int.Parse(_bits.Text ?? ""); _draft.PollIntervalMs = int.Parse(_poll.Text ?? "");
         _draft.Parity = (Parity)_parity.SelectedItem!; _draft.StopBits = (StopBits)_stop.SelectedItem!;
         _draft.PortName = _port.Text?.Trim() ?? "";
+        _draft.StandName = string.IsNullOrWhiteSpace(_standName.Text) ? null : _standName.Text.Trim();
         _draft.ConsoleDevices = _consoles.ToList();
         _draft.Devices = _devices.ToList(); _draft.Validate(); return _draft;
     }

@@ -60,6 +60,7 @@ namespace TestBuilder.Domain.Modbus
                             {
                                 Name = preset.Name,
                                 SlaveId = slaveId,
+                                StandSerialNumberAddress = preset.StandSerialNumberAddress,
                                 Registers = preset.Registers
                             }, _modbus);
                             await model.PollAsync();

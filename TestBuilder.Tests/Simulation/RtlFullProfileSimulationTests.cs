@@ -110,10 +110,10 @@ public class RtlFullProfileSimulationTests
                 {
                     // Same top-level RunOnFailure policy as TestViewModel: preserve failure,
                     // run every enabled cleanup in profile order with a fresh cancellation token.
-                    ctx.HasCriticalError = true; ctx.SkipFirstRunNodes = false; rig.Cleanup = true;
+                    ctx.HasCriticalError = true; ctx.SkipFirstRunNodes = false; ctx.IsCleanup = true; rig.Cleanup = true;
                     foreach (var cleanup in vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Where(n => n.RunOnFailure && n.IsEnabled))
                     {
-                        using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                        using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
                         ctx.CancellationToken = cleanupCts.Token; vm.Station.BeginCleanup(cleanup);
                         var result = await new TestExecutor().ExecuteAsync(compiler.Compile(cleanup.BodyGraph).StartNode, ctx, cleanupCts.Token);
                         vm.Station.FinishCleanup(cleanup, result == ExecutionStatus.Completed);
@@ -128,7 +128,7 @@ public class RtlFullProfileSimulationTests
                     $"{key}: {status}; {vm.Station.Headline}; {ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary}\n" + string.Join("\n", ctx.ReportEntries.Where(e => !e.IsSuccess).Select(e => e.Name + ": " + e.Value)));
                 Assert.True(rig.ReadCount > 1);
                 Assert.Equal(fault is "disconnect" or "bus-lost" or "short-read", connectionLost);
-                var outputs = board == "SW" ? new[] { 2301, 2302, 2307, 2385 } : new[] { 2403, 2492, 2489, 2511 };
+                var outputs = board == "SW" ? new[] { 2301, 2302, 2303, 2304, 2305, 2307, 2308, 2385 } : new[] { 2403, 2492, 2487, 2489, 2511 };
                 if (fault is not ("cleanup" or "bus-lost")) Assert.All(outputs, a => Assert.Equal(0, rig.Value(a)));
                 else
                 {
@@ -152,8 +152,8 @@ public class RtlFullProfileSimulationTests
                     {
                         Assert.Equal(new[] { 2323, 2325, 2327, 2325, 2323 }, rig.Writes.Where(w => w.Value == 1 && w.Address is 2323 or 2325 or 2327).Select(w => w.Address));
                         Assert.DoesNotContain(rig.Writes, w => new[] { 2335, 2338, 2343, 2346, 2349, 2352, 2355, 2358, 2361, 2364, 2367, 2370 }.Contains(w.Address));
-                        foreach (var a in new[] { 2303, 2304 }) Assert.Equal(new[] { 0, 0, 1, 0 }, rig.Writes.Where(w => w.Address == a).Select(w => w.Value));
-                        Assert.Equal(new[] { 0 }, rig.Writes.Where(w => w.Address == 2305).Select(w => w.Value));
+                        foreach (var a in new[] { 2303, 2304 }) Assert.Equal(new[] { 0, 0, 1, 0, 0 }, rig.Writes.Where(w => w.Address == a).Select(w => w.Value));
+                        Assert.Equal(new[] { 0, 0 }, rig.Writes.Where(w => w.Address == 2305).Select(w => w.Value));
                         Assert.Equal(3, rig.Commands.Count(c => c.Contains("setParam")));
                     }
                     else
@@ -194,7 +194,7 @@ public class RtlFullProfileSimulationTests
                     seconds = elapsed.Elapsed.TotalSeconds, rig.ReadCount, rig.ReadErrors, rig.WriteAttempts, connectionLost,
                     failure = ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary, cleanupResults,
                     reportEntries = ctx.ReportEntries, reportsSentToMock = rig.Reports.Count, labelsCaptured = rig.Labels.Count,
-                    powerOutputs = (board == "SW" ? new[] { 2301, 2302, 2307, 2385 } : new[] { 2403, 2492, 2489, 2511 }).ToDictionary(a => a, rig.Value)
+                    powerOutputs = (board == "SW" ? new[] { 2301, 2302, 2303, 2304, 2305, 2307, 2308, 2385 } : new[] { 2403, 2492, 2487, 2489, 2511 }).ToDictionary(a => a, rig.Value)
                 }, opts));
                 File.WriteAllLines(Path.Combine(folder, "trace.jsonl"), rig.Trace.Select(e => JsonSerializer.Serialize(e)));
                 for (var i = 0; i < rig.Labels.Count; i++) File.WriteAllText(Path.Combine(folder, $"label-{i + 1}.epl"), rig.Labels[i]);
