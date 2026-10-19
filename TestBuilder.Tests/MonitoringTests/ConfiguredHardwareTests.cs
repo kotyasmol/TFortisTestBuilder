@@ -55,6 +55,26 @@ public class ConfiguredHardwareTests
     }
 
     [Fact]
+    public async Task UnknownDeviceAtEvenSlaveAddressNeedsNoBuiltInModelOrIdentity()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var bus = new RecordingBus();
+            var manager = new SlaveManager(bus);
+            var config = new HardwareConfiguration { Devices = new() { new()
+            {
+                Name = "Новый датчик", SlaveId = 42,
+                Registers = new() { new() { Address = 700, Area = ModbusArea.Input } }
+            } } };
+            Assert.Equal(1, await manager.ConfigureAsync(config));
+            Assert.Equal(42, Assert.Single(manager.GetSlavesSnapshot()).SlaveId);
+            Assert.Equal(new[] { (ModbusArea.Input, 700, 1) }, bus.Reads);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task InvalidIdentityDoesNotReplaceExistingDevices()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));

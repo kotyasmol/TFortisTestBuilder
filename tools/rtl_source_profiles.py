@@ -55,13 +55,13 @@ def apply_original(graph, board):
             if board == 'POE' and name.startswith('Подача PoE порт '):
                 node['isEnabled'] = source[f'port{name.split()[-1]}_test']
             if name == 'Перед началом':
-                next(n for n in walk(node['bodyGraph']) if n['type'] == 'Operator Action')['text'] = 'Установите прошитую плату в стенд. Проверьте подключение питания и COM-портов.'
+                next(n for n in walk(node['bodyGraph']) if n['type'] == 'Operator Action')['text'] = 'Установите плату в стенд. Проверьте подключение питания и COM-портов.'
             if name == 'Подготовка стенда':
                 node['description'] = 'Параметры RTL_SW_v1: задержки K5 и VCC — 10 (значения регистров). Коэффициенты калибровки не изменяются.'
             if name == 'Питание и reset':
                 node['description'] = 'Пауза загрузки из RTL_POE_v1: 15 секунд.'
                 [n for n in walk(node['bodyGraph']) if n['type'] == 'Delay'][-1]['milliseconds'] = source['startup_time'] * 1000
-            if name in ('DUT self-test', 'PoE info', 'Версия платы', 'Запуск DUT после ручной прошивки'):
+            if name in ('DUT self-test', 'PoE info', 'Версия платы', 'Запуск и готовность DUT'):
                 node['description'] = 'Параметры из RTL_' + board + '_v1.json.'
         if board == 'SW':
             if typ == 'Write Register' and address in SW_WRITES:

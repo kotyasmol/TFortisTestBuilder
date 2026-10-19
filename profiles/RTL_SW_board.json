@@ -27,7 +27,7 @@
           },
           {
             "type": "Operator Action",
-            "text": "Установите прошитую плату в стенд. Проверьте подключение питания и COM-портов.",
+            "text": "Установите плату в стенд. Проверьте подключение питания и COM-портов.",
             "outputVariableName": "",
             "id": "1",
             "x": 320,
@@ -4933,13 +4933,13 @@
     },
     {
       "type": "Subtest",
-      "name": "Запуск DUT после ручной прошивки",
+      "name": "Запуск и готовность DUT",
       "description": "Параметры из RTL_SW_v1.json.",
       "isEnabled": true,
       "stopOnError": true,
       "boardElements": "ConsoleStatus_1,ConsoleStatus_2,ConsoleStatus_3",
       "bodyGraph": {
-        "name": "Запуск DUT после ручной прошивки",
+        "name": "Запуск и готовность DUT",
         "nodes": [
           {
             "type": "Start",

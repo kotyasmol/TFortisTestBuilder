@@ -87,7 +87,7 @@ swboard=dict(ImageBase64=base64.b64encode((rtl/'Resources/Images/PlateImages/RTL
 # Original raw controller values; calibration coefficients are never changed.
 limits={a:sw_source[key] for a,key in SW_WRITES.items() if a not in (2329,2332)}
 sw=[]
-sw.append(sub('Перед началом',[prompt('Установите прошитую плату в стенд. Проверьте подключение питания и COM-портов.')]))
+sw.append(sub('Перед началом',[prompt('Установите плату в стенд. Проверьте подключение питания и COM-портов.')]))
 sw.append(sub('Подготовка стенда', [write(a,0) for a in [2301,2302,2303,2304,2305,2307,2308]]+[write(2329,sw_source["k5_test_delay"]),write(2332,sw_source["vcc_start_delay"])]+[write(a,v) for a,v in limits.items()]+[write(2385,0),delay(500)],description='Пределы и задержки из RTL_SW_v1.json. Коэффициенты калибровки не изменяются.'))
 sw.append(sub('CR2032 без питания',[check(2317,sw_source["cr2032_NoPWR_min"],sw_source["cr2032_NoPWR_max"],'CR2032 без питания'),check(2318,sw_source["cr2032_NoPWR_cpu_min"],sw_source["cr2032_NoPWR_cpu_max"],'CR2032 CPU без питания')],swreg('CrStatus')))
 sw.append(sub('Чтение MCU ID внешней утилитой',[write(2301,1),write(2307,0),write(2385,1)]+program_uid()+[write(2301,0),write(2385,0)],isEnabled=False,description='Опциональная операция исходника. Укажите существующий read_mcu_id.bat перед включением. Прошивка и эмуляция клавиатуры не выполняются. Основной идентификатор SW читается через DEVICE_ID.'))
@@ -105,7 +105,7 @@ sw[-1]['bodyGraph'] = graph('VCC',vcc_items)
 vcc = sw[-1]['bodyGraph']
 for cond in vcc['nodes'][1:3]:
  vcc['connections'].append(dict(sourceNodeId=cond['id'],sourceConnector='False',targetNodeId='4',targetConnector='In'))
-sw.append(sub('Запуск DUT после ручной прошивки',[write(2301,0),write(2302,0),delay(10000),write(2301,1),write(2302,1),delay(2000),repeat([console(param('SW_VERS'),timeout=3000),parse('SW_VERS','McuVersion')],30,2000),eq('McuVersion',sw_source['firmware_swd_vers'],'VersionAtLeast')],swreg('ConsoleStatus'),description='Ожидание ответа SW_VERS вместо зависимости от единичной строки загрузочного лога. Версия из RTL_SW_v1.'))
+sw.append(sub('Запуск и готовность DUT',[write(2301,0),write(2302,0),delay(10000),write(2301,1),write(2302,1),delay(2000),repeat([console(param('SW_VERS'),timeout=3000),parse('SW_VERS','McuVersion')],30,2000),eq('McuVersion',sw_source['firmware_swd_vers'],'VersionAtLeast')],swreg('ConsoleStatus'),description='Ожидание ответа SW_VERS вместо зависимости от единичной строки загрузочного лога. Версия из RTL_SW_v1.'))
 sw.append(sub('DUT self-test',[console('ubus call system board'),parse('release.version','FirmwareVersion'),eq('FirmwareVersion',sw_source['firmware_vers'],'VersionAtLeast')]+[collect('Аппаратные ошибки DUT',[sub(k,paramcheck(k,'0')) for k in ['HW_ERR1','HW_ERR2','HW_ERR3']])],swreg('RtlStatus','FlashStatus'),description='Проверка минимальной версии и трёх HW_ERR. Версия из RTL_SW_v1.'))
 for sensor,addr in [('sensor1',2303),('sensor2',2304)]:
  items=[]
@@ -133,7 +133,7 @@ g=graph('RTL-SW · проверка платы · параметры RTL_v1',sw)
 # PoE areas come from disjoint contours of the original SVG, converted offline.
 poeboard=json.loads(Path(sys.argv[2]).read_text())
 def poereg(*names):return ','.join(r['Id'] for r in poeboard['Regions'] if r['Name'] in names)
-poe=[sub('Перед началом',[prompt('Установите прошитую плату в стенд. Проверьте подключение питания и COM-портов.')])]
+poe=[sub('Перед началом',[prompt('Установите плату в стенд. Проверьте подключение питания и COM-портов.')])]
 poe.append(sub('MCU ID',[prompt('Введите или отсканируйте настоящий UID микроконтроллера платы (24 шестнадцатеричных символа). Автоматическое чтение можно включить отдельным подтестом.','CpuId'),parse(r'^[0-9A-Fa-f]{24}$','CpuId','CpuId',mode='Regex')],poereg('Spi_swd_uart93')))
 poe.append(sub('MCU ID внешней утилитой',[write(2511,1),write(2492,1)]+program_uid()+[write(2511,0)],isEnabled=False,description='Укажите BAT/EXE чтения UID. При включении отключите предыдущий ручной ввод. Не прошивает и не эмулирует клавиши.'))
 poe.append(sub('Серийный номер',[serial('RTL-POE')]))

@@ -17,6 +17,17 @@ public class RtlOriginalSettingsTests
         }
     }
     private static string Text(JsonElement node, string key) => node.TryGetProperty(key, out var value) ? value.GetString() ?? "" : "";
+    private static IEnumerable<JsonElement> EnabledNodes(JsonElement graph)
+    {
+        foreach (var node in graph.GetProperty("nodes").EnumerateArray())
+        {
+            if (node.TryGetProperty("isEnabled", out var enabled) && !enabled.GetBoolean()) continue;
+            yield return node;
+            foreach (var key in new[] { "body", "bodyGraph" })
+                if (node.TryGetProperty(key, out var body))
+                    foreach (var child in EnabledNodes(body)) yield return child;
+        }
+    }
 
     [Fact]
     public void SwPreparationWritesOriginalRawDelaysAndEveryLimit()
@@ -80,6 +91,7 @@ public class RtlOriginalSettingsTests
         var nodes = Nodes(profile.RootElement).ToArray();
         Assert.All(nodes.Where(n => Text(n,"name").StartsWith("Отчёт") || Text(n,"name").StartsWith("Этикетка")),
             n => Assert.False(n.GetProperty("isEnabled").GetBoolean()));
+        Assert.DoesNotContain(EnabledNodes(profile.RootElement), n => Text(n, "type") == "Run Program");
         Assert.DoesNotContain(nodes, n => Text(n,"type") == "Run Program" && !n.GetProperty("runProgram").GetProperty("programPath").GetString()!.StartsWith("read_"));
         Assert.Equal(1000, profile.RootElement.GetProperty("hardware").GetProperty("PollIntervalMs").GetInt32());
     }
