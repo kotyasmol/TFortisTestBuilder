@@ -145,7 +145,10 @@
                      IsVisible="{Binding StationProfiles.Count, Converter={StaticResource IsEmpty}}"
                      IsHitTestVisible="False" Foreground="{DynamicResource TextSecondaryBrush}" />
         </Grid>
-
+        <Button x:Name="ReloadProfileButton" Grid.Row="3" Classes="station"
+                Content="Открыть заново" Command="{Binding ReloadProfileCommand}"
+                HorizontalAlignment="Stretch" Margin="16,8,16,16"
+                ToolTip.Tip="Открыть сохранённый профиль и повторить подготовку стенда" />
       </Grid>
     </Border>
 

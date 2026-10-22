@@ -43,7 +43,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly Stack<GraphWorkspaceViewModel> _graphStack = new();
     private readonly List<string> _graphPath = new();
     private readonly ExecutionUiState _executionUi = new();
-    private readonly HashSet<string> _preparedProfileVersions = new(StringComparer.Ordinal);
 
     private string? _currentProfilePath;
     private string? _savedProfileName;
@@ -262,6 +261,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             LogUiException("Переключение профиля", ex);
         }
         finally { IsConnecting = false; }
+        if (profile != null && _profileLoadError.Length == 0)
+            await PrepareOpenedProfileAsync();
     }
 
     private ConnectionViewModel? _selectedConnection;
@@ -741,6 +742,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private void CreateNewProfile()
     {
         if (!CanEditGraph || !CanChooseProfile || IsConnected) { StatusMessage = "Отключите стенд перед сменой профиля."; return; }
+        ResetProfilePreparation();
         ResetToRootGraph();
 
         ResetPartialRun();
@@ -851,10 +853,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             LogUiException("Подключение/отключение стенда", ex);
         }
         finally { IsConnecting = false; }
+        if (IsConnected) await PrepareOpenedProfileAsync();
     }
 
     private async Task ConnectAsync()
     {
+        ResetProfilePreparation();
         StatusMessage = "Поиск COM-портов...";
 
         RootGraph.Hardware?.Validate();
@@ -960,6 +964,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
+            ResetProfilePreparation();
             IsMonitoringActive = false;
             StopRunForConnectionFailure();
             StatusMessage = "Связь Modbus потеряна. Выполняется автоматическое восстановление.";
@@ -971,7 +976,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (!message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase)) StopRunForConnectionFailure();
+            if (!message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase))
+            {
+                ResetProfilePreparation();
+                StopRunForConnectionFailure();
+            }
             if (IsStopping)
             {
                 CloseReconnectDialog();
@@ -1036,6 +1045,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task DisconnectAsync()
     {
+        ResetProfilePreparation();
         if (_registerMonitor != null) await _registerMonitor.StopAsync();
         DisposeRegisterMonitor();
 
@@ -1054,6 +1064,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task RunGraphAsync()
     {
         if (!CanStartRun) return;
+        if (!HasPartialRun && !await PrepareOpenedProfileAsync()) return;
+        await ExecuteGraphAsync();
+    }
+
+    private async Task ExecuteGraphAsync(ProfilePreparationPlan? preparation = null)
+    {
+        if (preparation == null ? !CanStartRun : !CanPrepareProfile) return;
+        var preparing = preparation != null;
         if (IsTraining && !IsSafeTrainingGraph())
         {
             StatusMessage = "В обучении доступны только старт, конец, задержка и подтверждение оператора.";
@@ -1066,16 +1084,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         if (IsOperatorView) ResetPartialRun();
-        if (!IsRunEntryAttached())
+        if (!preparing && !IsRunEntryAttached())
         {
             ResetPartialRun();
             StatusMessage = "Стартовая нода удалена. Выберите ноду заново.";
             return;
         }
-        var partialRun = HasPartialRun;
-        var runWorkspace = _runWorkspace ?? RootGraph;
-        var runEntry = _runEntry;
-        var singleNode = _runSingleNode;
+        var partialRun = !preparing && HasPartialRun;
+        var runWorkspace = partialRun ? _runWorkspace ?? RootGraph : RootGraph;
+        var runEntry = partialRun ? _runEntry : null;
+        var singleNode = partialRun && _runSingleNode;
         var runCaption = PartialRunCaption;
         var slaveId = RunSlaveId;
         if (partialRun && slaveId.HasValue &&
@@ -1084,7 +1102,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             StatusMessage = "Адрес устройства должен быть целым числом от 1 до 247 или оставаться пустым.";
             return;
         }
-        var requiresStandConnection = partialRun ? PartialRunRequiresStand() : GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+        var requiresStandConnection = preparing ? preparation!.Nodes.Any(GraphConnectionRequirements.RequiresStandConnection) :
+            partialRun ? PartialRunRequiresStand() : GraphConnectionRequirements.RequiresStandConnection(RootGraph);
         if (!IsConnected && requiresStandConnection)
         {
             StatusMessage = "Этот граф содержит Modbus-ноды. Перед запуском необходимо подключиться к стенду.";
@@ -1096,7 +1115,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var runTimer = System.Diagnostics.Stopwatch.StartNew();
         var logFilePath = IsTraining ? null : LoggingService.Instance.StartFileLogForRun(profileName);
 
-        TestingLogger.Info($"Запуск теста: {profileName}");
+        TestingLogger.Info(preparing ? $"Подготовка стенда при открытии профиля: {profileName}" : $"Запуск теста: {profileName}");
         if (partialRun) TestingLogger.Info($"Частичный запуск: {runCaption}. Новый контекст; cleanup при ошибке сохранён.");
         if (!string.IsNullOrWhiteSpace(logFilePath))
             TestingLogger.Info($"Логи записываются в файл: {logFilePath}");
@@ -1113,7 +1132,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         IsStopping = false;
         _boardNodeStates.Clear();
         BoardChanged?.Invoke();
-        Station.BeginRun(RootGraph);
+        Station.BeginRun(RootGraph, preparing);
         IsTestPaused = false;
         IsPauseEffective = false;
         SelfTestPageState.Reset();
@@ -1121,7 +1140,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var runCleanup = false;
         var executionStatus = ExecutionStatus.Failed;
         ExecutionFailure? runFailure = null;
-        string? profileSessionKey = null;
+        Dictionary<string, object>? preparedVariables = null;
 
         try
         {
@@ -1131,10 +1150,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
             using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
-            GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
-            var graph = compiler.Compile(runWorkspace, runEntry, singleNode);
-            if (!partialRun)
-                profileSessionKey = FirstRunProfileKey.Create(_currentProfilePath, GraphSerializer.Serialize(this, CurrentProfileName));
+            // Compile every preparation operation before performing the first hardware action.
+            var graphs = preparing ? preparation!.Nodes.Select(node =>
+            {
+                GraphCompiler.ValidateRunConnections(RootGraph, RootGraph.Hardware, SelectedPort, node, true);
+                return compiler.Compile(RootGraph, node, singleNode: true);
+            }).ToArray() : CompileRun();
+            CompiledGraph[] CompileRun()
+            {
+                GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
+                return new[] { compiler.Compile(runWorkspace, runEntry, singleNode) };
+            }
 
             var mainWindow = IsTraining ? TrainingDialogOwner?.Invoke() : Avalonia.Application.Current?.ApplicationLifetime
                 is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktopLife
@@ -1143,7 +1169,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             context = new TestContext(_registerState)
             {
-                SkipFirstRunNodes = profileSessionKey != null && _preparedProfileVersions.Contains(profileSessionKey),
+                SkipFirstRunNodes = !preparing && !partialRun,
                 RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),
                 ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
@@ -1179,6 +1205,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 }
             };
 
+            if (!preparing && !partialRun)
+                foreach (var pair in _profilePreparationVariables)
+                    context.SetVariable(pair.Key, ParallelVariableSnapshot.Clone(pair.Value));
             if (partialRun && slaveId is >= 1 and <= 247)
             {
                 context.CurrentSlaveId = (byte)slaveId.Value;
@@ -1187,10 +1216,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (context.RequireFreshMonitoring)
                 foreach (var slave in context.ModbusRegisters.SlaveIds) context.RequiredPollAfter[slave] = System.Diagnostics.Stopwatch.GetTimestamp();
             context.SetVariable("OperatorName", App.StartupUserName);
-            var result = await new TestExecutor().ExecuteAsync(
-                graph.StartNode,
-                context,
-                _testRunCts.Token);
+            var result = ExecutionStatus.Completed;
+            foreach (var graph in graphs)
+            {
+                result = await new TestExecutor().ExecuteAsync(graph.StartNode, context, _testRunCts.Token);
+                if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess)) break;
+            }
             executionStatus = result;
             runFailure = context.CriticalFailure ?? context.Failure;
             if (runFailure == null && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
@@ -1208,6 +1239,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
             else
             {
+                if (preparing)
+                    preparedVariables = context.Variables.ToDictionary(pair => pair.Key, pair => ParallelVariableSnapshot.Clone(pair.Value));
                 context.SetVariable("Execution.Status", result.ToString());
             }
         }
@@ -1255,7 +1288,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };
-                _preparedProfileVersions.Clear();
                 IsStopping = true;
                 IsTestPaused = false;
                 IsPauseEffective = false;
@@ -1298,11 +1330,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
 
             runTimer.Stop();
-            Station.CompleteRun(executionStatus, context, partialRun, runTimer.Elapsed);
-            if (Station.IsSuccessful && profileSessionKey != null)
-                _preparedProfileVersions.Add(profileSessionKey);
-            else if (profileSessionKey != null)
-                _preparedProfileVersions.Remove(profileSessionKey);
+            if (preparing)
+            {
+                var succeeded = executionStatus == ExecutionStatus.Completed && !runCleanup && preparedVariables != null;
+                if (succeeded)
+                {
+                    _preparedProfileKey = CurrentPreparationKey();
+                    _profilePreparationVariables = preparedVariables!;
+                }
+                else ResetProfilePreparation();
+                Station.CompletePreparation(succeeded, NeedsStandInspection);
+            }
+            else Station.CompleteRun(executionStatus, context, partialRun, runTimer.Elapsed);
             StatusMessage = Station.Headline + ".";
             IsTestRunning = false;
             IsStopping = false;
@@ -1334,8 +1373,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 TestingLogger.Info(StatusMessage);
                 ResetPartialRun();
             }
-            StatusMessage += " " + Station.DurationText;
-            TestingLogger.Info(Station.DurationText);
+            var durationText = preparing ? "Время настройки: " + StationDashboardViewModel.FormatDuration(runTimer.Elapsed) : Station.DurationText;
+            StatusMessage += " " + durationText;
+            TestingLogger.Info(durationText);
             // Cleanup uses the same context and may fail itself; keep the main run's original cause last.
             if (runFailure != null)
                 TestingLogger.Error(runFailure.LogMessage);
@@ -1505,7 +1545,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public async Task NodeSkippedAsync(TestNode node, TestContext context, CancellationToken cancellationToken)
     {
-        TestingLogger.Info($"[ПРОПУСК] {node.DisplayName}: режим «Только при первом запуске».");
+        TestingLogger.Info($"[ПРОПУСК] {node.DisplayName}: выполнено при открытии профиля.");
         if (node.Source is NodeViewModel source)
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -1694,6 +1734,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (!IsAllowedProfilePath(filePath)) { StatusMessage = "Учебный профиль должен находиться в папке обучения."; return; }
         ResetPartialRun();
         _profileLoadError = string.Empty;
+        ResetProfilePreparation();
         try
         {
             var json = File.ReadAllText(filePath);
@@ -1909,6 +1950,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         OnPropertyChanged(nameof(SelectedProfile));
         OnPropertyChanged(nameof(SelectedStationProfile));
         UpdateStationProfileSelection();
+        RefreshStationAvailability();
     }
 
     private void AddNode(string? nodeType)

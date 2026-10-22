@@ -22,6 +22,7 @@ public partial class StationDashboardViewModel : ViewModelBase
     private TaskCompletionSource<bool>? _prompt;
     private bool _stopping;
     private bool _cleanup;
+    private bool _preparing;
     public ObservableCollection<StationStageViewModel> Stages { get; } = new();
     [ObservableProperty] private string headline = "Пульт стенда";
     [ObservableProperty] private string guidance = "Подготовьте изделие и подключите стенд.";
@@ -65,6 +66,7 @@ public partial class StationDashboardViewModel : ViewModelBase
 
     public void Prepare(GraphWorkspaceViewModel graph)
     {
+        _preparing = false;
         _stageByNode.Clear();
         _activeNodes.Clear();
         Stages.Clear();
@@ -133,13 +135,28 @@ public partial class StationDashboardViewModel : ViewModelBase
             foreach (var child in composite.BodyGraph.Nodes) Map(child, stage);
     }
 
-    public void BeginRun(GraphWorkspaceViewModel graph)
+    public void BeginRun(GraphWorkspaceViewModel graph, bool preparing = false)
     {
         Prepare(graph);
         _stopping = _cleanup = false;
         IsPaused = false;
-        Headline = "Проверка выполняется";
-        Guidance = "Дождитесь результата. Если потребуется ваше действие, инструкция появится здесь.";
+        _preparing = preparing;
+        Headline = preparing ? "Настройка стенда" : "Проверка выполняется";
+        Guidance = preparing ? "Дождитесь завершения подготовки профиля." : "Дождитесь результата. Если потребуется ваше действие, инструкция появится здесь.";
+    }
+
+    public void CompletePreparation(bool succeeded, bool needsInspection)
+    {
+        _activeNodes.Clear();
+        _stopping = _cleanup = false;
+        _preparing = false;
+        HasResult = IsSuccessful = false;
+        NeedsAttention = !succeeded;
+        Elapsed = null;
+        Headline = succeeded ? "Стенд настроен" : "Подготовка стенда не завершена";
+        Guidance = needsInspection ? "Проверьте состояние стенда. Обратитесь к инженеру." :
+            succeeded ? "Установите изделие и нажмите «Начать проверку»." : "Устраните причину и повторите запуск или откройте профиль заново.";
+        CurrentStage = succeeded ? "Готов к проверке" : "Подготовка не выполнена";
     }
 
     public void NodeStarted(NodeViewModel node, TestContext context)
@@ -155,7 +172,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         if (stage.State != StationStageState.Running)
             stage.State = StationStageState.Running;
         RefreshActiveStages();
-        if (!_stopping && !_cleanup && !IsAwaitingAction) Headline = "Проверка выполняется";
+        if (!_stopping && !_cleanup && !IsAwaitingAction) Headline = _preparing ? "Настройка стенда" : "Проверка выполняется";
     }
 
     public void NodeCompleted(NodeViewModel node, StepResult result, TestContext context)
@@ -236,7 +253,7 @@ public partial class StationDashboardViewModel : ViewModelBase
     public void RequestStop()
     {
         _stopping = true;
-        Headline = "Останавливаем проверку";
+        Headline = _preparing ? "Останавливаем настройку стенда" : "Останавливаем проверку";
         Guidance = "Дождитесь завершения действий по остановке.";
     }
 
@@ -339,7 +356,8 @@ public partial class StationDashboardViewModel : ViewModelBase
                 IsAwaitingAction = false;
                 OperatorMessage = string.Empty;
                 Headline = _cleanup ? "Завершаем работу стенда" :
-                    _stopping ? "Останавливаем проверку" : "Проверка выполняется";
+                    _stopping ? (_preparing ? "Останавливаем настройку стенда" : "Останавливаем проверку") :
+                    _preparing ? "Настройка стенда" : "Проверка выполняется";
             }
         }
     }

@@ -44,8 +44,6 @@
           <Button x:Name="NodeOptionsTrigger" Content="⚙" Padding="3" ToolTip.Tip="Настройки ноды"
                   IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}">
             <Button.Flyout><Flyout><StackPanel Spacing="8" Width="290" IsEnabled="{Binding #NodeOptionsTrigger.IsEnabled}">
-              <CheckBox Content="Только при первом запуске" IsVisible="{Binding CanRunOnlyOnFirstRun}" IsChecked="{Binding RunOnlyOnFirstRun}" />
-              <TextBlock IsVisible="{Binding CanRunOnlyOnFirstRun}" Text="После первого успешного полного запуска профиля эта нода пропускается до закрытия приложения. При изменении профиля подготовка повторяется. Ручной запуск ноды и аварийные действия выполняются всегда." TextWrapping="Wrap" Classes="hint" />
               <TextBlock Text="Элементы платы через запятую" TextWrapping="Wrap" />
               <TextBox Text="{Binding BoardElements}" Watermark="VCC, K5" />
             </StackPanel></Flyout></Button.Flyout>
@@ -76,7 +74,6 @@
           </Button>
         </StackPanel>
         <StackPanel Spacing="4">
-          <TextBlock Text="Только первый запуск" IsVisible="{Binding RunOnlyOnFirstRun}" FontSize="11" Foreground="{Binding NodeHeaderTextBrush}" />
           <Border IsVisible="{Binding IsRunStart}" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="6,3">
             <TextBlock Text="{Binding RunStartLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="Bold" />
           </Border>
@@ -87,6 +84,15 @@
                    FontWeight="SemiBold"
                    Foreground="{Binding NodeHeaderTextBrush}"
                    VerticalAlignment="Center" />
+          <CheckBox x:Name="ProfileOpenToggle"
+                    Content="При открытии профиля"
+                    FontSize="11"
+                    MinHeight="24"
+                    Foreground="{Binding NodeHeaderTextBrush}"
+                    IsVisible="{Binding CanRunOnlyOnFirstRun}"
+                    IsChecked="{Binding RunOnlyOnFirstRun, Mode=TwoWay}"
+                    IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}"
+                    ToolTip.Tip="Выполнять при каждом открытии профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. При обычных запусках теста пропускать. Подтест и цикл выполняются целиком." />
         </StackPanel>
       </DockPanel>
     </DataTemplate>

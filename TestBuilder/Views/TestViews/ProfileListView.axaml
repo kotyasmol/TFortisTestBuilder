@@ -10,7 +10,7 @@
     <converters:CollectionEmptyConverter x:Key="CollectionEmptyConverter" />
   </UserControl.Resources>
 
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
     <TextBlock Text="Профили тестов" Classes="sectionTitle" Margin="0,0,0,12" Foreground="{DynamicResource PrimaryTextBrush}" />
     <ComboBox Grid.Row="1" ItemsSource="{Binding ProductFilters}" SelectedItem="{Binding ProductFilter}" IsEnabled="{Binding CanChooseProfile}" HorizontalAlignment="Stretch" Margin="0,0,0,8" AutomationProperties.Name="Вид изделия" />
     <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,0,0,12">
@@ -92,6 +92,9 @@
         </StackPanel>
       </Grid>
     </Border>
-
+    <Button x:Name="ReloadProfileButton" Grid.Row="6" Classes="sidebarAction"
+            Content="Открыть заново" Command="{Binding ReloadProfileCommand}"
+            HorizontalAlignment="Stretch" Margin="0,8,0,0"
+            ToolTip.Tip="Открыть сохранённый профиль и повторить подготовку стенда" />
   </Grid>
 </UserControl>

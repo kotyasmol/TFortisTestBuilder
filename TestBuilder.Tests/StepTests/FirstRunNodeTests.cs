@@ -67,13 +67,31 @@ public class FirstRunNodeTests
         vm.UndoCommand.Execute(null); Assert.False(delay.RunOnlyOnFirstRun);
         vm.RedoCommand.Execute(null); Assert.True(delay.RunOnlyOnFirstRun);
         var json = GraphSerializer.Serialize(vm, "Прогрев");
-        Assert.Contains("First Run (v1): Delay", json);
+        Assert.Contains("Profile Open (v2): Delay", json);
         GraphSerializer.Deserialize(json, vm);
         subtest = Assert.IsType<SubtestNodeViewModel>(vm.RootGraph.Nodes.Single());
         Assert.True(subtest.BodyGraph.Nodes.OfType<DelayNodeViewModel>().Single().RunOnlyOnFirstRun);
         vm.SelectedNodes.Add(subtest); vm.CopyNodes(); vm.PasteNodes();
         Assert.Equal(2, vm.RootGraph.Nodes.Count);
         Assert.All(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>(), n => Assert.True(n.BodyGraph.Nodes.OfType<DelayNodeViewModel>().Single().RunOnlyOnFirstRun));
+    }
+
+    [Fact]
+    public void LegacyFirstRunWrapper_LoadsAndSavesAsProfileOpenVersionTwo()
+    {
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        vm.Nodes.Add(new DelayNodeViewModel { RunOnlyOnFirstRun = true });
+        var legacy = GraphSerializer.Serialize(vm, "Legacy preparation")
+            .Replace("Profile Open (v2): ", "First Run (v1): ")
+            .Replace("runOnlyOnFirstRun", "legacyUnusedFlag");
+
+        GraphSerializer.Deserialize(legacy, vm);
+
+        Assert.True(Assert.IsType<DelayNodeViewModel>(Assert.Single(vm.Nodes)).RunOnlyOnFirstRun);
+        var saved = GraphSerializer.Serialize(vm, "Preparation");
+        Assert.Contains("Profile Open (v2): Delay", saved);
+        Assert.DoesNotContain("First Run (v1):", saved);
     }
 
     [Fact]

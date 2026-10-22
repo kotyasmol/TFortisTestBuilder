@@ -89,7 +89,7 @@ public partial class TestViewModel
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
     public string StationConnectionText => IsConnecting ? "Подключение…" :
         IsConnected ? (IsMonitoringActive ? "Стенд подключён" : "Стенд подключён · нет обмена") : "Стенд отключён";
-    public bool IsStationReady => !NeedsStandInspection && IsConnected && IsMonitoringActive && !IsConnecting;
+    public bool IsStationReady => !NeedsStandInspection && !HasPendingPreparation && IsConnected && IsMonitoringActive && !IsConnecting;
     public string PauseStatus => IsPauseEffective ? "На паузе" : "Ожидание завершения текущих операций";
     public string PauseHint => IsPauseEffective ? "Нажмите «Продолжить», чтобы продолжить тест." :
         "Текущие операции во всех ветвях завершатся. Следующие будут ждать продолжения.";
@@ -148,8 +148,10 @@ public partial class TestViewModel
         NeedsStandInspection ? StandInspectionMessage :
         _profileLoadError.Length > 0 ? "Программа не загружена. Выберите другой профиль или обратитесь к инженеру." :
         IsConnecting ? "Ищем стенд. Дождитесь окончания подключения." :
-        IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : "Стенд занят проверкой") :
+        IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : _isPreparingProfile ? "Настройка стенда" : "Стенд занят проверкой") :
         _currentProfilePath == null || _selectedProfile == null ? "Выберите программу проверки" :
+        HasPendingPreparation ? (!IsConnected && GraphConnectionRequirements.RequiresStandConnection(RootGraph)
+            ? "Подключите стенд для подготовки профиля" : "Подготовка профиля ещё не выполнена. Повторите запуск.") :
         !GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? "Готово · подключение к стенду не требуется" :
         IsConnected && IsMonitoringActive ? "Стенд готов к проверке" : "Подключите стенд перед запуском";
 
@@ -174,6 +176,8 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(CanEditGraph));
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(CanChooseProfile));
+        OnPropertyChanged(nameof(CanReloadProfile));
+        ReloadProfileCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanStartRun));
         OnPropertyChanged(nameof(StationReadiness));
         OnPropertyChanged(nameof(StationProfileName));

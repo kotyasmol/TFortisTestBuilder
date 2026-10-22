@@ -13,7 +13,7 @@
     },
     {
       "id": "1",
-      "type": "Subtest",
+      "type": "Profile Open (v2): Subtest",
       "x": 544,
       "y": 496,
       "color": "orange",
@@ -202,11 +202,11 @@
           }
         ]
       },
-      "runOnlyOnFirstRun": false
+      "runOnlyOnFirstRun": true
     },
     {
       "id": "2",
-      "type": "Subtest",
+      "type": "Profile Open (v2): Subtest",
       "x": 1024,
       "y": 496,
       "color": "orange",
@@ -931,7 +931,7 @@
           }
         ]
       },
-      "runOnlyOnFirstRun": false
+      "runOnlyOnFirstRun": true
     },
     {
       "id": "3",
@@ -3338,7 +3338,7 @@
       "id": "19",
       "type": "Label",
       "x": 5840,
-      "y": 800,
+      "y": 832,
       "color": "blue",
       "text": "не проверялось\r\nнужна либа фортов\r\nнужен принтер",
       "labelWidth": 300,

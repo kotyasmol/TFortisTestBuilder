@@ -24,8 +24,10 @@ namespace TestBuilder.Services
         };
 
         private const string FirstRunPrefix = "First Run (v1): ";
-        private static string UnwrapNodeType(string? type) => type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
-            ? type[FirstRunPrefix.Length..] : type ?? "";
+        private const string ProfileOpenPrefix = "Profile Open (v2): ";
+        private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
+            ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
+                ? type[FirstRunPrefix.Length..] : type ?? "";
 
         // Маппинг ViewModel -> английский тип для JSON
         private static string GetNodeType(NodeViewModel node) => node switch
@@ -112,7 +114,7 @@ namespace TestBuilder.Services
                     Id = nodeIds[node],
                     // Older executables reject this alias instead of silently dropping
                     // all but the last branch. It still renders as the ordinary Start.
-                    Type = node.RunOnlyOnFirstRun ? FirstRunPrefix + GetNodeType(node) : requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
+                    Type = node.RunOnlyOnFirstRun ? ProfileOpenPrefix + GetNodeType(node) : requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
                         : requiresParallelRuntime && node is BodyStartNodeViewModel ? "Body Start (parallel v1)"
                         : GetNodeType(node),
                     X = node.Location.X,
@@ -491,7 +493,7 @@ namespace TestBuilder.Services
                     ? n.NodeType ?? string.Empty
                     : n.Type;
 
-                var wrappedFirstRun = type.StartsWith(FirstRunPrefix, StringComparison.Ordinal);
+                var wrappedFirstRun = type.StartsWith(FirstRunPrefix, StringComparison.Ordinal) || type.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal);
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
@@ -750,7 +752,7 @@ namespace TestBuilder.Services
                 if (node.RunOnlyOnFirstRun && !node.CanRunOnlyOnFirstRun)
                 {
                     node.Dispose();
-                    throw new InvalidOperationException($"Для ноды '{type}' нельзя задать выполнение только при первом запуске.");
+                    throw new InvalidOperationException($"Для ноды '{type}' нельзя задать выполнение при открытии профиля.");
                 }
 
                 node.Location = location;
