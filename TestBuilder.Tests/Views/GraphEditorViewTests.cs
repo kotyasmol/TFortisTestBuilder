@@ -402,7 +402,8 @@ public class GraphEditorViewTests
                 Assert.All(Descriptions(), description => Assert.Contains("PS-2:", description));
                 registry.Slaves.Clear();
                 write.SyncSlaves(); check.SyncSlaves(); wait.SyncSlaves();
-                Assert.Null(write.SelectedRegister);
+                Assert.NotNull(write.SelectedRegister);
+                Assert.True(write.ShowRegisterSelector);
                 write.Address = check.Address = wait.Address = 65535;
                 Assert.All(Descriptions(), description => Assert.Contains("описание отсутствует", description));
                 write.Address = check.Address = wait.Address = 1000;

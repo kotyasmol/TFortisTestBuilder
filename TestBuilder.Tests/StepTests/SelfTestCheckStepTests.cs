@@ -7,6 +7,7 @@ using TestBuilder.Tests.Support;
 
 namespace TestBuilder.Tests.StepTests;
 
+[Collection("Browser process lifecycle")]
 public class SelfTestCheckStepTests
 {
     [Theory]

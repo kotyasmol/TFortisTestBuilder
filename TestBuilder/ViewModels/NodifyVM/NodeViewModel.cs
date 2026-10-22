@@ -64,6 +64,17 @@ namespace TestBuilder.ViewModels.NodifyVM
         // Список слейвов для ComboBox в нодах
         public ObservableCollection<SlaveModelBase> AvailableSlaves { get; } = new();
         public bool IsConnected => SlaveRegistry.Instance.IsConnected;
+        private TestBuilder.Domain.Modbus.HardwareConfiguration? _registerReferenceHardware;
+        internal TestBuilder.Domain.Modbus.HardwareConfiguration? RegisterReferenceHardware
+        {
+            get => _registerReferenceHardware;
+            set
+            {
+                if (ReferenceEquals(_registerReferenceHardware, value)) return;
+                _registerReferenceHardware = value;
+                OnSlavesLoaded();
+            }
+        }
         public string HelpText => NodeHelpTextProvider.GetHelp(GetType());
         public string HelpSummary => NodeHelpTextProvider.GetSummary(GetType());
         public IReadOnlyList<string> HelpDetails => NodeHelpTextProvider.GetDetails(GetType());

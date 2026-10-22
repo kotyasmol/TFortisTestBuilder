@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services;
 using TestBuilder.Services.Http;
 using TestBuilder.Services.Logging;
 
@@ -44,6 +45,7 @@ namespace TestBuilder.Domain.Steps
         private const int MaxPageAttemptTimeoutMs = 30000;
         private const int BrowserDomSettleDelayMs = 10000;
         private const int MaxExtractionCandidates = 64;
+        private static readonly BrowserAttemptCoordinator BrowserAttempts = new();
 
         private readonly IHttpRequestService _httpRequestService;
         private readonly ILogger _logger;
@@ -776,9 +778,27 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken,
             Action<string>? reportStage = null)
         {
+            var waiting = Stopwatch.StartNew();
+            try
+            {
+                return await BrowserAttempts.RunAsync(timeout, cancellationToken,
+                    remaining => GetPageWithBrowserCoreAsync(browserPath, url, remaining,
+                        cancellationToken, reportStage)).ConfigureAwait(false);
+            }
+            catch (TimeoutException ex)
+            {
+                return HttpRequestResult.Failure(ex.Message, waiting.Elapsed);
+            }
+        }
+
+        private static async Task<HttpRequestResult> GetPageWithBrowserCoreAsync(
+            string browserPath, string url, TimeSpan timeout, CancellationToken cancellationToken,
+            Action<string>? reportStage)
+        {
             var stopwatch = Stopwatch.StartNew();
             var userDataDir = Path.Combine(Path.GetTempPath(), "TestBuilderHeadlessChrome_" + Guid.NewGuid().ToString("N"));
             Process? process = null;
+            WindowsProcessJob? job = null;
             var processStarted = false;
             string? webSocketUrl = null;
             var stage = "starting Chrome";
@@ -786,7 +806,9 @@ namespace TestBuilder.Domain.Steps
             void Stage(string value)
             {
                 stage = value;
-                reportStage?.Invoke($"{value} ({stopwatch.ElapsedMilliseconds} ms).");
+                // Diagnostics must never interrupt process cleanup.
+                try { reportStage?.Invoke($"{value} ({stopwatch.ElapsedMilliseconds} ms)."); }
+                catch { }
             }
 
             try
@@ -796,15 +818,19 @@ namespace TestBuilder.Domain.Steps
                 var debuggingPort = GetAvailableTcpPort();
                 Directory.CreateDirectory(userDataDir);
 
-                process = new Process();
-                process.StartInfo = CreateBrowserStartInfo(
-                    browserPath,
-                    url,
-                    debuggingPort,
-                    userDataDir);
-
+                var startInfo = CreateBrowserStartInfo(browserPath, url, debuggingPort, userDataDir);
                 cancellationToken.ThrowIfCancellationRequested();
-                processStarted = process.Start();
+                if (OperatingSystem.IsWindows())
+                {
+                    job = new WindowsProcessJob();
+                    process = job.Start(startInfo);
+                    processStarted = true;
+                }
+                else
+                {
+                    process = new Process { StartInfo = startInfo };
+                    processStarted = process.Start();
+                }
                 Stage($"Chrome PID {process.Id} started; waiting for DevTools");
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -837,6 +863,10 @@ namespace TestBuilder.Domain.Steps
             {
                 return HttpRequestResult.Failure($"{ex.Message} Stage: {stage}.", stopwatch.Elapsed);
             }
+            catch (BrowserCleanupException)
+            {
+                throw; // The application-wide coordinator must block all further launches.
+            }
             catch (Exception ex)
             {
                 return HttpRequestResult.Failure($"{ex.Message} Stage: {stage}.", stopwatch.Elapsed);
@@ -855,11 +885,11 @@ namespace TestBuilder.Domain.Steps
                             Stage("closing Chrome");
                             try
                             {
-                                await StopBrowserAsync(process, webSocketUrl).ConfigureAwait(false);
+                                await StopBrowserAsync(process, webSocketUrl, job).ConfigureAwait(false);
                             }
                             catch (Exception ex)
                             {
-                                throw new InvalidOperationException(
+                                throw new BrowserCleanupException(
                                     $"Could not close Chrome PID {process.Id}; stage before cleanup: {lastPageStage}. " +
                                     "Browser retry stopped to avoid accumulating processes.", ex);
                             }
@@ -868,10 +898,12 @@ namespace TestBuilder.Domain.Steps
                     }
                     finally
                     {
+                        job?.Dispose();
                         process.Dispose();
                     }
                 }
 
+                job?.Dispose(); // Also release a job whose process failed to start.
                 // The exited browser cannot overlap the next attempt. Profile IO is
                 // independent of the captured DOM and may be slow under Windows antivirus.
                 _ = Task.Run(() => TryDeleteDirectory(userDataDir));
@@ -1387,14 +1419,10 @@ namespace TestBuilder.Domain.Steps
             yield return $"poe_{side}_{kind}[{Math.Max(0, number - 1)}]";
         }
 
-        private static async Task StopBrowserAsync(Process process, string? webSocketUrl)
+        private static async Task StopBrowserAsync(Process process, string? webSocketUrl, WindowsProcessJob? job)
         {
-            if (process.HasExited)
-                return;
-
-            // Let Chrome close its own child processes before resorting to a tree kill.
-            // Browser.close may close the socket before sending a response.
-            if (webSocketUrl != null)
+            // A closed parent does not prove that renderers/GPU/utility processes exited.
+            if (!process.HasExited && webSocketUrl != null)
             {
                 using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                 try
@@ -1404,56 +1432,21 @@ namespace TestBuilder.Domain.Steps
                     await SendDevToolsCommandAsync(socket, 1, "Browser.close",
                         new Dictionary<string, object>(), closeTimeout.Token).ConfigureAwait(false);
                     await process.WaitForExitAsync(closeTimeout.Token).ConfigureAwait(false);
-                    return;
                 }
                 catch (Exception) { } // A timed-out/crashed browser still needs forced cleanup.
             }
 
-            if (process.HasExited)
+            if (job != null)
+            {
+                await job.TerminateAndWaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
                 return;
+            }
 
+            if (process.HasExited) return;
             using var killTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            if (OperatingSystem.IsWindows())
-            {
-                // Process.Kill(entireProcessTree: true) synchronously walks system
-                // processes on Windows. Keep forced termination in a bounded OS process.
-                using var killer = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "taskkill.exe"),
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-                killer.StartInfo.ArgumentList.Add("/PID");
-                killer.StartInfo.ArgumentList.Add(process.Id.ToString(CultureInfo.InvariantCulture));
-                killer.StartInfo.ArgumentList.Add("/T");
-                killer.StartInfo.ArgumentList.Add("/F");
-                killer.Start();
-                try
-                {
-                    await killer.WaitForExitAsync(killTimeout.Token).ConfigureAwait(false);
-                }
-                finally
-                {
-                    if (!killer.HasExited)
-                        killer.Kill();
-                }
-            }
-            else
-                process.Kill(entireProcessTree: true);
-
-            // If Chrome cannot be stopped, fail this execution instead of silently
-            // accumulating another browser on each retry. Stop remains cancellable.
-            try
-            {
-                await process.WaitForExitAsync(killTimeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException ex)
-            {
-                throw new InvalidOperationException($"Chrome PID {process.Id} could not be stopped; no further browser attempt will be started.", ex);
-            }
+            try { process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) when (process.HasExited) { }
+            await process.WaitForExitAsync(killTimeout.Token).ConfigureAwait(false);
         }
 
         private static void TryDeleteDirectory(string path)

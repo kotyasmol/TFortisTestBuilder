@@ -357,7 +357,7 @@
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Устройство из цикла" TextWrapping="Wrap" /></CheckBox>
 
-                    <Grid ColumnDefinitions="108,*">
+                    <Grid ColumnDefinitions="50,*,70">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
@@ -367,11 +367,11 @@
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
+                            <TextBlock Text="{Binding}" ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1"
+                      <TextBox Grid.Column="2" Margin="4,0,0,0"
                                IsVisible="{Binding ShowAddressTextBox}"
                                Text="{Binding AddressText}"
                                FontSize="{StaticResource FontCaption}" />
@@ -730,7 +730,7 @@
                       <TextBox Grid.Column="1" Text="{Binding ReadIntervalMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="108,*">
+                    <Grid ColumnDefinitions="50,*,70">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1"
                                 IsVisible="{Binding ShowRegisterSelector}"
@@ -740,11 +740,11 @@
                                 HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
+                            <TextBlock Text="{Binding}" ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1"
+                      <TextBox Grid.Column="2" Margin="4,0,0,0"
                                IsVisible="{Binding ShowAddressTextBox}"
                                Text="{Binding Address}"
                                FontSize="{StaticResource FontCaption}" />
@@ -1188,12 +1188,12 @@
                     </Grid>
                     <CheckBox  IsChecked="{Binding UseCurrentSlaveId}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Устройство из цикла" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox  IsChecked="{Binding LiveRead}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Прямое чтение устройства" TextWrapping="Wrap" /></CheckBox>
-                    <Grid ColumnDefinitions="108,*">
+                    <Grid ColumnDefinitions="50,*,70">
                       <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <ComboBox Grid.Column="1" IsVisible="{Binding ShowRegisterSelector}" ItemsSource="{Binding AvailableRegisters}" SelectedItem="{Binding SelectedRegister}" FontSize="{StaticResource FontCaption}" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" /></DataTemplate></ComboBox.ItemTemplate>
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontCaption}" /></DataTemplate></ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="{StaticResource FontCaption}" />
+                      <TextBox Grid.Column="2" Margin="4,0,0,0" IsVisible="{Binding ShowAddressTextBox}" Text="{Binding Address}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <SelectableTextBlock Text="{Binding RegisterDescription}" MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RegisterDescription}"
                                          FontSize="{StaticResource FontCaption}" TextWrapping="Wrap"

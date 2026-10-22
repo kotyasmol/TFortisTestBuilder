@@ -29,14 +29,14 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ObservableCollection<RegisterItem> AvailableRegisters { get; } = new();
         public bool HasSelectedRegister => SelectedRegister != null;
-        public bool ShowRegisterSelector => IsConnected && HasSelectedRegister;
-        public bool ShowAddressTextBox => !IsConnected || !HasSelectedRegister;
+        public bool ShowRegisterSelector => AvailableRegisters.Count > 0;
+        public bool ShowAddressTextBox => true;
 
         public string RegisterDescription => RegisterReference.Describe(Address,
-            IsConnected && !UseCurrentSlaveId ? SelectedSlave : null);
+            IsConnected && !UseCurrentSlaveId ? SelectedSlave : null, RegisterArea,
+            RegisterReferenceHardware, UseCurrentSlaveId ? null : SlaveId);
 
-        partial void OnUseCurrentSlaveIdChanged(bool value) =>
-            OnPropertyChanged(nameof(RegisterDescription));
+        partial void OnUseCurrentSlaveIdChanged(bool value) => RestoreSelections();
 
         private SlaveModelBase? _selectedSlave;
         public SlaveModelBase? SelectedSlave
@@ -73,12 +73,15 @@ namespace TestBuilder.ViewModels.StepVM
             AddInput(In);
             AddOutput(TrueOut);
             AddOutput(FalseOut);
+            RestoreSelections();
         }
 
         private void RefreshRegisters()
         {
             AvailableRegisters.Clear();
-            foreach (var reg in (_selectedSlave?.RegisterItems ?? Enumerable.Empty<RegisterItem>()))
+            foreach (var reg in RegisterReference.Choices(RegisterArea, writableOnly: false,
+                IsConnected && !UseCurrentSlaveId ? _selectedSlave : null,
+                RegisterReferenceHardware, UseCurrentSlaveId ? null : SlaveId))
                 AvailableRegisters.Add(reg);
             _selectedRegister = AvailableRegisters.FirstOrDefault(r => r.Address == Address && r.Area == RegisterArea);
             OnPropertyChanged(nameof(SelectedRegister));
