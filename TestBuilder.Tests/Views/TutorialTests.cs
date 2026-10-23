@@ -257,25 +257,7 @@ public class TutorialTests
         Assert.True(w.Step == step, $"Expected {step}, actual {w.Step}; {w.Model.StatusMessage}");
         if (w.Target != null) Assert.True(w.HighlightBounds.Width > 0 && w.HighlightBounds.Height > 0);
     }
-    static void ClickTarget(TutorialWindow w)
-    {
-        Assert.NotNull(w.Target);
-        if (w.Step is TutorialStep.SaveCopy or TutorialStep.Save or TutorialStep.Run)
-        {
-            var graph = w.GetVisualDescendants().OfType<TestBuilder.Views.TestViews.GraphEditorView>().Single();
-            graph.OpenGraphMenu(); Layout(w);
-            var menu = graph.NodeRunMenu!;
-            var item = w.Step == TutorialStep.Run
-                ? menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Выполнение"))
-                    .Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Запустить"))
-                : menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Сохранить профиль"));
-            Assert.True(item.Command!.CanExecute(null));
-            item.Command.Execute(null);
-            menu.Close(); Layout(w);
-            return;
-        }
-        Click(w, w.Target!);
-    }
+    static void ClickTarget(TutorialWindow w) { Assert.NotNull(w.Target); Click(w, w.Target!); }
     static Button Named(Window w, string name) => w.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);
     static void Click(Window w, Control c)
     {
