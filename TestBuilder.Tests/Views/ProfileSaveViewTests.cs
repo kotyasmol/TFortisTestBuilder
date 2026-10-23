@@ -61,8 +61,10 @@ public class ProfileSaveViewTests
                 var field = graph.GetVisualDescendants().OfType<AutoCompleteBox>().Single(x => AutomationProperties.GetName(x) == "Название профиля").GetVisualDescendants().OfType<TextBox>().Single();
                 Assert.Equal(profile.Name, field.Text);
                 field.Focus(); field.Text = "Проверка питания для завода 2";
-                var save = graph.GetVisualDescendants().OfType<Button>().Single(x => ReferenceEquals(x.Command, vm.SaveGraphCommand));
-                Click(save);
+                graph.OpenGraphMenu(); Layout(window);
+                var save = graph.NodeRunMenu!.Items.OfType<MenuItem>().Single(x => ReferenceEquals(x.Command, vm.SaveGraphCommand));
+                save.Command!.Execute(null);
+                graph.NodeRunMenu.Close();
                 if (vm.SaveGraphCommand.ExecutionTask != null) await vm.SaveGraphCommand.ExecutionTask;
                 Layout(window);
                 Assert.Equal("RTL-SW · Проверка питания для завода 2", vm.CurrentProfileName);

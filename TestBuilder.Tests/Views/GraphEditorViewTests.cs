@@ -490,7 +490,7 @@ public class GraphEditorViewTests
     }
 
     [Fact]
-    public async Task Toolbar_ZoomsCentersAndCollapsesPalette_WithoutChangingGraph()
+    public async Task ContextMenu_ZoomsCentersAndCollapsesPalette_WithoutChangingGraph()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
@@ -507,6 +507,16 @@ public class GraphEditorViewTests
                 var editor = view.FindControl<NodifyEditor>("Editor")!;
                 void Click(string name)
                 {
+                    if (name != "Свернуть или развернуть палитру")
+                    {
+                        view.OpenGraphMenu(); Layout(window);
+                        var menu = view.NodeRunMenu!.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Масштаб"));
+                        var title = name.Replace(" масштаб", "");
+                        menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, title))
+                            .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
+                        view.NodeRunMenu.Close(); Layout(window);
+                        return;
+                    }
                     var button = view.GetVisualDescendants().OfType<Button>().Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == name);
                     var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
                     window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);

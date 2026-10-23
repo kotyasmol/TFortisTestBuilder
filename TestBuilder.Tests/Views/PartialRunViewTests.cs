@@ -40,7 +40,7 @@ public class PartialRunViewTests
                 window.MouseDown(point, MouseButton.Right); window.MouseUp(point, MouseButton.Right); Layout(window);
                 Assert.NotNull(view.NodeRunMenu);
                 Assert.True(view.NodeRunMenu!.IsOpen);
-                var menuItem = view.NodeRunMenu.Items.OfType<MenuItem>().Last();
+                var menuItem = view.NodeRunMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Выполнение")).Items.OfType<MenuItem>().Last();
                 menuItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 view.NodeRunMenu.Close(); Layout(window);
                 Assert.True(vm.HasPartialRun);

@@ -31,6 +31,8 @@ public partial class GraphEditorView : UserControl, IDisposable
     private double _labelResizeStartHeight;
     internal NodeHelpWindow? HelpWindow { get; private set; }
     internal ContextMenu? NodeRunMenu { get; private set; }
+    private bool _isMultiSelect;
+    private Point? _contextPress;
     private bool _isDisposed;
     private bool _fitPending;
     private bool _fitScheduled;
@@ -178,6 +180,13 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private void OnSelectionPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (e.InitialPressMouseButton == MouseButton.Right && _contextPress is { } press)
+        {
+            _contextPress = null;
+            var delta = e.GetPosition(Editor) - press;
+            if (delta.X * delta.X + delta.Y * delta.Y <= 16)
+                OpenGraphMenu();
+        }
         if (!ReferenceEquals(e.Pointer.Captured, this)) return;
         e.Pointer.Capture(null);
         e.Handled = true;
@@ -192,7 +201,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         if (nodeContainer != null && e.GetCurrentPoint(Editor).Properties.IsLeftButtonPressed &&
             DataContext is TestViewModel nodeVm)
             nodeVm.SelectConnection(null);
-        if (MultiSelectNodesToggle.IsChecked == true &&
+        if (_isMultiSelect &&
             e.GetCurrentPoint(Editor).Properties.IsLeftButtonPressed &&
             DataContext is TestViewModel { CanEditGraph: true } selectionVm &&
             nodeContainer?.DataContext is NodeViewModel selectedNode)
@@ -208,48 +217,93 @@ public partial class GraphEditorView : UserControl, IDisposable
             // Keep the standard text-field context menu available for editing values.
             if (source?.GetSelfAndVisualAncestors().Any(c => c is TextBox) == true) return;
             var wire = source?.GetSelfAndVisualAncestors().OfType<BaseConnection>().FirstOrDefault();
-            if (wire?.DataContext is ConnectionViewModel connection && vm.CanEditGraph)
+            if (wire?.DataContext is ConnectionViewModel connection)
             {
-                vm.SelectConnection(connection);
-                var remove = new MenuItem { Header = "Удалить связь" };
-                remove.Click += (_, _) => vm.DeleteConnection(connection);
-                NodeRunMenu?.Close();
-                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { remove } };
-                NodeRunMenu.Open(wire);
+                if (vm.CanEditGraph) vm.SelectConnection(connection);
+                OpenGraphMenu(connection: connection);
                 e.Handled = true;
                 return;
             }
-            if (nodeContainer?.DataContext is NodeViewModel node && vm.CanEditGraph)
+            if (nodeContainer?.DataContext is NodeViewModel node)
             {
-                vm.SelectConnection(null);
-                if (!vm.SelectedNodes.Contains(node))
+                if (vm.CanEditGraph)
                 {
-                    vm.SelectedNodes.Clear();
-                    vm.SelectedNodes.Add(node);
+                    vm.SelectConnection(null);
+                    if (!vm.SelectedNodes.Contains(node))
+                    {
+                        vm.SelectedNodes.Clear();
+                        vm.SelectedNodes.Add(node);
+                    }
                 }
-                var copy = new MenuItem { Header = "Копировать" };
-                var duplicate = new MenuItem { Header = "Дублировать" };
-                var delete = new MenuItem { Header = "Удалить" };
-                copy.Click += OnCopyNodesClick;
-                duplicate.Click += OnDuplicateNodesClick;
-                delete.Click += OnDeleteSelectionClick;
-                var only = new MenuItem { Header = "Выполнить только эту ноду" };
-                var from = new MenuItem { Header = "Начать с этой ноды" };
-                only.IsEnabled = from.IsEnabled = vm.CanConfigureNodeRun(node);
-                only.Click += (_, _) => vm.ConfigureNodeRun(node, true);
-                from.Click += (_, _) => vm.ConfigureNodeRun(node, false);
-                NodeRunMenu?.Close();
-                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { copy, duplicate, delete, new Separator(), only, from } };
-                NodeRunMenu.Open(nodeContainer);
+                OpenGraphMenu(node);
                 e.Handled = true;
                 return;
             }
+            // A click opens the menu; dragging keeps Nodify's existing panning gesture.
+            _contextPress = e.GetPosition(Editor);
         }
         while (source != null)
         {
             if (source is ComboBox) { e.Handled = true; return; }
             source = source.Parent as Control;
         }
+    }
+
+    internal void OpenGraphMenu(NodeViewModel? node = null, ConnectionViewModel? connection = null)
+    {
+        if (DataContext is not TestViewModel vm) return;
+        Editor.Focus();
+        MenuItem Action(string title, EventHandler<RoutedEventArgs> handler, bool enabled = true)
+        {
+            var item = new MenuItem { Header = title, IsEnabled = enabled };
+            item.Click += handler;
+            return item;
+        }
+        MenuItem Command(string title, System.Windows.Input.ICommand command) =>
+            new() { Header = title, Command = command };
+        var items = new System.Collections.Generic.List<object>();
+        if (connection != null)
+            items.Add(Action("Удалить связь", (_, _) =>
+            {
+                if (vm.CanEditGraph) vm.DeleteConnection(connection);
+            }, vm.CanEditGraph));
+        items.Add(Action(_isMultiSelect ? "✓ Выбирать несколько" : "Выбирать несколько",
+            (_, _) => { if (vm.CanEditGraph) _isMultiSelect = !_isMultiSelect; }, vm.CanEditGraph));
+        items.Add(Action("Выделить всё", OnSelectAllClick, vm.CanEditGraph));
+        items.Add(Action("Снять выделение", OnClearSelectionClick));
+        items.Add(new Separator());
+        items.Add(Action("Копировать", OnCopyNodesClick, vm.CanEditGraph && vm.SelectedNodes.Count > 0));
+        items.Add(Action("Вставить", OnPasteNodesClick, vm.CanPaste));
+        items.Add(Action("Дублировать", OnDuplicateNodesClick, vm.CanEditGraph && vm.SelectedNodes.Count > 0));
+        items.Add(Action("Удалить", OnDeleteSelectionClick, vm.CanEditGraph &&
+            (vm.SelectedNodes.Count > 0 || vm.SelectedConnection != null)));
+        items.Add(Command("Отменить", vm.UndoCommand));
+        items.Add(Command("Повторить", vm.RedoCommand));
+        items.Add(Command("Очистить граф", vm.ClearGraphCommand));
+        items.Add(new Separator());
+        items.Add(Command("Сохранить профиль", vm.SaveGraphCommand));
+        items.Add(Command("Назад к родительскому графу", vm.GoBackGraphCommand));
+        items.Add(new MenuItem { Header = "Масштаб", ItemsSource = new object[]
+        {
+            Action("Увеличить", OnZoomInClick), Action("Уменьшить", OnZoomOutClick),
+            Action("Центрировать граф", OnCenterGraphClick)
+        }});
+        var runItems = new System.Collections.Generic.List<object>
+        {
+            Command("Запустить", vm.RunGraphCommand), Command("Пауза", vm.PauseTestCommand),
+            Command("Продолжить", vm.ResumeTestCommand), Command("Остановить", vm.StopTestCommand),
+            Command("С начала", vm.ClearPartialRunCommand)
+        };
+        if (node != null)
+        {
+            runItems.Add(new Separator());
+            runItems.Add(Action("Выполнить только эту ноду", (_, _) => vm.ConfigureNodeRun(node, true), vm.CanConfigureNodeRun(node)));
+            runItems.Add(Action("Начать с этой ноды", (_, _) => vm.ConfigureNodeRun(node, false), vm.CanConfigureNodeRun(node)));
+        }
+        items.Add(new MenuItem { Header = "Выполнение", ItemsSource = runItems });
+        NodeRunMenu?.Close();
+        NodeRunMenu = new ContextMenu { ItemsSource = items };
+        NodeRunMenu.Open(Editor);
     }
 
     private void OnDropNode(object? sender, DragEventArgs e)

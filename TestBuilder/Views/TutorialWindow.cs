@@ -184,7 +184,7 @@ public sealed class TutorialWindow : Window
             TutorialStep.Result => ("Посмотрите результат", "Проверка завершена. На пульте видны результат и затраченное время. Нажмите «Открыть редактор», чтобы научиться менять профили, или закончите обучение."),
             TutorialStep.Rename => ("Дайте копии другое имя", "В правом поле названия введите «Мой учебный профиль» или своё название и нажмите Enter. При сохранении с новым именем исходный профиль останется прежним."),
             TutorialStep.Parameter => ("Измените параметр ноды", "В ноде «Задержка» замените значение «Мс» на 500. Это пауза в половину секунды."),
-            TutorialStep.SaveCopy => ("Сохраните копию", "Нажмите «Сохранить». В учебном списке появится второй профиль с вашим названием."),
+            TutorialStep.SaveCopy => ("Сохраните копию", "Нажмите ПКМ на графе → «Сохранить профиль». В учебном списке появится второй профиль с вашим названием."),
             TutorialStep.New => ("Создайте свой граф", "Нажмите «Новый» в левом меню. Соберём проверку с заданием оператору и двумя исходами."),
             TutorialStep.Device => ("Укажите новое устройство", "В поле «Устройство» слева введите «Учебная плата» и нажмите Enter. Существующие устройства можно выбрать из подсказок; для нового достаточно ввести название."),
             TutorialStep.HideProfiles => ("Освободите место для графа", "Нажмите кнопку «Скрыть профили» слева от поля устройства. Эта же кнопка возвращает список, когда он понадобится."),
@@ -200,8 +200,8 @@ public sealed class TutorialWindow : Window
             TutorialStep.ConnectEnd => ("Соедините задержку и конец", "Перетащите линию между выделенными кружками: от «Выход» задержки к «Вход» конца."),
             TutorialStep.ConnectFailure => ("Соедините отмену", "Перетащите линию от «Отмена» ноды «Действие оператора» к «Вход» конца. При отмене граф завершится без задержки. У одного входа может быть несколько линий."),
             TutorialStep.Name => ("Назовите новую проверку", "В правом поле введите «Пробная проверка» и нажмите Enter. Полное имя составится из устройства слева и названия проверки справа."),
-            TutorialStep.Save => ("Сохраните новый профиль", "Нажмите «Сохранить». В обычной работе файл появится в папке профилей, выбранной в настройках. Учебные файлы удалятся при закрытии обучения."),
-            TutorialStep.Run => ("Проверьте свой граф", "Нажмите «Запустить». Появится окно с заданием, которое вы написали."),
+            TutorialStep.Save => ("Сохраните новый профиль", "Нажмите ПКМ на графе → «Сохранить профиль». В обычной работе файл появится в папке профилей, выбранной в настройках. Учебные файлы удалятся при закрытии обучения."),
+            TutorialStep.Run => ("Проверьте свой граф", "Нажмите ПКМ на графе → «Выполнение» → «Запустить». Появится окно с заданием, которое вы написали."),
             TutorialStep.ConfirmGraph => ("Подтвердите своё задание", "В окне задания нажмите «Продолжить». Граф перейдёт к задержке по соединённому вами выходу. Кнопка «Отмена» направляет выполнение сразу к концу."),
             TutorialStep.Wait => ("Выполняется проверка", "Дождитесь окончания задержки. Результаты шагов появятся в журнале под графом."),
             _ => ("Вы собрали и запустили профиль", "Теперь вы умеете выбирать проверку, создавать устройство, менять параметры, сохранять копию, пользоваться справкой и соединять разные исходы. Повторить обучение можно в настройках. Подробные действия и справка по каждой ноде находятся в «Полной инструкции».")
@@ -227,11 +227,11 @@ public sealed class TutorialWindow : Window
         TutorialStep.ActionMessage => Graph?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(c => c.DataContext is OperatorActionNodeViewModel),
         TutorialStep.Help => Graph?.GetVisualDescendants().OfType<Border>().FirstOrDefault(c => c.Classes.Contains("nodeHelpTrigger") && c.DataContext is OperatorActionNodeViewModel),
         TutorialStep.Parameter => Graph?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(c => c.DataContext is DelayNodeViewModel),
-        TutorialStep.SaveCopy or TutorialStep.Save => ButtonIn(_editor, "Сохранить профиль"),
+        TutorialStep.SaveCopy or TutorialStep.Save => Graph,
         TutorialStep.New => ButtonIn(_editor, "Новый"),
         TutorialStep.AddStart or TutorialStep.AddAction or TutorialStep.AddDelay or TutorialStep.AddEnd => Graph?.Parent as Control,
         TutorialStep.ConnectStart or TutorialStep.ConnectSuccess or TutorialStep.ConnectEnd or TutorialStep.ConnectFailure => Graph,
-        TutorialStep.Run => ButtonIn(_editor, "Запустить тест"),
+        TutorialStep.Run => Graph,
         _ => null
     };
 

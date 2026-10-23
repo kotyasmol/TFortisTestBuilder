@@ -36,8 +36,18 @@ public class MouseGraphEditingTests
             try
             {
                 window.Show(); Layout();
-                Click(view.FindControl<Avalonia.Controls.Primitives.ToggleButton>("MultiSelectNodesToggle")!);
-                Assert.True(view.FindControl<Avalonia.Controls.Primitives.ToggleButton>("MultiSelectNodesToggle")!.IsChecked);
+                var editor = view.FindControl<NodifyEditor>("Editor")!;
+                var blank = editor.TranslatePoint(new Point(10, editor.Bounds.Height - 10), window)!.Value;
+                window.MouseDown(blank, MouseButton.Right); window.MouseUp(blank, MouseButton.Right); Layout();
+                Assert.True(view.NodeRunMenu?.IsOpen);
+                Assert.Contains(view.NodeRunMenu!.Items.OfType<MenuItem>(), i => Equals(i.Header, "Сохранить профиль"));
+                view.NodeRunMenu.Close(); Layout();
+                window.MouseDown(blank, MouseButton.Right);
+                window.MouseMove(blank + new Point(60, -40));
+                window.MouseUp(blank + new Point(60, -40), MouseButton.Right); Layout();
+                Assert.False(view.NodeRunMenu.IsOpen);
+                view.OnCenterGraphClick(null, new RoutedEventArgs()); Layout();
+                ClickMenu("Выбирать несколько");
                 ClickNode(a);
                 Assert.Same(a, Assert.Single(vm.SelectedNodes));
                 ClickNode(b);
@@ -46,30 +56,30 @@ public class MouseGraphEditingTests
                 ClickNode(a);
                 Assert.Same(b, Assert.Single(vm.SelectedNodes));
                 ClickNode(a);
-                ClickButton("CopyNodesButton");
-                ClickButton("PasteNodesButton");
+                ClickMenu("Копировать");
+                ClickMenu("Вставить");
                 Assert.Equal(4, vm.Nodes.Count);
                 Assert.Equal(2, vm.Connections.Count);
-                ClickButton("DeleteSelectionButton");
+                ClickMenu("Удалить");
                 Assert.Equal(2, vm.Nodes.Count);
                 Assert.Same(wire, Assert.Single(vm.Connections));
-                Click(view.GetVisualDescendants().OfType<Button>().Single(x => x.Command == vm.UndoCommand));
+                ClickMenu("Отменить");
                 Assert.Equal(4, vm.Nodes.Count);
-                ClickButton("ClearNodeSelectionButton");
+                ClickMenu("Снять выделение");
                 Assert.Empty(vm.SelectedNodes);
-                ClickButton("SelectAllNodesButton");
+                ClickMenu("Выделить всё");
                 Assert.Equal(4, vm.SelectedNodes.Count);
-                ClickButton("DuplicateNodesButton");
+                ClickMenu("Дублировать");
                 Assert.Equal(8, vm.Nodes.Count);
                 vm.UndoCommand.Execute(null); Layout();
                 vm.SelectConnection(wire);
-                ClickButton("DeleteSelectionButton");
+                ClickMenu("Удалить");
                 Assert.DoesNotContain(wire, vm.Connections);
                 vm.UndoCommand.Execute(null); Layout();
                 Assert.Contains(wire, vm.Connections);
 
                 // Right-clicking an unselected node targets that node, not stale selection.
-                ClickButton("ClearNodeSelectionButton");
+                ClickMenu("Снять выделение");
                 ClickNode(a, MouseButton.Right);
                 Assert.Same(a, Assert.Single(vm.SelectedNodes));
                 var remove = view.NodeRunMenu!.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Удалить"));
@@ -96,10 +106,12 @@ public class MouseGraphEditingTests
                 Assert.Contains(wire, vm.Connections);
 
                 vm.IsTestRunning = true; Layout();
-                foreach (var name in new[] { "CopyNodesButton", "PasteNodesButton", "DuplicateNodesButton", "DeleteSelectionButton" })
-                    Assert.False(view.FindControl<Button>(name)!.IsEffectivelyEnabled);
+                view.OpenGraphMenu();
+                foreach (var title in new[] { "Копировать", "Вставить", "Дублировать", "Удалить" })
+                    Assert.False(view.NodeRunMenu!.Items.OfType<MenuItem>().Single(i => Equals(i.Header, title)).IsEnabled);
+                view.NodeRunMenu!.Close();
                 var count = vm.Nodes.Count;
-                ClickButton("DeleteSelectionButton");
+                ClickMenu("Удалить");
                 Assert.Equal(count, vm.Nodes.Count);
                 vm.IsTestRunning = false; Layout();
                 window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-mouse-editor.png");
@@ -107,11 +119,16 @@ public class MouseGraphEditingTests
             finally { window.Close(); }
 
             void Layout() { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); }
-            void ClickButton(string name) => Click(view.FindControl<Button>(name)!);
-            void Click(Control control)
+            void ClickMenu(string title)
             {
-                var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout();
+                view.OpenGraphMenu(); Layout();
+                var item = view.NodeRunMenu!.Items.OfType<MenuItem>().Single(i => Equals(i.Header, title));
+                if (item.IsEnabled)
+                {
+                    if (item.Command != null) item.Command.Execute(null);
+                    else item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                }
+                view.NodeRunMenu.Close(); Layout();
             }
             void ClickNode(NodeViewModel node, MouseButton button = MouseButton.Left)
             {

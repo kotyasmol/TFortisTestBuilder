@@ -102,9 +102,10 @@ public class DeviceProfileTests
             void Layout() { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
             void SaveClick()
             {
-                var save = view.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand));
-                var point = save.TranslatePoint(new Point(save.Bounds.Width / 2, save.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout();
+                view.OpenGraphMenu(); Layout();
+                var save = view.NodeRunMenu!.Items.OfType<MenuItem>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand));
+                save.Command!.Execute(null);
+                view.NodeRunMenu.Close(); Layout();
             }
         }, CancellationToken.None);
     }

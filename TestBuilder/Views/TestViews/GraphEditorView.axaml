@@ -204,7 +204,6 @@
                    ToolTip.Tip="Полное имя: устройство · название проверки. Новое название и «Сохранить» создают копию. С прежним названием обновляется открытый профиль." />
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,0,0,8" IsVisible="{Binding CanGoBackGraph}">
-          <Button Command="{Binding GoBackGraphCommand}" IsEnabled="{Binding CanGoBackGraph}" ToolTip.Tip="Назад к родительскому графу" AutomationProperties.Name="Назад к родительскому графу" Padding="9,8"><PathIcon Width="18" Height="18" Data="M10 4 L3 11 10 18 12 16 8 12 21 12 21 10 8 10 12 6 Z" /></Button>
           <TextBlock Grid.Column="1" Text="{Binding CurrentGraphPath}" TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="{Binding CurrentGraphPath}" Margin="12,0,0,0" VerticalAlignment="Center" />
         </Grid>
@@ -214,34 +213,13 @@
                     SelectedItem="{Binding ProfileProductKind, Mode=TwoWay}" IsEnabled="{Binding CanEditGraph}"
                     MinWidth="145" Margin="0,0,12,8" VerticalContentAlignment="Center" AutomationProperties.Name="Тип изделия"
                     ToolTip.Tip="Тип сохраняется в профиле и определяет доступные разделы программы." />
-          <Button Command="{Binding RunGraphCommand}" Classes="primary" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /><TextBlock Text="Запустить" Foreground="{Binding $parent[Button].Foreground}" /></StackPanel></Button>
-          <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза" Padding="9,8"><PathIcon Width="18" Height="18" Data="M5 3 H10 V21 H5 Z M14 3 H19 V21 H14 Z" /></Button>
-          <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="primary" ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /></Button>
-          <Button Command="{Binding StopTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="danger" ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 4 H20 V20 H4 Z" /></Button>
-          <Button Command="{Binding SaveGraphCommand}"  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M3 3 H18 L21 6 V21 H3 Z M6 4 V10 H17 V4 Z M6 14 V20 H18 V14 Z" /><TextBlock Text="Сохранить" /></StackPanel></Button>
-          <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
-          <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
-          <ToggleButton x:Name="MultiSelectNodesToggle" Content="Выбирать несколько" IsEnabled="{Binding CanEditGraph}"
-                        ToolTip.Tip="Включите и отмечайте ноды щелчками. Повторный щелчок снимает выделение." Padding="9,8" />
-          <Button x:Name="SelectAllNodesButton" Content="Выделить всё" Click="OnSelectAllClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
-          <Button x:Name="ClearNodeSelectionButton" Content="Снять выделение" Click="OnClearSelectionClick" Padding="9,8" />
-          <Button x:Name="CopyNodesButton" Content="Копировать" Click="OnCopyNodesClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
-          <Button x:Name="PasteNodesButton" Content="Вставить" Click="OnPasteNodesClick" IsEnabled="{Binding CanPaste}" Padding="9,8" />
-          <Button x:Name="DuplicateNodesButton" Content="Дублировать" Click="OnDuplicateNodesClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
-          <Button x:Name="DeleteSelectionButton" Content="Удалить" Click="OnDeleteSelectionClick" IsEnabled="{Binding CanEditGraph}"
-                  ToolTip.Tip="Удалить выделенные ноды или выбранную связь. Действие можно отменить." Padding="9,8" />
-          <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />
-          <Button Click="OnZoomOutClick" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 11 H20 V13 H4 Z" /></Button>
-          <Button Click="OnZoomInClick" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" /></Button>
-          <Button Click="OnCenterGraphClick" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" /></Button>
           <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,8,8" />
         </WrapPanel>
         <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
                 CornerRadius="8" Padding="10" Margin="0,4,0,0">
           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
             <TextBlock Text="{Binding PartialRunCaption}" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <Button Grid.Column="1" Content="С начала" Command="{Binding ClearPartialRunCommand}" Margin="12,0,0,0"
-                    ToolTip.Tip="Сбросить временный старт и запускать весь профиль" />
+
             <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="6" Margin="0,6,0,0">
               <TextBlock Text="{Binding PartialRunHint}" Classes="hint" TextWrapping="Wrap" />
               <StackPanel Orientation="Horizontal" Spacing="8">
