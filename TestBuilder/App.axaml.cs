@@ -20,6 +20,7 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        WindowsTitleBarTheme.Initialize();
     }
 
     public override void OnFrameworkInitializationCompleted()
