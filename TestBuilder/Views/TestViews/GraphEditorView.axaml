@@ -1624,6 +1624,7 @@
                                       Target="{Binding Target.Anchor}"
                                       Stroke="{Binding StrokeBrush}"
                                       StrokeThickness="{Binding StrokeThickness}"
+                                      ArrowSize="16,10"
                                       OutlineBrush="{Binding OutlineBrush}"
                                       OutlineThickness="{Binding OutlineThickness}"
                                       PointerPressed="OnConnectionPressed"
@@ -1634,6 +1635,7 @@
         <nodify:NodifyEditor.PendingConnectionTemplate>
           <DataTemplate x:DataType="nodifyvm:PendingConnectionViewModel">
             <nodify:PendingConnection StartedCommand="{Binding StartCommand}"
+                                      StrokeThickness="4"
                                       CompletedCommand="{Binding FinishCommand}"
                                       AllowOnlyConnectors="True" />
           </DataTemplate>

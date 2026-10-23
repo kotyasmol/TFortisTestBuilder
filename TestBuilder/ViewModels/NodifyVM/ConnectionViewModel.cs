@@ -36,7 +36,7 @@ namespace TestBuilder.ViewModels.NodifyVM
             IsSelected ? SelectedStrokeBrush : DefaultStrokeBrush;
 
         public double StrokeThickness =>
-            IsSelected ? 4 : 2;
+            IsSelected ? 6 : 4;
 
         public IBrush? OutlineBrush =>
             IsSelected ? SelectedOutlineBrush : null;
