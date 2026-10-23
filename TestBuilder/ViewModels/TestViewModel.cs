@@ -129,6 +129,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private List<ClipboardConnection>? _clipboardConnections;
 
     public bool CanPaste => CanEditGraph && _clipboardNodes?.Count > 0;
+    public int CopiedNodeCount => _clipboardNodes?.Count ?? 0;
 
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
@@ -455,21 +456,26 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .ToList();
 
         OnPropertyChanged(nameof(CanPaste));
+        OnPropertyChanged(nameof(CopiedNodeCount));
+        StatusMessage = $"Скопировано нод: {CopiedNodeCount}. Можно вставить в другой профиль.";
     }
 
-    public void PasteNodes()
+    public void PasteNodes(Point? location = null)
     {
         if (!CanEditGraph) return;
         if (_clipboardNodes == null || _clipboardNodes.Count == 0) return;
 
-        const double offset = 30;
+        var offset = location is { } target
+            ? new Point(target.X - _clipboardNodes.Min(n => n.Location.X),
+                target.Y - _clipboardNodes.Min(n => n.Location.Y))
+            : new Point(30, 30);
 
         var pastedNodes = new List<NodeViewModel>();
 
         foreach (var entry in _clipboardNodes)
         {
             var clone = CloneNodeDeep(entry.Node);
-            clone.Location = new Point(entry.Location.X + offset, entry.Location.Y + offset);
+            clone.Location = new Point(entry.Location.X + offset.X, entry.Location.Y + offset.Y);
             pastedNodes.Add(clone);
         }
 
@@ -503,6 +509,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         ResetConnectorsState();
+        StatusMessage = $"Вставлено нод: {pastedNodes.Count}.";
     }
 
     private static int GetConnectorIndex(ConnectorViewModel connector)

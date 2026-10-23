@@ -19,6 +19,69 @@ namespace TestBuilder.Tests.Views;
 public class MouseGraphEditingTests
 {
     [Fact]
+    public async Task Clipboard_CopiesFiveNodesBetweenProfiles_WithLinksNestedBodyAndUndo()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), "profile-clipboard-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            vm.IsOperatorView = false;
+            try
+            {
+                vm.Nodes.Clear();
+                var group = new SubtestNodeViewModel { Name = "Проверка", Location = new Point(9000, 8000) };
+                group.BodyGraph.Nodes.Add(new DelayNodeViewModel { Milliseconds = 123 });
+                vm.Nodes.Add(group);
+                for (var i = 1; i < 5; i++)
+                    vm.Nodes.Add(new DelayNodeViewModel { Location = new Point(9000 + i * 500, 8000), CustomName = $"Шаг {i}" });
+                for (var i = 0; i < 4; i++)
+                    vm.Connections.Add(new ConnectionViewModel(vm.Nodes[i].Output[0], vm.Nodes[i + 1].Input[0]));
+                var sourcePath = Path.Combine(folder, "source.json");
+                var targetPath = Path.Combine(folder, "target.json");
+                var sourceJson = TestBuilder.Services.GraphSerializer.Serialize(vm, "Профиль 1");
+                File.WriteAllText(sourcePath, sourceJson);
+                File.WriteAllText(targetPath, """{"name":"Профиль 2","nodes":[],"connections":[]}""");
+                await vm.SelectProfileAsync(TestBuilder.Services.GraphSerializer.ReadProfile(sourcePath));
+                foreach (var node in vm.Nodes) vm.SelectedNodes.Add(node);
+                vm.CopyNodes();
+                Assert.Equal(5, vm.CopiedNodeCount);
+                await vm.SelectProfileAsync(TestBuilder.Services.GraphSerializer.ReadProfile(targetPath));
+                Assert.True(vm.CanPaste);
+                Assert.Empty(vm.Nodes);
+                vm.PasteNodes(new Point(100, 200));
+                Assert.Equal(5, vm.Nodes.Count);
+                Assert.Equal(5, vm.SelectedNodes.Count);
+                Assert.Equal(4, vm.Connections.Count);
+                Assert.Equal(new Point(100, 200), vm.Nodes[0].Location);
+                Assert.Equal(new Point(600, 200), vm.Nodes[1].Location);
+                var pasted = Assert.IsType<SubtestNodeViewModel>(vm.Nodes[0]);
+                var delay = Assert.Single(pasted.BodyGraph.Nodes.OfType<DelayNodeViewModel>());
+                Assert.Equal(123, delay.Milliseconds);
+                delay.Milliseconds = 456;
+                vm.UndoCommand.Execute(null);
+                Assert.Equal(123, delay.Milliseconds);
+                vm.UndoCommand.Execute(null);
+                Assert.Empty(vm.Nodes);
+                Assert.Empty(vm.Connections);
+                vm.PasteNodes(new Point(300, 400));
+                pasted = Assert.IsType<SubtestNodeViewModel>(vm.Nodes[0]);
+                Assert.Equal(123, Assert.Single(pasted.BodyGraph.Nodes.OfType<DelayNodeViewModel>()).Milliseconds);
+                Assert.Equal(sourceJson, File.ReadAllText(sourcePath));
+                Assert.All(vm.Connections, c =>
+                {
+                    Assert.Contains(c.Source.Parent!, vm.Nodes);
+                    Assert.Contains(c.Target.Parent!, vm.Nodes);
+                });
+            }
+            finally { Directory.Delete(folder, true); }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task MouseControls_SelectCopyDuplicateDeleteAndUndo_AndLockDuringRun()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));

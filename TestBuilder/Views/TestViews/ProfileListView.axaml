@@ -95,6 +95,6 @@
     <Button x:Name="ReloadProfileButton" Grid.Row="6" Classes="sidebarAction"
             Content="Открыть заново" Command="{Binding ReloadProfileCommand}"
             HorizontalAlignment="Stretch" Margin="0,8,0,0"
-            ToolTip.Tip="Открыть сохранённый профиль и повторить подготовку стенда" />
+            ToolTip.Tip="Перечитать профиль с диска и повторить шаги «При открытии профиля». Несохранённые изменения будут потеряны." />
   </Grid>
 </UserControl>

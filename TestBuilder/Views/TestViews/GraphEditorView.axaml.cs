@@ -33,6 +33,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     internal ContextMenu? NodeRunMenu { get; private set; }
     private bool _isMultiSelect;
     private Point? _contextPress;
+    private Point _pasteLocation;
     private bool _isDisposed;
     private bool _fitPending;
     private bool _fitScheduled;
@@ -101,8 +102,12 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private void OnPasteNodesClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is TestViewModel vm) vm.PasteNodes();
+        if (DataContext is TestViewModel vm) vm.PasteNodes(_pasteLocation);
     }
+
+    private Point VisiblePasteLocation => new(
+        Editor.ViewportLocation.X + Editor.ViewportSize.Width / 4,
+        Editor.ViewportLocation.Y + Editor.ViewportSize.Height / 4);
 
     private void OnDuplicateNodesClick(object? sender, RoutedEventArgs e)
     {
@@ -153,7 +158,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     {
         if (DataContext is not TestViewModel vm) return;
         // Let text fields handle selection/copy, including read-only fields during a run.
-        if (e.Source is TextBox) return;
+        if ((e.Source as Control)?.GetSelfAndVisualAncestors().Any(c => c is TextBox) == true) return;
 
         if ((e.KeyModifiers == KeyModifiers.Control || e.KeyModifiers == KeyModifiers.Meta) && e.Key == Key.Z)
         {
@@ -166,14 +171,14 @@ public partial class GraphEditorView : UserControl, IDisposable
             if (vm.CanRedo) vm.RedoCommand.Execute(null);
             e.Handled = true;
         }
-        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.C)
+        else if ((e.KeyModifiers == KeyModifiers.Control || e.KeyModifiers == KeyModifiers.Meta) && e.Key == Key.C)
         {
             vm.CopyNodes();
             e.Handled = true;
         }
-        else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.V)
+        else if ((e.KeyModifiers == KeyModifiers.Control || e.KeyModifiers == KeyModifiers.Meta) && e.Key == Key.V)
         {
-            vm.PasteNodes();
+            vm.PasteNodes(VisiblePasteLocation);
             e.Handled = true;
         }
     }
@@ -185,7 +190,7 @@ public partial class GraphEditorView : UserControl, IDisposable
             _contextPress = null;
             var delta = e.GetPosition(Editor) - press;
             if (delta.X * delta.X + delta.Y * delta.Y <= 16)
-                OpenGraphMenu();
+                OpenGraphMenu(pasteLocation: Editor.GetLocationInsideEditor(e));
         }
         if (!ReferenceEquals(e.Pointer.Captured, this)) return;
         e.Pointer.Capture(null);
@@ -220,7 +225,7 @@ public partial class GraphEditorView : UserControl, IDisposable
             if (wire?.DataContext is ConnectionViewModel connection)
             {
                 if (vm.CanEditGraph) vm.SelectConnection(connection);
-                OpenGraphMenu(connection: connection);
+                OpenGraphMenu(connection: connection, pasteLocation: Editor.GetLocationInsideEditor(e));
                 e.Handled = true;
                 return;
             }
@@ -235,7 +240,7 @@ public partial class GraphEditorView : UserControl, IDisposable
                         vm.SelectedNodes.Add(node);
                     }
                 }
-                OpenGraphMenu(node);
+                OpenGraphMenu(node, pasteLocation: Editor.GetLocationInsideEditor(e));
                 e.Handled = true;
                 return;
             }
@@ -249,10 +254,11 @@ public partial class GraphEditorView : UserControl, IDisposable
         }
     }
 
-    internal void OpenGraphMenu(NodeViewModel? node = null, ConnectionViewModel? connection = null)
+    internal void OpenGraphMenu(NodeViewModel? node = null, ConnectionViewModel? connection = null, Point? pasteLocation = null)
     {
         if (DataContext is not TestViewModel vm) return;
         Editor.Focus();
+        _pasteLocation = pasteLocation ?? VisiblePasteLocation;
         MenuItem Action(string title, EventHandler<RoutedEventArgs> handler, bool enabled = true)
         {
             var item = new MenuItem { Header = title, IsEnabled = enabled };
