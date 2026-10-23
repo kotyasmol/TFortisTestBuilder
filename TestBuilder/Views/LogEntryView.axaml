@@ -22,7 +22,7 @@
     <SelectableTextBlock Text="{Binding}" IsHitTestVisible="False"
                          Classes.highlighted="{Binding IsHighlighted}"
                          Classes.failure="{Binding IsFailureSummary}"
-                         FontFamily="Consolas" FontSize="11" TextWrapping="Wrap">
+                         FontFamily="Consolas" FontSize="14" TextWrapping="Wrap">
       <SelectableTextBlock.Styles>
         <Style Selector="SelectableTextBlock">
           <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />

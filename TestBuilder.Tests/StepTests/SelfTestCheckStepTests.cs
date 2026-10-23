@@ -508,6 +508,39 @@ public class SelfTestCheckStepTests
         }
     }
 
+    [Fact]
+    public async Task BrowserResponses_LogEverySnapshotBeforeParsingIncludingEmptyAndFailedAttempts()
+    {
+        var logger = new RecordingLogger();
+        var html = "<html><title>Login</title><body>Please log in</body><script>" + new string('x', 20000) + "</script></html>";
+        const string xml = "<selftest><init_ok>1</init_ok><default_mac>AC:CC:11:A6:00:00</default_mac></selftest>";
+        var responses = new Queue<HttpRequestResult>(new[]
+        {
+            HttpRequestResult.Success(0, "", TimeSpan.Zero),
+            HttpRequestResult.Failure("DOM read failed", TimeSpan.Zero),
+            HttpRequestResult.Success(0, html, TimeSpan.Zero),
+            HttpRequestResult.Success(0, xml, TimeSpan.Zero)
+        });
+        var step = new SelfTestCheckStep(new QueueHttpRequestService(), logger,
+            SelfTestCheckStep.DefaultUrl, timeoutMs: 5000, SelfTestCheckStep.DefaultOutputPrefix,
+            "init_ok=1..1", failOnError: true, useBrowser: true, pollIntervalMs: 100,
+            enforceMinimumDeviceReadyTimeout: false,
+            endpointProbe: (_, _, _) => Task.FromResult(true),
+            browserPageLoader: (_, _, _) => Task.FromResult(responses.Dequeue()));
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(new TestContext(new RegisterState()), default));
+        Assert.Empty(responses);
+        Assert.Contains(logger.Messages, m => m.Contains("attempt 1): <empty>"));
+        Assert.Contains(logger.Messages, m => m.Contains("response error (attempt 2): DOM read failed"));
+        Assert.Equal(html, string.Concat(logger.Messages
+            .Where(m => m.StartsWith("[INFO] Selftest page content (attempt 3, part"))
+            .Select(m => m[(m.IndexOf('\n') + 1)..])));
+        Assert.Contains(logger.Messages, m => m.Contains("browser DOM: attempt 3") && m.Contains($"{html.Length} characters"));
+        Assert.Contains(logger.Messages, m => m.EndsWith(xml) && m.Contains("attempt 4"));
+        Assert.True(logger.Messages.FindIndex(m => m.EndsWith(xml)) <
+            logger.Messages.FindIndex(m => m.Contains("Selftest XML found")));
+    }
+
     private sealed class RecordingLogger : ILogger
     {
         public string Category => "Test";

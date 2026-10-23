@@ -376,6 +376,29 @@ namespace TestBuilder.Domain.Steps
                    double.IsFinite(value);
         }
 
+        private void LogPageResponse(HttpRequestResult result, int attempt, string url)
+        {
+            var source = _useBrowser ? "browser DOM" : "HTTP response";
+            var status = result.StatusCode is > 0 ? $", HTTP {result.StatusCode}" : string.Empty;
+            _logger.Info($"[INFO] Selftest {source}: attempt {attempt}, url {url}, {result.Body.Length} characters{status}.");
+            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                _logger.Warning($"Selftest response error (attempt {attempt}): {result.ErrorMessage}");
+            if (result.Body.Length == 0)
+            {
+                _logger.Info($"[INFO] Selftest page content (attempt {attempt}): <empty>.");
+                return;
+            }
+
+            // Preserve scripts and hidden DOM too; split large snapshots without truncating them.
+            const int chunkSize = 8192;
+            var parts = (result.Body.Length - 1) / chunkSize + 1;
+            for (var offset = 0; offset < result.Body.Length; offset += chunkSize)
+            {
+                var content = result.Body.Substring(offset, Math.Min(chunkSize, result.Body.Length - offset));
+                _logger.Info($"[INFO] Selftest page content (attempt {attempt}, part {offset / chunkSize + 1}/{parts}):\n{content}");
+            }
+        }
+
         private void LogParsedFieldSnapshot(Dictionary<string, string> values)
         {
             var keyFields = GetRules()
@@ -573,6 +596,8 @@ namespace TestBuilder.Domain.Steps
                     url,
                     GetAttemptTimeout(remaining),
                     cancellationToken);
+
+                LogPageResponse(lastResult, attempts, url);
 
                 if (!string.IsNullOrWhiteSpace(lastResult.ErrorMessage))
                 {

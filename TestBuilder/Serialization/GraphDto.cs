@@ -60,6 +60,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Color { get; set; }
 
+        [JsonPropertyName("customName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? CustomName { get; set; }
+
         [JsonPropertyName("repeatOnSameSlave")] public bool? RepeatOnSameSlave { get; set; }
         [JsonPropertyName("repeatCount")] public int? RepeatCount { get; set; }
         [JsonPropertyName("indexVariable")] public string? IndexVariable { get; set; }

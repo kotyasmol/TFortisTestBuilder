@@ -19,7 +19,7 @@ public partial class TestViewModel
 
     public bool HasPartialRun => _runEntry != null;
     public string PartialRunCaption => _runEntry == null ? string.Empty :
-        $"{(_runSingleNode ? "Только нода" : "Старт с ноды")}: {_runEntry.Title} · {_runWorkspace!.Title}";
+        $"{(_runSingleNode ? "Только нода" : "Старт с ноды")}: {_runEntry.DisplayTitle} · {_runWorkspace!.Title}";
     public string PartialRunHint => "Однократный запуск в пределах выбранного графа. Подтест / цикл выполняется целиком. Контекст новый; при ошибке выполняются аварийные подтесты.";
 
     public bool CanConfigureNodeRun(NodeViewModel? node) =>

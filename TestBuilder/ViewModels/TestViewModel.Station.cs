@@ -158,7 +158,7 @@ public partial class TestViewModel
     partial void OnIsOperatorViewChanged(bool value)
     {
         if (value && !IsTestRunning) ResetPartialRun();
-        if (value) BoardChanged?.Invoke();
+        if (value) { Station.RefreshStageNames(); BoardChanged?.Invoke(); }
         RefreshStationAvailability();
     }
     partial void OnIsConnectingChanged(bool value) => RefreshStationAvailability();
@@ -174,6 +174,7 @@ public partial class TestViewModel
     private void RefreshStationAvailability()
     {
         OnPropertyChanged(nameof(CanEditGraph));
+        OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(CanChooseProfile));
         OnPropertyChanged(nameof(CanReloadProfile));

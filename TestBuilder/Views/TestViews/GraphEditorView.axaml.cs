@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -46,8 +47,9 @@ public partial class GraphEditorView : UserControl, IDisposable
         Editor.TemplateApplied += OnEditorTemplateApplied;
 
         this.AddHandler(KeyDownEvent, OnKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        AddHandler(PointerReleasedEvent, OnSelectionPointerReleased, RoutingStrategies.Tunnel);
 
-        Editor.AddHandler(
+        AddHandler(
             PointerPressedEvent,
             OnEditorPointerPressed,
             Avalonia.Interactivity.RoutingStrategies.Tunnel,
@@ -80,6 +82,45 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     public void SelectAllNodes() => Editor.SelectAll();
 
+    private void OnSelectAllClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel { CanEditGraph: true } vm)
+        {
+            vm.SelectConnection(null);
+            SelectAllNodes();
+        }
+    }
+
+    private void OnClearSelectionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel vm) return;
+        vm.SelectedNodes.Clear();
+        vm.SelectConnection(null);
+    }
+
+    private void OnCopyNodesClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel { CanEditGraph: true } vm) vm.CopyNodes();
+    }
+
+    private void OnPasteNodesClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel vm) vm.PasteNodes();
+    }
+
+    private void OnDuplicateNodesClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel { CanEditGraph: true } vm || vm.SelectedNodes.Count == 0) return;
+        vm.DuplicateNodes();
+    }
+
+    private void OnDeleteSelectionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel { CanEditGraph: true } vm) return;
+        if (vm.SelectedConnection != null) vm.DeleteSelectedConnection();
+        else vm.DeleteSelectedNodes();
+    }
+
     private void UpdateEditorBackground()
     {
         if (this.Resources.TryGetResource("SmallGridBrush", ActualThemeVariant, out var brush) && brush is IBrush b)
@@ -103,7 +144,8 @@ public partial class GraphEditorView : UserControl, IDisposable
         Editor.LayoutUpdated -= OnEditorLayoutUpdated;
         Editor.TemplateApplied -= OnEditorTemplateApplied;
         RemoveHandler(KeyDownEvent, OnKeyDown);
-        Editor.RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
+        RemoveHandler(PointerReleasedEvent, OnSelectionPointerReleased);
+        RemoveHandler(PointerPressedEvent, OnEditorPointerPressed);
     }
 
     private void OnEditorTemplateApplied(object? sender, Avalonia.Controls.Primitives.TemplateAppliedEventArgs e)
@@ -147,21 +189,71 @@ public partial class GraphEditorView : UserControl, IDisposable
         }
     }
 
+    private void OnSelectionPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!ReferenceEquals(e.Pointer.Captured, this)) return;
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var source = e.Source as Control;
+        // Intercept before Nodify's own pointer state starts an exclusive selection/drag.
+        if (source?.GetSelfAndVisualAncestors().Contains(Editor) != true) return;
+        var nodeContainer = source?.GetSelfAndVisualAncestors().OfType<ItemContainer>().FirstOrDefault();
+        if (nodeContainer != null && e.GetCurrentPoint(Editor).Properties.IsLeftButtonPressed &&
+            DataContext is TestViewModel nodeVm)
+            nodeVm.SelectConnection(null);
+        if (MultiSelectNodesToggle.IsChecked == true &&
+            e.GetCurrentPoint(Editor).Properties.IsLeftButtonPressed &&
+            DataContext is TestViewModel { CanEditGraph: true } selectionVm &&
+            nodeContainer?.DataContext is NodeViewModel selectedNode)
+        {
+            selectionVm.SelectConnection(null);
+            e.Pointer.Capture(this);
+            if (!selectionVm.SelectedNodes.Remove(selectedNode)) selectionVm.SelectedNodes.Add(selectedNode);
+            e.Handled = true;
+            return;
+        }
         if (e.GetCurrentPoint(Editor).Properties.IsRightButtonPressed && DataContext is TestViewModel vm)
         {
-            var container = source?.GetSelfAndVisualAncestors().OfType<ItemContainer>().FirstOrDefault();
-            if (container?.DataContext is NodeViewModel node && vm.CanConfigureNodeRun(node))
+            // Keep the standard text-field context menu available for editing values.
+            if (source?.GetSelfAndVisualAncestors().Any(c => c is TextBox) == true) return;
+            var wire = source?.GetSelfAndVisualAncestors().OfType<BaseConnection>().FirstOrDefault();
+            if (wire?.DataContext is ConnectionViewModel connection && vm.CanEditGraph)
             {
+                vm.SelectConnection(connection);
+                var remove = new MenuItem { Header = "Удалить связь" };
+                remove.Click += (_, _) => vm.DeleteConnection(connection);
+                NodeRunMenu?.Close();
+                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { remove } };
+                NodeRunMenu.Open(wire);
+                e.Handled = true;
+                return;
+            }
+            if (nodeContainer?.DataContext is NodeViewModel node && vm.CanEditGraph)
+            {
+                vm.SelectConnection(null);
+                if (!vm.SelectedNodes.Contains(node))
+                {
+                    vm.SelectedNodes.Clear();
+                    vm.SelectedNodes.Add(node);
+                }
+                var copy = new MenuItem { Header = "Копировать" };
+                var duplicate = new MenuItem { Header = "Дублировать" };
+                var delete = new MenuItem { Header = "Удалить" };
+                copy.Click += OnCopyNodesClick;
+                duplicate.Click += OnDuplicateNodesClick;
+                delete.Click += OnDeleteSelectionClick;
                 var only = new MenuItem { Header = "Выполнить только эту ноду" };
                 var from = new MenuItem { Header = "Начать с этой ноды" };
+                only.IsEnabled = from.IsEnabled = vm.CanConfigureNodeRun(node);
                 only.Click += (_, _) => vm.ConfigureNodeRun(node, true);
                 from.Click += (_, _) => vm.ConfigureNodeRun(node, false);
                 NodeRunMenu?.Close();
-                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { only, from } };
-                NodeRunMenu.Open(container);
+                NodeRunMenu = new ContextMenu { ItemsSource = new object[] { copy, duplicate, delete, new Separator(), only, from } };
+                NodeRunMenu.Open(nodeContainer);
                 e.Handled = true;
                 return;
             }

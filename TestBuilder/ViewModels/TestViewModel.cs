@@ -128,7 +128,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private List<ClipboardNode>? _clipboardNodes;
     private List<ClipboardConnection>? _clipboardConnections;
 
-    public bool CanPaste => _clipboardNodes?.Count > 0;
+    public bool CanPaste => CanEditGraph && _clipboardNodes?.Count > 0;
 
     public GraphWorkspaceViewModel RootGraph { get; } = new()
     {
@@ -418,6 +418,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         ResetConnectorsState();
     }
 
+    public void DuplicateNodes()
+    {
+        if (!CanEditGraph || !SelectedNodes.Any(n => !IsProtectedBoundaryNode(n))) return;
+        CopyNodes();
+        PasteNodes();
+    }
+
     public void CopyNodes()
     {
         var selected = SelectedNodes
@@ -514,6 +521,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         var clone = source.Clone();
         clone.NodeColor = source.NodeColor;
+        clone.CustomName = source.CustomName;
         clone.BoardElements = source.BoardElements;
         clone.RunOnlyOnFirstRun = source.RunOnlyOnFirstRun;
 

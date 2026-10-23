@@ -120,6 +120,7 @@ namespace TestBuilder.Services
                     X = node.Location.X,
                     Y = node.Location.Y,
                     BoardElements = node.BoardElements,
+                    CustomName = string.IsNullOrWhiteSpace(node.CustomName) ? null : node.CustomName.Trim(),
                     RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
                     Color = node.NodeColor
                 };
@@ -748,6 +749,7 @@ namespace TestBuilder.Services
 
                 node.BoardElements = n.BoardElements ?? "";
                 node.NodeColor = n.Color ?? "blue";
+                node.CustomName = n.CustomName ?? string.Empty;
                 node.RunOnlyOnFirstRun = n.RunOnlyOnFirstRun || wrappedFirstRun;
                 if (node.RunOnlyOnFirstRun && !node.CanRunOnlyOnFirstRun)
                 {

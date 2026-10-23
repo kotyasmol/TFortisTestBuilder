@@ -114,7 +114,7 @@ namespace TestBuilder.ViewModels.StepVM
             CurrentStepIndex = CurrentStepIndex >= StepCount
                 ? StepCount
                 : CurrentStepIndex + 1;
-            ProgressText = $"{CurrentStepIndex}/{StepCount}: {node.Title}";
+            ProgressText = $"{CurrentStepIndex}/{StepCount}: {node.DisplayTitle}";
         }
 
         public void EndProgress()

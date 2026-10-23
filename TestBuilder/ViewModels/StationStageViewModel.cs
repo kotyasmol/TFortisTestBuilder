@@ -12,7 +12,9 @@ public partial class StationStageViewModel : ViewModelBase
 {
     private readonly Dictionary<NodeViewModel, int> _stepNumbers = new();
     public NodeViewModel Source { get; }
-    public string Name { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Caption))]
+    private string name;
     public string Caption => Regex.Replace(Name, @"^\d+[a-zа-я]?[.)]\s*", string.Empty, RegexOptions.IgnoreCase);
     public int Number { get; set; }
     public int StepCount => _stepNumbers.Count;
@@ -52,7 +54,7 @@ public partial class StationStageViewModel : ViewModelBase
     public StationStageViewModel(NodeViewModel source, string name, bool isCleanup = false)
     {
         Source = source;
-        Name = name;
+        this.name = name;
         IsCleanup = isCleanup;
         if (source is ICompositeNodeViewModel composite)
         {

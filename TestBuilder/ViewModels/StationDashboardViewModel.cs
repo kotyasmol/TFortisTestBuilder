@@ -370,7 +370,15 @@ public partial class StationDashboardViewModel : ViewModelBase
     internal static bool IsBoundary(NodeViewModel node) => node is StartNodeViewModel or EndNodeViewModel or
         BodyStartNodeViewModel or BodyEndNodeViewModel or LabelNodeViewModel;
 
-    internal static string DisplayName(NodeViewModel node) => node switch
+    public void RefreshStageNames()
+    {
+        foreach (var stage in _stageByNode.Values.Distinct())
+            stage.Name = DisplayName(stage.Source);
+        if (_activeNodes.Count > 0) RefreshActiveStages();
+    }
+
+    internal static string DisplayName(NodeViewModel node) => !string.IsNullOrWhiteSpace(node.CustomName)
+        ? node.DisplayTitle : node switch
     {
         SubtestNodeViewModel subtest => subtest.Name,
         OperatorActionNodeViewModel => "Действие оператора",

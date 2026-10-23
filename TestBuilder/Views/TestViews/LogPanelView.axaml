@@ -27,6 +27,11 @@
         <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="4">
+          <ToggleButton x:Name="FollowLogsToggle" Content="Следить за логом" IsChecked="True"
+                        IsCheckedChanged="OnFollowLogsChanged" Padding="8,0" MinHeight="28" Height="28"
+                        ToolTip.Tip="Показывать конец журнала при появлении новых записей. Прокрутка вверх отключает слежение." />
+          <Button x:Name="LogToBottomButton" Content="В конец" Click="OnScrollToBottomClick"
+                  Padding="8,0" MinHeight="28" Height="28" ToolTip.Tip="Перейти к концу журнала и включить слежение" />
           <Button Click="OnCopyLogs"
                   Classes="ghost"
                   Height="28"

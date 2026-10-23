@@ -26,6 +26,7 @@ internal static class FirstRunProfileKey
         {
             if (item is not JsonObject node) continue;
             node.Remove("x"); node.Remove("y"); node.Remove("color"); node.Remove("boardElements");
+            node.Remove("customName");
             if (node["body"] is JsonObject body) StripLayout(body);
             if (node["bodyGraph"] is JsonObject bodyGraph) StripLayout(bodyGraph);
         }

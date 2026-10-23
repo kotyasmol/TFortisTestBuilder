@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
@@ -53,6 +54,29 @@ public class ProfileOpenToggleTests
                 Assert.False(check.IsChecked);
                 vm.RedoCommand.Execute(null);
                 Assert.True(check.IsChecked);
+
+                var options = view.GetVisualDescendants().OfType<Button>()
+                    .Single(b => b.Name == "NodeOptionsTrigger" && b.DataContext == prep);
+                var flyout = Assert.IsType<Flyout>(options.Flyout);
+                flyout.ShowAt(options);
+                Layout();
+                var panel = Assert.IsType<StackPanel>(flyout.Content);
+                var input = panel.GetLogicalDescendants().OfType<TextBox>()
+                    .Single(t => t.Name == "CustomNodeNameInput");
+                Assert.True(input.IsEffectivelyVisible);
+                input.Text = "Ожидание питания";
+                Layout();
+                Assert.Equal("Ожидание питания", prep.CustomName);
+                Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(),
+                    t => t.Text == "Ожидание питания" && t.DataContext == prep);
+                vm.UndoCommand.Execute(null);
+                Assert.Empty(input.Text!);
+                vm.RedoCommand.Execute(null);
+                Assert.Equal("Ожидание питания", input.Text);
+                input.Text = "";
+                Layout();
+                Assert.Equal("Задержка", prep.DisplayTitle);
+                flyout.Hide();
 
                 vm.IsTestRunning = true;
                 Layout();

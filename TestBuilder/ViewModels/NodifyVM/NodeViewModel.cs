@@ -45,8 +45,12 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty] private string boardElements = "";
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(DisplayTitle))]
+        private string customName = string.Empty;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayTitle))]
         private string title = string.Empty;
-        public string DisplayTitle => TestBuilder.Presentation.RussianUiText.Display(Title);
+        public string DisplayTitle => string.IsNullOrWhiteSpace(CustomName)
+            ? TestBuilder.Presentation.RussianUiText.Display(Title) : CustomName.Trim();
         [ObservableProperty] private Point location;
         [ObservableProperty] private bool isSelected;
         [ObservableProperty]

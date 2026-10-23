@@ -44,6 +44,9 @@
           <Button x:Name="NodeOptionsTrigger" Content="⚙" Padding="3" ToolTip.Tip="Настройки ноды"
                   IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}">
             <Button.Flyout><Flyout><StackPanel Spacing="8" Width="290" IsEnabled="{Binding #NodeOptionsTrigger.IsEnabled}">
+              <TextBlock Text="Название ноды" />
+              <TextBox x:Name="CustomNodeNameInput" Text="{Binding CustomName, Mode=TwoWay}" Watermark="Необязательно"
+                       ToolTip.Tip="Название в редакторе и пульте. Очистите поле, чтобы вернуть стандартное название." />
               <TextBlock Text="Элементы платы через запятую" TextWrapping="Wrap" />
               <TextBox Text="{Binding BoardElements}" Watermark="VCC, K5" />
             </StackPanel></Flyout></Button.Flyout>
@@ -207,7 +210,16 @@
           <Button Command="{Binding SaveGraphCommand}"  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M3 3 H18 L21 6 V21 H3 Z M6 4 V10 H17 V4 Z M6 14 V20 H18 V14 Z" /><TextBlock Text="Сохранить" /></StackPanel></Button>
           <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
           <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
-          <Button Command="{Binding ClearGraphCommand}"  ToolTip.Tip="Очистить граф" AutomationProperties.Name="Очистить граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 6 H20 V8 H4 Z M9 3 H15 V5 H9 Z M6 9 H18 L17 22 H7 Z" /></Button>
+          <ToggleButton x:Name="MultiSelectNodesToggle" Content="Выбирать несколько" IsEnabled="{Binding CanEditGraph}"
+                        ToolTip.Tip="Включите и отмечайте ноды щелчками. Повторный щелчок снимает выделение." Padding="9,8" />
+          <Button x:Name="SelectAllNodesButton" Content="Выделить всё" Click="OnSelectAllClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
+          <Button x:Name="ClearNodeSelectionButton" Content="Снять выделение" Click="OnClearSelectionClick" Padding="9,8" />
+          <Button x:Name="CopyNodesButton" Content="Копировать" Click="OnCopyNodesClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
+          <Button x:Name="PasteNodesButton" Content="Вставить" Click="OnPasteNodesClick" IsEnabled="{Binding CanPaste}" Padding="9,8" />
+          <Button x:Name="DuplicateNodesButton" Content="Дублировать" Click="OnDuplicateNodesClick" IsEnabled="{Binding CanEditGraph}" Padding="9,8" />
+          <Button x:Name="DeleteSelectionButton" Content="Удалить" Click="OnDeleteSelectionClick" IsEnabled="{Binding CanEditGraph}"
+                  ToolTip.Tip="Удалить выделенные ноды или выбранную связь. Действие можно отменить." Padding="9,8" />
+          <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />
           <Button Click="OnZoomOutClick" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 11 H20 V13 H4 Z" /></Button>
           <Button Click="OnZoomInClick" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" /></Button>
           <Button Click="OnCenterGraphClick" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" /></Button>
