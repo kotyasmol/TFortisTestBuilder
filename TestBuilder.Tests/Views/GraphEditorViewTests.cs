@@ -566,6 +566,22 @@ public class GraphEditorViewTests
                 Assert.Equal(grayBody.R, grayBody.G);
                 Assert.Equal(grayBody.G, grayBody.B);
                 Assert.NotEqual(originalBody, grayBody);
+                foreach (var name in new[] { "NodeOptionsTrigger", "ColorPickerTrigger" })
+                {
+                    var button = node.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);
+                    Assert.Equal(0, ((ISolidColorBrush)button.Background!).Color.A);
+                    Assert.IsType<Avalonia.Controls.Shapes.Path>(button.Content);
+                }
+                var profileToggle = node.GetVisualDescendants().OfType<CheckBox>()
+                    .Single(c => c.Name == "ProfileOpenToggle");
+                Assert.Equal(0, ((ISolidColorBrush)profileToggle.Background!).Color.A);
+                var captureFolder = Environment.GetEnvironmentVariable("TESTBUILDER_LAYOUT_CAPTURES");
+                if (!string.IsNullOrEmpty(captureFolder))
+                {
+                    Directory.CreateDirectory(captureFolder);
+                    using var frame = window.CaptureRenderedFrame();
+                    frame!.Save(Path.Combine(captureFolder, $"inactive-node-{(dark ? "dark" : "light")}.png"));
+                }
                 foreach (var field in node.GetVisualDescendants().OfType<TextBox>())
                 {
                     var color = ((ISolidColorBrush)field.Background!).Color;
