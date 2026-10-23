@@ -1,38 +1,39 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:views="using:TestBuilder.Views"
              xmlns:testviews="using:TestBuilder.Views.TestViews"
              x:Class="TestBuilder.Views.TestView"
              x:DataType="vm:TestViewModel">
 
   <Grid ColumnDefinitions="Auto,*"
-        Background="{DynamicResource AppBackgroundBrush}" Margin="10">
+        Background="{DynamicResource AppBackgroundBrush}" Margin="12">
 
-    <Border Grid.Column="0" x:Name="ProfileSidebar" Classes="profileSidebar" IsVisible="{Binding !IsProfilesCollapsed}" Width="260"
-            Margin="0,0,10,0"
-            Padding="12"
-            Background="{DynamicResource SurfaceAltBrush}"
-            BorderBrush="{DynamicResource BorderStrongBrush}"
-            BorderThickness="1"
-            CornerRadius="10">
+    <views:RoundedPanel Grid.Column="0" x:Name="ProfileSidebar" Classes="profileSidebar" IsVisible="{Binding !IsProfilesCollapsed}" Width="260"
+            Margin="0,0,12,0"
+            Padding="{StaticResource PanelInset}"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="{StaticResource UiBorderThickness}"
+            CornerRadius="{StaticResource UiCornerRadius}">
       <Grid RowDefinitions="Auto,*">
         <testviews:ControlPanelView Grid.Row="0" />
         <testviews:ProfileListView Grid.Row="1" Margin="0,16,0,0" />
       </Grid>
-    </Border>
+    </views:RoundedPanel>
 
     <Grid Grid.Column="1"
           Margin="0"
           RowDefinitions="*,12,160">
 
-      <Border Grid.Row="0"
+      <views:RoundedPanel Grid.Row="0"
               BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1"
-              CornerRadius="10"
+              BorderThickness="{StaticResource UiBorderThickness}"
+              CornerRadius="{StaticResource UiCornerRadius}"
               ClipToBounds="True"
               Background="{DynamicResource SurfaceBrush}">
         <testviews:GraphEditorView x:Name="GraphEditor" />
-      </Border>
+      </views:RoundedPanel>
 
       <GridSplitter Grid.Row="1"
                     Height="12"
@@ -41,14 +42,14 @@
                     Background="Transparent"
                     ResizeDirection="Rows" />
 
-      <Border Grid.Row="2"
+      <views:RoundedPanel Grid.Row="2"
               BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1"
-              CornerRadius="10"
+              BorderThickness="{StaticResource UiBorderThickness}"
+              CornerRadius="{StaticResource UiCornerRadius}"
               ClipToBounds="True"
               Background="{DynamicResource SurfaceBrush}">
         <testviews:LogPanelView x:Name="LogPanel" />
-      </Border>
+      </views:RoundedPanel>
     </Grid>
 
   </Grid>

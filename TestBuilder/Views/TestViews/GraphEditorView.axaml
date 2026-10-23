@@ -20,7 +20,7 @@
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Template">
         <ControlTemplate>
-          <Border Background="{TemplateBinding Background}" CornerRadius="4">
+          <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource UiCornerRadius}">
             <ContentPresenter Name="PART_ContentPresenter"
                               Content="{TemplateBinding Content}"
                               Padding="{TemplateBinding Padding}"
@@ -63,7 +63,7 @@
                       Foreground="{Binding NodeHeaderTextBrush}"
                       Data="M11 10h2v7h-2z M11 7h2v2h-2z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" />
           </Border>
-          <Button x:Name="NodeOptionsTrigger" Theme="{StaticResource NodeHeaderButtonTheme}" Width="24" Height="24" MinWidth="24" MinHeight="24" Padding="4"
+          <Button x:Name="NodeOptionsTrigger" Classes="nodeHeaderAction" Theme="{StaticResource NodeHeaderButtonTheme}" Width="24" Height="24" MinWidth="24" MinHeight="24" Padding="4"
                   Background="Transparent" Foreground="{Binding NodeHeaderTextBrush}"
                   ToolTip.Tip="Настройки ноды" AutomationProperties.Name="Настройки ноды"
                   IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}">
@@ -78,7 +78,7 @@
             </StackPanel></Flyout></Button.Flyout>
           </Button>
           <Button x:Name="ColorPickerTrigger"
-                  Classes="nodeColorTrigger"
+                  Classes="nodeColorTrigger nodeHeaderAction"
                   Theme="{StaticResource NodeHeaderButtonTheme}" Width="24" Height="24" MinWidth="24" MinHeight="24" Padding="4"
                   Background="Transparent" Foreground="{Binding NodeHeaderTextBrush}"
                   ToolTip.Tip="Изменить цвет ноды" AutomationProperties.Name="Изменить цвет ноды">
@@ -107,7 +107,7 @@
           </Button>
         </StackPanel>
         <StackPanel Spacing="4">
-          <Border IsVisible="{Binding IsRunStart}" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="6,3">
+          <Border IsVisible="{Binding IsRunStart}" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource UiCornerRadius}" Padding="6,3">
             <TextBlock Text="{Binding RunStartLabel}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="Bold" />
           </Border>
         <TextBlock Text="{Binding DisplayTitle}"
@@ -183,7 +183,7 @@
 
   <Grid RowDefinitions="Auto,*">
 
-    <Border Grid.Row="0" Padding="10,6" Background="{DynamicResource SurfaceBrush}"
+    <Border Grid.Row="0" Padding="12,12,12,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto">
         <Grid ColumnDefinitions="Auto,Auto,200,Auto,*" Margin="0,0,0,6">
@@ -222,10 +222,12 @@
           <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
           <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
           <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,8,8">
           <Button Click="OnZoomOutClick" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 11 H20 V13 H4 Z" /></Button>
           <Button Click="OnZoomInClick" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" /></Button>
           <Button Click="OnCenterGraphClick" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" /></Button>
-          <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,8,8" />
+          <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,0,0" />
+          </StackPanel>
         </WrapPanel>
         <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
                 CornerRadius="8" Padding="10" Margin="0,4,0,0">

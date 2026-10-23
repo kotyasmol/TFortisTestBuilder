@@ -15,7 +15,7 @@
 
       <Border Grid.Row="0"
               Background="{DynamicResource SidebarDarkAltBrush}"
-              Padding="16">
+              Padding="{StaticResource PanelInset}">
 
         <StackPanel Spacing="4">
           <TextBlock Text="Добавить ноду"
@@ -63,7 +63,7 @@
 
                       <Border Classes="nodeEntry" Margin="0,1"
                               Padding="12,10"
-                              CornerRadius="7"
+                              CornerRadius="{StaticResource UiCornerRadius}"
                               BorderBrush="{DynamicResource BorderBrush}"
                               BorderThickness="0"
                               PointerPressed="OnNodePressed"

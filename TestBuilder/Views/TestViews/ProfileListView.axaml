@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:TestBuilder.Views"
              xmlns:vm="using:TestBuilder.ViewModels"
              xmlns:services="using:TestBuilder.Services"
              xmlns:converters="using:TestBuilder.Converters"
@@ -19,11 +20,11 @@
     </Grid>
     <TextBox Grid.Row="3" Text="{Binding ProfileSearch}" Watermark="Поиск профиля" Margin="0,0,0,12" />
     <TextBlock Grid.Row="4" Text="{Binding CatalogStatus}" IsVisible="{Binding HasCatalogStatus}" Classes="hint" Margin="0,0,0,8" />
-    <Border Grid.Row="5"
+    <views:RoundedPanel Grid.Row="5"
             BorderThickness="1"
             BorderBrush="{DynamicResource BorderBrush}"
-            CornerRadius="8"
-            Background="{DynamicResource SurfaceBrush}"
+            CornerRadius="{StaticResource UiCornerRadius}"
+            Background="{DynamicResource SurfaceAltBrush}"
             ClipToBounds="True">
       <Grid>
         <ScrollViewer x:Name="ProfileListBox" IsEnabled="{Binding CanChooseProfile}" HorizontalScrollBarVisibility="Disabled">
@@ -67,7 +68,7 @@
                     IsVisible="{Binding Profiles.Count, Converter={StaticResource CollectionEmptyConverter}}">
           <Border Width="32"
                   Height="26"
-                  CornerRadius="5"
+                  CornerRadius="{StaticResource UiCornerRadius}"
                   BorderBrush="{DynamicResource TextMutedBrush}"
                   BorderThickness="1"
                   Opacity="0.65">
@@ -91,7 +92,7 @@
                      HorizontalAlignment="Center" />
         </StackPanel>
       </Grid>
-    </Border>
+    </views:RoundedPanel>
     <Button x:Name="ReloadProfileButton" Grid.Row="6" Classes="sidebarAction"
             Content="Открыть заново" Command="{Binding ReloadProfileCommand}"
             HorizontalAlignment="Stretch" Margin="0,8,0,0"

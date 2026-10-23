@@ -12,7 +12,10 @@
       <x:Double x:Key="FontTitle">24</x:Double>
       <x:Double x:Key="ControlHeight">36</x:Double>
       <Thickness x:Key="PageInset">16</Thickness>
-      <Thickness x:Key="PanelInset">16</Thickness>
+      <Thickness x:Key="PanelInset">12</Thickness>
+      <CornerRadius x:Key="UiCornerRadius">8</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+      <Thickness x:Key="UiBorderThickness">1</Thickness>
       <Thickness x:Key="ControlInset">12,8</Thickness>
 
       <ControlTheme x:Key="ProfileItemTheme" TargetType="ListBoxItem">
@@ -27,7 +30,7 @@
         <Setter Property="Template">
           <ControlTemplate>
             <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource UiCornerRadius}">
               <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                                 Margin="{TemplateBinding Padding}" HorizontalContentAlignment="Stretch" />
             </Border>
@@ -42,18 +45,19 @@
       </ControlTheme>
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Default">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#DDE3E9" />
-          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#E6EBEF" />
+          <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#E4E8EE" />
+          <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#E9EDF2" />
           <SolidColorBrush x:Key="EditorDotBrush" Color="#9CAAB8" />
           <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#D9D9D9" />
           <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#E5E5E5" />
           <SolidColorBrush x:Key="GridLineBrush" Color="#CCD4DE" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#F1F3F5" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E8ECF0" />
-          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#E0E5EB" />
-          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#D3DBE5" />
-          <SolidColorBrush x:Key="BorderBrush" Color="#ABB7C6" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7D8EA3" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#F5F6F8" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E9EDF2" />
+          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#E9EDF2" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#DCE3EC" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#AAB6C5" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7B8DA3" />
           <SolidColorBrush x:Key="TextPrimaryBrush" Color="#202A38" />
           <SolidColorBrush x:Key="TextSecondaryBrush" Color="#46556B" />
           <SolidColorBrush x:Key="TextMutedBrush" Color="#536279" />
@@ -76,12 +80,12 @@
           <SolidColorBrush x:Key="ChangedSoftBrush" Color="#FFF4CC" />
           <SolidColorBrush x:Key="ChangedBorderBrush" Color="#F59E0B" />
           <SolidColorBrush x:Key="ChangedTextBrush" Color="#92400E" />
-          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#E8ECF0" />
-          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#E8ECF0" />
-          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#ABB7C6" />
-          <SolidColorBrush x:Key="SidebarTextBrush" Color="#172033" />
+          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#F5F6F8" />
+          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#F5F6F8" />
+          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#AAB6C5" />
+          <SolidColorBrush x:Key="SidebarTextBrush" Color="#202A38" />
           <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#536279" />
-          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#F1F3F5" />
+          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#F5F6F8" />
           <SolidColorBrush x:Key="NodeHeaderBrush" Color="#EEF3FF" />
           <SolidColorBrush x:Key="NodeConnectorTextBrush" Color="#3B465C" />
           <SolidColorBrush x:Key="NodeNeutralBrush" Color="#C9D8F6" />
@@ -97,16 +101,16 @@
           <SolidColorBrush x:Key="NodeOperatorBrush" Color="#BFD2F8" />
           <SolidColorBrush x:Key="ConnectorFillBrush" Color="#E0F2FE" />
           <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#0284C7" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#F1F3F5" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#F1F3F5" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#F1F3F5" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#F8FAFC" />
-          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#F8FAFC" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#E9EDF2" />
+          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#E9EDF2" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#0F172A" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#334155" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#64748B" />
           <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#2563EB" />
-          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#F1F3F5" />
+          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#F5F6F8" />
           <SolidColorBrush x:Key="Node.ForegroundBrush" Color="#172033" />
           <SolidColorBrush x:Key="Node.BorderBrush" Color="#AFCBFF" />
           <SolidColorBrush x:Key="ForegroundBrush" Color="#172033" />
@@ -114,18 +118,19 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#20252D" />
+          <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#303A46" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1D232B" />
           <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#232A33" />
           <SolidColorBrush x:Key="EditorDotBrush" Color="#526171" />
           <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#555555" />
           <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#626262" />
           <SolidColorBrush x:Key="GridLineBrush" Color="#343F4C" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#262E38" />
-          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#364150" />
-          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#425165" />
-          <SolidColorBrush x:Key="BorderBrush" Color="#58677C" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7D90A8" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#272F39" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#232A33" />
+          <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#303A46" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#3B4858" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#526173" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#788CA5" />
           <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E3E8F0" />
           <SolidColorBrush x:Key="TextSecondaryBrush" Color="#BFCBDC" />
           <SolidColorBrush x:Key="TextMutedBrush" Color="#AFBED2" />
@@ -148,12 +153,12 @@
           <SolidColorBrush x:Key="ChangedSoftBrush" Color="#493512" />
           <SolidColorBrush x:Key="ChangedBorderBrush" Color="#FBBF24" />
           <SolidColorBrush x:Key="ChangedTextBrush" Color="#FDE68A" />
-          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#58677C" />
-          <SolidColorBrush x:Key="SidebarTextBrush" Color="#E5ECF7" />
+          <SolidColorBrush x:Key="SidebarDarkBrush" Color="#272F39" />
+          <SolidColorBrush x:Key="SidebarDarkAltBrush" Color="#272F39" />
+          <SolidColorBrush x:Key="SidebarBorderBrush" Color="#526173" />
+          <SolidColorBrush x:Key="SidebarTextBrush" Color="#E3E8F0" />
           <SolidColorBrush x:Key="SidebarTextMutedBrush" Color="#BFCBDC" />
-          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="NodeBackgroundBrush" Color="#272F39" />
           <SolidColorBrush x:Key="NodeHeaderBrush" Color="#394A63" />
           <SolidColorBrush x:Key="NodeConnectorTextBrush" Color="#C7D2E5" />
           <SolidColorBrush x:Key="NodeNeutralBrush" Color="#4A6BA7" />
@@ -169,16 +174,16 @@
           <SolidColorBrush x:Key="NodeOperatorBrush" Color="#4A6BA7" />
           <SolidColorBrush x:Key="ConnectorFillBrush" Color="#123554" />
           <SolidColorBrush x:Key="ConnectorStrokeBrush" Color="#38BDF8" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#2C3440" />
-          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#262E38" />
-          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#262E38" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#303A46" />
+          <SolidColorBrush x:Key="SystemControlBackgroundAltMediumHighBrush" Color="#303A46" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseHighBrush" Color="#303A46" />
+          <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumHighBrush" Color="#232A33" />
+          <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#232A33" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#E5ECF7" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#C7D2E5" />
           <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#A9B5C8" />
           <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#3B82F6" />
-          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#2C3440" />
+          <SolidColorBrush x:Key="Node.BackgroundBrush" Color="#272F39" />
           <SolidColorBrush x:Key="Node.ForegroundBrush" Color="#E5ECF7" />
           <SolidColorBrush x:Key="Node.BorderBrush" Color="#5B8EF1" />
           <SolidColorBrush x:Key="ForegroundBrush" Color="#E5ECF7" />
@@ -230,7 +235,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
   </Style>
   <Style Selector="WrapPanel.actions > Button">
     <Setter Property="Margin" Value="0,0,8,8" />
@@ -241,11 +246,11 @@
   </Style>
 
   <Style Selector="Button">
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="Padding" Value="{StaticResource ControlInset}" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="FontSize" Value="14" />
@@ -267,6 +272,28 @@
     <Setter Property="Opacity" Value="0.55" />
   </Style>
 
+  <Style Selector="Button:not(.nodeHeaderAction):disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="Button:not(.nodeHeaderAction):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+  </Style>
+  <Style Selector="Button:not(.nodeHeaderAction):pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+  </Style>
+
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
@@ -283,7 +310,7 @@
   </Style>
 
   <Style Selector="Button.ghost">
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
   </Style>
 
@@ -300,11 +327,11 @@
   </Style>
 
   <Style Selector="TextBox">
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
   </Style>
@@ -314,12 +341,28 @@
   </Style>
 
   <Style Selector="ComboBox">
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+  </Style>
+
+  <Style Selector="NumericUpDown, AutoCompleteBox, ToggleButton">
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource UiBorderThickness}" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+  </Style>
+
+  <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
   </Style>
 
   <Style Selector="CheckBox">
@@ -334,7 +377,7 @@
   <Style Selector="ListBoxItem">
     <Setter Property="Padding" Value="10,8" />
     <Setter Property="Margin" Value="4,2" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
 
@@ -381,7 +424,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource NodeNeutralBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
 
@@ -452,7 +495,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Padding" Value="10,10" />
     <Setter Property="Template">
@@ -474,24 +517,22 @@
   </Style>
   <Style Selector="Border.nodeEntry">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
   </Style>
   <Style Selector="Border.nodeEntry:pointerover">
     <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
   </Style>
 
   <Style Selector="Button.sidebarAction">
-    <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="Button.sidebarAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ProfileSelectedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
-  </Style>
-  <Style Selector="Border.profileSidebar ComboBox, Border.profileSidebar TextBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
   </Style>
+
   <Style Selector="Border.profileSidebar Button.listHeader">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />

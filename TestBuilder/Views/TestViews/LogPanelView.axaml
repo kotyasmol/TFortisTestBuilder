@@ -11,7 +11,7 @@
     <converters:CollectionEmptyConverter x:Key="CollectionEmptyConverter" />
   </UserControl.Resources>
 
-  <Border Padding="12"
+  <Border Padding="{StaticResource PanelInset}"
           Background="{DynamicResource SurfaceBrush}">
     <Grid RowDefinitions="Auto,*">
 
@@ -26,7 +26,7 @@
                    VerticalAlignment="Center" />
         <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
-                    Spacing="4">
+                    Spacing="8">
           <ToggleButton x:Name="FollowLogsToggle" Content="Следить за логом" IsChecked="True"
                         IsCheckedChanged="OnFollowLogsChanged" Padding="8,0" MinHeight="28" Height="28"
                         ToolTip.Tip="Показывать конец журнала при появлении новых записей. Прокрутка вверх отключает слежение." />
@@ -71,11 +71,11 @@
         </StackPanel>
       </Grid>
 
-      <Border Grid.Row="1"
-              Background="{DynamicResource SurfaceBrush}"
+      <views:RoundedPanel Grid.Row="1"
+              Background="{DynamicResource SurfaceAltBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="1"
-              CornerRadius="8"
+              CornerRadius="{StaticResource UiCornerRadius}"
               Padding="8"
               ClipToBounds="True">
         <Grid>
@@ -107,7 +107,7 @@
                      Foreground="{DynamicResource TextSecondaryBrush}" IsHitTestVisible="False"
                      IsVisible="{Binding TestingLogger.Entries.Count, Converter={StaticResource CollectionEmptyConverter}}" />
         </Grid>
-      </Border>
+      </views:RoundedPanel>
 
     </Grid>
   </Border>
