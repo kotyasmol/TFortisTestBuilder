@@ -52,12 +52,10 @@ namespace TestBuilder.ViewModels
         public string WorkspaceTitle => IsSettingsOpen ? "Настройки" :
             IsEngineerWorkspace ? "Инженерный режим" : "Пульт стенда";
         public string SwitchWorkspaceTitle => IsEngineerWorkspace ? "Перейти в пульт" : "Открыть редактор";
-        public bool CanSwitchWorkspace => SettingsVM.CanChangeInterfaceMode;
-
-        [RelayCommand(CanExecute = nameof(CanSwitchWorkspace))]
+        [RelayCommand]
         private void SwitchWorkspace()
         {
-            if (CanSwitchWorkspace) SettingsVM.IsEngineerMode = !SettingsVM.IsEngineerMode;
+            SettingsVM.IsEngineerMode = !SettingsVM.IsEngineerMode;
         }
 
         [ObservableProperty] private bool isSettingsOpen;
@@ -92,7 +90,7 @@ namespace TestBuilder.ViewModels
         {
             if (e.PropertyName != nameof(SettingsVM.IsEngineerMode)) return;
             TestVM.IsOperatorView = !IsEngineerWorkspace;
-            if (!IsEngineerWorkspace) TestVM.Station.Prepare(TestVM.RootGraph);
+            if (!IsEngineerWorkspace && !TestVM.IsTestRunning) TestVM.Station.Prepare(TestVM.RootGraph);
             OnPropertyChanged(nameof(IsEngineerWorkspace));
             OnPropertyChanged(nameof(ShowBoardEditor));
             OnPropertyChanged(nameof(WorkspaceTitle));
@@ -116,9 +114,7 @@ namespace TestBuilder.ViewModels
                 IsSlavesFound = TestVM.IsMonitoringActive;
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting))
             {
-                SettingsVM.RefreshModeAvailability();
-                SwitchWorkspaceCommand.NotifyCanExecuteChanged();
-                OnPropertyChanged(nameof(CanSwitchWorkspace));
+                SettingsVM.RefreshTutorialAvailability();
             }
         }
 

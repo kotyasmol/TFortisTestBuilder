@@ -103,6 +103,15 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
+    <Style Selector="nodify|Node.inactive">
+      <Setter Property="Background" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
+      <Setter Property="ContentBrush" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
+      <Setter Property="FooterBrush" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
+    </Style>
+    <Style Selector="nodify|Node.inactive TextBox, nodify|Node.inactive ComboBox, nodify|Node.inactive NumericUpDown, nodify|Node.inactive Button, nodify|Node.inactive CheckBox">
+      <Setter Property="Background" Value="{DynamicResource InactiveNodeFieldBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
     <Style Selector="AutoCompleteBox.profileIdentity /template/ TextBox">
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
@@ -245,6 +254,12 @@
     </Border>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ClipToBounds="True">
+      <Border Background="{DynamicResource EditorBackgroundBrush}" IsHitTestVisible="False">
+        <testviews:GraphDotBackground
+            ViewportLocation="{Binding #Editor.ViewportLocation}"
+            ViewportZoom="{Binding #Editor.ViewportZoom}"
+            DotBrush="{DynamicResource EditorDotBrush}" />
+      </Border>
       <nodify:NodifyEditor x:Name="Editor"
                            Classes.inspectOnly="{Binding !CanEditGraph}"
                            ItemsSource="{Binding Nodes}"
@@ -253,7 +268,7 @@
                            DisplayConnectionsOnTop="False"
                            DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}"
                            SelectedItems="{Binding SelectedNodes}"
-                           Background="{DynamicResource EditorBackgroundBrush}"
+                           Background="Transparent"
                            GridCellSize="16"
                            DragDrop.AllowDrop="True">
 
@@ -872,7 +887,7 @@
                              Input="{Binding Input}"
                              Output="{Binding Output}"
                              Classes="SubtestNode"
-                             Background="{DynamicResource NodeBackgroundBrush}"
+                             Classes.inactive="{Binding IsInactive}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              BorderBrush="{Binding NodeColorBrush}" HeaderBrush="{Binding NodeColorBrush}"
                              BorderThickness="1"

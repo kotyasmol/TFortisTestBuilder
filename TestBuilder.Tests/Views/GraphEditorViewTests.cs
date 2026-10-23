@@ -534,6 +534,57 @@ public class GraphEditorViewTests
         }, CancellationToken.None);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisabledSubtest_GraysHeaderBodyAndFields_AndRestoresSelectedColor(bool dark)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            Application.Current!.RequestedThemeVariant = dark
+                ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+            using var modbus = new ModbusService();
+            using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+            vm.IsOperatorView = false;
+            var model = new SubtestNodeViewModel { NodeColor = "orange" };
+            vm.Nodes.Add(model);
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 1100, Height = 750, Content = view };
+            try
+            {
+                window.Show();
+                Layout(window);
+                var node = view.GetVisualDescendants().OfType<Node>()
+                    .Single(n => ReferenceEquals(n.DataContext, model));
+                var originalHeader = ((ISolidColorBrush)node.HeaderBrush!).Color;
+                var originalBody = ((ISolidColorBrush)node.ContentBrush!).Color;
+                model.IsEnabled = false;
+                Layout(window);
+                Assert.Equal(Colors.Gray, ((ISolidColorBrush)node.HeaderBrush!).Color);
+                var grayBody = ((ISolidColorBrush)node.ContentBrush!).Color;
+                Assert.Equal(grayBody.R, grayBody.G);
+                Assert.Equal(grayBody.G, grayBody.B);
+                Assert.NotEqual(originalBody, grayBody);
+                foreach (var field in node.GetVisualDescendants().OfType<TextBox>())
+                {
+                    var color = ((ISolidColorBrush)field.Background!).Color;
+                    Assert.Equal(color.R, color.G);
+                    Assert.Equal(color.G, color.B);
+                    Assert.True(field.IsEnabled);
+                }
+                Assert.True(node.GetVisualDescendants().OfType<CheckBox>()
+                    .First(c => c.IsChecked == false).IsEnabled);
+                model.IsEnabled = true;
+                Layout(window);
+                Assert.Equal("orange", model.NodeColor);
+                Assert.Equal(originalHeader, ((ISolidColorBrush)node.HeaderBrush!).Color);
+                Assert.Equal(originalBody, ((ISolidColorBrush)node.ContentBrush!).Color);
+            }
+            finally { window.Close(); }
+        }, CancellationToken.None);
+    }
+
     private static void Layout(Window window)
     {
         window.UpdateLayout();

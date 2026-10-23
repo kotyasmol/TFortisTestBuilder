@@ -12,7 +12,7 @@ namespace TestBuilder.ViewModels
 {
     public partial class SettingsViewModel : ViewModelBase
     {
-        private readonly Func<bool>? canChangeInterfaceMode;
+        private readonly Func<bool>? canStartTutorial;
         private bool isEngineerMode;
         [ObservableProperty] private string profileContext = "Коммутатор";
         [ObservableProperty] private bool showConsoleSettings;
@@ -23,20 +23,20 @@ namespace TestBuilder.ViewModels
             ShowConsoleSettings = hasConsole;
         }
 
-        public bool CanChangeInterfaceMode => canChangeInterfaceMode?.Invoke() ?? true;
+        public bool CanStartTutorial => canStartTutorial?.Invoke() ?? true;
 
         public bool IsEngineerMode
         {
             get => isEngineerMode;
             set
             {
-                if (!CanChangeInterfaceMode || !SetProperty(ref isEngineerMode, value)) return;
+                if (!SetProperty(ref isEngineerMode, value)) return;
                 AppSettings.Instance.EngineerMode = value;
                 AppSettings.Instance.Save();
             }
         }
 
-        public void RefreshModeAvailability() => OnPropertyChanged(nameof(CanChangeInterfaceMode));
+        public void RefreshTutorialAvailability() => OnPropertyChanged(nameof(CanStartTutorial));
 
         [ObservableProperty] private string standPort = "";
         [ObservableProperty] private string consolePort = "";
@@ -64,9 +64,9 @@ namespace TestBuilder.ViewModels
         public IAsyncRelayCommand SelectFolderCommand { get; }
         public IAsyncRelayCommand SelectLogFolderCommand { get; }
 
-        public SettingsViewModel(Func<bool>? canChangeInterfaceMode = null)
+        public SettingsViewModel(Func<bool>? canStartTutorial = null)
         {
-            this.canChangeInterfaceMode = canChangeInterfaceMode;
+            this.canStartTutorial = canStartTutorial;
             isEngineerMode = AppSettings.Instance.EngineerMode;
             StandPort = AppSettings.Instance.StandPort;
             ConsolePort = AppSettings.Instance.ConsolePort;

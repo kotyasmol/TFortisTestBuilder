@@ -7,7 +7,7 @@
       <TextBlock Text="Настройки" Classes="pageTitle" />
       <TextBlock Text="{Binding ProfileContext}" TextWrapping="Wrap" />
       <Button Content="Полная инструкция" Click="OnOpenUserGuide" AutomationProperties.Name="Открыть полную инструкцию" />
-      <Button Content="Интерактивное обучение" Click="OnOpenTutorial" IsEnabled="{Binding CanChangeInterfaceMode}" AutomationProperties.Name="Пройти интерактивное обучение" />
+      <Button Content="Интерактивное обучение" Click="OnOpenTutorial" IsEnabled="{Binding CanStartTutorial}" AutomationProperties.Name="Пройти интерактивное обучение" />
       <Border Classes="panel">
         <StackPanel Spacing="8">
           <TextBlock Text="Подключения рабочего места" Classes="sectionTitle" />
@@ -21,7 +21,7 @@
       <Border Classes="panel">
         <StackPanel Spacing="12">
           <TextBlock Text="Рабочий режим" Classes="sectionTitle" />
-          <WrapPanel IsEnabled="{Binding CanChangeInterfaceMode}">
+          <WrapPanel>
             <RadioButton Content="Пульт стенда" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"
                          IsChecked="{Binding !IsEngineerMode, Mode=TwoWay}" Margin="0,0,24,0" />
             <RadioButton Content="Инженерный режим" GroupName="{Binding #SettingsRoot.WorkspaceModeGroupName}"

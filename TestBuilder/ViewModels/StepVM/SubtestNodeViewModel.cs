@@ -15,7 +15,12 @@ namespace TestBuilder.ViewModels.StepVM
         private string description = string.Empty;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsInactive))]
+        [NotifyPropertyChangedFor(nameof(NodeColorBrush))]
+        [NotifyPropertyChangedFor(nameof(NodeHeaderTextBrush))]
         private bool isEnabled = true;
+
+        public override bool IsInactive => !IsEnabled;
 
         [ObservableProperty]
         private bool stopOnError = true;

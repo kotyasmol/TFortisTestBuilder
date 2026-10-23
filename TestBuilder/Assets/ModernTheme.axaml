@@ -44,6 +44,9 @@
         <ResourceDictionary x:Key="Default">
           <SolidColorBrush x:Key="AppBackgroundBrush" Color="#DDE3E9" />
           <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#E6EBEF" />
+          <SolidColorBrush x:Key="EditorDotBrush" Color="#9CAAB8" />
+          <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#D9D9D9" />
+          <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#E5E5E5" />
           <SolidColorBrush x:Key="GridLineBrush" Color="#CCD4DE" />
           <SolidColorBrush x:Key="SurfaceBrush" Color="#F1F3F5" />
           <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E8ECF0" />
@@ -113,6 +116,9 @@
         <ResourceDictionary x:Key="Dark">
           <SolidColorBrush x:Key="AppBackgroundBrush" Color="#20252D" />
           <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#232A33" />
+          <SolidColorBrush x:Key="EditorDotBrush" Color="#526171" />
+          <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#353535" />
+          <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#444444" />
           <SolidColorBrush x:Key="GridLineBrush" Color="#343F4C" />
           <SolidColorBrush x:Key="SurfaceBrush" Color="#2C3440" />
           <SolidColorBrush x:Key="SurfaceAltBrush" Color="#262E38" />

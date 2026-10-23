@@ -2,8 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Linq;
@@ -24,7 +22,6 @@ public partial class GraphEditorView : UserControl, IDisposable
         AvaloniaProperty.Register<GraphEditorView, bool>(nameof(IsNodeHelpOpen));
 
     private readonly IDisposable _visibilitySubscription;
-    private readonly IDisposable _themeSubscription;
     private readonly IDisposable _dataContextSubscription;
     private TestViewModel? _viewModel;
     private LabelNodeViewModel? _resizingLabel;
@@ -60,9 +57,6 @@ public partial class GraphEditorView : UserControl, IDisposable
             if (isVisible)
                 Editor.PopAllStates();
         }));
-
-        _themeSubscription = Application.Current!.GetObservable(Application.RequestedThemeVariantProperty)
-            .Subscribe(new AnonymousObserver<ThemeVariant?>(_ => UpdateEditorBackground()));
 
         _dataContextSubscription = this.GetObservable(DataContextProperty)
             .Subscribe(new AnonymousObserver<object?>(OnDataContextChanged));
@@ -121,12 +115,6 @@ public partial class GraphEditorView : UserControl, IDisposable
         else vm.DeleteSelectedNodes();
     }
 
-    private void UpdateEditorBackground()
-    {
-        if (this.Resources.TryGetResource("SmallGridBrush", ActualThemeVariant, out var brush) && brush is IBrush b)
-            Editor.Background = b;
-    }
-
     public void Dispose()
     {
         if (_isDisposed)
@@ -137,7 +125,6 @@ public partial class GraphEditorView : UserControl, IDisposable
         NodeRunMenu?.Close();
 
         _visibilitySubscription.Dispose();
-        _themeSubscription.Dispose();
         _dataContextSubscription.Dispose();
         DetachViewModel();
         Editor.RemoveHandler(DragDrop.DropEvent, OnDropNode);

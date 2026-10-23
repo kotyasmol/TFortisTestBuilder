@@ -110,8 +110,9 @@ namespace TestBuilder.ViewModels.NodifyVM
                                   ?? ColorOptions[0];
         }
 
-        public IBrush NodeColorBrush => SelectedColor.Brush;
-        public IBrush NodeHeaderTextBrush => SelectedColor.HeaderTextBrush;
+        public virtual bool IsInactive => false;
+        public IBrush NodeColorBrush => IsInactive ? Brushes.Gray : SelectedColor.Brush;
+        public IBrush NodeHeaderTextBrush => IsInactive ? Brushes.White : SelectedColor.HeaderTextBrush;
 
         [RelayCommand]
         private void SelectColor(string color) => NodeColor = color;

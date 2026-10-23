@@ -124,10 +124,20 @@ public class WindowLayoutTests
                 Assert.Same(rootNode, shellVm.TestVM.RootGraph.Nodes.First());
                 Capture(shell, "shell-station", width, dark);
                 shellVm.TestVM.IsConnecting = true;
-                Assert.False(shellVm.SwitchWorkspaceCommand.CanExecute(null));
+                Assert.True(shellVm.SwitchWorkspaceCommand.CanExecute(null));
                 shellVm.TestVM.IsConnecting = false;
                 shellVm.TestVM.IsTestRunning = true;
-                Assert.False(shellVm.SwitchWorkspaceCommand.CanExecute(null));
+                Assert.True(shellVm.SwitchWorkspaceCommand.CanExecute(null));
+                var stages = shellVm.TestVM.Station.Stages.ToArray();
+                shellVm.TestVM.Station.SerialNumber = "3200123";
+                shellVm.SwitchWorkspaceCommand.Execute(null);
+                Assert.True(shellVm.IsEngineerWorkspace);
+                Assert.False(shellVm.TestVM.CanEditGraph);
+                shellVm.SwitchWorkspaceCommand.Execute(null);
+                Assert.False(shellVm.IsEngineerWorkspace);
+                Assert.True(shellVm.TestVM.IsTestRunning);
+                Assert.Equal(stages, shellVm.TestVM.Station.Stages.ToArray());
+                Assert.Equal("3200123", shellVm.TestVM.Station.SerialNumber);
                 shellVm.TestVM.IsTestRunning = false;
             }
             finally
