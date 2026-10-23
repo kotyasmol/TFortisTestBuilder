@@ -177,8 +177,6 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(CanChooseProfile));
-        OnPropertyChanged(nameof(CanReloadProfile));
-        ReloadProfileCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanStartRun));
         OnPropertyChanged(nameof(StationReadiness));
         OnPropertyChanged(nameof(StationProfileName));

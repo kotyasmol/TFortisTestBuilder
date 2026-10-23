@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 
@@ -17,11 +16,6 @@ public partial class TestViewModel
     private bool CanPrepareProfile => !NeedsStandInspection && !IsTestRunning && !IsConnecting &&
         App.StartupOptions.IsValid && _profileLoadError.Length == 0;
     private bool HasPendingPreparation => _preparedProfileKey == null && BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
-
-    public bool CanReloadProfile => CanChooseProfile && _selectedProfile != null;
-
-    [RelayCommand(CanExecute = nameof(CanReloadProfile))]
-    private Task ReloadProfileAsync() => SelectProfileAsync(_selectedProfile, reload: true);
 
     private string CurrentPreparationKey() =>
         FirstRunProfileKey.Create(_currentProfilePath, GraphSerializer.Serialize(this, CurrentProfileName));

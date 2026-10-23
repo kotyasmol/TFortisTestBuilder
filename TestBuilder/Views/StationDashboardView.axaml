@@ -94,7 +94,7 @@
   <Grid ColumnDefinitions="260,*">
     <Border Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="Auto,Auto,*,Auto">
+      <Grid RowDefinitions="Auto,Auto,*">
         <TextBox Text="{Binding StationProfileSearch}" Watermark="Найти программу"
                  FontSize="{StaticResource FontSection}" MinHeight="48" Margin="16" IsEnabled="{Binding CanChooseProfile}"
                  AutomationProperties.Name="Поиск программы">
@@ -145,10 +145,6 @@
                      IsVisible="{Binding StationProfiles.Count, Converter={StaticResource IsEmpty}}"
                      IsHitTestVisible="False" Foreground="{DynamicResource TextSecondaryBrush}" />
         </Grid>
-        <Button x:Name="ReloadProfileButton" Grid.Row="3" Classes="station"
-                Content="Открыть заново" Command="{Binding ReloadProfileCommand}"
-                HorizontalAlignment="Stretch" Margin="16,8,16,16"
-                ToolTip.Tip="Открыть сохранённый профиль и повторить подготовку стенда" />
       </Grid>
     </Border>
 

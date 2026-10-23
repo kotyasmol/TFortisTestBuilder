@@ -49,7 +49,7 @@ public class FirstRunSessionTests
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(before + 1, PreparationStarts(vm));
 
-        await vm.ReloadProfileCommand.ExecuteAsync(null);
+        await vm.SelectProfileAsync(vm.SelectedProfile, reload: true);
         prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
         Assert.True(prep.HasExecutionSucceeded);
