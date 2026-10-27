@@ -75,6 +75,27 @@ public class FullProfileSerializationTests
         Assert.True(restored.Bidirectional);
     }
 
+    [Fact]
+    public void CustomLabelTemplateTravelsWithProfileAndClone()
+    {
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        var template = new LabelTemplateDefinition { Name = "New product", Command = "^XA^FD{{Serial}}^FS^XZ", WidthDots = 500 };
+        var node = new PrintLabelNodeViewModel { LabelTemplate = template };
+        vm.RootGraph.Nodes.Add(node);
+        var json = GraphSerializer.Serialize(vm, "Custom label");
+        Assert.Contains("labelTemplate", json);
+        GraphSerializer.Deserialize(json, vm);
+        var restored = Assert.Single(vm.RootGraph.Nodes.OfType<PrintLabelNodeViewModel>());
+        Assert.Equal(template.Id, restored.LabelTemplate!.Id);
+        Assert.Equal(500, restored.LabelTemplate.WidthDots);
+        template.Command = "modified";
+        Assert.Equal("^XA^FD{{Serial}}^FS^XZ", restored.LabelTemplate.Command);
+        var clone = Assert.IsType<PrintLabelNodeViewModel>(restored.Clone());
+        restored.LabelTemplate.Command = "changed again";
+        Assert.Equal("^XA^FD{{Serial}}^FS^XZ", clone.LabelTemplate!.Command);
+    }
+
     private static JsonDocument ReadProfile(string file) => JsonDocument.Parse(File.ReadAllText(
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file))));
 

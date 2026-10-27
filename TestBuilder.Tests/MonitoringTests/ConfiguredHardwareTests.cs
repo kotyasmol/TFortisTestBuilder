@@ -236,6 +236,41 @@ public class ConfiguredHardwareTests
         },CancellationToken.None);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiscoveryUsesCustomCatalogueEvenAddressAndIdentificationRegister(bool ambiguous)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var bus = new RecordingBus();
+            var manager = new SlaveManager(bus);
+            var definition = new DeviceDefinition { Name = "Новый датчик", SlaveId = 1,
+                IdentificationAddress = 700, IdentificationValue = 700,
+                Registers = new() { new() { Address = 900, Area = ModbusArea.Input } } };
+            var catalogue = new List<TestBuilder.Services.EquipmentTemplate> { new("custom", definition, false) };
+            var settings = new DiscoverySettings { SlaveAddresses = "42", DelayMs = 0, TemplateIds = new() { "custom" } };
+            if (ambiguous)
+            {
+                catalogue.Add(new("other", definition, false)); settings.TemplateIds.Add("other");
+                await Assert.ThrowsAsync<InvalidOperationException>(() => manager.ScanAsync(settings, catalogue));
+                Assert.Empty(manager.Slaves);
+            }
+            else
+            {
+                Assert.Equal(1, await manager.ScanAsync(settings, catalogue));
+                var model = Assert.Single(manager.Slaves);
+                Assert.Equal(42, model.SlaveId);
+                Assert.Equal("Новый датчик", model.DeviceType);
+                Assert.Equal(1, definition.SlaveId);
+                Assert.Contains((ModbusArea.Input, 900, 1), bus.Reads);
+            }
+            Assert.DoesNotContain(bus.Reads, r => r.Item2 == 0);
+            return true;
+        }, CancellationToken.None);
+    }
+
     private sealed class RecordingBus : IModbusService
     {
         public List<(ModbusArea,int,int)> Reads {get;}=new();

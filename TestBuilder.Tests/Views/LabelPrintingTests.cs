@@ -84,6 +84,49 @@ public class LabelPrintingTests
         }, CancellationToken.None);
     }
 
+    [Fact]
+    public async Task CustomTemplateLookupPrintAndRepeatDoNotDependOnBuiltInModels()
+    {
+        var original = TestBuilder.Services.AppSettings.Instance.LabelTemplates;
+        try
+        {
+            var template = new TestBuilder.Services.LabelTemplateDefinition {
+                Name = "Custom", UseShortSerial = true, RequiresMac = false, MatchServerSerial = true,
+                SerialOffset = 8000000, ShortSerialMax = 9999, ShortSerialDigits = 4, BarcodePrefix = "88",
+                Command = "^XA^FD{{Name}} {{Serial}} {{Barcode}}^FS^XZ" };
+            TestBuilder.Services.AppSettings.Instance.LabelTemplates = new() { template };
+            var data = LabelLookupService.Parse("[{\"device\":{\"serial\":8000042}}]", "8000042", false);
+            Assert.Equal(0, data.Kind);
+            var printer = new Printer();
+            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer)
+                { SerialNumber = "42", Copies = 1 };
+            await vm.PrintCommand.ExecuteAsync(null);
+            Assert.Equal("^XA^FDCustom 8000042 880042^FS^XZ", Assert.Single(printer.Jobs));
+            template.Command = "CHANGED";
+            await vm.RepeatLastCommand.ExecuteAsync(null);
+            Assert.Equal(printer.Jobs[0], printer.Jobs[1]);
+        }
+        finally { TestBuilder.Services.AppSettings.Instance.LabelTemplates = original; }
+    }
+
+    [Fact]
+    public async Task ConfigurationEditorsRender()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            foreach (var window in new Window[] { new DiscoverySettingsWindow(), new NetworkPlanWindow(), new LabelTemplatesWindow() })
+            {
+                try {
+                    window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                    AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+                    window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-" + window.GetType().Name + ".png");
+                    Assert.True(window.Bounds.Width > 0);
+                } finally { window.Close(); }
+            }
+        }, CancellationToken.None);
+    }
+
     private sealed class Http : IHttpRequestService
     {
         public string Url = "";

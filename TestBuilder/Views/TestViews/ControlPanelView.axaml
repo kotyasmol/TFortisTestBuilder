@@ -10,7 +10,6 @@
       <TextBlock Text="{Binding StandSerialCaption}" IsVisible="{Binding HasStandSerial}" TextWrapping="Wrap"
                  FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
     </StackPanel>
-    <TextBlock Text="{Binding ConnectionRequirements}" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}"/>
     <Button Content="{Binding ConnectionButtonText}" Command="{Binding ToggleConnectionCommand}"
             Classes="primary" HorizontalAlignment="Stretch" MinHeight="40" />
     <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}" TextWrapping="Wrap"

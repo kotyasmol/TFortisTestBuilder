@@ -442,6 +442,9 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonConverter(typeof(JsonStringEnumConverter<DeviceLabelModel>))]
         public DeviceLabelModel? LabelModel { get; set; }
+        [JsonPropertyName("labelTemplate")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Services.LabelTemplateDefinition? LabelTemplate { get; set; }
 
         [JsonPropertyName("failOnPrinterError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

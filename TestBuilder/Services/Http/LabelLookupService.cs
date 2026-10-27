@@ -52,9 +52,15 @@ public sealed class LabelLookupService(IHttpRequestService http)
             var serial = Field(device, "serial", "serial_num", "serialNumber", "serial_number");
             var mac = Field(device, "mac", "mac_address", "default_mac", "macAddress");
             if (!int.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) continue;
-            var kind = number is >= 3200000 and <= 3265535 ? 0 : number is >= 600000 and <= 665535 ? 1 : -1;
-            if (kind < 0 || string.IsNullOrWhiteSpace(mac)) continue;
-            mac = NormalizeMac(mac);
+            var templates = AppSettings.Instance.LabelTemplates;
+            LabelTemplateCatalog.Validate(templates);
+            var candidates = templates.Select((t, i) => (Template: t, Index: i)).Where(x => x.Template.MatchServerSerial &&
+                number >= x.Template.SerialOffset && (long)number <= (long)x.Template.SerialOffset + x.Template.ShortSerialMax).ToArray();
+            if (candidates.Length > 1) throw new InvalidOperationException("Диапазон серийника совпадает с несколькими шаблонами. Исправьте диапазоны в редакторе этикеток.");
+            if (candidates.Length == 0) continue;
+            var kind = candidates[0].Index;
+            if (string.IsNullOrWhiteSpace(mac) && templates[kind].RequiresMac) continue;
+            if (!string.IsNullOrWhiteSpace(mac)) mac = NormalizeMac(mac);
             if (byMac ? mac != NormalizeMac(query) : number.ToString(CultureInfo.InvariantCulture) != query.TrimStart('0')) continue;
             matches.Add(new(kind, number.ToString(CultureInfo.InvariantCulture), mac));
         }

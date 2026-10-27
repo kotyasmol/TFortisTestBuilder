@@ -1,4 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using TestBuilder.Services;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services.Logging;
@@ -8,6 +10,22 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class PrintLabelNodeViewModel : NodeViewModel
     {
+        [ObservableProperty] private LabelTemplateDefinition? labelTemplate;
+        public string CurrentTemplateName => LabelTemplate?.Name ?? (UseQtProZplFormat ? LabelModel.ToString() : "Только серийный номер");
+        partial void OnLabelTemplateChanged(LabelTemplateDefinition? value)
+        {
+            if (value != null) UseQtProZplFormat = value.UseShortSerial;
+            OnPropertyChanged(nameof(CurrentTemplateName));
+        }
+        [RelayCommand]
+        private async System.Threading.Tasks.Task ChooseTemplate()
+        {
+            if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+            {
+                var selected = await new TestBuilder.Views.LabelTemplatesWindow(LabelTemplate).ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
+                if (selected != null) LabelTemplate = selected.Copy();
+            }
+        }
         [ObservableProperty] private string printerName = "TSC TE310";
         [ObservableProperty] private string serialVariableName = "SerialNumber";
         [ObservableProperty] private string serialShortVariableName = "SerialShort";
@@ -24,8 +42,7 @@ namespace TestBuilder.ViewModels.StepVM
             get => (int)LabelModel;
             set { if (System.Enum.IsDefined(typeof(DeviceLabelModel), value)) LabelModel = (DeviceLabelModel)value; }
         }
-        partial void OnLabelModelChanged(DeviceLabelModel value) =>
-            OnPropertyChanged(nameof(SelectedLabelModelIndex));
+        partial void OnLabelModelChanged(DeviceLabelModel value) { OnPropertyChanged(nameof(SelectedLabelModelIndex)); OnPropertyChanged(nameof(CurrentTemplateName)); }
         [ObservableProperty] private bool failOnPrinterError = true;
 
         public ConnectorViewModel In { get; }
@@ -60,7 +77,7 @@ namespace TestBuilder.ViewModels.StepVM
                 FailOnPrinterError,
                 printer ?? new WindowsRawLabelPrinter(),
                 30000,
-                LabelModel);
+                LabelModel, LabelTemplate);
 
         public bool IsVariableSerialMode => !UseManualSerialNumber;
         public bool IsManualQtProMode => UseManualSerialNumber && UseQtProZplFormat;
@@ -75,6 +92,7 @@ namespace TestBuilder.ViewModels.StepVM
 
         partial void OnUseQtProZplFormatChanged(bool value)
         {
+            OnPropertyChanged(nameof(CurrentTemplateName));
             OnPropertyChanged(nameof(IsManualQtProMode));
             OnPropertyChanged(nameof(IsVariableQtProMode));
         }
@@ -91,6 +109,7 @@ namespace TestBuilder.ViewModels.StepVM
             Copies = Copies,
             UseQtProZplFormat = UseQtProZplFormat,
             LabelModel = LabelModel,
+            LabelTemplate = LabelTemplate?.Copy(),
             FailOnPrinterError = FailOnPrinterError
         };
     }

@@ -21,7 +21,7 @@ public sealed class ProfileEditHistory : IDisposable
         "Copies", "CpuIdVariableName", "CustomName", "Description", "DestinationIp", "DeviceType", "DurationMs",
         "Endpoint", "ExpectedPackets", "ExpectedValue", "FailMessage", "FailOnError", "FailOnPrinterError",
         "FailOnTimeout", "FirmwarePath", "FixedSerialNumber", "ForceUpdate", "FromSlaveId", "IncludeAllVariables",
-        "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel",
+        "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel", "LabelTemplate",
         "LabelWidth", "LeftVariableName", "LiveRead", "LocalIp", "LocalPort", "LocalReportsDirectory",
         "Location", "MacPrefix", "MacVariableName", "ManualMacAddress", "ManualSerialNumber", "Max",
         "MaxPortTestTimeMs", "Message", "InputVariable", "Milliseconds", "Min", "Mode", "Name",

@@ -23,78 +23,46 @@ namespace TestBuilder.Domain.Modbus
             _modbus = modbus ?? throw new ArgumentNullException(nameof(modbus));
         }
 
-        public async Task<int> ScanAsync()
+        public Task<int> ScanAsync() => ScanAsync(TestBuilder.Services.AppSettings.Instance.Discovery,
+            new TestBuilder.Services.EquipmentLibrary().Load());
+
+        internal async Task<int> ScanAsync(DiscoverySettings settings,
+            IReadOnlyList<TestBuilder.Services.EquipmentTemplate> catalogue)
         {
-            var foundModels = new List<SlaveModelBase>();
-            var presets = HardwarePresets.Load();
-
-            for (byte slaveId = 1; slaveId <= 35; slaveId += 2)
+            settings.Validate();
+            var templates = catalogue.Where(t => settings.TemplateIds == null ? t.IsBuiltIn : settings.TemplateIds.Contains(t.Id)).ToArray();
+            if (templates.Length == 0 || (settings.TemplateIds != null && settings.TemplateIds.Any(id => !templates.Any(t => t.Id == id))))
+                throw new InvalidOperationException("Типы оборудования для поиска не найдены в каталоге. Проверьте настройки поиска.");
+            if (templates.Any(t => t.Device.ExpectedIdentificationValues.Count == 0))
+                throw new InvalidOperationException("Для поиска задайте допустимые значения типа у каждого выбранного оборудования.");
+            var found = new List<SlaveModelBase>();
+            foreach (var slaveId in settings.GetAddresses())
             {
-                try
+                var matches = new List<DeviceDefinition>();
+                foreach (var group in templates.GroupBy(t => t.Device.IdentificationAddress))
                 {
-                    ushort typeValue = (await _modbus.ReadRegistersAsync(slaveId, 0, 1))[0];
-
-                    SlaveModelBase? model = typeValue switch
-                    {
-                        1 => new El60Model(slaveId, _modbus),
-                        2 => new PS1Model(slaveId, _modbus),
-                        3 => new PS2Model(slaveId, _modbus),
-                        4 => new El60v5Model(slaveId, _modbus),
-                        5 => new IO2Model(slaveId, _modbus),
-                        6 => new StandRpsModel(slaveId, _modbus),
-                        7 => new StandPwr180Model(slaveId, _modbus),
-                        8 => new Ps3Model(slaveId, _modbus),
-                        9 => new Simbat24Model(slaveId, _modbus),
-                        10 => new Simbat48Model(slaveId, _modbus),
-                        _ => null
-                    };
-
-                    // RTL types 104/105 are defined in the same register-map catalog
-                    // as the editor. Discovery must also work before loading a profile.
-                    if (model == null)
-                    {
-                        var preset = presets.FirstOrDefault(p => p.IdentificationAddress == 0 && p.IdentificationValue == typeValue);
-                        if (preset != null)
-                        {
-                            model = new ConfiguredSlaveModel(new DeviceDefinition
-                            {
-                                Name = preset.Name,
-                                SlaveId = slaveId,
-                                StandSerialNumberAddress = preset.StandSerialNumberAddress,
-                                Registers = preset.Registers
-                            }, _modbus);
-                            await model.PollAsync();
-                        }
-                    }
-
-                    if (model != null)
-                    {
-                        foundModels.Add(model);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, unknown type={typeValue}");
-                    }
+                    ushort[] reply;
+                    try { reply = await _modbus.ReadRegistersAsync(slaveId, group.Key, 1); }
+                    catch { continue; }
+                    if (reply.Length != 1) continue;
+                    matches.AddRange(group.Where(t => t.Device.ExpectedIdentificationValues.Contains(reply[0])).Select(t => t.Device));
                 }
-                catch (Exception ex)
+                if (matches.Count > 1)
+                    throw new InvalidOperationException($"Slave {slaveId}: ответ подходит нескольким выбранным типам. Уточните каталог или список поиска.");
+                if (matches.Count == 1)
                 {
-                    Console.WriteLine($"[MODBUS SCAN] slave={slaveId}, error={ex.GetType().Name}: {ex.Message}");
+                    var definition = System.Text.Json.JsonSerializer.Deserialize<DeviceDefinition>(System.Text.Json.JsonSerializer.Serialize(matches[0]))!;
+                    definition.SlaveId = slaveId;
+                    var model = new ConfiguredSlaveModel(definition, _modbus);
+                    await model.PollAsync();
+                    found.Add(model);
                 }
-
-                await Task.Delay(150);
+                if (settings.DelayMs > 0) await Task.Delay(settings.DelayMs);
             }
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                lock (_slavesLock)
-                {
-                    Slaves.Clear();
-                    foreach (var model in foundModels)
-                        Slaves.Add(model);
-                }
+            await Dispatcher.UIThread.InvokeAsync(() => {
+                lock (_slavesLock) { Slaves.Clear(); foreach (var model in found) Slaves.Add(model); }
             });
-
-            return foundModels.Count;
+            return found.Count;
         }
 
         public async Task<int> ConfigureAsync(HardwareConfiguration configuration)

@@ -327,6 +327,7 @@ namespace TestBuilder.Services
                         n.Copies = pl.Copies;
                         n.UseQtProZplFormat = pl.UseQtProZplFormat;
                         n.LabelModel = pl.LabelModel;
+                        n.LabelTemplate = pl.LabelTemplate?.Copy();
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
 
@@ -709,6 +710,7 @@ namespace TestBuilder.Services
                         Copies = n.Copies ?? 4,
                         UseQtProZplFormat = n.UseQtProZplFormat ?? false,
                         LabelModel = n.LabelModel ?? DeviceLabelModel.PswUpsBox8x2Pro,
+                        LabelTemplate = n.LabelTemplate?.Copy(),
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 

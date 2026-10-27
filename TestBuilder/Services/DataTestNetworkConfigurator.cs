@@ -26,9 +26,7 @@ public sealed record AdapterAssignment(string Ip, string AdapterId);
 
 public static class DataTestNetworkConfigurator
 {
-    public static IReadOnlyList<string> BenchIps { get; } = Enumerable.Range(2, 10)
-        .Select(lastOctet => $"192.168.0.{lastOctet}").ToArray();
-
+    public static IReadOnlyList<string> BenchIps => AppSettings.Instance.NetworkPlan.Addresses.Select(a => a.Ip).ToArray();
     public static IReadOnlyList<BenchAdapter> GetAdapters() => NetworkInterface.GetAllNetworkInterfaces()
         .Where(adapter => adapter.NetworkInterfaceType is NetworkInterfaceType.Ethernet or
             NetworkInterfaceType.GigabitEthernet)
@@ -44,59 +42,25 @@ public static class DataTestNetworkConfigurator
         .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToArray();
 
-    // PSW-2G6F+ has six 100 Mbps copper ports and two 1 Gbps SFP ports.
-    // The remaining two bench adapters are kept as spare addresses for other models.
-    public static (IReadOnlyList<AdapterAssignment>? Assignments, string? Error)
-        SuggestPsw2G6FAssignments(IReadOnlyList<BenchAdapter> adapters,
-            IReadOnlyCollection<string> savedAdapterIds)
-    {
-        var savedIds = savedAdapterIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var candidates = adapters.Where(adapter => savedIds.Contains(adapter.Id) ||
-                adapter.Ipv4.Split(", ").Any(BenchIps.Contains))
-            .ToArray();
-        if (candidates.Length != BenchIps.Count)
-            return (null, $"Для подбора нужно найти ровно 10 карт стенда по текущим IP или сохранённой привязке; найдено {candidates.Length}. Выберите карты вручную.");
-
-        var copper = candidates.Where(adapter => adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase) &&
-                adapter.SpeedMbps is >= 95 and <= 105).ToArray();
-        var sfp = candidates.Where(adapter => adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase) &&
-                adapter.SpeedMbps >= 950).ToArray();
-        var spare = candidates.Where(adapter => !adapter.Status.Equals("Up", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        if (copper.Length != 6 || sfp.Length != 2 || spare.Length != 2)
-            return (null, $"Для PSW-2G6F+ нужны 6 поднятых карт 100 Мбит/с, 2 поднятые карты 1 Гбит/с и 2 отключённые резервные. Сейчас: {copper.Length}, {sfp.Length}, {spare.Length}. Проверьте подключение или выберите карты вручную.");
-
-        // Keep the current IP order within each speed group. Speed alone cannot
-        // establish which physical port or pair a cable is connected to.
-        var ordered = copper.OrderBy(CurrentBenchIpOrder).Concat(sfp.OrderBy(CurrentBenchIpOrder))
-            .Concat(spare.OrderBy(CurrentBenchIpOrder)).ToArray();
-        return (BenchIps.Zip(ordered, (ip, adapter) => new AdapterAssignment(ip, adapter.Id)).ToArray(), null);
-    }
-
-    private static int CurrentBenchIpOrder(BenchAdapter adapter)
-    {
-        foreach (var ip in adapter.Ipv4.Split(", "))
-        {
-            for (var index = 0; index < BenchIps.Count; index++)
-                if (BenchIps[index] == ip) return index;
-        }
-        return int.MaxValue;
-    }
-
     private static double GetSpeedMbps(NetworkInterface adapter)
     {
         try { return adapter.Speed > 0 ? adapter.Speed / 1_000_000.0 : 0; }
         catch { return 0; }
     }
 
-    private static string TemporaryIpFor(string benchIp) => $"192.0.2.{benchIp.Split('.')[3]}";
+    private static string TemporaryIpFor(string benchIp, BenchNetworkPlan plan) => plan.Addresses.Single(a => a.Ip == benchIp).TemporaryIp;
 
     public static string? ValidateAssignments(IReadOnlyList<AdapterAssignment> assignments,
-        IReadOnlyList<BenchAdapter> adapters)
+        IReadOnlyList<BenchAdapter> adapters, BenchNetworkPlan? plan = null,
+        IReadOnlyDictionary<string, string>? managedAddresses = null)
     {
-        if (assignments.Count != BenchIps.Count ||
-            !BenchIps.SequenceEqual(assignments.Select(assignment => assignment.Ip)))
-            return "Нужно выбрать адаптер для каждого адреса 192.168.0.2–192.168.0.11.";
+        plan ??= AppSettings.Instance.NetworkPlan;
+        managedAddresses ??= AppSettings.Instance.DataTestAdapterIds;
+        try { plan.Validate(); } catch (InvalidOperationException ex) { return ex.Message; }
+        var benchIps = plan.Addresses.Select(a => a.Ip).ToArray();
+        if (assignments.Count != benchIps.Length ||
+            !benchIps.SequenceEqual(assignments.Select(assignment => assignment.Ip)))
+            return "Нужно выбрать адаптер для каждого адреса плана сети.";
 
         if (assignments.Any(assignment => string.IsNullOrWhiteSpace(assignment.AdapterId)))
             return "Для некоторых адресов адаптер не выбран.";
@@ -117,8 +81,10 @@ public static class DataTestNetworkConfigurator
             var assignment = assignments.Single(item =>
                 string.Equals(item.AdapterId, adapter.Id, StringComparison.OrdinalIgnoreCase));
             var otherIp = adapter.Ipv4.Split(", ").FirstOrDefault(ip =>
-                !string.IsNullOrWhiteSpace(ip) && !BenchIps.Contains(ip) &&
-                ip != TemporaryIpFor(assignment.Ip) &&
+                !string.IsNullOrWhiteSpace(ip) && !benchIps.Contains(ip) &&
+                !(managedAddresses?.TryGetValue(ip, out var owner) == true &&
+                    string.Equals(owner, adapter.Id, StringComparison.OrdinalIgnoreCase)) &&
+                ip != TemporaryIpFor(assignment.Ip, plan) &&
                 !ip.StartsWith("169.254.", StringComparison.Ordinal));
             if (otherIp != null)
                 return $"Карта {adapter.Name} имеет адрес {otherIp} вне сети стенда. Не меняйте служебное подключение; выберите другую карту.";
@@ -126,7 +92,7 @@ public static class DataTestNetworkConfigurator
         foreach (var adapter in adapters.Where(item => !selectedIds.Contains(item.Id)))
         {
             var conflictingIp = adapter.Ipv4.Split(", ")
-                .FirstOrDefault(BenchIps.Contains);
+                .FirstOrDefault(benchIps.Contains);
             if (conflictingIp != null)
                 return $"Адрес {conflictingIp} уже назначен карте {adapter.Name}, которая не выбрана для стенда.";
         }
@@ -140,8 +106,10 @@ public static class DataTestNetworkConfigurator
         if (!OperatingSystem.IsWindows())
             return "Настройка адаптеров доступна только в Windows.";
 
+        var plan = System.Text.Json.JsonSerializer.Deserialize<BenchNetworkPlan>(System.Text.Json.JsonSerializer.Serialize(AppSettings.Instance.NetworkPlan))!;
+        var benchIps = plan.Addresses.Select(a => a.Ip).ToArray();
         var adapters = GetAdapters();
-        var error = ValidateAssignments(assignments, adapters);
+        var error = ValidateAssignments(assignments, adapters, plan);
         if (error != null) return error;
 
         using var identity = WindowsIdentity.GetCurrent();
@@ -153,7 +121,7 @@ public static class DataTestNetworkConfigurator
         // changed adapters to distinct temporary addresses first, so a swap
         // such as .2 ↔ .8 never creates a duplicate bench address.
         var temporaryIpOwners = assignments.ToDictionary(
-            assignment => TemporaryIpFor(assignment.Ip), assignment => assignment.AdapterId);
+            assignment => TemporaryIpFor(assignment.Ip, plan), assignment => assignment.AdapterId);
         var occupiedTemporaryIp = NetworkInterface.GetAllNetworkInterfaces()
             .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses
                 .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
@@ -168,14 +136,14 @@ public static class DataTestNetworkConfigurator
             cancellationToken.ThrowIfCancellationRequested();
             var adapter = adapters.Single(item =>
                 string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
-            if (!adapter.Ipv4.Split(", ").Any(ip => BenchIps.Contains(ip) && ip != assignment.Ip))
+            if (!adapter.Ipv4.Split(", ").Any(ip => benchIps.Contains(ip) && ip != assignment.Ip))
                 continue;
 
-            var temporaryIp = TemporaryIpFor(assignment.Ip);
+            var temporaryIp = TemporaryIpFor(assignment.Ip, plan);
             progress.Report($"Освобождение прежнего адреса на {adapter.Name}...");
             var releaseError = await RunNetshAsync(["interface", "ipv4", "set", "address",
                 $"name={adapter.Name}", "source=static", $"address={temporaryIp}",
-                "mask=255.255.255.0", "gateway=none", "store=persistent"], cancellationToken);
+                $"mask={plan.Mask}", "gateway=none", "store=persistent"], cancellationToken);
             if (releaseError != null)
                 return $"Не удалось освободить адрес на {adapter.Name}: {releaseError}";
             if (!await WaitForAddressAsync(adapter.Id, temporaryIp, cancellationToken))
@@ -188,18 +156,18 @@ public static class DataTestNetworkConfigurator
             cancellationToken.ThrowIfCancellationRequested();
             var adapter = adapters.Single(item =>
                 string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
-            progress.Report($"Настройка {adapter.Name}: {assignment.Ip}/24...");
+            progress.Report($"Настройка {adapter.Name}: {assignment.Ip}, маска {plan.Mask}...");
 
             var setError = await RunNetshAsync(["interface", "ipv4", "set", "address",
                 $"name={adapter.Name}", "source=static", $"address={assignment.Ip}",
-                "mask=255.255.255.0", "gateway=none", "store=persistent"], cancellationToken);
+                $"mask={plan.Mask}", "gateway=none", "store=persistent"], cancellationToken);
             if (setError != null)
                 return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {setError}";
 
             if (!await WaitForAddressAsync(adapter.Id, assignment.Ip, cancellationToken))
                 return $"netsh завершился без ошибки, но адрес {assignment.Ip} на карте {adapter.Name} не появился.";
 
-            progress.Report($"Настроено: {adapter.Name} → {assignment.Ip}/24");
+            progress.Report($"Настроено: {adapter.Name} → {assignment.Ip}, маска {plan.Mask}");
         }
 
         return null;

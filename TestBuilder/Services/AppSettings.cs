@@ -57,6 +57,12 @@ namespace TestBuilder.Services
         [JsonPropertyName("logFolder")]
         public string LogFolder { get; set; } = string.Empty;
 
+        public TestBuilder.Domain.Modbus.DiscoverySettings Discovery { get; set; } = new();
+
+        public BenchNetworkPlan NetworkPlan { get; set; } = new();
+
+        public List<LabelTemplateDefinition> LabelTemplates { get; set; } = LabelTemplateCatalog.Defaults();
+
         // IP -> stable Windows network interface ID for the DataTest bench.
         [JsonPropertyName("dataTestAdapterIds")]
         public Dictionary<string, string> DataTestAdapterIds { get; set; } = new();
@@ -106,6 +112,17 @@ namespace TestBuilder.Services
             }
 
             return settings;
+        }
+
+        public void SaveChecked()
+        {
+            var temporary = SettingsPath + "." + Guid.NewGuid() + ".tmp";
+            try
+            {
+                File.WriteAllText(temporary, JsonSerializer.Serialize(this, JsonOptions));
+                File.Move(temporary, SettingsPath, overwrite: true);
+            }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }
 
         public void Save()

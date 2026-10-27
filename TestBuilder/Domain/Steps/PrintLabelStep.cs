@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Logging;
+using TestBuilder.Services;
 
 namespace TestBuilder.Domain.Steps
 {
@@ -27,10 +28,6 @@ namespace TestBuilder.Domain.Steps
     public sealed class PrintLabelStep : ITestStep
     {
         private const int DefaultPrinterTimeoutMs = 30000;
-        private const int LabelWidthDots = 354;
-        private const string PswUpsBox8x2ProName = "PSW+UPS-Box 8x2Pro";
-        private const int PswUpsBox8x2ProDeviceType = 32;
-
         private readonly ILogger _logger;
         private readonly string _printerName;
         private readonly string _serialVariableName;
@@ -45,9 +42,10 @@ namespace TestBuilder.Domain.Steps
         private readonly IRawLabelPrinter _printer;
         private readonly int _printerTimeoutMs;
         private readonly DeviceLabelModel _labelModel;
-        private string DeviceName => _labelModel == DeviceLabelModel.Psw2G6FPlus ? "PSW-2G6F+" : PswUpsBox8x2ProName;
-        private int DeviceType => _labelModel == DeviceLabelModel.Psw2G6FPlus ? 6 : PswUpsBox8x2ProDeviceType;
-        private int SerialOffset => DeviceType * 100000;
+        private readonly LabelTemplateDefinition _template;
+        private string DeviceName => _template.Name;
+        private int DeviceType => _template.DeviceCode;
+        private int SerialOffset => _template.SerialOffset;
 
         public PrintLabelStep(
             ILogger logger,
@@ -61,7 +59,8 @@ namespace TestBuilder.Domain.Steps
             int copies,
             bool useQtProZplFormat,
             bool failOnPrinterError,
-            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro)
+            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
+            LabelTemplateDefinition? template = null)
             : this(
                 logger,
                 printerName,
@@ -76,7 +75,7 @@ namespace TestBuilder.Domain.Steps
                 failOnPrinterError,
                 new WindowsRawLabelPrinter(),
                 DefaultPrinterTimeoutMs,
-                labelModel)
+                labelModel, template)
         {
         }
 
@@ -94,7 +93,8 @@ namespace TestBuilder.Domain.Steps
             bool failOnPrinterError,
             IRawLabelPrinter printer,
             int printerTimeoutMs,
-            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro)
+            DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
+            LabelTemplateDefinition? template = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
@@ -111,11 +111,12 @@ namespace TestBuilder.Domain.Steps
             _manualSerialNumber = manualSerialNumber?.Trim() ?? string.Empty;
             _manualMacAddress = manualMacAddress?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
-            _useQtProZplFormat = useQtProZplFormat;
+            _template = (template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).Copy();
+            _template.Validate();
+            _useQtProZplFormat = _template.UseShortSerial;
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
             _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
-            if (!Enum.IsDefined(labelModel)) throw new ArgumentOutOfRangeException(nameof(labelModel));
             _labelModel = labelModel;
         }
 
@@ -125,8 +126,8 @@ namespace TestBuilder.Domain.Steps
             ResetDiagnostics(context);
             context.SetVariable("PrintLabel.Copies", _copies);
             context.SetVariable("PrintLabel.PrinterName", _printerName);
-            context.SetVariable("PrintLabel.Language", _useQtProZplFormat ? "ZPL" : "EPL");
-            context.SetVariable("PrintLabel.Template", _useQtProZplFormat ? _labelModel.ToString() : "SerialOnlyEpl");
+            context.SetVariable("PrintLabel.Language", _template.Language);
+            context.SetVariable("PrintLabel.Template", _template.Id);
 
             if (string.IsNullOrWhiteSpace(_printerName))
             {
@@ -178,7 +179,7 @@ namespace TestBuilder.Domain.Steps
             {
                 int fullSerial;
                 int shortSerial;
-                string mac;
+                string mac = "";
                 string shortSerialSource;
                 string macSource;
 
@@ -189,7 +190,7 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, 6, serialError);
                     }
 
-                    if (!TryNormalizeMac(_manualMacAddress, out mac))
+                    if (_template.RequiresMac && !TryNormalizeMac(_manualMacAddress, out mac))
                     {
                         return Fail(
                             context,
@@ -215,9 +216,9 @@ namespace TestBuilder.Domain.Steps
                             $"Переменная короткого серийного номера '{_serialShortVariableName}' не найдена или не является целым числом.");
                     }
 
-                    if (shortSerial is < 0 or > 0xFFFF)
+                    if (shortSerial < 0 || shortSerial > _template.ShortSerialMax)
                     {
-                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..65535.");
+                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..{_template.ShortSerialMax}.");
                     }
 
                     if (fullSerial != SerialOffset + shortSerial)
@@ -229,8 +230,8 @@ namespace TestBuilder.Domain.Steps
                             $"{_serialShortVariableName}={shortSerial}.");
                     }
 
-                    if (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
-                        !TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac))
+                    if (_template.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
+                        !TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
                     {
                         return Fail(
                             context,
@@ -242,15 +243,13 @@ namespace TestBuilder.Domain.Steps
                     macSource = _macVariableName;
                 }
 
-                var barcode = $"{DeviceType:D3}{shortSerial:D5}";
-                singleLabel = _labelModel == DeviceLabelModel.Psw2G6FPlus
-                    ? BuildPsw2G6FPlusZpl(shortSerial, mac)
-                    : BuildPswUpsBox8x2ProZpl(shortSerial, mac);
-                language = "ZPL";
+                var barcode = _template.Barcode(shortSerial);
+                singleLabel = _template.Render(fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
+                language = _template.Language;
                 logDescription =
                     $"этикеток {DeviceName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
 
-                context.SetVariable("PrintLabel.Template", _labelModel.ToString());
+                context.SetVariable("PrintLabel.Template", _template.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
                 context.SetVariable("PrintLabel.DeviceName", DeviceName);
@@ -262,8 +261,10 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
-                singleLabel = BuildEpl(serial);
-                language = "EPL";
+                singleLabel = _template.Render(serial, 0, "",
+                    Math.Max(0, _template.WidthDots / 2 - CalculateBarcodeWidth(serial) / 2),
+                    Math.Max(0, _template.WidthDots / 2 - 20 * serial.Length / 2));
+                language = _template.Language;
                 logDescription = $"серийного номера {serial}";
             }
 
@@ -331,53 +332,17 @@ namespace TestBuilder.Domain.Steps
 
         internal static string BuildEpl(string serial)
         {
-            var barcodeWidth = CalculateBarcodeWidth(serial);
-            var barcodeX = Math.Max(0, LabelWidthDots / 2 - barcodeWidth / 2);
-            var textWidth = 20 * serial.Length;
-            var textX = Math.Max(0, LabelWidthDots / 2 - textWidth / 2);
-
-            return string.Concat(
-                "\r\n",
-                "N\r\n",
-                $"q{LabelWidthDots}\r\n",
-                "I8,C,001\r\n",
-                $"B{barcodeX},24,0,1,2,1,47,N,\"{serial}\"\r\n",
-                $"A{textX},94,0,3,1,1,N,\"{serial}\"\r\n",
-                "P1,1\r\n");
+            var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "SerialOnlyEpl");
+            return template.Render(serial, 0, "", Math.Max(0, template.WidthDots / 2 - CalculateBarcodeWidth(serial) / 2),
+                Math.Max(0, template.WidthDots / 2 - 20 * serial.Length / 2));
         }
-
-        internal static string BuildPswUpsBox8x2ProZpl(int shortSerial, string mac)
+        internal static string BuildPswUpsBox8x2ProZpl(int shortSerial, string mac) => BuildLegacy("PswUpsBox8x2Pro", shortSerial, mac);
+        internal static string BuildPsw2G6FPlusZpl(int shortSerial, string mac) => BuildLegacy("Psw2G6FPlus", shortSerial, mac);
+        private static string BuildLegacy(string id, int shortSerial, string mac)
         {
-            if (shortSerial is < 0 or > 0xFFFF)
-            {
-                throw new ArgumentOutOfRangeException(nameof(shortSerial), "Короткий серийный номер должен быть в диапазоне 0..65535.");
-            }
-
-            var nameOffset = (int)(640 - PswUpsBox8x2ProName.Length * 9 * 0.9);
-            var barcode = $"{PswUpsBox8x2ProDeviceType:D3}{shortSerial:D5}";
-
-            return string.Concat(
-                "^XA^MD10^FO",
-                nameOffset.ToString(CultureInfo.InvariantCulture),
-                ",35^A0,36,25^FD",
-                PswUpsBox8x2ProName,
-                "^FS^FO510,70^A0,25,20^FDMAC: ",
-                mac,
-                "^FS^FO510,95^A0,25,20^FDSN: ",
-                shortSerial.ToString("D5", CultureInfo.InvariantCulture),
-                "^FS^FO480,117^BY2^BCN,50,N,N,N^FD>:",
-                barcode,
-                "^FS^XZ ");
-        }
-
-        internal static string BuildPsw2G6FPlusZpl(int shortSerial, string mac)
-        {
-            if (shortSerial is < 0 or > 0xFFFF) throw new ArgumentOutOfRangeException(nameof(shortSerial));
-            // Exact non-Pro Qt layout; Pro retains its different barcode origin and prefix.
-            return "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+" +
-                $"^FS^FO510,70^A0,25,20^FDMAC: {mac}" +
-                $"^FS^FO510,95^A0,25,20^FDSN: {shortSerial.ToString("D5", CultureInfo.InvariantCulture)}" +
-                $"^FS^FO510,117^BY2^BCN,50,N,N,N^FD006{shortSerial.ToString("D5", CultureInfo.InvariantCulture)}^FS^XZ ";
+            var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == id);
+            if (shortSerial < 0 || shortSerial > template.ShortSerialMax) throw new ArgumentOutOfRangeException(nameof(shortSerial));
+            return template.Render((template.SerialOffset + shortSerial).ToString(CultureInfo.InvariantCulture), shortSerial, mac);
         }
 
         private bool TryResolveManualSerial(
@@ -396,7 +361,7 @@ namespace TestBuilder.Domain.Steps
                 return false;
             }
 
-            if (parsed <= 0xFFFF)
+            if (parsed <= _template.ShortSerialMax)
             {
                 shortSerial = parsed;
                 fullSerial = SerialOffset + shortSerial;
@@ -404,12 +369,12 @@ namespace TestBuilder.Domain.Steps
             }
 
             shortSerial = parsed - SerialOffset;
-            if (shortSerial is < 0 or > 0xFFFF)
+            if (shortSerial < 0 || shortSerial > _template.ShortSerialMax)
             {
                 error =
                     $"Для {DeviceName} введите полный серийник " +
-                    $"{SerialOffset}..{SerialOffset + 0xFFFF} " +
-                    "или короткий номер 0..65535.";
+                    $"{SerialOffset}..{SerialOffset + _template.ShortSerialMax} " +
+                    $"или короткий номер 0..{_template.ShortSerialMax}.";
                 return false;
             }
 

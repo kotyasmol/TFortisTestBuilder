@@ -8,6 +8,7 @@
       <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
         <TextBlock Text="Тип этикетки" />
         <ComboBox ItemsSource="{Binding LabelTypes}" SelectedIndex="{Binding SelectedType}" HorizontalAlignment="Stretch" />
+        <Button Content="Настроить шаблоны…" Command="{Binding EditTemplatesCommand}"/>
         <TextBlock Text="Серийный номер" />
         <Grid ColumnDefinitions="*,Auto">
           <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Для поиска — полный серверный номер" MinWidth="320" />
@@ -18,7 +19,7 @@
           <TextBox x:Name="LabelMacInput" Text="{Binding MacAddress}" Watermark="C0:11:A6:20:01:AC" />
           <Button Grid.Column="1" Content="Получить по MAC" Command="{Binding FindByMacCommand}" Margin="12,0,0,0" />
         </Grid>
-        <TextBlock Text="В формате «Только серийный номер» MAC не печатается." IsVisible="{Binding !HasMac}" />
+        <TextBlock Text="Выбранный шаблон не требует MAC." IsVisible="{Binding !HasMac}" />
         <TextBlock Text="Имя принтера Windows" />
         <TextBox Text="{Binding PrinterName}" Watermark="TSC TE310" />
         <Grid ColumnDefinitions="Auto,Auto">

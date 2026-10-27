@@ -59,4 +59,5 @@
 	    <DependentUpon>Connectionlostdialog.axaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Assets/label-templates.json" LogicalName="TestBuilder.label-templates.json" /></ItemGroup>
 </Project>

@@ -12,14 +12,7 @@ namespace TestBuilder.ViewModels;
 public partial class NetworkSetupRowViewModel : ObservableObject
 {
     public string Ip { get; }
-    public string Port => (int.Parse(Ip.Split('.')[3]) - 2).ToString();
-    public string Psw2G6FPort => int.Parse(Ip.Split('.')[3]) switch
-    {
-        >= 2 and <= 7 => $"Медный {int.Parse(Ip.Split('.')[3]) - 1}",
-        8 => "SFP 1",
-        9 => "SFP 2",
-        _ => "Резерв"
-    };
+    public string Port { get; }
     public ObservableCollection<BenchAdapter> Adapters { get; }
 
     [ObservableProperty] private BenchAdapter? selectedAdapter;
@@ -36,9 +29,10 @@ public partial class NetworkSetupRowViewModel : ObservableObject
     }
     [RelayCommand] private void Clear() => SelectedAdapter = null;
 
-    public NetworkSetupRowViewModel(string ip, ObservableCollection<BenchAdapter> adapters)
+    public NetworkSetupRowViewModel(string ip, ObservableCollection<BenchAdapter> adapters, int index = 0)
     {
         Ip = ip;
+        Port = index.ToString();
         Adapters = adapters;
     }
 }
@@ -64,9 +58,9 @@ public partial class NetworkSetupViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanApply));
         RefreshCommand.NotifyCanExecuteChanged();
-        SuggestPsw2G6FCommand.NotifyCanExecuteChanged();
         ResetCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
+        EditAddressPlanCommand.NotifyCanExecuteChanged();
     }
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
     private void SelectionChanged(NetworkSetupRowViewModel row, BenchAdapter? previous)
@@ -87,7 +81,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             new AdapterAssignment(r.Ip, r.SelectedAdapter?.Id ?? "")).ToArray(), Adapters.ToArray()) ?? "";
         foreach (var row in Rows)
             row.Message = row.SelectedAdapter == null ? "Выберите карту" :
-                row.CurrentAddress == row.Ip ? "Адрес совпадает" : $"Будет назначен {row.Ip}/24";
+                row.CurrentAddress == row.Ip ? "Адрес совпадает" : $"Будет назначен {row.Ip}";
         OnPropertyChanged(nameof(Summary));
         RefreshAvailability();
     }
@@ -105,7 +99,6 @@ public partial class NetworkSetupViewModel : ViewModelBase
     [ObservableProperty] private bool isBusy;
 
     public IRelayCommand RefreshCommand { get; }
-    public IRelayCommand SuggestPsw2G6FCommand { get; }
     public IAsyncRelayCommand ApplyCommand { get; }
 
     public NetworkSetupViewModel() : this(DataTestNetworkConfigurator.GetAdapters, () => true) { }
@@ -114,40 +107,30 @@ public partial class NetworkSetupViewModel : ViewModelBase
         _getAdapters = getAdapters;
         _canUse = canUse;
         Rows = new(DataTestNetworkConfigurator.BenchIps.Select(
-            ip => new NetworkSetupRowViewModel(ip, Adapters)));
+            (ip, index) => new NetworkSetupRowViewModel(ip, Adapters, index)));
         foreach (var row in Rows) row.SelectionChanged += SelectionChanged;
         ResetCommand = new RelayCommand(Reset, () => CanEdit);
         RefreshCommand = new RelayCommand(Refresh, () => CanEdit);
-        SuggestPsw2G6FCommand = new RelayCommand(SuggestPsw2G6F, () => CanEdit);
         ApplyCommand = new AsyncRelayCommand(ApplyAsync, () => CanApply);
         Refresh();
     }
 
-    private void SuggestPsw2G6F()
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private async Task EditAddressPlan()
     {
-        if (!CanEdit) return;
-
-        var savedIds = (AppSettings.Instance.DataTestAdapterIds ?? new()).Values.ToArray();
-        var (assignments, error) = DataTestNetworkConfigurator.SuggestPsw2G6FAssignments(
-            Adapters.ToArray(), savedIds);
-        if (error != null)
+        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
         {
-            Status = error;
-            return;
+            var saved = await new TestBuilder.Views.NetworkPlanWindow().ShowDialog<bool>(desktop.MainWindow);
+            if (!saved) return;
+            foreach (var row in Rows) row.SelectionChanged -= SelectionChanged;
+            Rows.Clear();
+            foreach (var (ip, index) in DataTestNetworkConfigurator.BenchIps.Select((ip, index) => (ip, index)))
+            {
+                var row = new NetworkSetupRowViewModel(ip, Adapters, index);
+                row.SelectionChanged += SelectionChanged; Rows.Add(row);
+            }
+            _draft = null; Refresh();
         }
-
-        _updating = true;
-        foreach (var row in Rows)
-        {
-            var id = assignments!.Single(item => item.Ip == row.Ip).AdapterId;
-            row.SelectedAdapter = Adapters.Single(item =>
-                string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase));
-        }
-
-        _updating = false;
-        CaptureDraft();
-        Validate();
-        Status = "Карты подобраны. Проверьте подключение кабелей и примените адреса.";
     }
 
     private void Refresh()

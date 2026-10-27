@@ -18,11 +18,11 @@
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
       <TextBlock Text="Выберите карту для каждого порта. Выбор занятой карты меняет две карты местами."
                  TextWrapping="Wrap"/>
-      <TextBlock Text="DataTest использует адреса 192.168.0.2–11, маску 255.255.255.0, без шлюза. Изменения записываются в Windows кнопкой «Применить адреса»."
+      <TextBlock Text="Адреса и маска задаются в плане сети. Те же адреса укажите в нодах DataTest. Windows изменяется только кнопкой «Применить адреса»."
                  TextWrapping="Wrap" Opacity="0.7"/>
       <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
         <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
-        <Button Content="Подобрать для PSW-2G6F+" Command="{Binding SuggestPsw2G6FCommand}"/>
+        <Button Content="Изменить план сети…" Command="{Binding EditAddressPlanCommand}"/>
         <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
       </WrapPanel>
       <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
@@ -39,7 +39,6 @@
                 <StackPanel Spacing="4">
                   <TextBlock Text="{Binding Port, StringFormat='Порт {0}'}" FontWeight="SemiBold"/>
                   <TextBlock Text="{Binding Ip}"/>
-                  <TextBlock Text="{Binding Psw2G6FPort, StringFormat='PSW: {0}'}" FontSize="12" Opacity="0.7"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
                   <ComboBox HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"

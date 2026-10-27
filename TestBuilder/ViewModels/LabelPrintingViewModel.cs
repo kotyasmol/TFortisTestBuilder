@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -15,7 +16,7 @@ namespace TestBuilder.ViewModels;
 
 public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 {
-    public string[] LabelTypes { get; } = ["PSW+UPS-Box 8x2Pro · 25×13 мм", "PSW-2G6F+ · 25×13 мм", "Только серийный номер · 30×10 мм"];
+    public string[] LabelTypes => AppSettings.Instance.LabelTemplates.Select(t => t.Name).ToArray();
     [ObservableProperty] private int selectedType;
     [ObservableProperty] private string serialNumber = "";
     [ObservableProperty] private string macAddress = "";
@@ -30,10 +31,11 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private readonly Func<bool> _canUse;
     private CancellationTokenSource? _operation;
     private LabelData? _last;
+    private LabelTemplateDefinition? _lastTemplate;
     private bool _disposed;
     public bool CanEdit => !IsBusy && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
-    public bool HasMac => SelectedType != 2;
+    public bool HasMac => SelectedType >= 0 && SelectedType < AppSettings.Instance.LabelTemplates.Count && AppSettings.Instance.LabelTemplates[SelectedType].RequiresMac;
     partial void OnSelectedTypeChanged(int value) => OnPropertyChanged(nameof(HasMac));
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
 
@@ -46,8 +48,21 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public void RefreshAvailability()
     {
         OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanRepeat));
+        EditTemplatesCommand.NotifyCanExecuteChanged();
         PrintCommand.NotifyCanExecuteChanged(); RepeatLastCommand.NotifyCanExecuteChanged();
         FindBySerialCommand.NotifyCanExecuteChanged(); FindByMacCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private async Task EditTemplates()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+        {
+            var selected = await new TestBuilder.Views.LabelTemplatesWindow().ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
+            OnPropertyChanged(nameof(LabelTypes));
+            if (selected != null) SelectedType = AppSettings.Instance.LabelTemplates.FindIndex(t => t.Id == selected.Id);
+            OnPropertyChanged(nameof(HasMac));
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
@@ -66,22 +81,24 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private Task Print() => PrintData(new(SelectedType, SerialNumber.Trim(), MacAddress.Trim()));
     [RelayCommand(CanExecute = nameof(CanRepeat))]
-    private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last);
+    private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last, _lastTemplate);
 
-    private Task PrintData(LabelData data) => Run(async token =>
+    private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null) => Run(async token =>
     {
-        if (data.Kind is < 0 or > 2) throw new InvalidOperationException("Выберите тип этикетки.");
+        if (savedTemplate == null && (data.Kind < 0 || data.Kind >= AppSettings.Instance.LabelTemplates.Count)) throw new InvalidOperationException("Выберите тип этикетки.");
+        var template = (savedTemplate ?? AppSettings.Instance.LabelTemplates[data.Kind]).Copy();
+        template.Validate();
         if (Copies is < 1 or > 100) throw new InvalidOperationException("Количество этикеток: от 1 до 100.");
         var printer = PrinterName.Trim(); var count = Copies;
         Status = "Печать…";
         var context = new TestContext(new RegisterState());
         var step = new PrintLabelStep(_logger, printer, "SerialNumber", "SerialShort", "Mac",
-            true, data.Serial, data.Mac, count, data.Kind != 2, true, _printer, 30000,
-            data.Kind == 1 ? DeviceLabelModel.Psw2G6FPlus : DeviceLabelModel.PswUpsBox8x2Pro);
+            true, data.Serial, data.Mac, count, template.UseShortSerial, true, _printer, 30000,
+            DeviceLabelModel.PswUpsBox8x2Pro, template);
         var result = await step.ExecuteAsync(context, token);
         if (result == StepResult.False) throw new InvalidOperationException(context.GetVariable<string>("PrintLabel.Error"));
-        _last = data;
-        LastLabelDescription = $"{LabelTypes[data.Kind]} · SN {data.Serial}" + (data.Kind == 2 ? "" : $" · MAC {data.Mac}");
+        _last = data; _lastTemplate = template.Copy();
+        LastLabelDescription = $"{template.Name} · SN {data.Serial}" + (!template.RequiresMac ? "" : $" · MAC {data.Mac}");
         Status = context.GetVariable<string>("PrintLabel.CompletionStatus") == "SentToPrinter"
             ? $"Передано принтеру: {count} шт. Драйвер не подтверждает физический выход этикетки."
             : $"Печать завершена: {count} шт.";

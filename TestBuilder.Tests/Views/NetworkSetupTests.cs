@@ -61,7 +61,7 @@ public class NetworkSetupTests
         Assert.False(vm.RefreshCommand.CanExecute(null));
         allowed = true; vm.IsBusy = true;
         Assert.False(vm.ResetCommand.CanExecute(null));
-        Assert.False(vm.SuggestPsw2G6FCommand.CanExecute(null));
+        Assert.False(vm.EditAddressPlanCommand.CanExecute(null));
         vm.IsBusy = false;
         Assert.True(vm.CanApply);
     }

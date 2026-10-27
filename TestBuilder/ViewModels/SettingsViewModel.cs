@@ -36,7 +36,14 @@ namespace TestBuilder.ViewModels
             }
         }
 
-        public void RefreshTutorialAvailability() => OnPropertyChanged(nameof(CanStartTutorial));
+        [RelayCommand(CanExecute = nameof(CanStartTutorial))]
+        private async Task ConfigureDiscovery()
+        {
+            if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+                await new TestBuilder.Views.DiscoverySettingsWindow().ShowDialog(desktop.MainWindow);
+        }
+
+        public void RefreshTutorialAvailability() { OnPropertyChanged(nameof(CanStartTutorial)); ConfigureDiscoveryCommand.NotifyCanExecuteChanged(); }
 
         [ObservableProperty] private string standPort = "";
         [ObservableProperty] private string consolePort = "";

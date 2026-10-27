@@ -892,6 +892,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         StatusMessage = "Поиск стенда на COM-портах...";
 
         RootGraph.Hardware?.Validate();
+        if (RootGraph.Hardware == null) AppSettings.Instance.Discovery.Validate();
         _registerState.Clear();
         var hardware = RootGraph.Hardware;
         // The profile identifies equipment, never a workstation-specific COM number.
@@ -911,20 +912,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     : $"Поиск {hardware.Devices[0].Name} на COM-порту {port} (slave {hardware.Devices[0].SlaveId}).");
                 var connected = await _modbusService.ConnectAsync(
                     port,
-                    hardware?.BaudRate ?? 9600,
-                    hardware?.Parity ?? Parity.None,
-                    hardware?.DataBits ?? 8,
-                    hardware?.StopBits ?? StopBits.One);
+                    hardware?.BaudRate ?? AppSettings.Instance.Discovery.BaudRate,
+                    hardware?.Parity ?? AppSettings.Instance.Discovery.Parity,
+                    hardware?.DataBits ?? AppSettings.Instance.Discovery.DataBits,
+                    hardware?.StopBits ?? AppSettings.Instance.Discovery.StopBits);
 
                 if (!connected)
                 {
                     ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), string.IsNullOrWhiteSpace(configuredPort));
-                    continue;
-                }
-
-                if (hardware == null && !await _modbusService.CheckPortAsync())
-                {
-                    await _modbusService.DisconnectAsync();
                     continue;
                 }
 
