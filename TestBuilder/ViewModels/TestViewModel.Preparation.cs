@@ -13,7 +13,7 @@ public partial class TestViewModel
     private string? _preparedProfileKey;
     private Dictionary<string, object> _profilePreparationVariables = new();
     private bool _isPreparingProfile;
-    private bool CanPrepareProfile => !NeedsStandInspection && !IsTestRunning && !IsConnecting &&
+    private bool CanPrepareProfile => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting &&
         App.StartupOptions.IsValid && _profileLoadError.Length == 0;
     private bool HasPendingPreparation => _preparedProfileKey == null && BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
 

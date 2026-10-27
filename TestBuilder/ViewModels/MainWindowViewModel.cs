@@ -1,3 +1,4 @@
+using TestBuilder.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -22,6 +23,7 @@ namespace TestBuilder.ViewModels
         public SelfTestPageViewModel SelfTestPageVM { get; }
         public SettingsViewModel SettingsVM { get; }
         public NetworkSetupViewModel NetworkSetupVM { get; }
+        public LabelPrintingViewModel LabelPrintingVM { get; }
         public string OperatorName => string.IsNullOrWhiteSpace(App.StartupUserName) ? "Локальный оператор" : App.StartupUserName;
         public string SessionStatus => !App.StartupOptions.IsValid ? "Ошибка параметров запуска" :
             string.IsNullOrEmpty(App.StartupSessionId) ? "Локальный запуск" : "Сессия лаунчера получена";
@@ -33,6 +35,7 @@ namespace TestBuilder.ViewModels
         public bool IsRegistersPage => SelectedPage == "Registers";
         public bool IsSelfTestPage => SelectedPage == "SelfTest" && ShowSwitchTools;
         public bool IsNetworkPage => SelectedPage == "Network" && ShowSwitchTools;
+        public bool IsLabelsPage => SelectedPage == "Labels";
         public bool ShowSwitchTools => !TestVM.IsAutonomousStand;
         partial void OnSelectedPageChanged(string value)
         {
@@ -40,11 +43,12 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(IsRegistersPage));
             OnPropertyChanged(nameof(IsSelfTestPage));
             OnPropertyChanged(nameof(IsNetworkPage));
+            OnPropertyChanged(nameof(IsLabelsPage));
         }
         [RelayCommand]
         private void SelectPage(string page)
         {
-            if (page is not ("Editor" or "Registers" or "SelfTest" or "Network")) return;
+            if (page is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels")) return;
             if (!ShowSwitchTools && page is "SelfTest" or "Network") return;
             SelectedPage = page;
         }
@@ -78,7 +82,12 @@ namespace TestBuilder.ViewModels
             ModbusVM.CanWrite = () => !TestVM.IsTestRunning && !TestVM.IsConnecting;
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.IsConnecting);
-            NetworkSetupVM = new NetworkSetupViewModel();
+            NetworkSetupVM = new NetworkSetupViewModel(DataTestNetworkConfigurator.GetAdapters,
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.IsConnecting);
+            NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
+            LabelPrintingVM = new LabelPrintingViewModel(TestVM.TestingLogger,
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.IsConnecting);
+            LabelPrintingVM.PropertyChanged += OnLabelPrintingChanged;
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
             SettingsVM.PropertyChanged += OnSettingsPropertyChanged;
@@ -95,6 +104,8 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(ShowBoardEditor));
             OnPropertyChanged(nameof(WorkspaceTitle));
             OnPropertyChanged(nameof(SwitchWorkspaceTitle));
+            LabelPrintingVM.RefreshAvailability();
+            NetworkSetupVM.RefreshAvailability();
         }
 
         private void OnTestVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -115,7 +126,19 @@ namespace TestBuilder.ViewModels
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting))
             {
                 SettingsVM.RefreshTutorialAvailability();
+                LabelPrintingVM.RefreshAvailability();
+                NetworkSetupVM.RefreshAvailability();
             }
+        }
+
+        private void OnNetworkSetupChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(NetworkSetupVM.IsBusy)) TestVM.IsNetworkSetupBusy = NetworkSetupVM.IsBusy;
+        }
+
+        private void OnLabelPrintingChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(LabelPrintingVM.IsBusy)) TestVM.IsLabelToolBusy = LabelPrintingVM.IsBusy;
         }
 
         private void RefreshProfileSettings() =>
@@ -126,6 +149,9 @@ namespace TestBuilder.ViewModels
             TestVM.PropertyChanged -= OnTestVmPropertyChanged;
             SettingsVM.PropertyChanged -= OnSettingsPropertyChanged;
             SelfTestPageVM.Dispose();
+            LabelPrintingVM.Dispose();
+            LabelPrintingVM.PropertyChanged -= OnLabelPrintingChanged;
+            NetworkSetupVM.PropertyChanged -= OnNetworkSetupChanged;
             TestVM.Dispose();
             ModbusVM.Dispose();
         }

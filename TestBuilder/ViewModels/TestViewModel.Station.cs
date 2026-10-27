@@ -140,11 +140,17 @@ public partial class TestViewModel
         NeedsStandInspection = false;
         TestingLogger.Warning("Инженер подтвердил проверку и ручное обесточивание стенда. Перед запуском подключитесь заново.");
     }
-    public bool CanStartRun => !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
+    [ObservableProperty] private bool isLabelToolBusy;
+    partial void OnIsLabelToolBusyChanged(bool value) => RefreshStationAvailability();
+    [ObservableProperty] private bool isNetworkSetupBusy;
+    partial void OnIsNetworkSetupBusyChanged(bool value) => RefreshStationAvailability();
+    public bool CanStartRun => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
             (!GraphConnectionRequirements.RequiresStandConnection(RootGraph) || (IsConnected && IsMonitoringActive))));
     public string StationReadiness => !App.StartupOptions.IsValid ? App.StartupOptions.Error :
+        IsNetworkSetupBusy ? "Дождитесь завершения настройки сети." :
+        IsLabelToolBusy ? "Дождитесь завершения проверки печати этикетки." :
         NeedsStandInspection ? StandInspectionMessage :
         _profileLoadError.Length > 0 ? "Программа не загружена. Выберите другой профиль или обратитесь к инженеру." :
         IsConnecting ? "Ищем стенд. Дождитесь окончания подключения." :

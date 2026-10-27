@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.LabelPrintingView"
+             x:DataType="vm:LabelPrintingViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+      <TextBlock Text="Проверка печати этикетки" FontSize="24" FontWeight="SemiBold" />
+      <TextBlock Text="Печать на принтере Windows без запуска графа и подключения стенда." TextWrapping="Wrap" />
+      <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
+        <TextBlock Text="Тип этикетки" />
+        <ComboBox ItemsSource="{Binding LabelTypes}" SelectedIndex="{Binding SelectedType}" HorizontalAlignment="Stretch" />
+        <TextBlock Text="Серийный номер" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Для поиска — полный серверный номер" MinWidth="320" />
+          <Button Grid.Column="1" Content="Получить по серийнику" Command="{Binding FindBySerialCommand}" Margin="12,0,0,0" />
+        </Grid>
+        <TextBlock Text="MAC-адрес" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox x:Name="LabelMacInput" Text="{Binding MacAddress}" Watermark="C0:11:A6:20:01:AC" />
+          <Button Grid.Column="1" Content="Получить по MAC" Command="{Binding FindByMacCommand}" Margin="12,0,0,0" />
+        </Grid>
+        <TextBlock Text="В формате «Только серийный номер» MAC не печатается." IsVisible="{Binding !HasMac}" />
+        <TextBlock Text="Имя принтера Windows" />
+        <TextBox Text="{Binding PrinterName}" Watermark="TSC TE310" />
+        <Grid ColumnDefinitions="Auto,Auto">
+          <TextBlock Text="Количество этикеток" VerticalAlignment="Center" />
+          <NumericUpDown Grid.Column="1" Value="{Binding Copies}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="120" Margin="12,0,0,0" />
+        </Grid>
+      </StackPanel>
+      <WrapPanel>
+        <Button Content="Печатать" Classes="primary" Command="{Binding PrintCommand}" Margin="0,0,12,8" />
+        <Button Content="Повторить последнюю этикетку" Command="{Binding RepeatLastCommand}" Margin="0,0,12,8"
+                ToolTip.Tip="Повторяет данные последней успешной печати этой вкладки. Количество и принтер берутся из текущих полей." />
+        <Button Content="Отменить" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" Margin="0,0,0,8" />
+      </WrapPanel>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="16" />
+      <TextBlock Text="Последняя этикетка этой вкладки" FontWeight="SemiBold" />
+      <SelectableTextBlock Text="{Binding LastLabelDescription}" TextWrapping="Wrap" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

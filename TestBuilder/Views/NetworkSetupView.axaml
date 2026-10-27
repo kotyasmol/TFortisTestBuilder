@@ -3,42 +3,70 @@
              xmlns:vm="using:TestBuilder.ViewModels"
              x:Class="TestBuilder.Views.NetworkSetupView"
              x:DataType="vm:NetworkSetupViewModel">
-  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="16" Spacing="16" MaxWidth="1200" HorizontalAlignment="Stretch">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Bottom" Margin="20,10" Spacing="8">
+      <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Content="Применить адреса" Command="{Binding ApplyCommand}"/>
+        <TextBlock Text="Нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center"/>
+      </StackPanel>
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="15"/>
+    </StackPanel>
+  <ScrollViewer HorizontalScrollBarVisibility="Auto">
+    <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
-      <TextBlock Text="Статический IPv4 /24, без шлюза. Для применения нужны права администратора."
+      <TextBlock Text="Выберите карту для каждого порта. Выбор занятой карты меняет две карты местами."
+                 TextWrapping="Wrap"/>
+      <TextBlock Text="DataTest использует адреса 192.168.0.2–11, маску 255.255.255.0, без шлюза. Изменения записываются в Windows кнопкой «Применить адреса»."
                  TextWrapping="Wrap" Opacity="0.7"/>
-      <Grid ColumnDefinitions="70,110,145,*" Margin="0,8,0,0">
-        <TextBlock Grid.Column="0" Text="Порт" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="1" Text="PSW-2G6F+" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="Адрес" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="3" Text="Сетевая карта" FontWeight="SemiBold"/>
+      <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
+        <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
+        <Button Content="Подобрать для PSW-2G6F+" Command="{Binding SuggestPsw2G6FCommand}"/>
+        <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
+      </WrapPanel>
+      <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
+      <Grid ColumnDefinitions="160,*,205,90" Margin="8,0">
+        <TextBlock Text="Порт / адрес стенда" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="Сетевая карта / состояние" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Текущий IPv4 / изменение" FontWeight="SemiBold"/>
       </Grid>
-      <ItemsControl ItemsSource="{Binding Rows}">
+      <ItemsControl ItemsSource="{Binding Rows}" IsEnabled="{Binding CanEdit}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
-            <Grid ColumnDefinitions="70,110,145,*" Margin="0,0,0,8">
-              <TextBlock Grid.Column="0" Text="{Binding Port}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="1" Text="{Binding Psw2G6FPort}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="2" Text="{Binding Ip}" VerticalAlignment="Center"/>
-              <ComboBox Grid.Column="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                        ItemsSource="{Binding Adapters}"
-                        SelectedItem="{Binding SelectedAdapter}"
-                        >
-                <ComboBox.ItemTemplate>
-                  <DataTemplate><TextBlock Text="{Binding Display}" TextWrapping="Wrap" ToolTip.Tip="{Binding Display}" /></DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-            </Grid>
+            <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,10">
+              <Grid ColumnDefinitions="160,*,205,90">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Port, StringFormat='Порт {0}'}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Ip}"/>
+                  <TextBlock Text="{Binding Psw2G6FPort, StringFormat='PSW: {0}'}" FontSize="12" Opacity="0.7"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
+                  <ComboBox HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter}"
+                            PlaceholderText="Выберите сетевую карту">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate><TextBlock Text="{Binding ChoiceDisplay}" ToolTip.Tip="{Binding Display}" TextWrapping="Wrap"/></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="{Binding Link}" FontSize="12" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="6" Margin="0,0,8,0">
+                  <TextBlock Text="{Binding CurrentAddress}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"/>
+                </StackPanel>
+                <Button Grid.Column="3" Content="Убрать" Command="{Binding ClearCommand}" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <WrapPanel Classes="actions" Margin="0,8,0,0">
-        <Button Content="Обновить список" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
-        <Button Content="Подобрать для PSW-2G6F+" Command="{Binding SuggestPsw2G6FCommand}" IsEnabled="{Binding !IsBusy}"/>
-        <Button Content="Применить адреса" Command="{Binding ApplyCommand}" IsEnabled="{Binding !IsBusy}"/>
-      </WrapPanel>
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+      <Expander Header="Журнал применения" HorizontalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding Journal}">
+          <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,3"/></DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Expander>
     </StackPanel>
   </ScrollViewer>
+  </DockPanel>
 </UserControl>

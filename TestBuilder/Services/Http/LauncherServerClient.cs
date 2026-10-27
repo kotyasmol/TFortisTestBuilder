@@ -20,7 +20,8 @@ public static class LauncherServerClient
         // Never send launcher credentials to the DUT or to an alternative server from a profile.
         if (!string.Equals(target.GetLeftPart(UriPartial.Authority), server.GetLeftPart(UriPartial.Authority),
                 StringComparison.OrdinalIgnoreCase) ||
-            !target.AbsolutePath.TrimEnd('/').EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase)) return;
+            !(target.AbsolutePath.TrimEnd('/').EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase) ||
+              target.AbsolutePath.TrimEnd('/').EndsWith("/getdevicehistorylist", StringComparison.OrdinalIgnoreCase))) return;
         request.Headers.TryAddWithoutValidation("User-Agent", "ftstand");
         request.Headers.TryAddWithoutValidation("Cookie", $"SGUID=session_id={validated.SessionId}&login=");
     }

@@ -18,6 +18,7 @@
           <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsEngineerWorkspace}">
             <Button Content="Редактор" Classes="workspaceNav" Classes.active="{Binding IsEditorPage}" Command="{Binding SelectPageCommand}" CommandParameter="Editor" />
             <Button Content="Регистры" Classes="workspaceNav" Classes.active="{Binding IsRegistersPage}" Command="{Binding SelectPageCommand}" CommandParameter="Registers" />
+            <Button Content="Этикетки" Classes="workspaceNav" Classes.active="{Binding IsLabelsPage}" Command="{Binding SelectPageCommand}" CommandParameter="Labels" />
             <Button Content="Самопроверка" Classes="workspaceNav" Classes.active="{Binding IsSelfTestPage}" Command="{Binding SelectPageCommand}" CommandParameter="SelfTest" IsVisible="{Binding ShowSwitchTools}" />
             <Button Content="Сеть" Classes="workspaceNav" Classes.active="{Binding IsNetworkPage}" Command="{Binding SelectPageCommand}" CommandParameter="Network" IsVisible="{Binding ShowSwitchTools}" />
           </StackPanel>
@@ -42,6 +43,7 @@
         <Grid IsVisible="{Binding IsRegistersPage}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></Grid>
         <Grid IsVisible="{Binding IsSelfTestPage}"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></Grid>
         <Grid IsVisible="{Binding IsNetworkPage}"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></Grid>
+        <Grid IsVisible="{Binding IsLabelsPage}"><views:LabelPrintingView DataContext="{Binding LabelPrintingVM}" /></Grid>
       </Grid>
     </Grid>
     <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">

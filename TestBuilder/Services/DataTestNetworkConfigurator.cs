@@ -15,6 +15,9 @@ namespace TestBuilder.Services;
 public sealed record BenchAdapter(string Id, string Name, string Mac, string Status, string Ipv4,
     double SpeedMbps = 0)
 {
+    public string ChoiceDisplay => $"{Name} · {Mac}";
+    public string LinkDisplay => Status.Equals("Up", StringComparison.OrdinalIgnoreCase)
+        ? $"Подключена · {SpeedMbps:F0} Мбит/с" : $"Нет соединения ({Status})";
     public string Display => $"{Name}  |  {Mac}  |  {Status}  |  " +
         (SpeedMbps > 0 ? $"{SpeedMbps:F0} Mbps" : "скорость неизвестна") + $"  |  {Ipv4}";
 }
@@ -233,9 +236,18 @@ public static class DataTestNetworkConfigurator
 
         using var process = Process.Start(start);
         if (process == null) return "Не удалось запустить netsh";
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        try { await process.WaitForExitAsync(timeout.Token); }
+        catch (OperationCanceledException)
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            cancellationToken.ThrowIfCancellationRequested();
+            return "netsh не завершился за 30 секунд. Обновите состояние карт перед повторным применением.";
+        }
         var standardOutput = (await stdout).Trim();
         var standardError = (await stderr).Trim();
         if (process.ExitCode == 0 && standardError.Length == 0) return null;
