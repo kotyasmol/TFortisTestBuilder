@@ -240,12 +240,17 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
 
         var reconnect = IsConnected;
-        var connectedPort = SelectedPort;
         IsConnecting = true;
         try
         {
             // The previous poller must finish before replacing its register map.
-            if (reconnect) await DisconnectAsync();
+            ResetProfilePreparation();
+            if (_registerMonitor != null) await _registerMonitor.StopAsync();
+            DisposeRegisterMonitor();
+            IsMonitoringActive = false;
+            _registerState.Clear();
+            _slaveManager.Slaves.Clear();
+            SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
             _selectedProfile = profile;
             if (profile == null) _currentProfilePath = null;
             OnPropertyChanged(nameof(SelectedProfile));
@@ -256,8 +261,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 LoadProfile(profile.FilePath);
                 if (_profileLoadError.Length == 0)
                 {
-                    if (reconnect && GraphConnectionRequirements.RequiresStandConnection(RootGraph))
-                        await ConnectAsync(connectedPort);
+                    if (reconnect)
+                        await ValidateConnectedProfileAsync();
                     else StatusMessage = GraphConnectionRequirements.RequiresStandConnection(RootGraph)
                         ? "Профиль выбран. Подключите стенд." : "Профиль выбран.";
                 }
@@ -867,7 +872,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         try
         {
             if (IsConnected) await DisconnectAsync();
-            else await ConnectAsync();
+            else
+            {
+                await ConnectAsync();
+                if (IsConnected && _currentProfilePath != null && _profileLoadError.Length == 0)
+                    await ValidateConnectedProfileAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -886,84 +896,70 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private async Task ConnectAsync(string? identifiedPort = null)
+    internal Func<string[]> AvailableStandPorts { get; set; } = SerialPort.GetPortNames;
+
+    private async Task ConnectAsync()
     {
         ResetProfilePreparation();
-        StatusMessage = "Поиск стенда на COM-портах...";
-
-        RootGraph.Hardware?.Validate();
-        if (RootGraph.Hardware == null) AppSettings.Instance.Discovery.Validate();
+        IsMonitoringActive = false;
+        StatusMessage = "Открытие COM-порта...";
         _registerState.Clear();
-        var hardware = RootGraph.Hardware;
-        // The profile identifies equipment, never a workstation-specific COM number.
-        string? configuredPort = identifiedPort;
-        var availablePorts = SerialPort.GetPortNames().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
-        var ports = string.IsNullOrWhiteSpace(identifiedPort)
-            ? GetStandPortCandidates(hardware, availablePorts)
-            : GetStandPortCandidates(hardware, new[] { identifiedPort });
-
-
-        foreach (var port in ports)
+        _slaveManager.Slaves.Clear();
+        SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
+        var settings = AppSettings.Instance.Discovery;
+        foreach (var port in GetStandPortCandidates(null, AvailableStandPorts()))
         {
-            try
+            if (!await _modbusService.ConnectAsync(port, settings.BaudRate, settings.Parity,
+                    settings.DataBits, settings.StopBits))
             {
-                TestingLogger.Info(hardware == null
-                    ? $"Проверка COM-порта {port}."
-                    : $"Поиск {hardware.Devices[0].Name} на COM-порту {port} (slave {hardware.Devices[0].SlaveId}).");
-                var connected = await _modbusService.ConnectAsync(
-                    port,
-                    hardware?.BaudRate ?? AppSettings.Instance.Discovery.BaudRate,
-                    hardware?.Parity ?? AppSettings.Instance.Discovery.Parity,
-                    hardware?.DataBits ?? AppSettings.Instance.Discovery.DataBits,
-                    hardware?.StopBits ?? AppSettings.Instance.Discovery.StopBits);
-
-                if (!connected)
-                {
-                    ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), string.IsNullOrWhiteSpace(configuredPort));
-                    continue;
-                }
-
-                if (!await StartMonitoringAsync())
-                {
-                    await _modbusService.DisconnectAsync();
-                    IsConnected = false;
-                    IsMonitoringActive = false;
-                    SlaveRegistry.Instance.NotifyConnected(false);
-                    continue;
-                }
-
-                SelectedPort = port;
-                IsConnected = true;
-                _history.Clear(); // A connected hardware map cannot be replaced through metadata undo.
-                TestingLogger.Info($"Подключено к {port}.");
-                SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
-                SlaveRegistry.Instance.NotifyConnected(true);
-
-                return;
+                ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), true);
+                continue;
             }
-            catch (Exception ex)
-            {
-                ReportPortSearchFailure(port, ex, string.IsNullOrWhiteSpace(configuredPort));
-                if (ex is InvalidOperationException) TestingLogger.Info($"{port}: {ex.Message}");
-                DisposeRegisterMonitor();
-                await _modbusService.DisconnectAsync();
-                IsConnected = false;
-                IsMonitoringActive = false;
-                SlaveRegistry.Instance.NotifyConnected(false);
-            }
+            SelectedPort = port;
+            IsConnected = true;
+            _history.Clear();
+            SlaveRegistry.Instance.NotifyConnected(true);
+            StatusMessage = "COM-порт открыт. Выберите профиль.";
+            TestingLogger.Info($"Открыт COM-порт {port}. Оборудование ещё не проверено.");
+            return;
         }
+        StatusMessage = "Нет доступного COM-порта.";
+        TestingLogger.Error(StatusMessage);
+    }
 
-        StatusMessage = hardware == null ? "Не удалось подключиться." : $"Стенд {hardware.Devices[0].Name} не найден на доступных COM-портах.";
-        TestingLogger.Error(hardware == null
-            ? "Не удалось подключиться. Проверьте кабель и порт."
-            : $"Стенд {hardware.Devices[0].Name} не найден. Проверены доступные COM-порты и параметры Modbus профиля.");
+    private async Task<bool> ValidateConnectedProfileAsync()
+    {
+        ResetProfilePreparation();
+        IsMonitoringActive = false;
+        if (!IsConnected) return false;
+        if (!ProfileRequiresHardware) return true;
+        try
+        {
+            var hardware = RootGraph.Hardware
+                ?? throw new InvalidOperationException("В профиле не задано оборудование. Заполните вкладку «Оборудование».");
+            hardware.Validate();
+            // Apply the profile line settings only to the already selected port.
+            await _modbusService.ConfigureLineAsync(hardware.BaudRate, hardware.Parity,
+                hardware.DataBits, hardware.StopBits);
+            if (!await StartMonitoringAsync()) return false;
+            SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            IsConnected = _modbusService.IsConnected;
+            SlaveRegistry.Instance.NotifyConnected(IsConnected);
+            IsMonitoringActive = false;
+            StatusMessage = "Оборудование не соответствует профилю. Подробности в журнале.";
+            TestingLogger.Error($"Проверка оборудования на {SelectedPort}: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<bool> StartMonitoringAsync()
     {
-        var count = RootGraph.Hardware == null
-            ? await _slaveManager.ScanAsync()
-            : await _slaveManager.ConfigureAsync(RootGraph.Hardware);
+        var count = await _slaveManager.ConfigureAsync(RootGraph.Hardware
+            ?? throw new InvalidOperationException("В профиле не задано оборудование."));
 
         if (count == 0)
         {
@@ -1095,7 +1091,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task RunGraphAsync()
     {
         if (!CanStartRun) return;
-        if (!HasPartialRun && !await PrepareOpenedProfileAsync()) return;
         await ExecuteGraphAsync();
     }
 

@@ -71,7 +71,7 @@ public class ProfileConnectionAndLogSelectionTests
                 File.WriteAllText(path, """{"name":"Без оборудования","nodes":[],"connections":[]}""");
                 await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
                 Assert.True(vm.CanConnectStation);
-                Assert.Contains("Автоматический поиск", vm.ConnectionRequirements);
+                Assert.Contains("не задано", vm.ConnectionRequirements);
             }
             finally { File.Delete(path); }
             return true;
@@ -111,7 +111,7 @@ public class ProfileConnectionAndLogSelectionTests
                 Assert.False(vm.IsMonitoringActive);
                 Assert.False(vm.IsConnecting);
                 Assert.True(vm.CanChooseProfile);
-                Assert.Contains(vm.TestingLogger.Entries, e => e.ToString().Contains("Не удалось открыть"));
+                Assert.Contains(vm.TestingLogger.Entries, e => e.ToString().Contains("COM-порт закрыт"));
                 Assert.True(vm.CanConnectStation);
                 Assert.True(vm.ToggleConnectionCommand.CanExecute(null));
                 Assert.DoesNotContain(vm.TestingLogger.Entries, e => e.ToString().Contains("Загрузка профиля"));

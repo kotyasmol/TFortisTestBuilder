@@ -15,6 +15,7 @@ public partial class TestViewModel
     private bool _isPreparingProfile;
     private bool CanPrepareProfile => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting &&
         App.StartupOptions.IsValid && _profileLoadError.Length == 0;
+    private bool ProfileRequiresHardware => RootGraph.Hardware?.Devices.Count > 0 || GraphConnectionRequirements.RequiresStandConnection(RootGraph);
     private bool HasPendingPreparation => _preparedProfileKey == null && BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
 
     private string CurrentPreparationKey() =>
@@ -29,6 +30,12 @@ public partial class TestViewModel
     internal async Task<bool> PrepareOpenedProfileAsync()
     {
         if (IsTestRunning || IsConnecting || NeedsStandInspection || _profileLoadError.Length > 0) return false;
+        if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
+        {
+            StatusMessage = "Оборудование профиля не проверено.";
+            RefreshStationAvailability();
+            return false;
+        }
         // Profiles without preparation retain their existing execution and validation path.
         if (!BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun))
         {

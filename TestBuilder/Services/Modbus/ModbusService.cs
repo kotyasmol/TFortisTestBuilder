@@ -38,7 +38,7 @@ namespace TestBuilder.Services.Modbus
         public bool IsConnected
         {
             get => _isConnected;
-            private set
+            protected set
             {
                 if (_isConnected == value)
                     return;
@@ -56,7 +56,7 @@ namespace TestBuilder.Services.Modbus
 
         #region CONNECT
 
-        public async Task<bool> ConnectAsync(
+        public virtual async Task<bool> ConnectAsync(
             string port,
             int baudRate,
             Parity parity,
@@ -117,6 +117,23 @@ namespace TestBuilder.Services.Modbus
                 IsConnected = false;
                 return false;
             }
+        }
+
+        public virtual async Task ConfigureLineAsync(int baudRate, Parity parity, int dataBits, StopBits stopBits)
+        {
+            await _ioLock.WaitAsync();
+            try
+            {
+                if (!IsConnected || _serialPort?.IsOpen != true)
+                    throw new IOException("Подключённый COM-порт закрыт.");
+                // SerialPort permits these changes while open; keep exclusive ownership.
+                _serialPort.BaudRate = baudRate;
+                _serialPort.Parity = parity;
+                _serialPort.DataBits = dataBits;
+                _serialPort.StopBits = stopBits;
+                _connectionSettings = new ConnectionSettings(_serialPort.PortName, baudRate, parity, dataBits, stopBits);
+            }
+            finally { _ioLock.Release(); }
         }
 
         public async Task DisconnectAsync()

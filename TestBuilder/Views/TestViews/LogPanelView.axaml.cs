@@ -15,8 +15,7 @@ namespace TestBuilder.Views.TestViews;
 
 public partial class LogPanelView : UserControl, IDisposable
 {
-    private readonly ObservableCollection<LogEntry> _visibleEntries = new();
-    private bool _historyPaused;
+    private readonly ObservableCollection<LogEntry> _historySnapshot = new();
     private TestViewModel? _currentVm;
     private bool _scrollPending;
     private bool _disposed;
@@ -27,7 +26,7 @@ public partial class LogPanelView : UserControl, IDisposable
     public LogPanelView()
     {
         InitializeComponent();
-        LogList.ItemsSource = _visibleEntries;
+        LogList.ItemsSource = _historySnapshot;
         LogSelection.Enable(LogList);
         LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
         LogList.AddHandler(PointerWheelChangedEvent, OnLogWheel, RoutingStrategies.Tunnel);
@@ -50,16 +49,33 @@ public partial class LogPanelView : UserControl, IDisposable
     {
         if (Following)
         {
-            if (_historyPaused) SynchronizeEntries();
-            _historyPaused = false;
+            ShowLiveEntries();
             RequestScrollToBottom();
         }
-        else _historyPaused = true;
+        else
+        {
+            // Freeze only when the operator explicitly pauses or navigates history.
+            // The live collection may trim old rows while this snapshot stays stable.
+            var offset = Viewer?.Offset;
+            var selection = LogList?.SelectedItems?.Cast<object>().ToArray();
+            SynchronizeEntries();
+            if (LogList != null)
+            {
+                LogList.ItemsSource = _historySnapshot;
+                if (selection != null)
+                    foreach (var item in selection) LogList.SelectedItems?.Add(item);
+                // Complete the source switch before the wheel/scrollbar processes
+                // the same pointer event, so pausing does not jump to the first row.
+                LogList.UpdateLayout();
+                if (offset.HasValue && Viewer is { } viewer) viewer.Offset = offset.Value;
+            }
+        }
     }
 
     private void ResumeFollowing()
     {
         FollowLogsToggle.IsChecked = true;
+        ShowLiveEntries();
         RequestScrollToBottom();
     }
 
@@ -77,30 +93,22 @@ public partial class LogPanelView : UserControl, IDisposable
 
     private void SynchronizeEntries()
     {
-        _visibleEntries.Clear();
+        _historySnapshot.Clear();
         if (_currentVm != null)
-            foreach (var entry in _currentVm.TestingLogger.Entries) _visibleEntries.Add(entry);
+            foreach (var entry in _currentVm.TestingLogger.Entries) _historySnapshot.Add(entry);
+    }
+
+    private void ShowLiveEntries()
+    {
+        if (LogList == null) return;
+        // Let Avalonia observe the logger directly. A second mutable mirror can
+        // become stale across initialization, hidden views and profile preparation.
+        LogList.ItemsSource = _currentVm?.TestingLogger.Entries ?? _historySnapshot;
     }
 
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Keep a stable reading snapshot: the live logger trims its first row at
-        // 1000 entries, which otherwise moves the viewport even without autoscroll.
-        if (!Following) return;
-        switch (e.Action)
-        {
-            case NotifyCollectionChangedAction.Add:
-                for (var i = 0; i < e.NewItems!.Count; i++)
-                    _visibleEntries.Insert(e.NewStartingIndex + i, (LogEntry)e.NewItems[i]!);
-                break;
-            case NotifyCollectionChangedAction.Remove:
-                for (var i = 0; i < e.OldItems!.Count; i++) _visibleEntries.RemoveAt(e.OldStartingIndex);
-                break;
-            default:
-                SynchronizeEntries();
-                break;
-        }
-        RequestScrollToBottom();
+        if (Following) RequestScrollToBottom();
     }
 
     private void OnLogScrollChanged(object? sender, ScrollChangedEventArgs e)

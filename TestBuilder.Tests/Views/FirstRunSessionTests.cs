@@ -101,7 +101,7 @@ public class FirstRunSessionTests
     });
 
     [Fact]
-    public Task FailedPreparation_BlocksDeviceChecksAndRetriesUntilSuccess() => InSession(async () =>
+    public Task FailedPreparation_BlocksManualStartUntilPreparationSucceeds() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -119,15 +119,18 @@ public class FirstRunSessionTests
         Assert.False(vm.Station.HasResult);
 
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(starts + 1, PreparationStarts(vm));
+        Assert.Equal(starts, PreparationStarts(vm));
+        Assert.False(vm.CanStartRun);
         Assert.False(test.HasExecutionSucceeded);
         Assert.False(vm.Station.HasResult);
 
         failedPrep.VariableName = "OperatorName";
         failedPrep.ExpectedValue = App.StartupUserName;
         failedPrep.ComparisonType = VariableComparisonType.String;
+        Assert.True(await vm.PrepareOpenedProfileAsync());
+        Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(starts + 2, PreparationStarts(vm));
+        Assert.Equal(starts + 1, PreparationStarts(vm));
         Assert.True(test.HasExecutionSucceeded);
         Assert.True(vm.Station.IsSuccessful);
     });
@@ -153,6 +156,9 @@ public class FirstRunSessionTests
         Assert.False(vm.Station.HasResult);
         prep.Milliseconds = 0;
         var starts = PreparationStarts(vm);
+        Assert.False(vm.CanStartRun);
+        Assert.True(await vm.PrepareOpenedProfileAsync());
+        Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(starts + 1, PreparationStarts(vm));
         Assert.True(test.HasExecutionSucceeded);
@@ -234,7 +240,8 @@ public class FirstRunSessionTests
         Assert.True(vm.Station.IsSuccessful);
         misplaced.RunOnlyOnFirstRun = true;
 
-        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.False(vm.CanStartRun);
+        await vm.PrepareOpenedProfileAsync();
 
         Assert.False(vm.Station.HasResult);
         Assert.False(vm.Station.IsSuccessful);
@@ -257,10 +264,73 @@ public class FirstRunSessionTests
         Assert.False(vm.IsTestRunning);
         Assert.False(vm.IsConnected);
         Assert.False(vm.Station.HasResult);
-        Assert.Contains("Подключите стенд", vm.StatusMessage);
+        Assert.Contains("не проверено", vm.StatusMessage);
         Assert.All(vm.Nodes, node => Assert.False(node.HasExecutionSucceeded));
         Assert.Equal(starts, PreparationStarts(vm));
     });
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public Task PortOpeningDoesNotReadDevices_ProfileChecksBeforePreparation_ThenWaitsForStart(bool matches) => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var port = new FakePort();
+        var devices = new FakeDevices { Identity = matches ? (ushort)77 : (ushort)78 };
+        using var vm = new TestViewModel(port, new SlaveManager(devices)) { IsOperatorView = false,
+            AvailableStandPorts = () => new[] { "COM2", "COM1", "COM3" } };
+        await vm.ToggleConnectionCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { "COM1", "COM2" }, port.Opened);
+        Assert.True(vm.IsConnected);
+        Assert.Equal("COM2", vm.SelectedPort);
+        Assert.Equal(0, devices.Reads);
+        Assert.False(vm.IsMonitoringActive);
+        Chain(vm.RootGraph, PreparationDelay(), new DelayNodeViewModel { Milliseconds = 0 });
+        vm.RootGraph.Hardware = new() { BaudRate = 19200, Devices = new() { new() {
+            Name = "Custom", SlaveId = 42, IdentificationValue = 77,
+            Registers = new() { new() { Address = 123 } } } } };
+        var path = files.PathFor("hardware");
+        await vm.SaveGraphToPathAsync(path);
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        Assert.True(vm.IsConnected);
+        Assert.Equal(2, port.Opened.Count); // no release/reopen or fallback to COM3
+        Assert.Equal(19200, port.ConfiguredBaudRate);
+        Assert.True(devices.Reads > 0);
+        var prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
+        var test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
+        Assert.Equal(matches, prep.HasExecutionSucceeded);
+        Assert.False(test.HasExecutionSucceeded);
+        Assert.Equal(matches, vm.CanStartRun);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.Equal(matches, test.HasExecutionSucceeded);
+        await vm.ToggleConnectionCommand.ExecuteAsync(null);
+    });
+
+    private sealed class FakePort : ModbusService
+    {
+        public List<string> Opened { get; } = new();
+        public int ConfiguredBaudRate;
+        public override Task<bool> ConnectAsync(string port, int baudRate, System.IO.Ports.Parity parity, int dataBits, System.IO.Ports.StopBits stopBits)
+        {
+            Opened.Add(port); IsConnected = port != "COM1";
+            return Task.FromResult(IsConnected);
+        }
+        public override Task ConfigureLineAsync(int baudRate, System.IO.Ports.Parity parity, int dataBits, System.IO.Ports.StopBits stopBits)
+        { ConfiguredBaudRate = baudRate; return Task.CompletedTask; }
+    }
+    private sealed class FakeDevices : IModbusService
+    {
+        public ushort Identity;
+        public int Reads;
+        public Task<ushort[]> ReadRegistersAsync(byte slave, ushort address, ushort count, CancellationToken ct = default)
+        {
+            Reads++;
+            return Task.FromResult(Enumerable.Repeat(address == 0 ? Identity : (ushort)0, count).ToArray());
+        }
+        public Task<bool> WriteRegisterAsync(byte slave, ushort address, ushort value, bool verify = true, CancellationToken ct = default) => throw new InvalidOperationException("Unexpected write");
+        public Task<bool> CheckPortAsync(CancellationToken ct = default) => throw new InvalidOperationException("Unexpected probe");
+        public void SubscribeRegister(byte slave, ushort address, Action<ushort[]> callback) { }
+    }
 
     private static TestViewModel CreateViewModel(ModbusService bus) => new(bus, new SlaveManager(bus)) { IsOperatorView = false };
     private static DelayNodeViewModel PreparationDelay() => new() { Milliseconds = 1, RunOnlyOnFirstRun = true };

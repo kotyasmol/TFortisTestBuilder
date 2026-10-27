@@ -85,8 +85,8 @@ public partial class TestViewModel
     public bool HasStationProfile => SelectedProfile != null && _profileLoadError.Length == 0;
     public bool HasConnectionProfile => _currentProfilePath != null && _profileLoadError.Length == 0 && RootGraph.Hardware != null;
     public string ConnectionRequirements => _currentProfilePath == null ? "Подключитесь к стенду, затем выберите профиль." :
-        RootGraph.Hardware == null ? "Автоматический поиск известных устройств стенда." :
-        "Ищем на доступных COM-портах: " + string.Join("; ", RootGraph.Hardware.Devices.Select(d =>
+        RootGraph.Hardware == null ? "Оборудование профиля не задано." :
+        "Проверяем на подключённом COM-порту: " + string.Join("; ", RootGraph.Hardware.Devices.Select(d =>
             d.ExpectedIdentificationValues.Count > 0
                 ? $"slave {d.SlaveId} — {d.Name}, регистр {d.IdentificationAddress} = {string.Join(" или ", d.ExpectedIdentificationValues)}"
                 : $"slave {d.SlaveId} — {d.Name}, чтение {d.Registers.Count} регистров"));
@@ -95,7 +95,7 @@ public partial class TestViewModel
     public bool CanPauseTest => IsTestRunning && !IsTestPaused && !IsStopping;
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
     public string StationConnectionText => IsConnecting ? "Подключение…" :
-        IsConnected ? (IsMonitoringActive ? "Стенд подключён" : "Стенд подключён · нет обмена") : "Стенд отключён";
+        IsConnected ? (IsMonitoringActive ? "Стенд подключён" : "COM-порт открыт · оборудование не проверено") : "Стенд отключён";
     public bool IsStationReady => !NeedsStandInspection && !HasPendingPreparation && IsConnected && IsMonitoringActive && !IsConnecting;
     public string PauseStatus => IsPauseEffective ? "На паузе" : "Ожидание завершения текущих операций";
     public string PauseHint => IsPauseEffective ? "Нажмите «Продолжить», чтобы продолжить тест." :
@@ -152,7 +152,8 @@ public partial class TestViewModel
     [ObservableProperty] private bool isNetworkSetupBusy;
     partial void OnIsNetworkSetupBusyChanged(bool value) => RefreshStationAvailability();
     public bool CanStartRun => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
-        _profileLoadError.Length == 0 &&
+        _profileLoadError.Length == 0 && (!HasPendingPreparation || HasPartialRun) &&
+        (!ProfileRequiresHardware || (IsConnected && IsMonitoringActive)) &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
             (!GraphConnectionRequirements.RequiresStandConnection(RootGraph) || (IsConnected && IsMonitoringActive))));
     public string StationReadiness => !App.StartupOptions.IsValid ? App.StartupOptions.Error :
@@ -160,12 +161,13 @@ public partial class TestViewModel
         IsLabelToolBusy ? "Дождитесь завершения проверки печати этикетки." :
         NeedsStandInspection ? StandInspectionMessage :
         _profileLoadError.Length > 0 ? "Программа не загружена. Выберите другой профиль или обратитесь к инженеру." :
-        IsConnecting ? "Ищем стенд. Дождитесь окончания подключения." :
+        IsConnecting ? "Подключение и проверка оборудования." :
         IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : _isPreparingProfile ? "Настройка стенда" : "Стенд занят проверкой") :
         _currentProfilePath == null || _selectedProfile == null ? (IsConnected ? "Выберите программу проверки" : "Подключитесь к стенду, затем выберите профиль") :
         RootGraph.Hardware == null && GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? ConnectionRequirements :
+        ProfileRequiresHardware && IsConnected && !IsMonitoringActive ? "Оборудование профиля не проверено. Откройте профиль заново." :
         HasPendingPreparation ? (!IsConnected && GraphConnectionRequirements.RequiresStandConnection(RootGraph)
-            ? "Подключите стенд для подготовки профиля" : "Подготовка профиля ещё не выполнена. Повторите запуск.") :
+            ? "Подключите стенд для подготовки профиля" : "Подготовка профиля не выполнена. Откройте профиль заново.") :
         !GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? "Готово · подключение к стенду не требуется" :
         IsConnected && IsMonitoringActive ? "Стенд готов к проверке" : "Подключите стенд перед запуском";
 

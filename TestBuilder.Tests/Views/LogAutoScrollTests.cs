@@ -16,6 +16,55 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class LogAutoScrollTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProfilePreparationPublishesLogsWithoutClickingLogButtons(bool initiallyHidden)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            using var view = new LogPanelView { IsVisible = !initiallyHidden };
+            var window = new Window { Width = 900, Height = 500, Content = view, DataContext = vm };
+            var path = Path.Combine(Path.GetTempPath(), "log-preparation-" + Guid.NewGuid() + ".json");
+            try
+            {
+                var start = new TestBuilder.ViewModels.StepVM.StartNodeViewModel();
+                var prep = new TestBuilder.ViewModels.StepVM.DelayNodeViewModel { Milliseconds = 150, RunOnlyOnFirstRun = true };
+                var test = new TestBuilder.ViewModels.StepVM.DelayNodeViewModel { Milliseconds = 1 };
+                var end = new TestBuilder.ViewModels.StepVM.EndNodeViewModel();
+                vm.RootGraph.Clear();
+                foreach (var node in new TestBuilder.ViewModels.NodifyVM.NodeViewModel[] { start, prep, test, end }) vm.Nodes.Add(node);
+                vm.Connections.Add(new(start.Output[0], prep.Input[0]));
+                vm.Connections.Add(new(prep.Output[0], test.Input[0]));
+                vm.Connections.Add(new(test.Output[0], end.Input[0]));
+                File.WriteAllText(path, TestBuilder.Services.GraphSerializer.Serialize(vm, "Log preparation"));
+                window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                var list = view.FindControl<ListBox>("LogList")!;
+                var opening = vm.SelectProfileAsync(TestBuilder.Services.GraphSerializer.ReadProfile(path));
+                await Task.Delay(30);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Подготовка стенда при открытии профиля:"));
+                Assert.Same(vm.TestingLogger.Entries, list.ItemsSource);
+                await opening;
+                await Task.Run(() => vm.TestingLogger.Info("BACKGROUND LOG WITHOUT CLICK"));
+                Dispatcher.UIThread.RunJobs();
+                view.IsVisible = true;
+                for (var i = 0; i < 6; i++) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); }
+                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message == "BACKGROUND LOG WITHOUT CLICK");
+                Assert.Equal(vm.TestingLogger.Entries.ToArray(), list.Items.Cast<LogEntry>().ToArray());
+                Assert.True(vm.Nodes.OfType<TestBuilder.ViewModels.StepVM.DelayNodeViewModel>().First().HasExecutionSucceeded);
+                Assert.False(vm.Nodes.OfType<TestBuilder.ViewModels.StepVM.DelayNodeViewModel>().Last().HasExecutionSucceeded);
+                Assert.Contains(list.GetVisualDescendants().OfType<SelectableTextBlock>(),
+                    t => t.Text?.Contains("BACKGROUND LOG WITHOUT CLICK") == true);
+            }
+            finally { view.DataContext = null; window.Close(); File.Delete(path); }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task LongRowsFollowToTheirEnd_UserCanReadHistory_AndReturnWithMouse()
     {
@@ -41,9 +90,12 @@ public class LogAutoScrollTests
                 Assert.True(toggle.IsChecked);
 
                 var center = list.TranslatePoint(new Point(100, list.Bounds.Height / 2), window)!.Value;
+                var liveOffset = viewer.Offset.Y;
                 window.MouseWheel(center, new Vector(0, 5)); Layout();
                 Assert.False(toggle.IsChecked);
                 var before = viewer.Offset.Y;
+                Assert.True(before > 0 && liveOffset - before < 1000,
+                    $"Pausing jumped from {liveOffset} to {before}");
                 Add("New row while reading history"); Layout();
                 Assert.Equal(before, viewer.Offset.Y, 1);
                 Assert.True(viewer.Offset.Y < viewer.Extent.Height - viewer.Viewport.Height - 4);
