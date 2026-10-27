@@ -12,6 +12,75 @@ namespace TestBuilder.Tests.MonitoringTests;
 [Collection("Graph editor UI")]
 public class ConfiguredHardwareTests
 {
+    [Theory]
+    [InlineData(9, true)]
+    [InlineData(10, true)]
+    [InlineData(8, false)]
+    public async Task SimbatAcceptsEitherConfiguredTypeAndRejectsOthers(ushort type, bool accepted)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var bus = new RecordingBus { Identity = type };
+            var manager = new SlaveManager(bus);
+            var config = new HardwareConfiguration { Devices = new() { new()
+            {
+                SlaveId = 17, Name = "SIMBAT-24/48", IdentificationValues = new() { 9, 10 },
+                Registers = new() { new() { Address = 1700 } }
+            } } };
+            config = System.Text.Json.JsonSerializer.Deserialize<HardwareConfiguration>(
+                System.Text.Json.JsonSerializer.Serialize(config))!;
+            if (accepted) Assert.Equal(1, await manager.ConfigureAsync(config));
+            else
+            {
+                var error = await Assert.ThrowsAsync<InvalidOperationException>(() => manager.ConfigureAsync(config));
+                Assert.Contains("ожидалось 9 или 10, получено 8", error.Message);
+                Assert.Empty(manager.GetSlavesSnapshot());
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public void IdentificationEditorRejectsInvalidListWithoutChangingPreviousValues()
+    {
+        var device = new DeviceDefinition { IdentificationValue = 9 };
+        device.IdentificationValuesText = "9, 10";
+        Assert.Null(device.IdentificationValue);
+        Assert.Equal(new ushort[] { 9, 10 }, device.ExpectedIdentificationValues);
+        Assert.Throws<FormatException>(() => device.IdentificationValuesText = "9, wrong");
+        Assert.Equal(new ushort[] { 9, 10 }, device.ExpectedIdentificationValues);
+        device.IdentificationValuesText = "9";
+        Assert.Equal((ushort)9, device.IdentificationValue);
+        Assert.Null(device.IdentificationValues);
+    }
+
+    [Fact]
+    public async Task AllExpectedSlavesMustPassBeforePublishingConnection()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var bus = new RecordingBus();
+            var manager = new SlaveManager(bus);
+            var config = new HardwareConfiguration { Devices = new()
+            {
+                new() { Name = "Первое", SlaveId = 1, IdentificationValue = 0,
+                    Registers = new() { new() { Address = 100 } } },
+                new() { Name = "Второе", SlaveId = 23, IdentificationValue = 8,
+                    Registers = new() { new() { Address = 1200 } } }
+            } };
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => manager.ConfigureAsync(config));
+            Assert.Contains("Slave 23", error.Message);
+            Assert.Contains("ожидалось 8, получено 0", error.Message);
+            Assert.Empty(manager.GetSlavesSnapshot());
+            config.Devices[1].IdentificationValue = 0;
+            Assert.Equal(2, await manager.ConfigureAsync(config));
+            Assert.Equal(new byte[] { 1, 23 }, manager.GetSlavesSnapshot().Select(d => d.SlaveId));
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task CancelAfterReadBeforeUiUpdateDoesNotRaiseUnhandledExceptionOrPublishValues()
     {
@@ -171,11 +240,13 @@ public class ConfiguredHardwareTests
     {
         public List<(ModbusArea,int,int)> Reads {get;}=new();
         public bool Truncate,Block,Cancelled;
+        public ushort? Identity;
         public TaskCompletionSource<bool> Started {get;}=new(TaskCreationOptions.RunContinuationsAsynchronously);
         public async Task<ushort[]> ReadAreaAsync(byte slave,ushort address,ushort count,ModbusArea area,CancellationToken ct=default)
         {
             Reads.Add((area,address,count));Started.TrySetResult(true);
             if(Block)try{await Task.Delay(Timeout.Infinite,ct);}catch(OperationCanceledException){Cancelled=true;throw;}
+            if (address == 0 && count == 1 && Identity.HasValue && !Truncate) return new[] { Identity.Value };
             return Enumerable.Range(address,Truncate?count-1:count).Select(v=>(ushort)v).ToArray();
         }
         public Task<ushort[]> ReadRegistersAsync(byte slave,ushort address,ushort count,CancellationToken ct=default)=>ReadAreaAsync(slave,address,count,ModbusArea.Holding,ct);

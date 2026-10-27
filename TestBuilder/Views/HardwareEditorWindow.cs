@@ -21,7 +21,7 @@ using TestBuilder.Services;
 
 namespace TestBuilder.Views;
 
-public sealed class HardwareEditorWindow : Window
+public sealed partial class HardwareEditorWindow : Window
 {
     private readonly TestViewModel _vm;
     private HardwareConfiguration _draft;
@@ -38,28 +38,28 @@ public sealed class HardwareEditorWindow : Window
     private readonly List<Control> _consoleInputs = new();
     private readonly ComboBox _parity = new() { ItemsSource = Enum.GetValues<Parity>() };
     private readonly ComboBox _stop = new() { ItemsSource = new[] { StopBits.One, StopBits.Two, StopBits.OnePointFive } };
-    private readonly List<DeviceDefinition> _presets;
-    private readonly ComboBox _preset = new() { MinWidth = 160 };
-    private readonly CheckBox _legacy = new() { Content = "Определять оборудование АПК-03 автоматически" };
+    private readonly EquipmentLibrary _library;
+    private readonly TabControl _tabs = new();
+    private readonly CheckBox _legacy = new() { Content = "Оборудование не задано (подключение недоступно)" };
     private readonly TextBlock _registerTitle = new() { FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold };
     private readonly TextBox _registerSearch = new() { Watermark = "Найти регистр" };
     private readonly StackPanel _identification = new() { Spacing = 8 };
 
-    public HardwareEditorWindow(TestViewModel vm)
+    public HardwareEditorWindow(TestViewModel vm) : this(vm, new EquipmentLibrary()) { }
+    internal HardwareEditorWindow(TestViewModel vm, EquipmentLibrary library)
     {
+        _library = library;
         _vm = vm; Title = "Оборудование текущего профиля"; Width = 1180; Height = 780; MinWidth = 1000; MinHeight = 650;
         _draft = vm.RootGraph.Hardware == null ? new HardwareConfiguration() : TestViewModel.CopyDefinition(vm.RootGraph.Hardware);
         _legacy.IsChecked = vm.RootGraph.Hardware == null;
         _devices = new ObservableCollection<DeviceDefinition>(_draft.Devices);
         foreach (var console in _draft.ConsoleDevices) _consoles.Add(console);
         _port.ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray();
-        _presets = HardwarePresets.Load();
         _parity.ItemTemplate = new FuncDataTemplate<Parity>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
         _stop.ItemTemplate = new FuncDataTemplate<StopBits>((value, _) => new TextBlock { Text = RussianUiText.Display(value) });
-        _preset.ItemTemplate = new FuncDataTemplate<DeviceDefinition>((value, _) => new TextBlock { Text = value?.Name });
-        _preset.ItemsSource = _presets; _preset.SelectedIndex = 0;
         _devicesGrid.ItemsSource = _devices;
-        AddColumn(_devicesGrid, "Адрес", "SlaveId"); AddColumn(_devicesGrid, "Название", "Name");
+        _devicesGrid.Name = "ProfileEquipmentGrid";
+        AddColumn(_devicesGrid, "Slave", "SlaveId"); AddColumn(_devicesGrid, "Название", "Name");
 
         AddColumn(_registersGrid, "Адрес", "Address"); AddColumn(_registersGrid, "Название", "Name");
         AddAreaColumn(); AddColumn(_registersGrid, "Единица", "Unit"); AddColumn(_registersGrid, "Категория", "Category");
@@ -84,12 +84,12 @@ public sealed class HardwareEditorWindow : Window
         stand.Children.Add(new TextBlock { Text = "Название стенда" });
         stand.Children.Add(_standName);
         connection.Children.Add(stand);
-        connection.Children.Add(new TextBlock { Text = "Для готового стенда АПК-03 можно оставить автоматическое определение. Для плат и другого оборудования задайте устройства на соседней вкладке.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        connection.Children.Add(new TextBlock { Text = "Добавьте готовые устройства из каталога, затем назначьте slave-адреса в «Оборудование профиля». Здесь настраивается общая линия Modbus.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var serial = new WrapPanel();
-        Field(serial, "COM-порт Modbus", _port);
+        connection.Children.Add(new TextBlock { Text = "COM-порт определяется автоматически по ответам устройств профиля." });
         Field(serial, "Скорость, бод", _baud); Field(serial, "Биты данных", _bits); Field(serial, "Чётность", _parity); Field(serial, "Стоп-биты", _stop); Field(serial, "Опрос, мс", _poll);
         connection.Children.Add(serial);
-        connection.Children.Add(new TextBlock { Text = "Порт, параметры линии и устройства сохраняются в JSON профиля. При переносе на другой компьютер проверьте названия портов. Отдельный USB-UART процессора добавляется на вкладке «Консоли».", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        connection.Children.Add(new TextBlock { Text = "Параметры линии и ожидаемые устройства сохраняются в профиле. Номер COM-порта стенда не нужен. Отдельный USB-UART процессора добавляется на вкладке «Консоли».", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var transfer = new WrapPanel();
         transfer.Children.Add(Button("Импорт оборудования…", async () => await ImportAsync()));
         var export = Button("Экспорт оборудования…", async () => await ExportAsync()); transfer.Children.Add(export);
@@ -98,17 +98,23 @@ public sealed class HardwareEditorWindow : Window
         var devicesPage = new Grid { ColumnDefinitions = new ColumnDefinitions("290,16,*"), Margin = new Thickness(0, 16, 0, 0) };
         var devices = new DockPanel();
         var deviceActions = new StackPanel { Spacing = 8, Margin = new Thickness(0, 0, 0, 12) };
-        deviceActions.Children.Add(new TextBlock { Text = "Устройства", FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold });
-        _preset.HorizontalAlignment = HorizontalAlignment.Stretch;
-        deviceActions.Children.Add(_preset);
-        var add = new WrapPanel();
-        add.Children.Add(Button("Добавить из шаблона", () => { if (_preset.SelectedItem is DeviceDefinition p) AddDevice(TestViewModel.CopyDefinition(p)); }));
-        add.Children.Add(Button("Пустое устройство", () => AddDevice(new DeviceDefinition { Registers = new() { new RegisterDefinition() } })));
-        deviceActions.Children.Add(add);
+        deviceActions.Children.Add(new TextBlock { Text = "Устройства этого профиля", FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        deviceActions.Children.Add(new TextBlock { Text = "Назначьте каждой единице свой slave-адрес. Изменения здесь относятся только к этому профилю.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        deviceActions.Children.Add(Button("Добавить из каталога…", () => _tabs.SelectedIndex = 0));
         DockPanel.SetDock(deviceActions, Dock.Top); devices.Children.Add(deviceActions);
         var deviceBottom = new StackPanel { Spacing = 8 };
-        deviceBottom.Children.Add(Button("Удалить устройство", () => { if (_devicesGrid.SelectedItem is DeviceDefinition d) { _devices.Remove(d); _devicesGrid.SelectedIndex = _devices.Count > 0 ? 0 : -1; ShowRegisters(); } }));
-        foreach (var (label, property) in new[] { ("Регистр типа", "IdentificationAddress"), ("Ожидаемое значение", "IdentificationValue"), ("Регистр серийного номера стенда (Holding, необязательно)", "StandSerialNumberAddress") })
+        deviceBottom.Children.Add(Button("Убрать из профиля", () => { if (_devicesGrid.SelectedItem is DeviceDefinition d) { _devices.Remove(d); _devicesGrid.SelectedIndex = _devices.Count > 0 ? 0 : -1; ShowRegisters(); } }));
+        deviceBottom.Children.Add(Button("Сохранить как новое в каталоге…", async () =>
+        {
+            try
+            {
+                CommitGrid();
+                if (_devicesGrid.SelectedItem is DeviceDefinition d)
+                    await EditTemplateAsync(null, d);
+            }
+            catch (Exception ex) { _status.Text = ex.Message; }
+        }));
+        foreach (var (label, property) in new[] { ("Регистр типа", "IdentificationAddress"), ("Допустимые значения типа (через запятую)", "IdentificationValuesText"), ("Регистр серийного номера стенда (Holding, необязательно)", "StandSerialNumberAddress") })
         {
             var input = new TextBox(); input.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay });
             _identification.Children.Add(new TextBlock { Text = label }); _identification.Children.Add(input);
@@ -128,14 +134,17 @@ public sealed class HardwareEditorWindow : Window
         regTop.Children.Add(new TextBlock { Text = "Двойной щелчок — изменить ячейку. Адрес регистра указывается с нуля.", Classes = { "hint" } });
         DockPanel.SetDock(regTop, Dock.Top); registers.Children.Add(regTop); registers.Children.Add(_registersGrid);
         Grid.SetColumn(registers, 2); devicesPage.Children.Add(registers);
-        var deviceTab = new TabItem { Header = "Устройства и регистры", Content = devicesPage };
+        var deviceTab = new TabItem { Header = "Оборудование профиля", Content = devicesPage };
         var consoleTab = new TabItem { Header = "Консоли", Content = CreateConsolePage() };
-        var tabs = new TabControl { Items = { new TabItem { Header = "Подключение", Content = connection }, deviceTab, consoleTab } };
-        void ModeChanged() { var manual = _legacy.IsChecked != true; stand.IsEnabled = manual; serial.IsEnabled = manual; deviceTab.IsEnabled = manual; consoleTab.IsEnabled = manual; export.IsEnabled = manual; }
+        _tabs.Items.Add(new TabItem { Header = "Каталог оборудования", Content = CreateCatalogPage() });
+        _tabs.Items.Add(deviceTab);
+        _tabs.Items.Add(new TabItem { Header = "Подключение", Content = connection });
+        _tabs.Items.Add(consoleTab);
+        void ModeChanged() { var manual = _legacy.IsChecked != true; stand.IsEnabled = manual; serial.IsEnabled = manual; consoleTab.IsEnabled = manual; export.IsEnabled = manual; }
         _legacy.IsCheckedChanged += (_, _) => ModeChanged(); ModeChanged();
-        root.Children.Add(tabs); Content = root;
+        root.Children.Add(_tabs); Content = root;
         LoadConnection(); _devicesGrid.SelectedIndex = _devices.Count == 0 ? -1 : 0; ShowRegisters();
-        tabs.SelectedIndex = _legacy.IsChecked == true ? 0 : 1;
+        _tabs.SelectedIndex = _devices.Count == 0 ? 0 : 1;
     }
     private void CommitGrid()
     {
@@ -148,7 +157,7 @@ public sealed class HardwareEditorWindow : Window
         CommitGrid();
         _draft.BaudRate = int.Parse(_baud.Text ?? ""); _draft.DataBits = int.Parse(_bits.Text ?? ""); _draft.PollIntervalMs = int.Parse(_poll.Text ?? "");
         _draft.Parity = (Parity)_parity.SelectedItem!; _draft.StopBits = (StopBits)_stop.SelectedItem!;
-        _draft.PortName = _port.Text?.Trim() ?? "";
+        _draft.PortName = "";
         _draft.StandName = string.IsNullOrWhiteSpace(_standName.Text) ? null : _standName.Text.Trim();
         _draft.ConsoleDevices = _consoles.ToList();
         _draft.Devices = _devices.ToList(); _draft.Validate(); return _draft;

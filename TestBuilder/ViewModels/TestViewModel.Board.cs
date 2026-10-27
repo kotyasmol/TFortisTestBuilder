@@ -52,6 +52,7 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(HasConsoleSettings));
         OnPropertyChanged(nameof(IsAutonomousStand));
         RefreshStandIdentity();
+        RefreshStationAvailability();
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(ConsoleDeviceChoices));
         BoardChanged?.Invoke();

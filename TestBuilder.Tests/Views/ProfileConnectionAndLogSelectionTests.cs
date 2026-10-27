@@ -54,10 +54,34 @@ public class ProfileConnectionAndLogSelectionTests
         }, CancellationToken.None);
     }
 
+    [Fact]
+    public async Task ConnectionIsAvailableBeforeProfileAndForLegacyProfiles()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            Assert.True(vm.CanConnectStation);
+            Assert.True(vm.ToggleConnectionCommand.CanExecute(null));
+            Assert.False(vm.IsConnected);
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+            try
+            {
+                File.WriteAllText(path, """{"name":"Без оборудования","nodes":[],"connections":[]}""");
+                await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+                Assert.True(vm.CanConnectStation);
+                Assert.Contains("Автоматический поиск", vm.ConnectionRequirements);
+            }
+            finally { File.Delete(path); }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData("RTL_SW_board.json")]
     [InlineData("RTL_POE_board.json")]
-    public async Task ConnectedUserCanLoadBoardProfile_AndFailedReconnectLeavesGraphAvailable(string file)
+    public async Task SelectingProfileRechecksPreviouslyFoundPort_AndLeavesProfileOpenOnFailure(string file)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
@@ -70,6 +94,7 @@ public class ProfileConnectionAndLogSelectionTests
             try
             {
                 vm.IsConnected = true;
+                vm.SelectedPort = AppSettings.Instance.StandPort;
                 vm.IsMonitoringActive = true;
                 Assert.True(vm.CanChooseProfile);
                 var source = JsonNode.Parse(File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles", file))))!;
@@ -87,6 +112,8 @@ public class ProfileConnectionAndLogSelectionTests
                 Assert.False(vm.IsConnecting);
                 Assert.True(vm.CanChooseProfile);
                 Assert.Contains(vm.TestingLogger.Entries, e => e.ToString().Contains("Не удалось открыть"));
+                Assert.True(vm.CanConnectStation);
+                Assert.True(vm.ToggleConnectionCommand.CanExecute(null));
                 Assert.DoesNotContain(vm.TestingLogger.Entries, e => e.ToString().Contains("Загрузка профиля"));
             }
             finally { AppSettings.Instance.StandPort = oldPort; File.Delete(testProfile); }

@@ -11,8 +11,7 @@
       <Border Classes="panel">
         <StackPanel Spacing="8">
           <TextBlock Text="Подключения рабочего места" Classes="sectionTitle" />
-          <TextBlock Text="COM стенда (пусто — поиск автоматически)" />
-          <TextBox Text="{Binding StandPort}" Watermark="COM3" />
+          <TextBlock Text="COM стенда определяется автоматически по оборудованию выбранного профиля." TextWrapping="Wrap" />
           <TextBlock Text="COM консоли (отдельный USB-UART)" IsVisible="{Binding ShowConsoleSettings}" />
           <TextBox Text="{Binding ConsolePort}" Watermark="COM4" IsVisible="{Binding ShowConsoleSettings}" />
           <TextBlock Text="Резервные порты для старых профилей. Для новых задайте подключения через «Оборудование» — они сохранятся в JSON профиля." TextWrapping="Wrap" />

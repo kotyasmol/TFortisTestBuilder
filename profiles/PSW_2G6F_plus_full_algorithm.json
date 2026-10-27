@@ -2272,5 +2272,1508 @@
       "targetNodeId": "11",
       "targetConnector": "Вход"
     }
-  ]
+  ],
+  "hardware": {
+    "StandName": "АПК-03 · PSW-2G6F+",
+    "PortName": "",
+    "BaudRate": 9600,
+    "Parity": 0,
+    "DataBits": 8,
+    "StopBits": 1,
+    "PollIntervalMs": 1000,
+    "Devices": [
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 1,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 3,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 5,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 7,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 9,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "EL-60v5",
+        "SlaveId": 11,
+        "Registers": [
+          {
+            "Address": 1400,
+            "Name": "Текущий ток, канал A, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1401,
+            "Name": "Текущий ток, канал B, мА",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1402,
+            "Name": "Текущее напряжение, канал A, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1403,
+            "Name": "Текущее напряжение, канал B, мВ",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1404,
+            "Name": "Макс. ток, канал A, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1405,
+            "Name": "Макс. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1406,
+            "Name": "Макс. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1407,
+            "Name": "Макс. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1408,
+            "Name": "Мин. ток, канал A, мА",
+            "Writable": true,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1409,
+            "Name": "Мин. ток, канал B, мА",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1410,
+            "Name": "Мин. напряжение, канал A",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1411,
+            "Name": "Мин. напряжение, канал B",
+            "Writable": false,
+            "Category": "Статистика"
+          },
+          {
+            "Address": 1412,
+            "Name": "Установка нагрузки, канал A, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1413,
+            "Name": "Установка нагрузки, канал B, мВт",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1414,
+            "Name": "Включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1415,
+            "Name": "Включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1416,
+            "Name": "Температура радиатора, канал A",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1417,
+            "Name": "Температура радиатора, канал B",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1418,
+            "Name": "Макс. температура радиатора, канал A",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1419,
+            "Name": "Макс. температура радиатора, канал B",
+            "Writable": true,
+            "Category": "Управление температурой"
+          },
+          {
+            "Address": 1420,
+            "Name": "Авт. включение нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1421,
+            "Name": "Авт. включение нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1422,
+            "Name": "Авт. установка нагрузки, канал A",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1423,
+            "Name": "Авт. установка нагрузки, канал B",
+            "Writable": true,
+            "Category": "Автоуправление"
+          },
+          {
+            "Address": 1424,
+            "Name": "Включение Passive PoE, канал A",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1425,
+            "Name": "Включение Passive PoE, канал B",
+            "Writable": true,
+            "Category": "Управление PoE"
+          },
+          {
+            "Address": 1426,
+            "Name": "T2P, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1427,
+            "Name": "T2P, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1428,
+            "Name": "ALERT, канал A",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1429,
+            "Name": "ALERT, канал B",
+            "Writable": false,
+            "Category": "Измерения"
+          },
+          {
+            "Address": 1430,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Статистика"
+          }
+        ],
+        "IdentificationValue": 4,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "IO-2",
+        "SlaveId": 21,
+        "Registers": [
+          {
+            "Address": 1500,
+            "Name": "Выход 1",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1501,
+            "Name": "Выход 2",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1502,
+            "Name": "Выход 3",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1503,
+            "Name": "Выход 4",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1504,
+            "Name": "Выход 5",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1505,
+            "Name": "Выход 6",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1506,
+            "Name": "Выход 7",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1507,
+            "Name": "Состояние входа 1",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1508,
+            "Name": "Состояние входа 2",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1509,
+            "Name": "Состояние входа 3",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1510,
+            "Name": "Состояние входа 4",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1511,
+            "Name": "Состояние входа 5",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1512,
+            "Name": "Состояние входа 6",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1513,
+            "Name": "Состояние входа 7",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1514,
+            "Name": "Состояние входа 8",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1515,
+            "Name": "Состояние входа 9",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1516,
+            "Name": "Состояние входа 10",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1517,
+            "Name": "Состояние входа 11",
+            "Writable": false,
+            "Category": "Входы"
+          },
+          {
+            "Address": 1518,
+            "Name": "I2C адрес чипа",
+            "Writable": true,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1519,
+            "Name": "I2C адрес регистра",
+            "Writable": true,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1520,
+            "Name": "I2C данные",
+            "Writable": true,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1521,
+            "Name": "I2C флаг готовности",
+            "Writable": false,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1522,
+            "Name": "I2C старт чтения",
+            "Writable": true,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1523,
+            "Name": "I2C старт записи",
+            "Writable": true,
+            "Category": "I2C"
+          },
+          {
+            "Address": 1524,
+            "Name": "RS485 адрес Modbus ID",
+            "Writable": true,
+            "Category": "RS485"
+          },
+          {
+            "Address": 1525,
+            "Name": "RS485 адрес регистра",
+            "Writable": true,
+            "Category": "RS485"
+          },
+          {
+            "Address": 1526,
+            "Name": "RS485 данные",
+            "Writable": true,
+            "Category": "RS485"
+          },
+          {
+            "Address": 1527,
+            "Name": "RS485 флаг готовности",
+            "Writable": false,
+            "Category": "RS485"
+          },
+          {
+            "Address": 1528,
+            "Name": "RS485 старт чтения",
+            "Writable": true,
+            "Category": "RS485"
+          },
+          {
+            "Address": 1529,
+            "Name": "RS485 старт записи",
+            "Writable": true,
+            "Category": "RS485"
+          }
+        ],
+        "IdentificationValue": 5,
+        "IdentificationAddress": 0
+      },
+      {
+        "Name": "PS-3",
+        "SlaveId": 23,
+        "Registers": [
+          {
+            "Address": 1200,
+            "Name": "Выход AC1",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1201,
+            "Name": "Выход AC2",
+            "Writable": true,
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1202,
+            "Name": "Выход Sensor1",
+            "Writable": false,
+            "Category": "Сенсоры"
+          },
+          {
+            "Address": 1203,
+            "Name": "Выход Sensor2",
+            "Writable": false,
+            "Category": "Сенсоры"
+          },
+          {
+            "Address": 1204,
+            "Name": "Ключ зарядки",
+            "Writable": true,
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1205,
+            "Name": "Напряжение зарядки, мВ",
+            "Writable": false,
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1206,
+            "Name": "Ток зарядки, мА",
+            "Writable": false,
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1207,
+            "Name": "Макс. напряжение зарядки, мВ",
+            "Writable": false,
+            "Category": "Статистика зарядки"
+          },
+          {
+            "Address": 1208,
+            "Name": "Мин. напряжение зарядки, мВ",
+            "Writable": false,
+            "Category": "Статистика зарядки"
+          },
+          {
+            "Address": 1209,
+            "Name": "Сопротивление контроля тока, Ом",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1210,
+            "Name": "Ключ разрядки",
+            "Writable": true,
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1211,
+            "Name": "Напряжение разрядки, мВ",
+            "Writable": false,
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1212,
+            "Name": "Ток разрядки, мА",
+            "Writable": false,
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1213,
+            "Name": "Макс. напряжение разрядки, мВ",
+            "Writable": false,
+            "Category": "Статистика разрядки"
+          },
+          {
+            "Address": 1214,
+            "Name": "Мин. напряжение разрядки, мВ",
+            "Writable": false,
+            "Category": "Статистика разрядки"
+          },
+          {
+            "Address": 1215,
+            "Name": "Реле нагревателя 1",
+            "Writable": true,
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1216,
+            "Name": "Ток нагревателя 1, мА",
+            "Writable": false,
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1217,
+            "Name": "Температура радиатора ЭН",
+            "Writable": false,
+            "Category": "Температура"
+          },
+          {
+            "Address": 1218,
+            "Name": "Макс. температура радиатора",
+            "Writable": true,
+            "Category": "Защита"
+          },
+          {
+            "Address": 1219,
+            "Name": "Очистка статистики",
+            "Writable": true,
+            "Category": "Управление"
+          },
+          {
+            "Address": 1220,
+            "Name": "Реле нагревателя 2",
+            "Writable": true,
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1221,
+            "Name": "Ток нагревателя 2, мА",
+            "Writable": false,
+            "Category": "Нагреватели"
+          }
+        ],
+        "IdentificationValue": 8,
+        "IdentificationAddress": 0
+      }
+    ]
+  }
 }

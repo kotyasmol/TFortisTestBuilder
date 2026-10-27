@@ -240,20 +240,27 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
 
         var reconnect = IsConnected;
+        var connectedPort = SelectedPort;
         IsConnecting = true;
         try
         {
             // The previous poller must finish before replacing its register map.
             if (reconnect) await DisconnectAsync();
             _selectedProfile = profile;
+            if (profile == null) _currentProfilePath = null;
             OnPropertyChanged(nameof(SelectedProfile));
             OnPropertyChanged(nameof(SelectedStationProfile));
             UpdateStationProfileSelection();
             if (profile != null)
             {
                 LoadProfile(profile.FilePath);
-                if (reconnect && _profileLoadError.Length == 0 && GraphConnectionRequirements.RequiresStandConnection(RootGraph))
-                    await ConnectAsync();
+                if (_profileLoadError.Length == 0)
+                {
+                    if (reconnect && GraphConnectionRequirements.RequiresStandConnection(RootGraph))
+                        await ConnectAsync(connectedPort);
+                    else StatusMessage = GraphConnectionRequirements.RequiresStandConnection(RootGraph)
+                        ? "Профиль выбран. Подключите стенд." : "Профиль выбран.";
+                }
             }
         }
         catch (Exception ex)
@@ -309,7 +316,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _slaveManager.Slaves.CollectionChanged += OnStandDevicesChanged;
         RefreshStandIdentity();
 
-        ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync, () => !IsTraining && !IsTestRunning && !IsConnecting);
+        ToggleConnectionCommand = new AsyncRelayCommand(ToggleConnectionAsync, () => IsConnected ? CanDisconnectStation : CanConnectStation);
         RunGraphCommand = new AsyncRelayCommand(RunGraphAsync, () => CanStartRun);
         PauseTestCommand = new RelayCommand(PauseTest, () => CanPauseTest);
         ResumeTestCommand = new RelayCommand(ResumeTest, () => CanResumeTest);
@@ -855,7 +862,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task ToggleConnectionAsync()
     {
         if (IsTraining) return;
-        if (IsTestRunning || IsConnecting) return;
+        if (IsConnected ? !CanDisconnectStation : !CanConnectStation) return;
         IsConnecting = true;
         try
         {
@@ -871,19 +878,28 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (IsConnected) await PrepareOpenedProfileAsync();
     }
 
-    private async Task ConnectAsync()
+    internal static string[] GetStandPortCandidates(HardwareConfiguration? hardware, IEnumerable<string> availablePorts)
+    {
+        var consolePorts = (hardware?.ConsoleDevices ?? new()).Select(d => d.PortName?.Trim())
+            .Where(p => !string.IsNullOrEmpty(p)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return availablePorts.Where(p => !consolePorts.Contains(p)).Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private async Task ConnectAsync(string? identifiedPort = null)
     {
         ResetProfilePreparation();
-        StatusMessage = "Поиск COM-портов...";
+        StatusMessage = "Поиск стенда на COM-портах...";
 
         RootGraph.Hardware?.Validate();
         _registerState.Clear();
         var hardware = RootGraph.Hardware;
-        var configuredPort = (hardware?.PortName ?? AppSettings.Instance.StandPort)?.Trim();
+        // The profile identifies equipment, never a workstation-specific COM number.
+        string? configuredPort = identifiedPort;
         var availablePorts = SerialPort.GetPortNames().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
-        var consolePorts = hardware?.ConsoleDevices.Select(d => d.PortName.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var ports = string.IsNullOrWhiteSpace(configuredPort)
-            ? availablePorts.Where(p => consolePorts?.Contains(p) != true).ToArray() : new[] { configuredPort };
+        var ports = string.IsNullOrWhiteSpace(identifiedPort)
+            ? GetStandPortCandidates(hardware, availablePorts)
+            : GetStandPortCandidates(hardware, new[] { identifiedPort });
 
 
         foreach (var port in ports)
@@ -933,6 +949,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             catch (Exception ex)
             {
                 ReportPortSearchFailure(port, ex, string.IsNullOrWhiteSpace(configuredPort));
+                if (ex is InvalidOperationException) TestingLogger.Info($"{port}: {ex.Message}");
                 DisposeRegisterMonitor();
                 await _modbusService.DisconnectAsync();
                 IsConnected = false;
@@ -949,7 +966,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task<bool> StartMonitoringAsync()
     {
-        var count = RootGraph.Hardware == null ? await _slaveManager.ScanAsync() : await _slaveManager.ConfigureAsync(RootGraph.Hardware);
+        var count = RootGraph.Hardware == null
+            ? await _slaveManager.ScanAsync()
+            : await _slaveManager.ConfigureAsync(RootGraph.Hardware);
 
         if (count == 0)
         {
@@ -971,7 +990,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         IsMonitoringActive = true;
         StatusMessage = $"Найдено устройств: {count}";
-        TestingLogger.Info($"Найдено устройств: {count}. Можно запускать тест.");
+        TestingLogger.Info(_currentProfilePath == null
+            ? $"Найдено устройств: {count}. Выберите профиль проверки."
+            : $"Найдено устройств: {count}. Оборудование проверено.");
         return true;
     }
 

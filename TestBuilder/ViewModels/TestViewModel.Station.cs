@@ -83,7 +83,14 @@ public partial class TestViewModel
     public string StationConfigurationCaption => SelectedProfile?.DeviceModel != null
         ? SelectedProfile.ConfigurationName + " · этапы теста" : "Этапы теста";
     public bool HasStationProfile => SelectedProfile != null && _profileLoadError.Length == 0;
-    public bool CanConnectStation => !IsTraining && !IsConnected && !IsTestRunning && !IsConnecting;
+    public bool HasConnectionProfile => _currentProfilePath != null && _profileLoadError.Length == 0 && RootGraph.Hardware != null;
+    public string ConnectionRequirements => _currentProfilePath == null ? "Подключитесь к стенду, затем выберите профиль." :
+        RootGraph.Hardware == null ? "Автоматический поиск известных устройств стенда." :
+        "Ищем на доступных COM-портах: " + string.Join("; ", RootGraph.Hardware.Devices.Select(d =>
+            d.ExpectedIdentificationValues.Count > 0
+                ? $"slave {d.SlaveId} — {d.Name}, регистр {d.IdentificationAddress} = {string.Join(" или ", d.ExpectedIdentificationValues)}"
+                : $"slave {d.SlaveId} — {d.Name}, чтение {d.Registers.Count} регистров"));
+    public bool CanConnectStation => _profileLoadError.Length == 0 && !IsTraining && !IsConnected && !IsTestRunning && !IsConnecting && !IsNetworkSetupBusy;
     public bool CanDisconnectStation => IsConnected && !IsTestRunning && !IsConnecting;
     public bool CanPauseTest => IsTestRunning && !IsTestPaused && !IsStopping;
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
@@ -155,7 +162,8 @@ public partial class TestViewModel
         _profileLoadError.Length > 0 ? "Программа не загружена. Выберите другой профиль или обратитесь к инженеру." :
         IsConnecting ? "Ищем стенд. Дождитесь окончания подключения." :
         IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : _isPreparingProfile ? "Настройка стенда" : "Стенд занят проверкой") :
-        _currentProfilePath == null || _selectedProfile == null ? "Выберите программу проверки" :
+        _currentProfilePath == null || _selectedProfile == null ? (IsConnected ? "Выберите программу проверки" : "Подключитесь к стенду, затем выберите профиль") :
+        RootGraph.Hardware == null && GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? ConnectionRequirements :
         HasPendingPreparation ? (!IsConnected && GraphConnectionRequirements.RequiresStandConnection(RootGraph)
             ? "Подключите стенд для подготовки профиля" : "Подготовка профиля ещё не выполнена. Повторите запуск.") :
         !GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? "Готово · подключение к стенду не требуется" :
@@ -190,6 +198,8 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(HasStationProfile));
         OnPropertyChanged(nameof(StationConnectionText));
         OnPropertyChanged(nameof(IsStationReady));
+        OnPropertyChanged(nameof(HasConnectionProfile));
+        OnPropertyChanged(nameof(ConnectionRequirements));
         OnPropertyChanged(nameof(CanConnectStation));
         OnPropertyChanged(nameof(CanDisconnectStation));
         OnPropertyChanged(nameof(CanPauseTest));

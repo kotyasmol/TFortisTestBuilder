@@ -103,14 +103,25 @@ namespace TestBuilder.Domain.Modbus
             var models = new List<SlaveModelBase>();
             foreach (var d in configuration.Devices)
             {
-                if (d.IdentificationValue.HasValue)
+                var expected = d.ExpectedIdentificationValues;
+                if (expected.Count > 0)
                 {
-                    var id = await _modbus.ReadRegistersAsync(d.SlaveId, d.IdentificationAddress, 1);
-                    if (id.Length != 1 || id[0] != d.IdentificationValue)
-                        throw new InvalidOperationException($"Slave {d.SlaveId}: тип оборудования не совпадает с профилем {d.Name}.");
+                    ushort[] id;
+                    try { id = await _modbus.ReadRegistersAsync(d.SlaveId, d.IdentificationAddress, 1); }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Slave {d.SlaveId} ({d.Name}): нет ответа при проверке регистра {d.IdentificationAddress}. {ex.Message}", ex);
+                    }
+                    if (id.Length != 1 || !expected.Contains(id[0]))
+                        throw new InvalidOperationException($"Slave {d.SlaveId} ({d.Name}), регистр {d.IdentificationAddress}: " +
+                            $"ожидалось {string.Join(" или ", expected)}, получено {(id.Length == 1 ? id[0].ToString() : "неполный ответ")}.");
                 }
                 var model = new ConfiguredSlaveModel(d, _modbus);
-                await model.PollAsync();
+                try { await model.PollAsync(); }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Slave {d.SlaveId} ({d.Name}): не удалось прочитать регистры профиля. {ex.Message}", ex);
+                }
                 models.Add(model);
             }
             await Dispatcher.UIThread.InvokeAsync(() => {

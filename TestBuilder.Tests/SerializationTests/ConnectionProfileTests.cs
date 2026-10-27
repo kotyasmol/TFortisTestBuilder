@@ -25,6 +25,16 @@ public class ConnectionProfileTests
     };
 
     [Fact]
+    public void StandSearchIgnoresSavedComNumberAndExcludesConsolePorts()
+    {
+        var hardware = Hardware();
+        hardware.PortName = "COM-OLD";
+        hardware.ConsoleDevices[0].PortName = "COM2";
+        Assert.Equal(new[] { "COM1", "COM3" }, TestViewModel.GetStandPortCandidates(hardware,
+            new[] { "COM3", "COM2", "COM1" }));
+    }
+
+    [Fact]
     public void SaveLoadPreservesBothConnections_AndRejectsDanglingReferencesAtomically()
     {
         using var bus = new ModbusService();

@@ -23,6 +23,29 @@ public sealed class DeviceDefinition
     public string Name { get; set; } = "Новое устройство";
     public byte SlaveId { get; set; } = 1;
     public ushort? IdentificationValue { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ushort>? IdentificationValues { get; set; }
+    [JsonIgnore]
+    public IReadOnlyList<ushort> ExpectedIdentificationValues => IdentificationValues ??
+        (IdentificationValue is { } value ? new List<ushort> { value } : new List<ushort>());
+    [JsonIgnore]
+    public string IdentificationValuesText
+    {
+        get => string.Join(", ", ExpectedIdentificationValues);
+        set
+        {
+            var values = new List<ushort>();
+            if (!string.IsNullOrWhiteSpace(value))
+                foreach (var part in value.Split(','))
+                {
+                    if (!ushort.TryParse(part.Trim(), out var number))
+                        throw new FormatException("Укажите значения 0..65535 через запятую, например 9, 10.");
+                    if (!values.Contains(number)) values.Add(number);
+                }
+            IdentificationValue = values.Count == 1 ? values[0] : null;
+            IdentificationValues = values.Count > 1 ? values : null;
+        }
+    }
     public ushort IdentificationAddress { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ushort? StandSerialNumberAddress { get; set; }
@@ -33,7 +56,7 @@ public sealed class HardwareConfiguration
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StandName { get; set; }
-    // Null preserves the workplace port of old profiles; empty explicitly means automatic search.
+    // Retained for JSON compatibility. Stand discovery uses device identities, not this port name.
     public string? PortName { get; set; }
     public List<ConsoleDeviceDefinition> ConsoleDevices { get; set; } = new();
     public int BaudRate { get; set; } = 9600;
@@ -61,6 +84,8 @@ public sealed class HardwareConfiguration
             throw new InvalidOperationException("Нужны устройства с уникальными адресами slave 1..247.");
         foreach (var d in Devices)
         {
+            if (d.IdentificationValues != null && (d.IdentificationValue.HasValue || d.IdentificationValues.Count == 0))
+                throw new InvalidOperationException($"Устройство {d.Name}: задайте одно значение типа либо непустой список допустимых значений.");
             if (d.SlaveId is < 1 or > 247 || string.IsNullOrWhiteSpace(d.Name) ||
                 d.Registers == null || d.Registers.Count is < 1 or > 4096 || d.Registers.Any(x => x == null))
                 throw new InvalidOperationException($"Устройство {d.Name}: нужны имя, slave 1..247 и 1..4096 регистров.");

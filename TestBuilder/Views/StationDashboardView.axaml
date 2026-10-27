@@ -254,7 +254,7 @@
             </Grid>
           </Border>
         </Grid>
-        <TextBlock Text="Выберите программу слева" FontSize="{StaticResource FontTitle}" VerticalAlignment="Center" HorizontalAlignment="Center"
+        <TextBlock Text="{Binding StationReadiness}" TextWrapping="Wrap" Margin="16" FontSize="{StaticResource FontTitle}" VerticalAlignment="Center" HorizontalAlignment="Center"
                    IsVisible="{Binding !HasStationProfile}" Foreground="{DynamicResource TextSecondaryBrush}" />
       </Grid>
 
