@@ -48,8 +48,25 @@ public class LogAutoScrollTests
                 Assert.Equal(before, viewer.Offset.Y, 1);
                 Assert.True(viewer.Offset.Y < viewer.Extent.Height - viewer.Viewport.Height - 4);
 
+                var frozen = list.Items.Cast<LogEntry>().ToArray();
+                // A running subtest produces enough output to trim the live buffer.
+                for (var i = 0; i < 1100; i++)
+                {
+                    Add($"New subtest row {i}");
+                    vm.TestingLogger.Entries.RemoveAt(0);
+                }
+                Layout();
+                Assert.Equal(frozen, list.Items.Cast<LogEntry>().ToArray());
+                Assert.Equal(before, viewer.Offset.Y, 1);
+                // Clearing the source for another run must not discard the reading snapshot.
+                vm.TestingLogger.Entries.Clear(); Add("Next run"); Layout();
+                Assert.Equal(frozen, list.Items.Cast<LogEntry>().ToArray());
+                window.MouseWheel(center, new Vector(0, -1)); Layout();
+                Assert.False(toggle.IsChecked);
+
                 Click(view.FindControl<Button>("LogToBottomButton")!);
                 Assert.True(toggle.IsChecked);
+                Assert.Equal(vm.TestingLogger.Entries.ToArray(), list.Items.Cast<LogEntry>().ToArray());
                 AtBottom();
                 // Trimming the oldest entries and resizing must not disable following.
                 for (var i = 0; i < 40; i++) { vm.TestingLogger.Entries.RemoveAt(0); Add($"Next {i}"); }

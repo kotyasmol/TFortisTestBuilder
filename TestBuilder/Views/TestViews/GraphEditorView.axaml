@@ -117,16 +117,22 @@
                    FontWeight="SemiBold"
                    Foreground="{Binding NodeHeaderTextBrush}"
                    VerticalAlignment="Center" />
+          <Border IsVisible="{Binding CanRunOnlyOnFirstRun}"
+                  HorizontalAlignment="Left"
+                  Background="{DynamicResource SurfaceBrush}"
+                  CornerRadius="4" Padding="6,0">
           <CheckBox x:Name="ProfileOpenToggle"
                     Background="Transparent"
                     Content="При открытии профиля"
                     FontSize="11"
+                    FontWeight="SemiBold"
                     MinHeight="24"
-                    Foreground="{Binding NodeHeaderTextBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
                     IsVisible="{Binding CanRunOnlyOnFirstRun}"
                     IsChecked="{Binding RunOnlyOnFirstRun, Mode=TwoWay}"
                     IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}"
                     ToolTip.Tip="Выполнять при каждом открытии профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. При обычных запусках теста пропускать. Подтест и цикл выполняются целиком." />
+          </Border>
         </StackPanel>
       </DockPanel>
     </DataTemplate>
@@ -914,7 +920,7 @@
 
                     <Grid ColumnDefinitions="*,*">
                       <CheckBox Grid.Column="0"  IsChecked="{Binding IsEnabled}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включен" TextWrapping="Wrap" /></CheckBox>
-                      <CheckBox Grid.Column="1"  IsChecked="{Binding StopOnError}" FontSize="{StaticResource FontCaption}" Margin="8,0,0,0" ><TextBlock Text="Стоп" TextWrapping="Wrap" /></CheckBox>
+                      <CheckBox Grid.Column="1"  IsChecked="{Binding StopOnError}" FontSize="{StaticResource FontCaption}" Margin="8,0,0,0" ><TextBlock Text="Прервать тест при ошибке" TextWrapping="Wrap" /></CheckBox>
                     </Grid>
 
                     <CheckBox

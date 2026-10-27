@@ -6,6 +6,8 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
 using System.Collections.Specialized;
+using System.Collections.ObjectModel;
+using TestBuilder.Services.Logging;
 using System.Linq;
 using TestBuilder.ViewModels;
 
@@ -13,7 +15,8 @@ namespace TestBuilder.Views.TestViews;
 
 public partial class LogPanelView : UserControl, IDisposable
 {
-    private const double BottomThreshold = 4;
+    private readonly ObservableCollection<LogEntry> _visibleEntries = new();
+    private bool _historyPaused;
     private TestViewModel? _currentVm;
     private bool _scrollPending;
     private bool _disposed;
@@ -24,6 +27,7 @@ public partial class LogPanelView : UserControl, IDisposable
     public LogPanelView()
     {
         InitializeComponent();
+        LogList.ItemsSource = _visibleEntries;
         LogSelection.Enable(LogList);
         LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
         LogList.AddHandler(PointerWheelChangedEvent, OnLogWheel, RoutingStrategies.Tunnel);
@@ -44,7 +48,13 @@ public partial class LogPanelView : UserControl, IDisposable
     private void OnScrollToBottomClick(object? sender, RoutedEventArgs e) => ResumeFollowing();
     private void OnFollowLogsChanged(object? sender, RoutedEventArgs e)
     {
-        if (Following) RequestScrollToBottom();
+        if (Following)
+        {
+            if (_historyPaused) SynchronizeEntries();
+            _historyPaused = false;
+            RequestScrollToBottom();
+        }
+        else _historyPaused = true;
     }
 
     private void ResumeFollowing()
@@ -61,11 +71,37 @@ public partial class LogPanelView : UserControl, IDisposable
         _currentVm = DataContext as TestViewModel;
         if (_currentVm != null)
             _currentVm.TestingLogger.Entries.CollectionChanged += OnLogEntriesChanged;
+        SynchronizeEntries();
         if (FollowLogsToggle != null) ResumeFollowing();
     }
 
+    private void SynchronizeEntries()
+    {
+        _visibleEntries.Clear();
+        if (_currentVm != null)
+            foreach (var entry in _currentVm.TestingLogger.Entries) _visibleEntries.Add(entry);
+    }
+
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => RequestScrollToBottom();
+    {
+        // Keep a stable reading snapshot: the live logger trims its first row at
+        // 1000 entries, which otherwise moves the viewport even without autoscroll.
+        if (!Following) return;
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                for (var i = 0; i < e.NewItems!.Count; i++)
+                    _visibleEntries.Insert(e.NewStartingIndex + i, (LogEntry)e.NewItems[i]!);
+                break;
+            case NotifyCollectionChangedAction.Remove:
+                for (var i = 0; i < e.OldItems!.Count; i++) _visibleEntries.RemoveAt(e.OldStartingIndex);
+                break;
+            default:
+                SynchronizeEntries();
+                break;
+        }
+        RequestScrollToBottom();
+    }
 
     private void OnLogScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
@@ -79,7 +115,7 @@ public partial class LogPanelView : UserControl, IDisposable
     {
         if (e.Delta.Y == 0) return;
         FollowLogsToggle.IsChecked = false;
-        if (e.Delta.Y < 0) ResumeIfAtBottomAfterInput();
+
     }
 
     private void OnLogPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -93,23 +129,15 @@ public partial class LogPanelView : UserControl, IDisposable
     {
         if (!_scrollBarInteraction) return;
         _scrollBarInteraction = false;
-        ResumeIfAtBottomAfterInput();
+
     }
 
     private void OnLogKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key is not (Key.Up or Key.Down or Key.PageUp or Key.PageDown or Key.Home or Key.End)) return;
         FollowLogsToggle.IsChecked = false;
-        if (e.Key is Key.Down or Key.PageDown or Key.End) ResumeIfAtBottomAfterInput();
-    }
 
-    private void ResumeIfAtBottomAfterInput()
-        => Dispatcher.UIThread.Post(() =>
-        {
-            if (!_disposed && Viewer is { } viewer &&
-                viewer.Extent.Height - viewer.Viewport.Height - viewer.Offset.Y <= BottomThreshold)
-                ResumeFollowing();
-        }, DispatcherPriority.Background);
+    }
 
     private void RequestScrollToBottom()
     {

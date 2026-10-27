@@ -29,7 +29,8 @@
                     Spacing="8">
           <ToggleButton x:Name="FollowLogsToggle" Content="Следить за логом" IsChecked="True"
                         IsCheckedChanged="OnFollowLogsChanged" Padding="8,0" MinHeight="28" Height="28"
-                        ToolTip.Tip="Показывать конец журнала при появлении новых записей. Прокрутка вверх отключает слежение." />
+                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                        ToolTip.Tip="Показывать новые записи. При прокрутке журнал фиксируется для чтения. Чтобы вернуться к новым записям, включите слежение или нажмите «В конец»." />
           <Button x:Name="LogToBottomButton" Content="В конец" Click="OnScrollToBottomClick"
                   Padding="8,0" MinHeight="28" Height="28" ToolTip.Tip="Перейти к концу журнала и включить слежение" />
           <Button Click="OnCopyLogs"
@@ -80,7 +81,6 @@
               ClipToBounds="True">
         <Grid>
           <ListBox x:Name="LogList"
-                   ItemsSource="{Binding TestingLogger.Entries}"
                    ToolTip.Tip="Shift — диапазон строк, Ctrl/⌘ — отдельные строки. Ctrl/⌘+A — выделить всё."
                    Background="Transparent" BorderThickness="0" Padding="0"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -105,7 +105,7 @@
           <TextBlock Text="Здесь появится журнал выполнения теста" TextWrapping="Wrap"
                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12"
                      Foreground="{DynamicResource TextSecondaryBrush}" IsHitTestVisible="False"
-                     IsVisible="{Binding TestingLogger.Entries.Count, Converter={StaticResource CollectionEmptyConverter}}" />
+                     IsVisible="{Binding #LogList.ItemCount, Converter={StaticResource CollectionEmptyConverter}}" />
         </Grid>
       </views:RoundedPanel>
 

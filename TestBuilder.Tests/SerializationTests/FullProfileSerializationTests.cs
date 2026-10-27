@@ -40,6 +40,41 @@ public class FullProfileSerializationTests
         Assert.DoesNotContain(forbiddenType, types);
     }
 
+    [Theory]
+    [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json")]
+    [InlineData("PSW_UPS_Box_8x2Pro_parallel_start.json")]
+    [InlineData("PSW_UPS_Box_8x2Pro_parallel_el60.json")]
+    public void ProProfilesCheckBothSfpPortsAtGigabit(string file)
+    {
+        using var profile = ReadProfile(file);
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize(profile.RootElement.GetRawText(), vm);
+        var subtest = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+            .Single(n => n.Name == "10. DataTest портов 0..9");
+        var node = subtest.BodyGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+        Assert.True(node.AllowGigabit);
+        Assert.True(node.Bidirectional);
+        Assert.True(node.FailOnError);
+        Assert.True(subtest.StopOnError);
+        Assert.Equal(5000, node.DurationMs);
+        Assert.Equal(1, node.AllowedLossPercent);
+        Assert.Equal(2, node.AllowedTxDeficitPercent);
+        var lines = node.PortsText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(5, lines.Length);
+        Assert.Equal("port8-9,192.168.0.10,192.168.0.11,1000", lines[4]);
+        Assert.All(lines.Take(4), line => Assert.EndsWith(",100", line));
+        Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
+        var serialized = GraphSerializer.Serialize(vm, file);
+        GraphSerializer.Deserialize(serialized, vm);
+        var restored = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+            .Single(n => n.Name == "10. DataTest портов 0..9")
+            .BodyGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+        Assert.True(restored.AllowGigabit);
+        Assert.Equal(node.PortsText, restored.PortsText);
+        Assert.True(restored.Bidirectional);
+    }
+
     private static JsonDocument ReadProfile(string file) => JsonDocument.Parse(File.ReadAllText(
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file))));
 
@@ -270,7 +305,7 @@ public class FullProfileSerializationTests
                 "port2-3,192.168.0.4,192.168.0.5,100",
                 "port4-5,192.168.0.6,192.168.0.7,100",
                 "port6-7,192.168.0.8,192.168.0.9,100",
-                "port8-9,192.168.0.10,192.168.0.11,100"
+                "port8-9,192.168.0.10,192.168.0.11,1000"
             },
             portLines);
         Assert.Contains(

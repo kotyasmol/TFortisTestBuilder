@@ -2260,7 +2260,7 @@
       "y": 128,
       "color": "purple",
       "name": "10. DataTest портов 0..9",
-      "description": "SoftwarePcap проверка пар портов коммутатора 0-1, 2-3, 4-5, 6-7, 8-9 на статически настроенных картах 192.168.0.2-11",
+      "description": "DataTest: пары 0–1, 2–3, 4–5, 6–7 — 100 Мбит/с; SFP 8–9 — 1000 Мбит/с. Оба направления, карты 192.168.0.2–11.",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
@@ -2284,7 +2284,7 @@
             "durationMs": 5000,
             "outputVariableName": "DataTest",
             "failOnError": true,
-            "allowGigabit": false,
+            "allowGigabit": true,
             "mode": "SoftwarePcap",
             "expectedPackets": 10000,
             "packetSizeBytes": 1514,
@@ -2296,7 +2296,7 @@
             "allowedLossPercent": 1,
             "allowedTxDeficitPercent": 2,
             "bidirectional": true,
-            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,100",
+            "portsText": "port0-1,192.168.0.2,192.168.0.3,100\r\nport2-3,192.168.0.4,192.168.0.5,100\r\nport4-5,192.168.0.6,192.168.0.7,100\r\nport6-7,192.168.0.8,192.168.0.9,100\r\nport8-9,192.168.0.10,192.168.0.11,1000",
             "runOnlyOnFirstRun": false
           },
           {
@@ -3329,7 +3329,7 @@
       "x": 4336,
       "y": -80,
       "color": "blue",
-      "text": "100мбит тесты ок, но гигабит не проверялся пока.  надо? ",
+      "text": "Порты 8–9: DataTest 1000 Мбит/с в обоих направлениях. Нужны гигабитные карты и линк на 192.168.0.10 и 192.168.0.11.",
       "labelWidth": 300,
       "labelHeight": 120,
       "runOnlyOnFirstRun": false
