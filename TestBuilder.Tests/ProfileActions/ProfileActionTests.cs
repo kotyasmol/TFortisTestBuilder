@@ -51,19 +51,21 @@ public class ProfileActionTests
         Assert.Contains("Остановлено", waiting.StateText);
     }
 
-    [Fact]
-    public void Serialization_CopiesBothGraphs_AndOldProfilesClearButtons()
+    [Theory]
+    [InlineData("#15803D")]
+    [InlineData(ProfileActionDefinition.SystemColor)]
+    public void Serialization_CopiesBothGraphs_AndOldProfilesClearButtons(string color)
     {
         using var bus = new ModbusService();
         using var source = new TestViewModel(bus, new SlaveManager(bus));
         LoadEmpty(source);
-        source.RootGraph.QuickActions.Add(new() { Name = "Питание", Display = ProfileActionDisplay.Toggle, Color = "#15803D", Graph = DelayGraph(12), OffGraph = DelayGraph(34) });
+        source.RootGraph.QuickActions.Add(new() { Name = "Питание", Display = ProfileActionDisplay.Toggle, Color = color, Graph = DelayGraph(12), OffGraph = DelayGraph(34) });
         var json = GraphSerializer.Serialize(source, "Копия");
         Assert.Contains("Start (actions v1)", json);
         using var copy = new TestViewModel(bus, new SlaveManager(bus));
         GraphSerializer.Deserialize(json, copy);
         var button = Assert.Single(copy.RootGraph.QuickActions);
-        Assert.Equal("Питание", button.Name); Assert.Equal("#15803D", button.Color); Assert.Equal(ProfileActionDisplay.Toggle, button.Display);
+        Assert.Equal("Питание", button.Name); Assert.Equal(color, button.Color); Assert.Equal(ProfileActionDisplay.Toggle, button.Display);
         Assert.Equal(12, button.Graph.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
         Assert.Equal(34, button.OffGraph.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
         Assert.NotSame(source.RootGraph.QuickActions[0].Graph.Nodes[0], button.Graph.Nodes[0]);

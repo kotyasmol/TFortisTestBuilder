@@ -12,6 +12,8 @@ public enum ProfileActionDisplay { Button, Toggle, Progress }
 
 public sealed class ProfileActionDefinition
 {
+    public const string SystemColor = "system";
+    public static bool IsSystemColor(string? value) => string.Equals(value, SystemColor, StringComparison.OrdinalIgnoreCase);
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "Новое действие";
     public string Color { get; set; } = "#2563EB";
@@ -23,7 +25,7 @@ public sealed class ProfileActionDefinition
     {
         if (string.IsNullOrWhiteSpace(Id) || Id.Length > 100) throw new InvalidOperationException("Некорректный ID кнопки.");
         if (string.IsNullOrWhiteSpace(Name) || Name.Length > 100 || Name.Any(char.IsControl)) throw new InvalidOperationException("Введите название кнопки до 100 символов.");
-        if (!Avalonia.Media.Color.TryParse(Color, out _) || !Enum.IsDefined(Display))
+        if ((!IsSystemColor(Color) && !Avalonia.Media.Color.TryParse(Color, out _)) || !Enum.IsDefined(Display))
             throw new InvalidOperationException("Некорректный цвет или вид кнопки.");
         if (Graph == null || OffGraph == null) throw new InvalidOperationException("Не задан граф действия.");
         if (Graph.QuickActions.Count != 0 || OffGraph.QuickActions.Count != 0)

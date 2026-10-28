@@ -31,7 +31,8 @@ public partial class ProfileActionEditorWindow : Window
         _on = CreateEditor(source.Graph);
         _off = CreateEditor(source.OffGraph);
         OnEditor.DataContext = _on; OffEditor.DataContext = _off;
-        NameInput.Text = source.Name; ColorInput.Text = source.Color;
+        NameInput.Text = source.Name;
+        ColorInput.Text = ProfileActionDefinition.IsSystemColor(source.Color) ? "Системный" : source.Color;
         DisplayInput.SelectedIndex = (int)source.Display;
         _ready = true; UpdateDisplay(); UpdateColorSelection();
         Closed += (_, _) => { OnEditor.Dispose(); OffEditor.Dispose(); _on.Dispose(); _off.Dispose(); _modbus.Dispose(); };
@@ -54,14 +55,22 @@ public partial class ProfileActionEditorWindow : Window
         OffTab.IsVisible = toggle; ToggleHint.IsVisible = toggle;
         if (!toggle) GraphTabs.SelectedIndex = 0;
     }
-    private void OnPickColor(object? sender, RoutedEventArgs e) { if (sender is Button { Tag: string color }) ColorInput.Text = color; }
+    private void OnPickColor(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string color })
+            ColorInput.Text = ProfileActionDefinition.IsSystemColor(color) ? "Системный" : color;
+    }
+    private string SelectedColor => string.Equals(ColorInput.Text?.Trim(), "Системный", StringComparison.OrdinalIgnoreCase)
+        ? ProfileActionDefinition.SystemColor : ColorInput.Text?.Trim() ?? "";
     private void OnColorChanged(object? sender, TextChangedEventArgs e) { if (_ready) UpdateColorSelection(); }
     private void UpdateColorSelection()
     {
-        var valid = Color.TryParse(ColorInput.Text?.Trim() ?? "", out var current);
+        var system = ProfileActionDefinition.IsSystemColor(SelectedColor);
+        var valid = Color.TryParse(SelectedColor, out var current);
         foreach (var swatch in ColorPalette.Children.OfType<Button>())
         {
-            var selected = valid && swatch.Tag is string value && Color.TryParse(value, out var color) && color == current;
+            var selected = swatch.Tag is string value && (ProfileActionDefinition.IsSystemColor(value)
+                ? system : valid && Color.TryParse(value, out var color) && color == current);
             swatch.Classes.Set("selected", selected);
             var name = ToolTip.GetTip(swatch)?.ToString() ?? "Цвет";
             AutomationProperties.SetName(swatch, selected ? $"{name} — выбран" : name);
@@ -71,7 +80,7 @@ public partial class ProfileActionEditorWindow : Window
     internal ProfileActionDefinition BuildResult()
     {
         var result = new ProfileActionDefinition {
-            Id = _id, Name = NameInput.Text?.Trim() ?? "", Color = ColorInput.Text?.Trim() ?? "",
+            Id = _id, Name = NameInput.Text?.Trim() ?? "", Color = SelectedColor,
             Display = (ProfileActionDisplay)DisplayInput.SelectedIndex,
             Graph = _on.RootGraph, OffGraph = _off.RootGraph
         };

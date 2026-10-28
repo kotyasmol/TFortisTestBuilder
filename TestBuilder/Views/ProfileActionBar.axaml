@@ -17,6 +17,15 @@
       <Style Selector="^:pressed"><Setter Property="Opacity" Value="0.85" /></Style>
     </ControlTheme>
   </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Button.profileAction:not(.systemColor)" x:DataType="vm:ProfileActionViewModel">
+      <Setter Property="Background" Value="{Binding Background}" />
+    </Style>
+    <Style Selector="Button.profileAction.systemColor">
+      <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+  </UserControl.Styles>
   <Grid x:Name="QuickActionsLayout" ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
     <Border x:Name="QuickActionsPanel" IsVisible="{Binding !IsQuickActionsCollapsed}" Width="280" Padding="12"
             Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
@@ -33,12 +42,12 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ProfileActionViewModel">
                 <Grid ColumnDefinitions="*,Auto">
-                  <Button Classes="profileAction" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}" Background="{Binding Background}"
+                  <Button Classes="profileAction" Classes.systemColor="{Binding UsesSystemColor}" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}"
                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="52" Padding="10,8"
                           ToolTip.Tip="{Binding StateText}" AutomationProperties.Name="{Binding Name}">
                     <Button.Foreground>
                       <MultiBinding Converter="{StaticResource ContrastText}">
-                        <Binding Path="Background" />
+                        <Binding Path="Background" RelativeSource="{RelativeSource Self}" />
                         <Binding Path="$parent[views:ProfileActionBar].Background" />
                       </MultiBinding>
                     </Button.Foreground>

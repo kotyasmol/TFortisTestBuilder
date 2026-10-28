@@ -20,6 +20,83 @@ namespace TestBuilder.Tests.ProfileActions;
 [Collection("Graph editor UI")]
 public class ProfileActionViewTests
 {
+    [Fact]
+    public async Task SystemColor_CanBeSelectedAndReopened_AndFollowsThemeWithoutChangingCustomColors()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            ProfileActionDefinition saved;
+            var editor = new ProfileActionEditorWindow();
+            try
+            {
+                editor.Show(); Layout(editor);
+                var system = editor.FindControl<StackPanel>("ColorPalette")!.Children.OfType<Button>()
+                    .Single(b => Equals(b.Tag, ProfileActionDefinition.SystemColor));
+                Click(editor, system);
+                Assert.Equal("Системный", editor.FindControl<TextBox>("ColorInput")!.Text);
+                Assert.True(system.Classes.Contains("selected"));
+                saved = editor.BuildResult();
+                Assert.Equal(ProfileActionDefinition.SystemColor, saved.Color);
+            }
+            finally { editor.Close(); }
+
+            var reopened = new ProfileActionEditorWindow(saved, null);
+            try
+            {
+                reopened.Show(); Layout(reopened);
+                Assert.Equal("Системный", reopened.FindControl<TextBox>("ColorInput")!.Text);
+                Assert.Equal("Системный — выбран", AutomationProperties.GetName(reopened.FindControl<StackPanel>("ColorPalette")!
+                    .Children.OfType<Button>().Single(b => b.Classes.Contains("selected"))));
+                Capture(reopened, "action-system-color-editor.png");
+            }
+            finally { reopened.Close(); }
+
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            ProfileActionTests.LoadEmpty(vm);
+            saved.Name = "Системная кнопка"; saved.Display = ProfileActionDisplay.Toggle;
+            vm.RootGraph.QuickActions.Add(saved);
+            vm.RootGraph.QuickActions.Add(new() { Name = "Цветная кнопка", Color = "#15803D" });
+            vm.IsQuickActionsCollapsed = false;
+            var bar = new ProfileActionBar { DataContext = vm };
+            var window = new Window { Width = 420, Height = 400, Content = bar };
+            try
+            {
+                window.Show(); Layout(window);
+                var buttons = bar.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("profileAction")).ToArray();
+                var system = buttons[0]; var custom = buttons[1];
+                Color? previous = null;
+                foreach (var theme in new[] { Avalonia.Styling.ThemeVariant.Light, Avalonia.Styling.ThemeVariant.Dark })
+                {
+                    window.RequestedThemeVariant = theme; Layout(window);
+                    var background = Assert.IsAssignableFrom<ISolidColorBrush>(system.Background).Color;
+                    Assert.NotEqual(previous, background); previous = background;
+                    Assert.Equal(theme == Avalonia.Styling.ThemeVariant.Light ? Colors.Black : Colors.White,
+                        Assert.IsAssignableFrom<ISolidColorBrush>(system.Foreground).Color);
+                    Assert.Equal(system.Foreground, system.GetVisualDescendants().OfType<Ellipse>().Single().Fill);
+                    foreach (var button in buttons)
+                    {
+                        var expected = button == system ? background : Color.Parse("#15803D");
+                        Assert.Equal(expected, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
+                        var point = button.TranslatePoint(new Point(10, 10), window)!.Value;
+                        window.MouseMove(point); Layout(window);
+                        Assert.Equal(expected, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
+                        foreach (var label in button.GetVisualDescendants().OfType<TextBlock>())
+                        {
+                            Assert.True(label.IsEffectivelyVisible);
+                            Assert.Equal(button.Foreground, label.Foreground);
+                        }
+                    }
+                    window.MouseMove(new Point(400, 380)); Layout(window);
+                    Capture(window, $"action-system-color-{theme}.png");
+                }
+                Assert.Equal(ProfileActionDefinition.SystemColor, saved.Color);
+            }
+            finally { window.Close(); }
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData(false, false, ProfileActionDisplay.Toggle)]
     [InlineData(false, true, ProfileActionDisplay.Toggle)]
