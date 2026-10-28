@@ -72,7 +72,8 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private async Task RunAsync()
     {
         if (!CanRun) return;
-        var turnOff = IsToggle && IsStateKnown && IsOn;
+        // Retry an unsuccessful command in the same direction. Only success flips IsOn.
+        var turnOff = IsToggle && IsOn;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         ExpectedSteps = CountLinearSteps(turnOff ? Definition.OffGraph : Definition.Graph);
         IsRunning = true; Status = ""; CurrentStep = "Запуск"; CompletedSteps = 0;

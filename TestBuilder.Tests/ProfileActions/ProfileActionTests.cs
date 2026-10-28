@@ -35,11 +35,14 @@ public class ProfileActionTests
     public async Task FailureAndCancellation_DoNotClaimToggleState()
     {
         var fail = false;
+        var directions = new List<bool>();
         var button = new ProfileActionViewModel(new() { Display = ProfileActionDisplay.Toggle },
-            (_, _, _, _) => Task.FromResult(new ProfileActionResult(!fail, "не выполнено")), () => true, () => { });
+            (_, off, _, _) => { directions.Add(off); return Task.FromResult(new ProfileActionResult(!fail, "не выполнено")); }, () => true, () => { });
         await button.RunCommand.ExecuteAsync(null); Assert.True(button.IsOn);
         fail = true; await button.RunCommand.ExecuteAsync(null);
         Assert.False(button.IsStateKnown); Assert.Contains("Ошибка", button.StateText);
+        await button.RunCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { false, true, true }, directions);
         var waiting = new ProfileActionViewModel(new() { Display = ProfileActionDisplay.Toggle },
             async (_, _, _, token) => { await Task.Delay(Timeout.Infinite, token); return new(true, "OK"); }, () => true, () => { });
         var task = waiting.RunCommand.ExecuteAsync(null);
