@@ -64,6 +64,11 @@ public class ProfileActionViewTests
                 var add = buttons.Single(b => AutomationProperties.GetName(b) == "Добавить кнопку в профиль");
                 Assert.True(add.IsEffectivelyVisible);
                 Assert.Equal(2, buttons.Count(b => AutomationProperties.GetName(b) == "Изменить кнопку" && b.IsEffectivelyVisible));
+                var edit = buttons.First(b => AutomationProperties.GetName(b) == "Изменить кнопку");
+                var delete = buttons.First(b => AutomationProperties.GetName(b) == "Удалить кнопку");
+                Assert.Equal(edit.Bounds.Size, delete.Bounds.Size);
+                Assert.Equal(new Size(16, 16), Assert.IsType<Viewbox>(edit.Content).Bounds.Size);
+                Assert.Equal(new Size(16, 16), Assert.IsType<Viewbox>(delete.Content).Bounds.Size);
                 var run = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[0].RunCommand));
                 Assert.True(run.IsEffectivelyEnabled); Assert.True(run.Bounds.Width >= 160);
                 var second = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[1].RunCommand));
@@ -83,6 +88,76 @@ public class ProfileActionViewTests
                 Assert.Equal(0, bar.Bounds.Width);
             }
             finally { window.Close(); }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task DeleteButton_RequiresConfirmation_CancelEscapeAndClosePreserveGraphs_AndUndoRestoresOrder()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            ProfileActionTests.LoadEmpty(vm);
+            var definitions = new[] {
+                new ProfileActionDefinition { Name = "AC1" },
+                new ProfileActionDefinition { Name = "UPS / АКБ", Display = ProfileActionDisplay.Toggle },
+                new ProfileActionDefinition { Name = "Нагреватель" }
+            };
+            foreach (var definition in definitions) vm.RootGraph.QuickActions.Add(definition);
+            vm.IsQuickActionsCollapsed = false;
+            var bar = new ProfileActionBar { DataContext = vm };
+            var window = new Window { Width = 420, Height = 420, Content = bar };
+            DeleteProfileActionDialog? dialog = null;
+            vm.ConfirmDeleteQuickActionAsync = name =>
+            {
+                dialog = new DeleteProfileActionDialog(name);
+                return dialog.ShowDialog<bool>(window);
+            };
+            try
+            {
+                window.Show(); Layout(window);
+                void RequestDelete()
+                {
+                    var delete = bar.GetVisualDescendants().OfType<Button>().Single(b =>
+                        AutomationProperties.GetName(b) == "Удалить кнопку" && ReferenceEquals(b.DataContext, vm.QuickActions[1]));
+                    Click(window, delete);
+                    Layout(dialog!);
+                    Assert.Contains(dialog!.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("UPS / АКБ") == true);
+                    Assert.Equal(definitions, vm.RootGraph.QuickActions);
+                }
+                foreach (var cancellation in new[] { "button", "escape", "close" })
+                {
+                    RequestDelete();
+                    if (cancellation == "button")
+                        Click(dialog!, dialog!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Отмена")));
+                    else if (cancellation == "escape") dialog!.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+                    else dialog!.Close();
+                    await vm.DeleteQuickActionCommand.ExecutionTask!;
+                    Layout(window);
+                    Assert.Equal(definitions, vm.RootGraph.QuickActions);
+                }
+                RequestDelete();
+                Capture(dialog!, "delete-action-confirmation.png");
+                Click(dialog!, dialog!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Удалить")));
+                await vm.DeleteQuickActionCommand.ExecutionTask!;
+                Assert.Equal(new[] { definitions[0], definitions[2] }, vm.RootGraph.QuickActions);
+                vm.UndoCommand.Execute(null);
+                Assert.Equal(definitions, vm.RootGraph.QuickActions);
+
+                // Recheck edit availability after the asynchronous confirmation.
+                var confirmation = new TaskCompletionSource<bool>();
+                vm.ConfirmDeleteQuickActionAsync = _ => confirmation.Task;
+                var pending = vm.DeleteQuickActionCommand.ExecuteAsync(vm.QuickActions[1]);
+                vm.IsTestRunning = true;
+                confirmation.SetResult(true);
+                await pending;
+                Assert.Equal(definitions, vm.RootGraph.QuickActions);
+                vm.IsTestRunning = false;
+            }
+            finally { dialog?.Close(); window.Close(); }
             return true;
         }, CancellationToken.None);
     }

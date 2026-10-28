@@ -74,13 +74,26 @@ public partial class TestViewModel
         var previous = action.Definition;
         _history.Execute(RootGraph, new ProfileMetadataCommand(() => RootGraph.QuickActions[index] = result, () => RootGraph.QuickActions[index] = previous));
     }
+    internal Func<string, Task<bool>> ConfirmDeleteQuickActionAsync { get; set; } = async name =>
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is { } owner)
+            return await new Views.DeleteProfileActionDialog(name).ShowDialog<bool>(owner);
+        return false;
+    };
+
     [RelayCommand(CanExecute = nameof(CanEditQuickActions))]
-    private void DeleteQuickAction(ProfileActionViewModel? action)
+    private async Task DeleteQuickAction(ProfileActionViewModel? action)
     {
         if (!CanEditQuickActions || action == null) return;
-        var index = RootGraph.QuickActions.IndexOf(action.Definition);
+        var graph = RootGraph;
+        var definition = action.Definition;
+        if (!graph.QuickActions.Contains(definition)) return;
+        if (!await ConfirmDeleteQuickActionAsync(definition.Name) || !CanEditQuickActions || !ReferenceEquals(graph, RootGraph)) return;
+        var index = graph.QuickActions.IndexOf(definition);
         if (index < 0) return;
-        _history.Execute(RootGraph, new ProfileMetadataCommand(() => RootGraph.QuickActions.Remove(action.Definition), () => RootGraph.QuickActions.Insert(index, action.Definition)));
+        _history.Execute(graph, new ProfileMetadataCommand(() => graph.QuickActions.Remove(definition), () => graph.QuickActions.Insert(index, definition)));
     }
 
     internal async Task<ProfileActionResult> ExecuteProfileActionAsync(ProfileActionDefinition action, bool turnOff,
