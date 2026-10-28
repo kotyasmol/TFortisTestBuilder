@@ -34,9 +34,10 @@
         <Button Grid.Column="2" Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
       </Grid>
     </Border>
-    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" IsVisible="{Binding !IsSettingsOpen}">
-      <views:ProfileActionBar DataContext="{Binding TestVM}" IsVisible="{Binding IsOperatorView}" />
-      <Grid Grid.Column="1">
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" IsVisible="{Binding !IsSettingsOpen}">
+      <views:ProfileActionBar x:Name="OperatorQuickActions" Grid.Column="1" IsRightDocked="True"
+                              DataContext="{Binding TestVM}" IsVisible="{Binding IsOperatorView}" />
+      <Grid x:Name="WorkspaceContent">
         <Grid IsVisible="{Binding !IsEngineerWorkspace}">
           <views:StationDashboardView DataContext="{Binding TestVM}" />
         </Grid>

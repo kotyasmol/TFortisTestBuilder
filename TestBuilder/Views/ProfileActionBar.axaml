@@ -14,7 +14,7 @@
       <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.7" /></Style>
     </ControlTheme>
   </UserControl.Resources>
-  <Grid ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
+  <Grid x:Name="QuickActionsLayout" ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
     <Border x:Name="QuickActionsPanel" IsVisible="{Binding !IsQuickActionsCollapsed}" Width="280" Padding="12"
             Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*">
@@ -81,7 +81,7 @@
     <Button Grid.Column="1" x:Name="QuickActionsHandle" Classes="edgeHandle" Command="{Binding ToggleQuickActionsCommand}"
             ToolTip.Tip="{Binding QuickActionsToggleTip}" AutomationProperties.Name="Свернуть или развернуть кнопки профиля"
             Width="24" MinWidth="24" Height="64" Padding="5,12" VerticalAlignment="Center">
-      <Grid>
+      <Grid x:Name="QuickActionsArrows" RenderTransformOrigin="50%,50%">
         <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsQuickActionsCollapsed}" Data="M2 0 L10 8 2 16 0 14 6 8 0 2 Z" />
         <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding !IsQuickActionsCollapsed}" Data="M8 0 L0 8 8 16 10 14 4 8 10 2 Z" />
       </Grid>
