@@ -156,7 +156,7 @@ public class UsabilityTests
                     Assert.Equal(original, GraphSerializer.Serialize(vm.TestVM, "Исходный профиль"));
                 }
                 finally { hardware.Close(); Dispatcher.UIThread.RunJobs(); }
-                Assert.Equal(52, UserGuide.All.Count);
+                Assert.Equal(54, UserGuide.All.Count);
                 foreach (var node in vm.TestVM.AvailableNodes.Concat(new[] { new BodyStartNodeViewModel(), (TestBuilder.ViewModels.NodifyVM.NodeViewModel)new BodyEndNodeViewModel() }))
                 {
                     var article = Assert.IsType<GuideArticle>(UserGuide.ForNode(node.GetType()));

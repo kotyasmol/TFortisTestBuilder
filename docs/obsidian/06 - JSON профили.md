@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-10-22
+updated: 2026-10-28
 ---
 
 # JSON профили
@@ -66,52 +66,21 @@ PrintLabel поддерживает объект labelTemplate с полной �
 После выбора шаблона нужно сохранить профиль.
 
 
-## 2026-10-27 — подключение до выбора профиля
+## Контракт подключения — 2026-10-28
 
-По последнему уточнению пользователя порядок возвращён: «Подключиться» →
-автопоиск COM-порта и известных устройств → выбор профиля. До выбора профиля
-используются редактируемые настройки Discovery и выбранные записи каталога.
-Наличие COM-порта само по себе не считается обнаружением стенда.
+`hardware` содержит ожидаемые slave, идентификацию, карты регистров и RTU-параметры.
+Основной порт выбирается при «Подключиться» по локальному `AppSettings.StandPort`;
+пустая настройка означает первый успешно открытый порт в сортировке по имени.
+Устройства проверяются после выбора профиля на уже открытом порту.
+`hardware.PortName` оставлено для совместимости и не определяет выбор COM.
+Порты консолей при первоначальном открытии Modbus автоматически не исключаются:
+профиль может ещё не быть выбран. Конфликт консоли с занятым портом проверяется
+перед выполнением её нод. Подробности — [[07 - Modbus и мониторинг]].
 
-После выбора профиля подключённый порт автоматически переоткрывается с его
-параметрами RTU; проверяется весь состав `hardware`, затем запускаются мониторинг
-и подготовка профиля. Другой порт при этой проверке не подбирается. При ошибке
-профиль остаётся открытым, соединение сбрасывается, журнал показывает причину.
-Выбор профиля до подключения также допустим; тогда поиск использует его карту.
-Старые профили без `hardware` могут подключаться через сканирование известных типов.
-Каталог оборудования и сохранённые в профиле ожидания остаются без изменений.
-Номер COM в профиле не нужен.
-
-
-## Отменённый порядок от 2026-10-27 — сначала профиль
-
-Основное подключение доступно только после загрузки профиля с `hardware`.
-Программа перебирает доступные COM-порты и проверяет все `Devices`: slave ID,
-Holding-регистр `IdentificationAddress` и `IdentificationValue` (если задан),
-затем полный первый опрос `Registers`. Частичный состав, неправильный тип или
-неполный ответ не считаются успешным подключением. В журнале есть адрес slave,
-имя, регистр, ожидаемое и полученное значения. Профили без идентификатора
-проверяются по доступности всей заданной карты данных.
-
-Номер COM стенда не выбирается и не требуется в профиле. Старые `hardware.PortName`
-и `AppSettings.StandPort` не ограничивают поиск основного подключения; поле JSON
-сохранено для совместимости. Явные порты консолей исключаются из поиска.
-При выборе другого профиля прежний монитор останавливается и порт закрывается.
-Автоматического подключения при смене профиля нет: оператор нажимает «Подключить».
-После успешной проверки запускаются мониторинг и подготовка при открытии профиля.
-
-Редактор «Оборудование» задаёт параметры RTU, устройства, ожидаемый тип и карты
-регистров. Старый профиль без `hardware` открывается для редактирования, но для
-подключения нужно заполнить оборудование и сохранить профиль. Автономные профили
-без Modbus по-прежнему можно выполнять без подключения.
-
-В поставляемых Pro-профилях задано 11 устройств: EL-60v5 (тип 4) на нечётных
-slave 1–15, SIMBAT-24/48 (тип 9 или 10) на 17, IO-2 (тип 5) на 21, PS-3 (тип 8) на 23.
-По уточнению пользователя на slave 17 допустимы оба SIMBAT: 24 и 48.
+В трёх Pro-профилях 11 устройств: восемь EL-60v5 (тип 4) на нечётных 1–15,
+SIMBAT-24/48 (9 или 10) на 17, IO-2 (5) на 21, PS-3 (8) на 23.
 PSW-2G6F+ ожидает шесть EL-60v5 на 1–11, IO-2 на 21 и PS-3 на 23.
-Все типы читаются из Holding 0. Карты скопированы из встроенных шаблонов в JSON,
-поэтому профиль содержит полный контракт и может редактироваться отдельно.
-Существующие RTL-профили уже содержат типы 104/105 и карты данных.
+Идентификация — Holding 0. RTL-профили содержат ожидаемые типы 104/105.
 
 ## Идентификация стенда в панели подключения — 2026-10-19
 
@@ -178,10 +147,10 @@ USB-UART с заданными правилами поиска не препят
 
 ## Подключения в JSON — 2026-10-19
 
-`hardware.PortName` сохранено для совместимости JSON, но с 2026-10-27
-основное подключение всегда ищет оборудование по ожидаемым slave.
-Редактор оборудования записывает пустую строку. Порты консолей
-из оборудования профиля исключаются из автоматического поиска Modbus.
+`hardware.PortName` сохранено для совместимости JSON. Основной порт задаётся
+локальным `standPort` или выбирается по успешному открытию; редактор оборудования
+записывает в профиль пустую строку PortName. Идентификация slave выполняется
+отдельно после открытия профиля.
 
 `hardware.ConsoleDevices` содержит отдельные текстовые UART-устройства:
 `Id`, `Name`, `PortName`, `BaudRate`, `Parity`, `DataBits`, `StopBits`, `EncodingName`,
@@ -262,8 +231,9 @@ NodeDto: `boardElements`, `registerArea`, `reportName`, параметры repea
 старым EXE, который не понимает новые поля. Не переносить такие профили на старый TB.
 Выбор non-Holding области и VersionAtLeast также требует нового runtime.
 
-Новые примеры: RTL_SW_board, RTL_POE_board, RTL_LED_color_template,
-board_manual_label. Параметры SW/PoE предварительные; см. [[25 - Перенос TFortisBoard в TestBuilder]].
+Производственные RTL_SW_board и RTL_POE_board находятся в `profiles`;
+RTL_LED_color_template и board_manual_label — в `examples/profiles`.
+Параметры SW/PoE перенесены из RTL_v1; аппаратная приёмка отдельно от переноса; см. [[25 - Перенос TFortisBoard в TestBuilder]].
 Доставка — отдельные JSON-файлы, без БД/сервера пакетов. Разные заводы могут хранить
 свои варианты под разными именами, не перезаписывая локальные настройки станции.
 
@@ -305,6 +275,10 @@ board_manual_label. Параметры SW/PoE предварительные; с
 | `configurationName` | string? | Необязательное название конфигурации внутри модели, например «Полная проверка» или «Только питание». |
 | `nodes` | array | Ноды графа. |
 | `connections` | array | Связи между коннекторами. |
+| `productKind` | Switch / Board | Тип изделия, по умолчанию Switch. |
+| `hardware` | object? | Устройства, регистры, RTU и консоли. |
+| `board` | object? | Встроенное изображение и области. |
+| `quickActions` | array | Кнопки профиля с отдельными графами. |
 
 ### Группировка конфигураций в пульте
 
@@ -425,6 +399,10 @@ ID, отсутствующие ноды связей и неверные нап�
 | `Send Test Report` | `SendTestReportNodeViewModel` |
 | `Subtest` | `SubtestNodeViewModel` |
 | `For Slaves` | `ForEachSlaveNodeViewModel` |
+| `Serial Console` | `SerialConsoleNodeViewModel` |
+| `Run Program` | `RunProgramNodeViewModel` |
+| `Parse Response` | `ParseResponseNodeViewModel` |
+| `Check LED Color` | `CheckLedColorNodeViewModel` |
 
 Deserializer также принимает часть русских и legacy-имен, например `Старт`, `Конец`, `WriteRegister`, `SELFTEST_CHECK`. Старые типы `Send UDP Set MAC`, `SEND_UDP_SET_MAC_PACKET` и `UDP установка MAC` загружаются как `Set Pro MAC`; их UDP-поля игнорируются, а таймаут меньше 10 секунд заменяется безопасным значением 60000 мс.
 
@@ -445,10 +423,12 @@ Deserializer также принимает часть русских и legacy-�
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | Set PSW MAC (UDP) | `destinationIp`, `localIp`, `localPort`, `udpPort`, `macVariableName`, `timeoutMs`, `failOnError` |
 | Update PSW Firmware | `baseUrl`, `firmwarePath`, `targetVersion`, `versionVariable`, `forceUpdate` |
-| DataTest | `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `allowGigabit`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
-| Print Label | `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `labelModel`, `failOnPrinterError` |
+| DataTest | `DisabledPortsText`, `mode`, `expectedPackets`, `packetSizeBytes`, `udpPort`, `maxPortTestTimeMs`, `targetBandwidthMbps`, `allowGigabit`, `durationMs`, `warmupMs`, `interPairDelayMs`, `allowedLossPercent`, `allowedTxDeficitPercent`, `bidirectional`, `portsText`, `ports` |
+| Print Label | `labelTemplate`, `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `labelModel`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
-| For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body` |
+| For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body`, `repeatOnSameSlave`, `repeatCount`, `indexVariable`, `untilSuccess`, `repeatDelayMs` |
+| Общие | `customName`, `runOnlyOnFirstRun`, `boardElements` |
+| Платы | `serialConsole`, `runProgram`, `parseResponse`, `checkLedColor` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
@@ -517,8 +497,9 @@ production-запрос с фактическим `Dut.cpu_id`; успешный
 
 В `PSW_UPS_Box_8x2Pro_full_algorithm_polling.json` `Run Data Test` использует
 пять постоянных пар: `.2/.3`, `.4/.5`, `.6/.7`, `.8/.9`, `.10/.11` в сети
-`192.168.0.0/24`. Адреса назначаются вручную в Windows и профилем не изменяются.
-Target рабочего профиля — `100 Mbps`, `bidirectional = true`. При загрузке и
+`192.168.0.0/24`. Адреса назначаются отдельной вкладкой «Сеть»
+либо средствами Windows и нодой не изменяются. Общий target — `100 Mbps`,
+SFP-пара `.10/.11` имеет override `1000` и `allowGigabit=true`; `bidirectional=true`. При загрузке и
 сохранении `targetBandwidthMbps`, `ports[].bandwidthMbps` и четвертое поле каждой
 строки `portsText` ограничиваются диапазоном `1..100` при `allowGigabit=false`
 (дефолт); это автоматически мигрирует ошибочные legacy-значения `1000` на `100`.
@@ -634,7 +615,7 @@ JSON-deserializer проигнорирует их как неизвестные 
 При следующем сохранении эти legacy-поля исчезнут. Если старый профиль не
 содержит `serialVariableName`, используется полный `SerialNumber`.
 
-Поставляемый `manual_label_printing.json` содержит только структурные
+Импортируемый пример `examples/profiles/manual_label_printing.json` содержит только структурные
 `Start`/`End` и один исполняемый `Print Label`. В нём
 `useManualSerialNumber: true`, пустое `manualSerialNumber` заполняется оператором
 в UI перед запуском вместе с обязательным `manualMacAddress`; `copies: 4` и
@@ -683,7 +664,7 @@ endpoint больше нет. Поле `sampleCount` удалено из DTO.
 ## Совместимость и риски
 
 - JSON хранит связи по тексту коннектора. Нельзя без миграции менять `Title` коннекторов.
-- В старых/битых профилях могут встречаться строки коннекторов с mojibake или `????`; такие связи deserializer пропустит, если не найдет коннектор.
+- Неизвестный коннектор, в том числе повреждённая строка, вызывает ошибку загрузки; такие связи не пропускаются молча. Отдельные известные legacy-имена сопоставляются явно.
 - `FindConnector` содержит специальную совместимость для `For Slaves`: `Success` сопоставляется с `True`, `Error` - с `False`.
 - `ExpectedValue` и `DeviceType` хранятся как `object?`, поэтому deserializer содержит преобразования из `JsonElement`, строк и чисел.
 - В `For Slaves` старые коннекторы `Success`/`Error` при загрузке сопоставляются с текущими `True`/`False`.
@@ -832,3 +813,11 @@ graph и offGraph. Графы используют обычные nodes/connecti
 потери кнопок при пересохранении. Вложенные определения кнопок, неизвестный вид,
 повторяющиеся ID и некорректные связи отвергаются до замены открытого профиля.
 Сохранение копии переносит оба графа; после загрузки объекты независимы.
+
+## Регистр имён JSON
+
+`GraphSerializer` читает имена свойств без учёта регистра, но не применяет общую
+camelCase-политику при записи. Большинство имён задаётся `JsonPropertyName`.
+Исключение DataTest: неактивные пары записываются как `DisabledPortsText`.
+Не переименовывайте поля по внешнему виду C#-свойства; источник формата —
+`Serialization/GraphDto.cs` и соответствующие Options/Definition.
