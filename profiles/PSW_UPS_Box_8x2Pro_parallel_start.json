@@ -5,7 +5,7 @@
   "nodes": [
     {
       "id": "0",
-      "type": "Start (parallel v1)",
+      "type": "Start (actions v1)",
       "x": 80,
       "y": 120,
       "color": "blue",
@@ -5038,5 +5038,107 @@
         "IdentificationAddress": 0
       }
     ]
-  }
+  },
+  "quickActions": [
+    {
+      "id": "e4243dd30c2e4d05ae62c5ebd99a282e",
+      "name": "AC1",
+      "color": "#2563EB",
+      "display": "Toggle",
+      "graph": {
+        "name": "Включить AC1",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 320,
+            "y": 80,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false,
+            "customName": "Включить AC1"
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 880,
+            "y": 80,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "offGraph": {
+        "name": "Выключить AC1",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 320,
+            "y": 80,
+            "color": "blue",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false,
+            "customName": "Выключить AC1"
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 880,
+            "y": 80,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -436,7 +436,11 @@ public class ParallelGraphCompilationTests
                 expected.Remove(ignored);
                 actual.Remove(ignored);
             }
-            if (id == "0") actual["type"] = "Start";
+            if (id == "0")
+            {
+                expected["type"] = "Start";
+                actual["type"] = "Start";
+            }
             if (id == "17")
                 foreach (var labelField in new[] { "text", "labelWidth", "labelHeight" })
                 {
@@ -452,8 +456,8 @@ public class ParallelGraphCompilationTests
             { "sourceNodeId": "4", "sourceConnector": "Success", "targetNodeId": "7", "targetConnector": "In" }
             """));
         Assert.Equal(ConnectionKeys(expectedConnections), ConnectionKeys(parallel["connections"]!.AsArray()));
-        Assert.Equal("Start", originalNodes[0]!["type"]!.GetValue<string>());
-        Assert.Equal("Start (parallel v1)", parallelNodes[0]!["type"]!.GetValue<string>());
+        Assert.Equal("Start (connections v1)", originalNodes[0]!["type"]!.GetValue<string>());
+        Assert.Equal("Start (actions v1)", parallelNodes[0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
@@ -474,6 +478,13 @@ public class ParallelGraphCompilationTests
             var id = node!["id"]!.GetValue<string>();
             var copy = optimizedNodes.Single(n => n!["id"]!.GetValue<string>() == id)!;
             if (id == "9") continue; // This stand has no SFP cables; the optimized template retains its full test.
+            if (id == "0")
+            {
+                var normalizedStart = node.DeepClone();
+                normalizedStart["type"] = copy["type"]!.DeepClone();
+                Assert.True(JsonNode.DeepEquals(normalizedStart, copy));
+                continue;
+            }
             if (id is not ("2" or "3"))
             {
                 Assert.True(JsonNode.DeepEquals(node, copy), $"Changed unrelated stage {id}.");
@@ -515,7 +526,8 @@ public class ParallelGraphCompilationTests
         if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
-        Assert.Contains("\"type\": \"Start (parallel v1)\"", saved);
+        Assert.Equal(file == ParallelProfile ? "Start (actions v1)" : "Start (connections v1)",
+            JsonNode.Parse(saved)!["nodes"]![0]!["type"]!.GetValue<string>());
         var loadedVm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(saved, loadedVm);
 
@@ -525,6 +537,25 @@ public class ParallelGraphCompilationTests
         Assert.Equal(originalVm.RootGraph.DeviceModel, loadedVm.RootGraph.DeviceModel);
         Assert.Equal(originalVm.RootGraph.Connections.Count, loadedVm.RootGraph.Connections.Count);
         Assert.Equal(2, loadedVm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Count(n => n.RunOnFailure));
+        if (file == ParallelProfile)
+        {
+            var action = Assert.Single(loadedVm.RootGraph.QuickActions);
+            Assert.Equal(originalVm.RootGraph.QuickActions.Single().Id, action.Id);
+            Assert.Equal("AC1", action.Name);
+            Assert.Equal(TestBuilder.Models.ProfileActionDisplay.Toggle, action.Display);
+            foreach (var (graph, value) in new[] { (action.Graph, 1), (action.OffGraph, 0) })
+            {
+                var write = Assert.Single(graph.Nodes.OfType<ModbusWriteNodeViewModel>());
+                Assert.Equal(23, write.SlaveId);
+                Assert.Equal(1200, write.Address);
+                Assert.Equal(value, write.Value);
+                Assert.True(write.VerifyWrite);
+                Assert.False(write.UseCurrentSlaveId);
+                Assert.Equal(3, graph.Nodes.Count);
+                Assert.Equal(2, graph.Connections.Count);
+                Compile(graph);
+            }
+        }
     }
 
     [Fact]
@@ -546,7 +577,9 @@ public class ParallelGraphCompilationTests
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         var existingNodes = vm.RootGraph.Nodes.ToArray();
-        var json = ReadProfile(ParallelProfile).Replace("Start (parallel v1)", "Start (parallel v2)");
+        var profile = JsonNode.Parse(ReadProfile(ParallelProfile))!;
+        profile["nodes"]![0]!["type"] = "Start (parallel v2)";
+        var json = profile.ToJsonString();
 
         Assert.Throws<InvalidOperationException>(() => GraphSerializer.Deserialize(json, vm));
         Assert.Equal(existingNodes, vm.RootGraph.Nodes);
