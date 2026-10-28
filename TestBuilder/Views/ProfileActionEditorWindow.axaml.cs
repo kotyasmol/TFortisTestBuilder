@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using System.Text.Json;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Models;
 using TestBuilder.Services;
@@ -30,7 +33,7 @@ public partial class ProfileActionEditorWindow : Window
         OnEditor.DataContext = _on; OffEditor.DataContext = _off;
         NameInput.Text = source.Name; ColorInput.Text = source.Color;
         DisplayInput.SelectedIndex = (int)source.Display;
-        _ready = true; UpdateDisplay();
+        _ready = true; UpdateDisplay(); UpdateColorSelection();
         Closed += (_, _) => { OnEditor.Dispose(); OffEditor.Dispose(); _on.Dispose(); _off.Dispose(); _modbus.Dispose(); };
     }
 
@@ -52,6 +55,18 @@ public partial class ProfileActionEditorWindow : Window
         if (!toggle) GraphTabs.SelectedIndex = 0;
     }
     private void OnPickColor(object? sender, RoutedEventArgs e) { if (sender is Button { Tag: string color }) ColorInput.Text = color; }
+    private void OnColorChanged(object? sender, TextChangedEventArgs e) { if (_ready) UpdateColorSelection(); }
+    private void UpdateColorSelection()
+    {
+        var valid = Color.TryParse(ColorInput.Text?.Trim() ?? "", out var current);
+        foreach (var swatch in ColorPalette.Children.OfType<Button>())
+        {
+            var selected = valid && swatch.Tag is string value && Color.TryParse(value, out var color) && color == current;
+            swatch.Classes.Set("selected", selected);
+            var name = ToolTip.GetTip(swatch)?.ToString() ?? "Цвет";
+            AutomationProperties.SetName(swatch, selected ? $"{name} — выбран" : name);
+        }
+    }
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();
     internal ProfileActionDefinition BuildResult()
     {
