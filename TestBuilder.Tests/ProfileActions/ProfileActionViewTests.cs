@@ -19,20 +19,21 @@ namespace TestBuilder.Tests.ProfileActions;
 public class ProfileActionViewTests
 {
     [Fact]
-    public async Task LeftPanel_CollapsesAndExpands_EngineerCanEdit_OperatorOnlyRunsSameButton()
+    public async Task GraphPanel_CollapsesInsideCanvas_EngineerCanEdit_OperatorOnlyRunsSameButton()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            ProfileActionTests.LoadEmpty(vm);
             vm.RootGraph.QuickActions.Add(new() { Name = "Питание", Display = ProfileActionDisplay.Toggle });
             vm.RootGraph.QuickActions.Add(new() { Name = "Проверка", Display = ProfileActionDisplay.Progress });
-            var bar = new ProfileActionBar { DataContext = vm };
-            var workspace = new Border();
-            Grid.SetColumn(workspace, 1);
-            var host = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Children = { bar, workspace } };
-            var window = new Window { Width = 1050, Height = 500, Content = host };
+            using var screen = new TestView { DataContext = vm };
+            var graph = screen.FindControl<GraphEditorView>("GraphEditor")!;
+            var bar = graph.FindControl<ProfileActionBar>("GraphQuickActions")!;
+            var workspace = graph.FindControl<Nodify.NodifyEditor>("Editor")!;
+            var window = new Window { Width = 1400, Height = 850, Content = screen };
             try
             {
                 window.Show(); Layout(window);
@@ -42,11 +43,23 @@ public class ProfileActionViewTests
                 Assert.False(panel.IsEffectivelyVisible);
                 Assert.True(handle.IsEffectivelyVisible);
                 Assert.Equal(24, bar.Bounds.Width);
+                var paletteHandle = graph.GetVisualDescendants().OfType<Button>()
+                    .Single(b => AutomationProperties.GetName(b) == "Свернуть или развернуть палитру");
+                var sidebar = screen.FindControl<RoundedPanel>("ProfileSidebar")!;
+                var logs = screen.FindControl<LogPanelView>("LogPanel")!;
+                Assert.True(bar.TranslatePoint(default, screen)!.Value.X >= sidebar.Bounds.Right);
+                Assert.Equal(paletteHandle.TranslatePoint(default, graph)!.Value.Y, handle.TranslatePoint(default, graph)!.Value.Y, 1);
+                var graphHeader = graph.FindControl<WrapPanel>("GraphActions")!;
+                Assert.True(bar.TranslatePoint(default, graph)!.Value.Y >= graphHeader.TranslatePoint(default, graph)!.Value.Y + graphHeader.Bounds.Height);
+                var sidebarBounds = sidebar.Bounds;
+                var logBounds = logs.Bounds;
                 Click(window, handle);
                 Assert.False(vm.IsQuickActionsCollapsed);
                 Assert.True(panel.IsEffectivelyVisible);
                 Assert.Equal(304, bar.Bounds.Width);
                 Assert.True(workspace.Bounds.X >= bar.Bounds.Right);
+                Assert.Equal(sidebarBounds, sidebar.Bounds);
+                Assert.Equal(logBounds, logs.Bounds);
                 var buttons = bar.GetVisualDescendants().OfType<Button>().ToArray();
                 var add = buttons.Single(b => AutomationProperties.GetName(b) == "Добавить кнопку в профиль");
                 Assert.True(add.IsEffectivelyVisible);
@@ -64,7 +77,7 @@ public class ProfileActionViewTests
                 Assert.True(vm.QuickActions[0].IsOn);
                 Click(window, run); await vm.QuickActions[0].RunCommand.ExecutionTask!;
                 Assert.False(vm.QuickActions[0].IsOn);
-                vm.IsOperatorView = false; Layout(window); Capture(window, "action-panel.png");
+                vm.IsOperatorView = false; Layout(window); Capture(window, "action-panel-in-graph.png");
                 vm.IsOperatorView = true; vm.RootGraph.QuickActions.Clear(); Layout(window);
                 Assert.False(handle.IsEffectivelyVisible);
                 Assert.Equal(0, bar.Bounds.Width);

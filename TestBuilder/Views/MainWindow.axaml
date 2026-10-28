@@ -35,7 +35,7 @@
       </Grid>
     </Border>
     <Grid Grid.Row="1" ColumnDefinitions="Auto,*" IsVisible="{Binding !IsSettingsOpen}">
-      <views:ProfileActionBar DataContext="{Binding TestVM}" />
+      <views:ProfileActionBar DataContext="{Binding TestVM}" IsVisible="{Binding IsOperatorView}" />
       <Grid Grid.Column="1">
         <Grid IsVisible="{Binding !IsEngineerWorkspace}">
           <views:StationDashboardView DataContext="{Binding TestVM}" />

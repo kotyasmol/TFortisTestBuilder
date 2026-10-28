@@ -256,14 +256,15 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ClipToBounds="True">
-      <Border Background="{DynamicResource EditorBackgroundBrush}" IsHitTestVisible="False">
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ClipToBounds="True">
+      <views:ProfileActionBar x:Name="GraphQuickActions" />
+      <Border Grid.Column="1" Background="{DynamicResource EditorBackgroundBrush}" IsHitTestVisible="False">
         <testviews:GraphDotBackground
             ViewportLocation="{Binding #Editor.ViewportLocation}"
             ViewportZoom="{Binding #Editor.ViewportZoom}"
             DotBrush="{DynamicResource EditorDotBrush}" />
       </Border>
-      <nodify:NodifyEditor x:Name="Editor"
+      <nodify:NodifyEditor x:Name="Editor" Grid.Column="1"
                            Classes.inspectOnly="{Binding !CanEditGraph}"
                            ItemsSource="{Binding Nodes}"
                            Connections="{Binding Connections}"
@@ -1645,7 +1646,7 @@
 
       </nodify:NodifyEditor>
 
-      <Grid Grid.Column="1" ColumnDefinitions="24,Auto" Name="InspectorPanel">
+      <Grid Grid.Column="2" ColumnDefinitions="24,Auto" Name="InspectorPanel">
         <Button Classes="edgeHandle" Command="{Binding TogglePaletteCommand}"
                 ToolTip.Tip="{Binding PaletteToggleTip}" AutomationProperties.Name="Свернуть или развернуть палитру"
                 Width="24" MinWidth="24" Height="64" Padding="5,12" VerticalAlignment="Center">
