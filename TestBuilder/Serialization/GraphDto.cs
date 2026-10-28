@@ -31,11 +31,25 @@ namespace TestBuilder.Serialization
         public TestBuilder.Models.BoardDesign? Board { get; set; }
         [JsonPropertyName("productKind")] public string ProductKind { get; set; } = "Switch";
 
+        [JsonPropertyName("quickActions")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<ProfileActionDto>? QuickActions { get; set; }
+
         [JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 
         [JsonPropertyName("connections")]
         public List<ConnectionDto> Connections { get; set; } = new();
+    }
+
+    public sealed class ProfileActionDto
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+        [JsonPropertyName("name")] public string Name { get; set; } = "";
+        [JsonPropertyName("color")] public string Color { get; set; } = "#2563EB";
+        [JsonPropertyName("display")] public string Display { get; set; } = "Button";
+        [JsonPropertyName("graph")] public GraphDto Graph { get; set; } = new();
+        [JsonPropertyName("offGraph")] public GraphDto OffGraph { get; set; } = new();
     }
 
     public class NodeDto

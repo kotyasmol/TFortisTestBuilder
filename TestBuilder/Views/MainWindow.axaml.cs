@@ -55,9 +55,10 @@ namespace TestBuilder.Views
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
-            if (DataContext is MainWindowViewModel vm && vm.TestVM.IsTestRunning)
+            if (DataContext is MainWindowViewModel vm && (vm.TestVM.IsTestRunning || vm.TestVM.HasRunningQuickActions))
             {
                 e.Cancel = true;
+                vm.TestVM.CancelQuickActions();
                 vm.TestVM.StopTestCommand.Execute(null);
             }
             base.OnClosing(e);

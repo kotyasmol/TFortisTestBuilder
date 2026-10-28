@@ -90,8 +90,8 @@ public partial class TestViewModel
             d.ExpectedIdentificationValues.Count > 0
                 ? $"slave {d.SlaveId} — {d.Name}, регистр {d.IdentificationAddress} = {string.Join(" или ", d.ExpectedIdentificationValues)}"
                 : $"slave {d.SlaveId} — {d.Name}, чтение {d.Registers.Count} регистров"));
-    public bool CanConnectStation => _profileLoadError.Length == 0 && !IsTraining && !IsConnected && !IsTestRunning && !IsConnecting && !IsNetworkSetupBusy;
-    public bool CanDisconnectStation => IsConnected && !IsTestRunning && !IsConnecting;
+    public bool CanConnectStation => !IsActionGraphEditor && !HasRunningQuickActions && _profileLoadError.Length == 0 && !IsTraining && !IsConnected && !IsTestRunning && !IsConnecting && !IsNetworkSetupBusy;
+    public bool CanDisconnectStation => !HasRunningQuickActions && IsConnected && !IsTestRunning && !IsConnecting;
     public bool CanPauseTest => IsTestRunning && !IsTestPaused && !IsStopping;
     public bool CanResumeTest => IsTestRunning && IsTestPaused && !IsStopping;
     public string StationConnectionText => IsConnecting ? "Подключение…" :
@@ -135,8 +135,8 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(PauseStatus));
         OnPropertyChanged(nameof(PauseHint));
     }
-    public bool CanEditGraph => _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
-    public bool CanChooseProfile => !IsTestRunning && !IsConnecting;
+    public bool CanEditGraph => !HasRunningQuickActions && _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
+    public bool CanChooseProfile => !HasRunningQuickActions && !IsTestRunning && !IsConnecting;
     [ObservableProperty] private bool needsStandInspection;
     public string StandInspectionMessage => "Отключение стенда не подтверждено. Выключите питание стенда и обратитесь к инженеру перед следующим запуском.";
     partial void OnNeedsStandInspectionChanged(bool value) => RefreshStationAvailability();
@@ -151,7 +151,7 @@ public partial class TestViewModel
     partial void OnIsLabelToolBusyChanged(bool value) => RefreshStationAvailability();
     [ObservableProperty] private bool isNetworkSetupBusy;
     partial void OnIsNetworkSetupBusyChanged(bool value) => RefreshStationAvailability();
-    public bool CanStartRun => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
+    public bool CanStartRun => !IsActionGraphEditor && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 && (!HasPendingPreparation || HasPartialRun) &&
         (!ProfileRequiresHardware || (IsConnected && IsMonitoringActive)) &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
@@ -178,10 +178,11 @@ public partial class TestViewModel
         RefreshStationAvailability();
     }
     partial void OnIsConnectingChanged(bool value) => RefreshStationAvailability();
-    partial void OnIsStoppingChanged(bool value) => RefreshStationAvailability();
+    partial void OnIsStoppingChanged(bool value) { if (value) CancelQuickActions(); RefreshStationAvailability(); }
     partial void OnIsTestRunningChanged(bool value) => RefreshStationAvailability();
     partial void OnIsConnectedChanged(bool value)
     {
+        if (!value) { CancelQuickActions(); foreach (var action in QuickActions) action.InvalidateState(); }
         RefreshStationAvailability();
         RefreshStandIdentity();
     }
@@ -189,6 +190,14 @@ public partial class TestViewModel
 
     private void RefreshStationAvailability()
     {
+        OnPropertyChanged(nameof(HasRunningQuickActions));
+        OnPropertyChanged(nameof(CanEditQuickActions));
+        OnPropertyChanged(nameof(ShowQuickActions));
+        OnPropertyChanged(nameof(ShowQuickActionTools));
+        AddQuickActionCommand.NotifyCanExecuteChanged();
+        EditQuickActionCommand.NotifyCanExecuteChanged();
+        DeleteQuickActionCommand.NotifyCanExecuteChanged();
+        foreach (var action in QuickActions) action.RefreshAvailability();
         OnPropertyChanged(nameof(CanEditGraph));
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanEditHardware));

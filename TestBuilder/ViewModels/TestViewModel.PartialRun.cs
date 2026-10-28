@@ -23,7 +23,7 @@ public partial class TestViewModel
     public string PartialRunHint => "Однократный запуск в пределах выбранного графа. Подтест / цикл выполняется целиком. Контекст новый; при ошибке выполняются аварийные подтесты.";
 
     public bool CanConfigureNodeRun(NodeViewModel? node) =>
-        CanEditGraph && !IsConnecting && node != null && CurrentGraph.Nodes.Contains(node) && node is not LabelNodeViewModel;
+        !IsActionGraphEditor && CanEditGraph && !IsConnecting && node != null && CurrentGraph.Nodes.Contains(node) && node is not LabelNodeViewModel;
 
     public void ConfigureNodeRun(NodeViewModel node, bool singleNode)
     {

@@ -336,7 +336,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         ClearGraphCommand = new AsyncRelayCommand(RequestClearGraphAsync, () => CanEditGraph);
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
         NewProfileCommand = new RelayCommand(CreateNewProfile, () => CanEditGraph && CanChooseProfile && !IsConnected);
-        SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync, () => CanEditGraph);
+        SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync, () => CanEditGraph && !IsActionGraphEditor);
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync, () => CanEditGraph);
         TogglePaletteCommand = new RelayCommand(() => IsPaletteCollapsed = !IsPaletteCollapsed);
@@ -348,6 +348,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         Profiles.CollectionChanged += (_, _) => { if (!_refreshingProfiles) RefreshEngineerProfileGroups(); };
         BuildNodePaletteCategories();
+        RootGraph.QuickActions.CollectionChanged += (_, _) => RefreshQuickActions();
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
@@ -775,6 +776,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         ResetPartialRun();
         RootGraph.Clear();
+        RootGraph.QuickActions.Clear();
         RootGraph.Hardware = null;
         RootGraph.Board = null;
         RootGraph.ProductKind = ProductFilter == "Платы" ? "Board" : "Switch";
@@ -1007,6 +1009,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             if (!message.Contains("восстановлено", StringComparison.OrdinalIgnoreCase))
             {
+                CancelQuickActions();
+                foreach (var action in QuickActions) action.InvalidateState();
                 ResetProfilePreparation();
                 StopRunForConnectionFailure();
             }
@@ -1324,6 +1328,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 {
                     try
                     {
+                        await DrainQuickActionsAsync();
                         if (_registerMonitor != null) await _registerMonitor.StopAsync();
                     }
                     catch (Exception ex)
@@ -1896,7 +1901,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task SaveGraphAsync()
     {
-        if (!CanEditGraph) return;
+        if (IsActionGraphEditor || !CanEditGraph) return;
         if (string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         var folder = ProfilesFolder;
 
@@ -2068,6 +2073,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
+        CancelQuickActions();
         _slaveManager.Slaves.CollectionChanged -= OnStandDevicesChanged;
         if (_standSerialRegister != null) _standSerialRegister.PropertyChanged -= OnStandSerialChanged;
         _modbusService.ReconnectStatusChanged -= OnReconnectStatusChanged;
@@ -2086,6 +2092,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private static void DisposeGraphNodes(GraphWorkspaceViewModel graph)
     {
+        foreach (var action in graph.QuickActions) { DisposeGraphNodes(action.Graph); DisposeGraphNodes(action.OffGraph); }
         foreach (var node in graph.Nodes)
         {
             if (node is ICompositeNodeViewModel composite)

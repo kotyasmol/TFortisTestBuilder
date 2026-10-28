@@ -10,6 +10,7 @@ namespace TestBuilder.ViewModels.Graphs
     /// </summary>
     public sealed class GraphWorkspaceViewModel
     {
+        public ObservableCollection<TestBuilder.Models.ProfileActionDefinition> QuickActions { get; } = new();
         public string Title { get; set; } = "Граф";
         public System.DateTimeOffset? UpdatedAt { get; set; }
 
@@ -18,7 +19,7 @@ namespace TestBuilder.ViewModels.Graphs
         public TestBuilder.Domain.Modbus.HardwareConfiguration? Hardware
         {
             get => _hardware;
-            set { _hardware = value; ApplyReferenceHardware(value, new()); }
+            set { _hardware = value; ApplyReferenceHardware(value, new()); foreach (var action in QuickActions) { action.Graph.Hardware = value; action.OffGraph.Hardware = value; } }
         }
 
         public GraphWorkspaceViewModel()

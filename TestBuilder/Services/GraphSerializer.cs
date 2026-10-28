@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using TestBuilder.Serialization;
+using TestBuilder.Models;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
@@ -83,6 +84,15 @@ namespace TestBuilder.Services
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (board v1)";
             if (dto.Hardware is { PortName: not null } || dto.Hardware?.ConsoleDevices.Count > 0)
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (connections v1)";
+            if (vm.RootGraph.QuickActions.Count > 0)
+            {
+                ValidateActions(vm.RootGraph);
+                dto.QuickActions = vm.RootGraph.QuickActions.Select(a => new ProfileActionDto {
+                    Id = a.Id, Name = a.Name, Color = a.Color, Display = a.Display.ToString(),
+                    Graph = ExportActionGraph(a.Graph), OffGraph = ExportActionGraph(a.OffGraph)
+                }).ToList();
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (actions v1)";
+            }
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
@@ -395,6 +405,7 @@ namespace TestBuilder.Services
 
         public static string Deserialize(string json, TestViewModel vm)
         {
+            if (vm.HasRunningQuickActions) throw new InvalidOperationException("Дождитесь завершения кнопок перед открытием профиля.");
             var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
                       ?? throw new InvalidOperationException("Не удалось прочитать JSON");
 
@@ -405,7 +416,22 @@ namespace TestBuilder.Services
             // Parse the entire document before replacing the user's open graph.
             // Malformed links and unsupported runtime versions must not erase it.
             var loaded = new GraphWorkspaceViewModel();
-            try { DeserializeGraph(dto, loaded, isBodyGraph: false); GraphCompiler.ValidateConnections(loaded, dto.Hardware); }
+            try
+            {
+                DeserializeGraph(dto, loaded, isBodyGraph: false);
+                loaded.Hardware = dto.Hardware;
+                foreach (var action in dto.QuickActions ?? new())
+                {
+                    if (action == null || !Enum.TryParse<ProfileActionDisplay>(action.Display, out var display) || !Enum.IsDefined(display))
+                        throw new InvalidOperationException("Неизвестный вид кнопки профиля.");
+                    var definition = new ProfileActionDefinition { Id = action.Id, Name = action.Name, Color = action.Color, Display = display };
+                    loaded.QuickActions.Add(definition);
+                    definition.Graph = ImportActionGraph(action.Graph, dto.Hardware);
+                    definition.OffGraph = ImportActionGraph(action.OffGraph, dto.Hardware);
+                }
+                ValidateActions(loaded);
+                GraphCompiler.ValidateConnections(loaded, dto.Hardware);
+            }
             catch
             {
                 DisposeLoadedNodes(loaded);
@@ -413,12 +439,14 @@ namespace TestBuilder.Services
             }
             vm.ResetToRootGraph();
             vm.RootGraph.Clear();
+            vm.RootGraph.QuickActions.Clear();
             vm.RootGraph.Title = loaded.Title;
             vm.RootGraph.UpdatedAt = dto.UpdatedAt;
             vm.RootGraph.IsBodyGraph = false;
             vm.RootGraph.Hardware = dto.Hardware;
             vm.RootGraph.Board = dto.Board;
             vm.RootGraph.ProductKind = dto.ProductKind;
+            foreach (var action in loaded.QuickActions) vm.RootGraph.QuickActions.Add(action);
             foreach (var node in loaded.Nodes) vm.RootGraph.Nodes.Add(node);
             foreach (var connection in loaded.Connections) vm.RootGraph.Connections.Add(connection);
             var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName, dto.DeviceModelId);
@@ -435,6 +463,31 @@ namespace TestBuilder.Services
             return dto.Name;
         }
 
+        internal static GraphDto ExportActionGraph(GraphWorkspaceViewModel graph)
+        {
+            if (graph.QuickActions.Count != 0) throw new InvalidOperationException("Вложенные кнопки не поддерживаются.");
+            return SerializeGraph(graph, graph.Title);
+        }
+        internal static GraphWorkspaceViewModel ImportActionGraph(GraphDto dto, TestBuilder.Domain.Modbus.HardwareConfiguration? hardware = null)
+        {
+            if (dto == null || dto.QuickActions?.Count > 0) throw new InvalidOperationException("Некорректный граф кнопки.");
+            RejectRemovedNodes(dto);
+            var graph = new GraphWorkspaceViewModel();
+            try { DeserializeGraph(dto, graph, false); graph.Hardware = hardware; GraphCompiler.ValidateConnections(graph, hardware); return graph; }
+            catch { DisposeLoadedNodes(graph); throw; }
+        }
+        private static void ValidateActions(GraphWorkspaceViewModel graph)
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var action in graph.QuickActions)
+            {
+                action.Validate();
+                if (!ids.Add(action.Id)) throw new InvalidOperationException("Повторяющийся ID кнопки профиля.");
+                GraphCompiler.ValidateConnections(action.Graph, graph.Hardware);
+                GraphCompiler.ValidateConnections(action.OffGraph, graph.Hardware);
+            }
+        }
+
         private static bool ContainsParallelConnections(GraphWorkspaceViewModel graph, HashSet<GraphWorkspaceViewModel> visited)
         {
             if (!visited.Add(graph))
@@ -448,6 +501,7 @@ namespace TestBuilder.Services
 
         private static void DisposeLoadedNodes(GraphWorkspaceViewModel graph)
         {
+            foreach (var action in graph.QuickActions) { DisposeLoadedNodes(action.Graph); DisposeLoadedNodes(action.OffGraph); }
             foreach (var node in graph.Nodes)
             {
                 if (node is ICompositeNodeViewModel composite) DisposeLoadedNodes(composite.BodyGraph);
@@ -476,6 +530,8 @@ namespace TestBuilder.Services
                 if ((type is "Wait Variable Until" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
                     node.PollAction?.Trim().ToLowerInvariant() is "getupsstatus" or "getupsvoltage" or "getirpstatus")
                     throw new InvalidOperationException($"Режим опроса '{node.PollAction}' удалён. Обновите Wait Variable Until: используйте HttpGet с явно заданными endpoint и типом ответа.");
+                if (node.BodyGraph?.QuickActions?.Count > 0 || node.Body?.QuickActions?.Count > 0)
+                    throw new InvalidOperationException("Кнопки разрешены только в корневом профиле.");
                 if (node.BodyGraph != null) RejectRemovedNodes(node.BodyGraph);
                 if (node.Body != null) RejectRemovedNodes(node.Body);
             }
@@ -500,7 +556,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 

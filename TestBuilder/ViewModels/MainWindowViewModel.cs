@@ -79,14 +79,14 @@ namespace TestBuilder.ViewModels
             TestVM = new TestViewModel(ModbusService, SlaveManager);
             ModbusVM = new ModbusMonitoringViewModel(SlaveManager, ModbusService, TestVM.TestingLogger);
             ModbusVM.ManagedMonitorActive = () => TestVM.IsMonitoringActive || TestVM.IsConnecting || TestVM.RootGraph.Hardware != null;
-            ModbusVM.CanWrite = () => !TestVM.IsTestRunning && !TestVM.IsConnecting;
+            ModbusVM.CanWrite = () => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting;
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
-            SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.IsConnecting);
+            SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM = new NetworkSetupViewModel(DataTestNetworkConfigurator.GetAdapters,
-                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.IsConnecting);
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
             LabelPrintingVM = new LabelPrintingViewModel(TestVM.TestingLogger,
-                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.IsConnecting);
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             LabelPrintingVM.PropertyChanged += OnLabelPrintingChanged;
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
@@ -123,7 +123,7 @@ namespace TestBuilder.ViewModels
             }
             if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
                 IsSlavesFound = TestVM.IsMonitoringActive;
-            if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting))
+            if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting) or nameof(TestVM.HasRunningQuickActions))
             {
                 SettingsVM.RefreshTutorialAvailability();
                 LabelPrintingVM.RefreshAvailability();
