@@ -122,7 +122,7 @@ public class StationDashboardTests
     {
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus)) { IsOperatorView = true };
-        var profile = vm.StationProfiles.First(p => p.StationName == "PSW-2G6F+");
+        var profile = vm.StationProfiles.First(p => p.DeviceModel == "PSW-2G6F+");
         vm.SelectedProfile = profile;
         var node = vm.RootGraph.Nodes.First();
         var stages = vm.Station.Stages.ToArray();

@@ -93,7 +93,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public string PaletteToggleIcon => IsPaletteCollapsed ? "‹" : "›";
     public string PaletteToggleTip => IsPaletteCollapsed ? "Развернуть палитру" : "Свернуть палитру";
-    public string CurrentGraphPath => string.Join(" / ", _graphPath);
+    public string CurrentGraphPath => string.Join(" / ", _graphPath.Select((title, index) =>
+        index == 0 ? GraphProfile.ComposeName(DeviceName, ProfileDescription) : title));
     public string CurrentProfileName
     {
         get => RootGraph.Title;

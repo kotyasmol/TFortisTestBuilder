@@ -33,20 +33,20 @@ namespace TestBuilder.Services
         }
         public string ModelGroup => DeviceModel ?? (DeviceModelId == null ? "Без модели" : "Модель " + DeviceModelId);
         public string ModelGroupKey => DeviceModelId != null ? "id:" + DeviceModelId.ToUpperInvariant() : "name:" + EquipmentCatalog.Normalize(ModelGroup);
-        public string StationName => Name switch
+        public string StationName => DisplayName;
+        public string DisplayName => ComposeName(DeviceModel, ConfigurationName);
+
+        public static string ComposeName(string? model, string? description)
         {
-            "PSW_2G6F_plus_full_algorithm" => "PSW-2G6F+",
-            "PSW_UPS_Box_8x2Pro_full_algorithm_polling" => "PSW+UPS-Box 8x2Pro",
-            "Ручная печать 4 этикеток PSW+UPS-Box 8x2Pro" => "Ручная печать",
-            "Демонстрация пульта · без оборудования" => "Демонстрация пульта",
-            _ => DisplayName
-        };
-        public string DisplayName => Name switch
-        {
-            "PSW_2G6F_plus_full_algorithm" => "PSW-2G6F+ · Полная проверка",
-            "PSW_UPS_Box_8x2Pro_full_algorithm_polling" => "PSW+UPS-Box 8x2Pro · Полная проверка",
-            _ => Name.Replace('_', ' ')
-        };
+            var device = Clean(model);
+            var title = Clean(description) ?? "";
+            if (device == null) return title.Length == 0 ? "Новый профиль" : title;
+            if (title.Equals(device, StringComparison.OrdinalIgnoreCase)) return device;
+            foreach (var separator in new[] { " · ", " — ", " - " })
+                if (title.StartsWith(device + separator, StringComparison.OrdinalIgnoreCase))
+                { title = title[(device.Length + separator.Length)..].Trim(); break; }
+            return title.Length == 0 ? device : device + " · " + title;
+        }
 
         public GraphProfile(string filePath, string name, string? deviceModel = null, string? configurationName = null, string? deviceModelId = null, string productKind = "Switch", DateTimeOffset? updatedAt = null)
         {
@@ -68,13 +68,13 @@ namespace TestBuilder.Services
                 "PSW_2G6F_plus_full_algorithm" or "PSW_UPS_Box_8x2Pro_full_algorithm_polling" => "Полная проверка",
                 "Ручная печать 4 этикеток PSW+UPS-Box 8x2Pro" => "Ручная печать этикеток",
                 "Демонстрация пульта · без оборудования" => "Демонстрация пульта",
-                _ => DisplayName
+                _ => Name.Replace('_', ' ')
             };
         }
 
         private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         // Отображается в ListBox напрямую
-        public override string ToString() => Name;
+        public override string ToString() => DisplayName;
     }
 }

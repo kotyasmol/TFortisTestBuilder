@@ -125,9 +125,9 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:StationProfileOptionViewModel">
                           <Button Classes="program" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
-                                  AutomationProperties.Name="{Binding Profile.ConfigurationName}">
+                                  AutomationProperties.Name="{Binding Profile.DisplayName}">
                             <StackPanel Spacing="5">
-                              <TextBlock Text="{Binding Profile.ConfigurationName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Profile.DisplayName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
                               <TextBlock Text="{Binding Profile.UpdatedAtText}" IsVisible="{Binding Profile.HasUpdatedAt}"
                                          HorizontalAlignment="Right" FontSize="11" Opacity="0.7"
                                          ToolTip.Tip="{Binding Profile.UpdatedAtTooltip}" />

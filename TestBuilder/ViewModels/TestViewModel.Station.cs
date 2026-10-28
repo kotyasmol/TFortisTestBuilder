@@ -79,7 +79,7 @@ public partial class TestViewModel
                 option.IsSelected = option.Profile.FilePath == SelectedProfile?.FilePath;
     }
 
-    public string StationProfileName => SelectedProfile?.DeviceModel ?? SelectedProfile?.StationName ?? "Выберите программу";
+    public string StationProfileName => SelectedProfile?.DisplayName ?? "Выберите программу";
     public string StationConfigurationCaption => SelectedProfile?.DeviceModel != null
         ? SelectedProfile.ConfigurationName + " · этапы теста" : "Этапы теста";
     public bool HasStationProfile => SelectedProfile != null && _profileLoadError.Length == 0;

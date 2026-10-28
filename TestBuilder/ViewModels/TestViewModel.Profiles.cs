@@ -37,8 +37,7 @@ public partial class TestViewModel
         return text;
     }
     private static string ComposeProfileName(string? device, string description) =>
-        string.IsNullOrWhiteSpace(device) ? (description.Length == 0 ? "Новый профиль" : description) :
-        description.Length == 0 ? device.Trim() : device.Trim() + " · " + description;
+        GraphProfile.ComposeName(device, description);
     private void SetProfileIdentity(string title, string? description)
     {
         RootGraph.ConfigurationName = description;
