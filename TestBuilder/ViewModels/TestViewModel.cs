@@ -888,11 +888,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (IsConnected) await PrepareOpenedProfileAsync();
     }
 
-    internal static string[] GetStandPortCandidates(HardwareConfiguration? hardware, IEnumerable<string> availablePorts)
+    internal static string[] GetStandPortCandidates(HardwareConfiguration? hardware, IEnumerable<string> availablePorts, string? requestedPort = null)
     {
         var consolePorts = (hardware?.ConsoleDevices ?? new()).Select(d => d.PortName?.Trim())
             .Where(p => !string.IsNullOrEmpty(p)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return availablePorts.Where(p => !consolePorts.Contains(p)).Distinct(StringComparer.OrdinalIgnoreCase)
+        return availablePorts.Where(p => !consolePorts.Contains(p))
+            .Where(p => string.IsNullOrWhiteSpace(requestedPort) || p.Equals(requestedPort.Trim(), StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
@@ -907,7 +908,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _slaveManager.Slaves.Clear();
         SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
         var settings = AppSettings.Instance.Discovery;
-        foreach (var port in GetStandPortCandidates(null, AvailableStandPorts()))
+        foreach (var port in GetStandPortCandidates(null, AvailableStandPorts(), AppSettings.Instance.StandPort))
         {
             if (!await _modbusService.ConnectAsync(port, settings.BaudRate, settings.Parity,
                     settings.DataBits, settings.StopBits))

@@ -11,7 +11,8 @@
       <Border Classes="panel">
         <StackPanel Spacing="8">
           <TextBlock Text="Подключения рабочего места" Classes="sectionTitle" />
-          <TextBlock Text="COM стенда определяется автоматически." TextWrapping="Wrap" />
+          <TextBlock Text="COM стенда (пусто — автоматически)" TextWrapping="Wrap" />
+          <TextBox Text="{Binding StandPort}" Watermark="Например, COM3" />
           <Button Content="Параметры открытия COM-порта…" Command="{Binding ConfigureDiscoveryCommand}"/>
           <TextBlock Text="COM консоли (отдельный USB-UART)" IsVisible="{Binding ShowConsoleSettings}" />
           <TextBox Text="{Binding ConsolePort}" Watermark="COM4" IsVisible="{Binding ShowConsoleSettings}" />
