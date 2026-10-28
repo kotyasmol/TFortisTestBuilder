@@ -11,6 +11,7 @@ public partial class ProfileListView : UserControl
 {
     private GraphProfile? _profileBeforeClick;
     private bool _syncingSelection;
+    internal ContextMenu? ProfileMenu { get; private set; }
 
     public ProfileListView()
     {
@@ -51,8 +52,33 @@ public partial class ProfileListView : UserControl
 
     private void OnProfileListPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.GetCurrentPoint(ProfileListBox).Properties.IsRightButtonPressed && DataContext is TestViewModel vm)
+        {
+            _profileBeforeClick = null;
+            var element = ProfileListBox.InputHitTest(e.GetPosition(ProfileListBox)) as Control;
+            while (element != null)
+            {
+                if (element.DataContext is GraphProfile profile)
+                {
+                    ProfileMenu?.Close();
+                    ProfileMenu = new ContextMenu
+                    {
+                        ItemsSource = new[]
+                        {
+                            new MenuItem { Header = "Копировать профиль", Command = vm.CopyProfileCommand, CommandParameter = profile },
+                            new MenuItem { Header = "Переименовать профиль", Command = vm.RenameProfileCommand, CommandParameter = profile }
+                        }
+                    };
+                    ProfileMenu.Open(element);
+                    e.Handled = true;
+                    return;
+                }
+                element = element.Parent as Control;
+            }
+            return;
+        }
         _profileBeforeClick = e.GetCurrentPoint(ProfileListBox).Properties.IsLeftButtonPressed &&
-            DataContext is TestViewModel vm ? vm.SelectedProfile : null;
+            DataContext is TestViewModel current ? current.SelectedProfile : null;
     }
 
     private void OnProfileListPointerReleased(object? sender, PointerReleasedEventArgs e)
