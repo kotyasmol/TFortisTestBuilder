@@ -264,7 +264,7 @@ public class FirstRunSessionTests
         Assert.False(vm.IsTestRunning);
         Assert.False(vm.IsConnected);
         Assert.False(vm.Station.HasResult);
-        Assert.Contains("не проверено", vm.StatusMessage);
+        Assert.Equal(string.Empty, vm.StatusMessage);
         Assert.All(vm.Nodes, node => Assert.False(node.HasExecutionSucceeded));
         Assert.Equal(starts, PreparationStarts(vm));
     });

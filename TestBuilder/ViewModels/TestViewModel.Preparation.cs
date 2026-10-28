@@ -32,7 +32,7 @@ public partial class TestViewModel
         if (IsTestRunning || IsConnecting || NeedsStandInspection || _profileLoadError.Length > 0) return false;
         if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
         {
-            StatusMessage = "Оборудование профиля не проверено.";
+            StatusMessage = string.Empty;
             RefreshStationAvailability();
             return false;
         }

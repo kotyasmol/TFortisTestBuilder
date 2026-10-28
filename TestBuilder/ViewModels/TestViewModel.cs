@@ -924,7 +924,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _history.Clear();
             SlaveRegistry.Instance.NotifyConnected(true);
             StatusMessage = "COM-порт открыт. Выберите профиль.";
-            TestingLogger.Info($"Открыт COM-порт {port}. Оборудование ещё не проверено.");
+            TestingLogger.Info($"Открыт COM-порт {port}.");
             return;
         }
         StatusMessage = "Нет доступного COM-порта.";
