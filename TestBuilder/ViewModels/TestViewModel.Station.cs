@@ -48,7 +48,7 @@ public partial class TestViewModel
         foreach (var profiles in visible.GroupBy(p => p.ModelGroupKey, System.StringComparer.OrdinalIgnoreCase))
         {
             if (!_stationGroups.TryGetValue(profiles.Key, out var group))
-                _stationGroups.Add(profiles.Key, group = new StationProfileGroupViewModel(profiles.First().ModelGroup));
+                _stationGroups.Add(profiles.Key, group = new StationProfileGroupViewModel(profiles.First().ModelGroup, profiles.Key));
             var options = profiles.Select(p => group.Profiles.FirstOrDefault(o => ReferenceEquals(o.Profile, p))
                 ?? new StationProfileOptionViewModel(p, selected => SelectedProfile = selected)).ToArray();
             SynchronizeStationItems(group.Profiles, options);

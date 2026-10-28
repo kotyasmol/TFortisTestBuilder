@@ -151,7 +151,7 @@ public partial class TestViewModel
         foreach (var items in Profiles.OrderBy(p => p.DeviceModel == null).ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), StringComparer.Ordinal).ThenBy(p => EquipmentCatalog.SortKey(p.Name), StringComparer.Ordinal).GroupBy(p => p.ModelGroupKey))
         {
             if (!_engineerGroups.TryGetValue(items.Key, out var group))
-                _engineerGroups.Add(items.Key, group = new EngineerProfileGroup(items.First().ModelGroup));
+                _engineerGroups.Add(items.Key, group = new EngineerProfileGroup(items.First().ModelGroup, items.Key));
             SynchronizeStationItems(group.Profiles, items.ToArray());
             if (!string.IsNullOrWhiteSpace(ProfileSearch)) group.IsExpanded = true;
             groups.Add(group);
@@ -163,9 +163,10 @@ public partial class TestViewModel
 public partial class EngineerProfileGroup : ViewModelBase
 {
     public string Name { get; }
+    public string Key { get; }
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool isExpanded;
-    public EngineerProfileGroup(string name) => Name = name;
+    public EngineerProfileGroup(string name, string? key = null) { Name = name; Key = key ?? name; }
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private void ToggleExpanded() => IsExpanded = !IsExpanded;
 }

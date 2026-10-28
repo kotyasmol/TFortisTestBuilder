@@ -9,10 +9,11 @@ namespace TestBuilder.ViewModels;
 public partial class StationProfileGroupViewModel : ViewModelBase
 {
     public string ModelName { get; }
+    public string Key { get; }
     public ObservableCollection<StationProfileOptionViewModel> Profiles { get; } = new();
     [ObservableProperty] private bool isExpanded;
 
-    public StationProfileGroupViewModel(string modelName) => ModelName = modelName;
+    public StationProfileGroupViewModel(string modelName, string? key = null) { ModelName = modelName; Key = key ?? modelName; }
 
     [RelayCommand]
     private void ToggleExpanded() => IsExpanded = !IsExpanded;

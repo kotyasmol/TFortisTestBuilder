@@ -45,6 +45,9 @@ namespace TestBuilder.Services
         [JsonPropertyName("engineerMode")]
         public bool EngineerMode { get; set; }
 
+        [JsonPropertyName("workspace")]
+        public WorkspacePreferences Workspace { get; set; } = new();
+
         [JsonPropertyName("tutorialOfferedVersion")]
         public int TutorialOfferedVersion { get; set; }
 
@@ -127,11 +130,7 @@ namespace TestBuilder.Services
 
         public void Save()
         {
-            try
-            {
-                var json = JsonSerializer.Serialize(this, JsonOptions);
-                File.WriteAllText(SettingsPath, json);
-            }
+            try { SaveChecked(); }
             catch { }
         }
     }

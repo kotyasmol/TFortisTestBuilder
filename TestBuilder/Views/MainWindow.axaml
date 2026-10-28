@@ -39,7 +39,7 @@
                               DataContext="{Binding TestVM}" IsVisible="{Binding IsOperatorView}" />
       <Grid x:Name="WorkspaceContent">
         <Grid IsVisible="{Binding !IsEngineerWorkspace}">
-          <views:StationDashboardView DataContext="{Binding TestVM}" />
+          <views:StationDashboardView x:Name="StationViewControl" DataContext="{Binding TestVM}" />
         </Grid>
         <Grid IsVisible="{Binding IsEngineerWorkspace}">
           <Grid IsVisible="{Binding IsEditorPage}"><views:TestView x:Name="TestViewControl" /></Grid>

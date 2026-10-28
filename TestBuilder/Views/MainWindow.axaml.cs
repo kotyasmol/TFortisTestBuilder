@@ -6,6 +6,14 @@ namespace TestBuilder.Views
 {
     public partial class MainWindow : Window
     {
+        private WorkspacePersistence? _workspacePersistence;
+
+        internal void EnableWorkspacePersistence(Services.AppSettings settings, System.Action? save = null)
+        {
+            AssignDataContexts();
+            _workspacePersistence?.Dispose();
+            _workspacePersistence = new WorkspacePersistence(this, settings, save ?? settings.SaveChecked);
+        }
         public MainWindow()
         {
             InitializeComponent();
@@ -44,6 +52,7 @@ namespace TestBuilder.Views
 
         protected override void OnClosed(System.EventArgs e)
         {
+            _workspacePersistence?.Dispose();
             if (TestViewControl is System.IDisposable testView)
                 testView.Dispose();
 

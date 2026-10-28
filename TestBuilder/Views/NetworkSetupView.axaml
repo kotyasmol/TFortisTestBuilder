@@ -26,7 +26,7 @@
         <Button Content="Названия, порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
         <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
       </WrapPanel>
-      <Expander Header="Определить карту по кабелю" HorizontalAlignment="Stretch">
+      <Expander x:Name="IdentifyCableSection" Header="Определить карту по кабелю" HorizontalAlignment="Stretch">
         <StackPanel Spacing="8">
           <TextBlock Text="При включённом DUT запомните линки, отключите один кабель и сравните. После определения подключите кабель обратно. Несколько изменений не доказывают соответствие порту." TextWrapping="Wrap"/>
           <WrapPanel>
@@ -74,7 +74,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <Expander Header="Журнал применения" HorizontalAlignment="Stretch">
+      <Expander x:Name="NetworkJournalSection" Header="Журнал применения" HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding Journal}">
           <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,3"/></DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
