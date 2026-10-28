@@ -93,13 +93,13 @@
                         BorderThickness="1"
                         CornerRadius="8">
                   <UniformGrid Columns="4">
-                    <Button Classes="nodeColorChoice" Background="#3B82F6" ToolTip.Tip="Синий" Command="{Binding SelectColorCommand}" CommandParameter="blue" />
-                    <Button Classes="nodeColorChoice" Background="#14B8A6" ToolTip.Tip="Бирюзовый" Command="{Binding SelectColorCommand}" CommandParameter="turquoise" />
-                    <Button Classes="nodeColorChoice" Background="#22C55E" ToolTip.Tip="Зелёный" Command="{Binding SelectColorCommand}" CommandParameter="green" />
-                    <Button Classes="nodeColorChoice" Background="#EAB308" ToolTip.Tip="Жёлтый" Command="{Binding SelectColorCommand}" CommandParameter="yellow" />
-                    <Button Classes="nodeColorChoice" Background="#F97316" ToolTip.Tip="Оранжевый" Command="{Binding SelectColorCommand}" CommandParameter="orange" />
-                    <Button Classes="nodeColorChoice" Background="#EF4444" ToolTip.Tip="Красный" Command="{Binding SelectColorCommand}" CommandParameter="red" />
-                    <Button Classes="nodeColorChoice" Background="#A855F7" ToolTip.Tip="Фиолетовый" Command="{Binding SelectColorCommand}" CommandParameter="purple" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#3B82F6" ToolTip.Tip="Синий" Command="{Binding SelectColorCommand}" CommandParameter="blue" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#14B8A6" ToolTip.Tip="Бирюзовый" Command="{Binding SelectColorCommand}" CommandParameter="turquoise" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#22C55E" ToolTip.Tip="Зелёный" Command="{Binding SelectColorCommand}" CommandParameter="green" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#EAB308" ToolTip.Tip="Жёлтый" Command="{Binding SelectColorCommand}" CommandParameter="yellow" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#F97316" ToolTip.Tip="Оранжевый" Command="{Binding SelectColorCommand}" CommandParameter="orange" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#EF4444" ToolTip.Tip="Красный" Command="{Binding SelectColorCommand}" CommandParameter="red" />
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#A855F7" ToolTip.Tip="Фиолетовый" Command="{Binding SelectColorCommand}" CommandParameter="purple" />
                   </UniformGrid>
                 </Border>
               </Flyout>
@@ -148,7 +148,7 @@
     </Style>
     <Style Selector="nodify|Node.inactive TextBox, nodify|Node.inactive ComboBox, nodify|Node.inactive NumericUpDown, nodify|Node.inactive Button, nodify|Node.inactive CheckBox">
       <Setter Property="Background" Value="{DynamicResource InactiveNodeFieldBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="AutoCompleteBox.profileIdentity /template/ TextBox">
       <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -420,7 +420,7 @@
                     <TextBlock Text="{Binding IntegerInputError}"
                                IsVisible="{Binding HasIntegerInputError}"
                                FontSize="{StaticResource FontCaption}"
-                               Foreground="#DC2626"
+                               Foreground="{DynamicResource DangerTextBrush}"
                                TextWrapping="Wrap" />
 
                     <CheckBox

@@ -16,13 +16,13 @@
       </Grid>
       <StackPanel Orientation="Horizontal" Spacing="8">
         <TextBlock Text="Цвета:" VerticalAlignment="Center" />
-        <Button Background="#2563EB" Width="32" Height="28" Tag="#2563EB" Click="OnPickColor" ToolTip.Tip="Синий" />
-        <Button Background="#0F766E" Width="32" Height="28" Tag="#0F766E" Click="OnPickColor" ToolTip.Tip="Бирюзовый" />
-        <Button Background="#15803D" Width="32" Height="28" Tag="#15803D" Click="OnPickColor" ToolTip.Tip="Зелёный" />
-        <Button Background="#EAB308" Width="32" Height="28" Tag="#EAB308" Click="OnPickColor" ToolTip.Tip="Жёлтый" />
-        <Button Background="#EA580C" Width="32" Height="28" Tag="#EA580C" Click="OnPickColor" ToolTip.Tip="Оранжевый" />
-        <Button Background="#B91C1C" Width="32" Height="28" Tag="#B91C1C" Click="OnPickColor" ToolTip.Tip="Красный" />
-        <Button Background="#7C3AED" Width="32" Height="28" Tag="#7C3AED" Click="OnPickColor" ToolTip.Tip="Фиолетовый" />
+        <Button Classes="colorSwatch" Background="#2563EB" Width="32" Height="28" Tag="#2563EB" Click="OnPickColor" ToolTip.Tip="Синий" />
+        <Button Classes="colorSwatch" Background="#0F766E" Width="32" Height="28" Tag="#0F766E" Click="OnPickColor" ToolTip.Tip="Бирюзовый" />
+        <Button Classes="colorSwatch" Background="#15803D" Width="32" Height="28" Tag="#15803D" Click="OnPickColor" ToolTip.Tip="Зелёный" />
+        <Button Classes="colorSwatch" Background="#EAB308" Width="32" Height="28" Tag="#EAB308" Click="OnPickColor" ToolTip.Tip="Жёлтый" />
+        <Button Classes="colorSwatch" Background="#EA580C" Width="32" Height="28" Tag="#EA580C" Click="OnPickColor" ToolTip.Tip="Оранжевый" />
+        <Button Classes="colorSwatch" Background="#B91C1C" Width="32" Height="28" Tag="#B91C1C" Click="OnPickColor" ToolTip.Tip="Красный" />
+        <Button Classes="colorSwatch" Background="#7C3AED" Width="32" Height="28" Tag="#7C3AED" Click="OnPickColor" ToolTip.Tip="Фиолетовый" />
         <TextBlock x:Name="ToggleHint" Text="Одна кнопка: первое нажатие включает, следующее выключает." VerticalAlignment="Center" Margin="12,0,0,0" />
       </StackPanel>
     </StackPanel>
@@ -31,7 +31,7 @@
       <TabItem x:Name="OffTab" Header="Повторное нажатие — выключить"><editor:GraphEditorView x:Name="OffEditor" /></TabItem>
     </TabControl>
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
-      <TextBlock x:Name="ErrorText" Foreground="#DC2626" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+      <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
       <Button Grid.Column="1" Content="Отмена" Click="OnCancel" Margin="0,0,8,0" />
       <Button Grid.Column="2" Content="Применить к профилю" Click="OnApply" />
     </Grid>

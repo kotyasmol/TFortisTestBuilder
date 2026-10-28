@@ -38,7 +38,7 @@ public class ProfileConnectionAndLogSelectionTests
                 Assert.All(vm.TestingLogger.Entries, entry =>
                 {
                     Assert.Equal(TestBuilder.Services.Logging.LogLevel.Info, entry.Level);
-                    Assert.Null(entry.HighlightColor);
+                    Assert.Equal(TestBuilder.Services.Logging.LogHighlight.None, entry.Highlight);
                     Assert.DoesNotContain("TimeoutException", entry.Message);
                     Assert.DoesNotContain("TestViewModel.cs", entry.Message);
                 });

@@ -19,6 +19,8 @@ namespace TestBuilder.Services.Logging
         Error
     }
 
+    public enum LogHighlight { None, Error, Success, Step, Warning }
+
     /// <summary>
     /// Одна запись лога.
     /// </summary>
@@ -33,15 +35,13 @@ namespace TestBuilder.Services.Logging
 
             // Error severity wins even when an exception quotes an earlier [OK] message.
             if (IsFailureSummary || level == LogLevel.Error || Message.Contains("[ОШИБКА]") || Message.Contains("[ERROR]"))
-                HighlightColor = "#DC2626";
+                Highlight = LogHighlight.Error;
             else if (Message.Contains("[OK]"))
-                HighlightColor = "#16A34A";
+                Highlight = LogHighlight.Success;
             else if (Message.Contains("[ШАГ]"))
-                HighlightColor = "#2563EB";
+                Highlight = LogHighlight.Step;
             else if (level == LogLevel.Warning || Message.Contains("[ОСТАНОВ]"))
-                HighlightColor = "#D97706";
-            else
-                HighlightColor = null; // null = использовать DynamicResource из XAML
+                Highlight = LogHighlight.Warning;
         }
 
         public DateTime Timestamp { get; }
@@ -49,10 +49,11 @@ namespace TestBuilder.Services.Logging
         public string Category { get; }
         public string Message { get; }
 
-        /// <summary>null = обычный текст (тема-зависимый), иначе фиксированный цвет</summary>
-        public string? HighlightColor { get; }
-
-        public bool IsHighlighted => HighlightColor != null;
+        public LogHighlight Highlight { get; }
+        public bool IsError => Highlight == LogHighlight.Error;
+        public bool IsSuccess => Highlight == LogHighlight.Success;
+        public bool IsStep => Highlight == LogHighlight.Step;
+        public bool IsWarning => Highlight == LogHighlight.Warning;
         public bool IsFailureSummary => Message.StartsWith("[ПРИЧИНА СБОЯ]", StringComparison.Ordinal);
 
         public override string ToString()

@@ -2,19 +2,20 @@
 using Avalonia.Media;
 using Avalonia.Styling;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace TestBuilder.Converters
 {
-    public class BoolToBackgroundConverter : IValueConverter
+    public class BoolToBackgroundConverter : IMultiValueConverter
     {
         public static readonly BoolToBackgroundConverter Instance = new();
 
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
         {
-            var isDark = Avalonia.Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+            var isDark = values.Count > 1 && Equals(values[1], ThemeVariant.Dark);
 
-            if (value is bool isReadOnly)
+            if (values.Count > 0 && values[0] is bool isReadOnly)
             {
                 if (isDark)
                     return isReadOnly
@@ -29,7 +30,5 @@ namespace TestBuilder.Converters
             return isDark ? new SolidColorBrush(Color.Parse("#182235")) : Brushes.White;
         }
 
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-            => throw new NotImplementedException();
     }
 }

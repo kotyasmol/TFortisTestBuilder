@@ -61,6 +61,17 @@
           <SolidColorBrush x:Key="TextPrimaryBrush" Color="#202A38" />
           <SolidColorBrush x:Key="TextSecondaryBrush" Color="#46556B" />
           <SolidColorBrush x:Key="TextMutedBrush" Color="#536279" />
+          <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#E9EDF2" />
+          <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#AAB6C5" />
+          <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#E9EDF2" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#AAB6C5" />
+          <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="CheckBoxForegroundCheckedDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="CheckBoxForegroundUncheckedDisabled" Color="#536279" />
+          <SolidColorBrush x:Key="CheckBoxForegroundIndeterminateDisabled" Color="#536279" />
           <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#E8F0FF" />
@@ -134,13 +145,24 @@
           <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E3E8F0" />
           <SolidColorBrush x:Key="TextSecondaryBrush" Color="#BFCBDC" />
           <SolidColorBrush x:Key="TextMutedBrush" Color="#AFBED2" />
+          <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#303A46" />
+          <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#526173" />
+          <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#303A46" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#526173" />
+          <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="CheckBoxForegroundCheckedDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="CheckBoxForegroundUncheckedDisabled" Color="#AFBED2" />
+          <SolidColorBrush x:Key="CheckBoxForegroundIndeterminateDisabled" Color="#AFBED2" />
           <SolidColorBrush x:Key="PrimaryBrush" Color="#3B82F6" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#60A5FA" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#1E3A5F" />
           <SolidColorBrush x:Key="ProfileSelectedBrush" Color="#254F7F" />
           <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#1E3554" />
           <SolidColorBrush x:Key="PrimaryTextBrush" Color="#93C5FD" />
-          <SolidColorBrush x:Key="OnPrimaryBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="OnPrimaryBrush" Color="#101828" />
           <SolidColorBrush x:Key="SuccessBrush" Color="#34D399" />
           <SolidColorBrush x:Key="SuccessSoftBrush" Color="#153927" />
           <SolidColorBrush x:Key="SuccessBorderBrush" Color="#276749" />
@@ -241,10 +263,6 @@
     <Setter Property="Margin" Value="0,0,8,8" />
   </Style>
 
-  <Style Selector="TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-  </Style>
-
   <Style Selector="Button">
     <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -259,37 +277,28 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
-  <Style Selector="Button:pointerover">
+  <Style Selector="Button:not(:disabled):pointerover">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
   </Style>
 
-  <Style Selector="Button:pressed">
+  <Style Selector="Button:not(:disabled):pressed">
     <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
   </Style>
 
-  <Style Selector="Button:disabled">
-    <Setter Property="Opacity" Value="0.55" />
-  </Style>
-
-  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):disabled /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-  </Style>
-  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
   </Style>
-  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
   </Style>
-  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.primary:not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.primary:not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
   </Style>
-  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.danger:not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.danger:not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
   </Style>
@@ -300,11 +309,11 @@
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
   </Style>
 
-  <Style Selector="Button.primary PathIcon">
-    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
+  <Style Selector="Button PathIcon">
+    <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
   </Style>
 
-  <Style Selector="Button.primary:pointerover">
+  <Style Selector="Button.primary:not(:disabled):pointerover, Button.primary:not(:disabled):pressed">
     <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
   </Style>
@@ -326,6 +335,19 @@
     <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
   </Style>
 
+  <!-- Keep the control and its presenter in sync: nested labels/icons bind to the control. -->
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):disabled">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
   <Style Selector="TextBox">
     <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -338,6 +360,16 @@
 
   <Style Selector="TextBox:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBox:disabled /template/ TextBlock#PART_Watermark, TextBox:disabled /template/ TextBlock#PART_FloatingWatermark, TextBox:not(:disabled) /template/ TextBlock#PART_Watermark, TextBox:not(:disabled) /template/ TextBlock#PART_FloatingWatermark">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="Button.colorSwatch:not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.colorSwatch:not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
 
   <Style Selector="ComboBox">
@@ -358,11 +390,25 @@
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
   </Style>
 
+  <Style Selector="ToggleButton:checked">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
+  </Style>
   <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}" />
     <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
+  </Style>
+  <Style Selector="ToggleButton:disabled">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
   </Style>
 
   <Style Selector="CheckBox">

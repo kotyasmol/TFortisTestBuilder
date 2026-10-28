@@ -148,9 +148,10 @@
               <Style Selector="DataGridRow">
                 <Setter Property="Background">
                   <Setter.Value>
-                    <Binding Path="IsReadOnly"
-                             Converter="{StaticResource BoolToBackground}"
-                             x:DataType="models:RegisterItem" />
+                    <MultiBinding Converter="{StaticResource BoolToBackground}" x:DataType="models:RegisterItem">
+                      <Binding Path="IsReadOnly" />
+                      <Binding Path="$parent[views:ModbusMonitoringView].ActualThemeVariant" />
+                    </MultiBinding>
                   </Setter.Value>
                 </Setter>
               </Style>

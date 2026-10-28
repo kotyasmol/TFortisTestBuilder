@@ -25,10 +25,6 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     public bool IsToggle => Definition.Display == ProfileActionDisplay.Toggle;
     public bool ShowProgress => Definition.Display == ProfileActionDisplay.Progress || IsRunning;
     public IBrush Background => Brush.Parse(Definition.Color);
-    public IBrush Foreground
-    {
-        get { var c = Color.Parse(Definition.Color); return .2126 * c.R + .7152 * c.G + .0722 * c.B > 150 ? Brushes.Black : Brushes.White; }
-    }
     [ObservableProperty] private bool isRunning;
     [ObservableProperty] private bool isOn;
     [ObservableProperty] private bool isStateKnown;

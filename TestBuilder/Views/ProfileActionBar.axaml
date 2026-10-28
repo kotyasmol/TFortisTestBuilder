@@ -1,17 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views"
-             x:Class="TestBuilder.Views.ProfileActionBar" x:DataType="vm:TestViewModel">
+             xmlns:converters="using:TestBuilder.Converters"
+             x:Class="TestBuilder.Views.ProfileActionBar" x:DataType="vm:TestViewModel" Background="{DynamicResource SurfaceBrush}">
   <UserControl.Resources>
+    <converters:ContrastTextConverter x:Key="ContrastText" />
     <ControlTheme x:Key="ActionButtonTheme" TargetType="Button">
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Template"><ControlTemplate>
-        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
           <ContentPresenter Background="Transparent" Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate></Setter>
-      <Style Selector="^:pointerover"><Setter Property="Opacity" Value="0.9" /></Style>
-      <Style Selector="^:pressed"><Setter Property="Opacity" Value="0.75" /></Style>
-      <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.7" /></Style>
+      <Style Selector="^:pointerover"><Setter Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource Self}}" /></Style>
+      <Style Selector="^:pressed"><Setter Property="BorderThickness" Value="2" /></Style>
     </ControlTheme>
   </UserControl.Resources>
   <Grid x:Name="QuickActionsLayout" ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
@@ -30,19 +31,25 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ProfileActionViewModel">
                 <Grid ColumnDefinitions="*,Auto">
-                  <Button Classes="profileAction" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}" Background="{Binding Background}" Foreground="{Binding Foreground}"
+                  <Button Classes="profileAction" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}" Background="{Binding Background}"
                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="52" Padding="10,8"
                           ToolTip.Tip="{Binding StateText}" AutomationProperties.Name="{Binding Name}">
+                    <Button.Foreground>
+                      <MultiBinding Converter="{StaticResource ContrastText}">
+                        <Binding Path="Background" />
+                        <Binding Path="$parent[views:ProfileActionBar].Background" />
+                      </MultiBinding>
+                    </Button.Foreground>
                     <Grid ColumnDefinitions="Auto,*">
                       <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <Border IsVisible="{Binding IsToggle}" Width="34" Height="20" CornerRadius="10" BorderThickness="2" BorderBrush="{Binding Foreground}">
-                          <Ellipse Fill="{Binding Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="{Binding ToggleAlignment}" Opacity="{Binding ToggleOpacity}" />
+                        <Border IsVisible="{Binding IsToggle}" Width="34" Height="20" CornerRadius="10" BorderThickness="2" BorderBrush="{Binding $parent[Button].Foreground}">
+                          <Ellipse Fill="{Binding $parent[Button].Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="{Binding ToggleAlignment}" Opacity="{Binding ToggleOpacity}" />
                         </Border>
-                        <views:ActionActivityIndicator Width="26" Height="26" IsActive="{Binding IsRunning}" Progress="{Binding Progress}" IsVisible="{Binding ShowProgress}" Stroke="{Binding Foreground}" />
+                        <views:ActionActivityIndicator Width="26" Height="26" IsActive="{Binding IsRunning}" Progress="{Binding Progress}" IsVisible="{Binding ShowProgress}" Stroke="{Binding $parent[Button].Foreground}" />
                       </StackPanel>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Foreground="{Binding Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Foreground="{Binding Foreground}" Text="{Binding StateText}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding StateText}" FontSize="11" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </Grid>
                   </Button>

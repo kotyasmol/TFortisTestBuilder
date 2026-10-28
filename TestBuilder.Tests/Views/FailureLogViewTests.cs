@@ -98,14 +98,14 @@ public class FailureLogViewTests
     }
 
     [Theory]
-    [InlineData(LogLevel.Warning, "[ERROR] Selftest failed", "#DC2626")]
-    [InlineData(LogLevel.Warning, "[ОШИБКА] Регистр не прочитан", "#DC2626")]
-    [InlineData(LogLevel.Error, "Exception includes [OK] from earlier output", "#DC2626")]
-    [InlineData(LogLevel.Info, "[OK] Проверка пройдена", "#16A34A")]
-    [InlineData(LogLevel.Warning, "[ОСТАНОВ] Остановлено пользователем", "#D97706")]
-    [InlineData(LogLevel.Info, "Обычная строка", null)]
-    public void LogEntry_UsesErrorSeverityBeforeMessageTags(LogLevel level, string message, string? color)
-        => Assert.Equal(color, new LogEntry(DateTime.Now, level, "Testing", message).HighlightColor);
+    [InlineData(LogLevel.Warning, "[ERROR] Selftest failed", LogHighlight.Error)]
+    [InlineData(LogLevel.Warning, "[ОШИБКА] Регистр не прочитан", LogHighlight.Error)]
+    [InlineData(LogLevel.Error, "Exception includes [OK] from earlier output", LogHighlight.Error)]
+    [InlineData(LogLevel.Info, "[OK] Проверка пройдена", LogHighlight.Success)]
+    [InlineData(LogLevel.Warning, "[ОСТАНОВ] Остановлено пользователем", LogHighlight.Warning)]
+    [InlineData(LogLevel.Info, "Обычная строка", LogHighlight.None)]
+    public void LogEntry_UsesErrorSeverityBeforeMessageTags(LogLevel level, string message, LogHighlight highlight)
+        => Assert.Equal(highlight, new LogEntry(DateTime.Now, level, "Testing", message).Highlight);
 
     private static SubtestNodeViewModel FailingSubtest(string name, string variable)
     {

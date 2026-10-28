@@ -33,14 +33,14 @@ public partial class WriteRegisterDialog : Window
         if (!ushort.TryParse(ValueBox.Text, out ushort value))
         {
             ResultText.Text = "Ошибка: неверное значение";
-            ResultText.Foreground = Avalonia.Media.Brushes.Red;
+            ShowResultColor("DangerTextBrush");
             return;
         }
 
         if (!byte.TryParse(SlaveIdBox.Text, out byte slaveId))
         {
             ResultText.Text = "Ошибка: неверный Slave ID";
-            ResultText.Foreground = Avalonia.Media.Brushes.Red;
+            ShowResultColor("DangerTextBrush");
             return;
         }
 
@@ -49,12 +49,12 @@ public partial class WriteRegisterDialog : Window
             await _slave.Modbus.WriteAreaAsync(slaveId, (ushort)_register.Address, value, _register.Area);
             await _slave.PollAsync();
             ResultText.Text = "Запись выполнена успешно";
-            ResultText.Foreground = Avalonia.Media.Brushes.Green;
+            ShowResultColor("SuccessTextBrush");
         }
         catch
         {
             ResultText.Text = "Ошибка записи";
-            ResultText.Foreground = Avalonia.Media.Brushes.Red;
+            ShowResultColor("DangerTextBrush");
         }
     }
 
@@ -62,4 +62,7 @@ public partial class WriteRegisterDialog : Window
     {
         Close();
     }
+
+    private void ShowResultColor(string resource) => ResultText.Bind(TextBlock.ForegroundProperty,
+        new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension(resource));
 }

@@ -10,9 +10,10 @@
       <Setter Property="BorderThickness" Value="3,0,0,0" />
       <Setter Property="Padding" Value="8,6" />
     </Style>
-    <Style Selector="SelectableTextBlock.highlighted">
-      <Setter Property="Foreground" Value="{Binding HighlightColor}" />
-    </Style>
+    <Style Selector="SelectableTextBlock.error"><Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" /></Style>
+    <Style Selector="SelectableTextBlock.success"><Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" /></Style>
+    <Style Selector="SelectableTextBlock.step"><Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /></Style>
+    <Style Selector="SelectableTextBlock.warning"><Setter Property="Foreground" Value="{DynamicResource ChangedTextBrush}" /></Style>
     <Style Selector="SelectableTextBlock.failure">
       <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
       <Setter Property="FontWeight" Value="Bold" />
@@ -20,7 +21,8 @@
   </UserControl.Styles>
   <Border Classes.failure="{Binding IsFailureSummary}" Margin="2">
     <SelectableTextBlock Text="{Binding}" IsHitTestVisible="False"
-                         Classes.highlighted="{Binding IsHighlighted}"
+                         Classes.error="{Binding IsError}" Classes.success="{Binding IsSuccess}"
+                         Classes.step="{Binding IsStep}" Classes.warning="{Binding IsWarning}"
                          Classes.failure="{Binding IsFailureSummary}"
                          FontFamily="Consolas" FontSize="14" TextWrapping="Wrap">
       <SelectableTextBlock.Styles>

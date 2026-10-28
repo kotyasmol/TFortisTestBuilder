@@ -2,8 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="TestBuilder.Views.WriteRegisterDialog"
         Title="Запись регистра"
-        Width="300"
-        Height="250"
+        Width="360"
+        MinHeight="250"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
@@ -24,9 +25,9 @@
             <TextBox Grid.Column="1" x:Name="ValueBox" />
         </Grid>
 
-        <Border Height="1" Background="Gray" Margin="0,5" />
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,5" />
 
-        <TextBlock x:Name="ResultText" Text="Нет данных" Foreground="Gray" />
+        <TextBlock x:Name="ResultText" Text="Нет данных" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
 
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
             <Button Content="Отправить" x:Name="SendButton" Width="100" />
