@@ -303,6 +303,7 @@
           <Button Classes="station" Content="Подключить" Command="{Binding ConnectStationCommand}" />
           <Button Classes="station" Content="Отключить" Command="{Binding DisconnectStationCommand}" />
           <Button Classes="station primary" Content="Начать" Command="{Binding RunGraphCommand}" MinWidth="100" />
+          <Button Classes="station primary" Content="Повторить настройку" Command="{Binding RetryProfilePreparationCommand}" IsVisible="{Binding ShowRetryProfilePreparation}" />
           <Button Classes="station" Content="Пауза" Command="{Binding PauseTestCommand}" IsVisible="{Binding !IsTestPaused}" />
           <Button Classes="station" Content="Продолжить" Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" />
           <Button Classes="station danger" Content="Остановить" Command="{Binding StopTestCommand}" />

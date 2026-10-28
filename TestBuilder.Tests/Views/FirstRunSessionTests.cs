@@ -1,5 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
@@ -8,6 +12,8 @@ using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Views;
+using TestBuilder.Views.TestViews;
 
 namespace TestBuilder.Tests.Views;
 
@@ -127,7 +133,9 @@ public class FirstRunSessionTests
         failedPrep.VariableName = "OperatorName";
         failedPrep.ExpectedValue = App.StartupUserName;
         failedPrep.ComparisonType = VariableComparisonType.String;
-        Assert.True(await vm.PrepareOpenedProfileAsync());
+        Assert.True(vm.RetryProfilePreparationCommand.CanExecute(null));
+        await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+        Assert.False(vm.ShowRetryProfilePreparation);
         Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(starts + 1, PreparationStarts(vm));
@@ -135,8 +143,10 @@ public class FirstRunSessionTests
         Assert.True(vm.Station.IsSuccessful);
     });
 
-    [Fact]
-    public Task CancelledPreparation_BlocksDeviceChecksAndCanBeRetried() => InSession(async () =>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task CancelledPreparation_BlocksDeviceChecksAndCanBeRetriedFromUi(bool operatorMode) => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -149,6 +159,7 @@ public class FirstRunSessionTests
         Assert.True(vm.IsTestRunning);
         vm.StopTestCommand.Execute(null);
         await opening;
+        vm.IsOperatorView = operatorMode;
         prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         var test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
         Assert.False(prep.HasExecutionSucceeded);
@@ -157,7 +168,38 @@ public class FirstRunSessionTests
         prep.Milliseconds = 0;
         var starts = PreparationStarts(vm);
         Assert.False(vm.CanStartRun);
-        Assert.True(await vm.PrepareOpenedProfileAsync());
+        Assert.True(vm.CanRetryProfilePreparation);
+        vm.NeedsStandInspection = true;
+        Assert.False(vm.RetryProfilePreparationCommand.CanExecute(null));
+        var blockedStarts = PreparationStarts(vm);
+        await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+        Assert.Equal(blockedStarts, PreparationStarts(vm));
+        vm.NeedsStandInspection = false;
+        vm.IsNetworkSetupBusy = true;
+        Assert.False(vm.RetryProfilePreparationCommand.CanExecute(null));
+        vm.IsNetworkSetupBusy = false;
+        Assert.False(vm.IsStopping);
+        var source = vm.RootGraph;
+        Control screen = operatorMode ? new StationDashboardView { DataContext = vm } : new GraphEditorView { DataContext = vm };
+        var window = new Window { Content = screen, Width = 1400, Height = 950 };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            var retry = screen.GetVisualDescendants().OfType<Button>()
+                .Single(b => ReferenceEquals(b.Command, vm.RetryProfilePreparationCommand));
+            Assert.True(retry.IsEffectivelyVisible); Assert.True(retry.IsEffectivelyEnabled);
+            var point = retry.TranslatePoint(new Point(retry.Bounds.Width / 2, retry.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left);
+            Assert.NotNull(vm.RetryProfilePreparationCommand.ExecutionTask);
+            await vm.RetryProfilePreparationCommand.ExecutionTask!;
+            Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            Assert.False(retry.IsEffectivelyVisible);
+        }
+        finally { window.Close(); (screen as IDisposable)?.Dispose(); }
+        Assert.Same(source, vm.RootGraph);
+        Assert.Same(prep, vm.Nodes.OfType<DelayNodeViewModel>().First());
+        Assert.Equal(0, prep.Milliseconds); // unsaved change survives retry
+        Assert.True(vm.CanStartRun);
         Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(starts + 1, PreparationStarts(vm));
@@ -303,6 +345,19 @@ public class FirstRunSessionTests
         Assert.Equal(matches, vm.CanStartRun);
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(matches, test.HasExecutionSucceeded);
+        if (!matches)
+        {
+            Assert.True(vm.CanRetryProfilePreparation);
+            await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+            Assert.False(prep.HasExecutionSucceeded);
+            Assert.False(vm.CanStartRun);
+            devices.Identity = 77;
+            await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+            Assert.True(prep.HasExecutionSucceeded);
+            Assert.False(test.HasExecutionSucceeded);
+            Assert.True(vm.CanStartRun);
+            Assert.Equal(2, port.Opened.Count);
+        }
         await vm.ToggleConnectionCommand.ExecuteAsync(null);
     });
 

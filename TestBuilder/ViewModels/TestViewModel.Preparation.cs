@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 
@@ -17,6 +18,36 @@ public partial class TestViewModel
         App.StartupOptions.IsValid && _profileLoadError.Length == 0;
     private bool ProfileRequiresHardware => RootGraph.Hardware?.Devices.Count > 0 || GraphConnectionRequirements.RequiresStandConnection(RootGraph);
     private bool HasPendingPreparation => _preparedProfileKey == null && BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
+    public bool ShowRetryProfilePreparation => !IsActionGraphEditor && HasPendingPreparation;
+    public bool CanRetryProfilePreparation => ShowRetryProfilePreparation && CanPrepareProfile &&
+        !_isPreparingProfile && !IsStopping && !HasRunningQuickActions && (!ProfileRequiresHardware || IsConnected);
+
+    [RelayCommand(CanExecute = nameof(CanRetryProfilePreparation))]
+    private async Task RetryProfilePreparationAsync()
+    {
+        if (!CanRetryProfilePreparation) return;
+        // Keep the open graph and unsaved edits. Recheck equipment only if its
+        // previous validation was lost; preparation never starts the device test.
+        if (ProfileRequiresHardware && !IsMonitoringActive)
+        {
+            IsConnecting = true;
+            try
+            {
+                if (_registerMonitor != null) await _registerMonitor.StopAsync();
+                DisposeRegisterMonitor();
+                _registerState.Clear();
+                if (!await ValidateConnectedProfileAsync()) return;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Не удалось проверить оборудование. Подробности в журнале.";
+                LogUiException("Повторная подготовка профиля", ex);
+                return;
+            }
+            finally { IsConnecting = false; }
+        }
+        await PrepareOpenedProfileAsync();
+    }
 
     private string CurrentPreparationKey() =>
         FirstRunProfileKey.Create(_currentProfilePath, GraphSerializer.Serialize(this, CurrentProfileName));
@@ -29,7 +60,7 @@ public partial class TestViewModel
 
     internal async Task<bool> PrepareOpenedProfileAsync()
     {
-        if (IsTestRunning || IsConnecting || NeedsStandInspection || _profileLoadError.Length > 0) return false;
+        if (!CanPrepareProfile || _isPreparingProfile || HasRunningQuickActions) return false;
         if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
         {
             StatusMessage = string.Empty;

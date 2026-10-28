@@ -165,9 +165,9 @@ public partial class TestViewModel
         IsTestRunning ? (IsStopping ? "Выполняем завершающие действия" : _isPreparingProfile ? "Настройка стенда" : "Стенд занят проверкой") :
         _currentProfilePath == null || _selectedProfile == null ? (IsConnected ? "Выберите программу проверки" : "Подключитесь к стенду, затем выберите профиль") :
         RootGraph.Hardware == null && GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? ConnectionRequirements :
+        HasPendingPreparation ? (!IsConnected && ProfileRequiresHardware
+            ? "Подключите стенд для подготовки профиля" : "Нажмите «Повторить настройку» для подготовки профиля.") :
         ProfileRequiresHardware && IsConnected && !IsMonitoringActive ? "Откройте профиль заново." :
-        HasPendingPreparation ? (!IsConnected && GraphConnectionRequirements.RequiresStandConnection(RootGraph)
-            ? "Подключите стенд для подготовки профиля" : "Подготовка профиля не выполнена. Откройте профиль заново.") :
         !GraphConnectionRequirements.RequiresStandConnection(RootGraph) ? "Готово · подключение к стенду не требуется" :
         IsConnected && IsMonitoringActive ? "Стенд готов к проверке" : "Подключите стенд перед запуском";
 
@@ -203,6 +203,9 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(CanEditHardware));
         OnPropertyChanged(nameof(CanChooseProfile));
         OnPropertyChanged(nameof(CanStartRun));
+        OnPropertyChanged(nameof(ShowRetryProfilePreparation));
+        OnPropertyChanged(nameof(CanRetryProfilePreparation));
+        RetryProfilePreparationCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(StationReadiness));
         OnPropertyChanged(nameof(StationProfileName));
         OnPropertyChanged(nameof(StationConfigurationCaption));
