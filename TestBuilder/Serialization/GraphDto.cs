@@ -35,6 +35,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<ProfileActionDto>? QuickActions { get; set; }
 
+        [JsonPropertyName("registerIndicators")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<TestBuilder.Models.RegisterIndicatorDefinition>? RegisterIndicators { get; set; }
+
         [JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 

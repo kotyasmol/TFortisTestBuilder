@@ -183,20 +183,26 @@ public partial class TestViewModel
     partial void OnIsConnectedChanged(bool value)
     {
         if (!value) { CancelQuickActions(); foreach (var action in QuickActions) action.InvalidateState(); }
+        UpdateRegisterIndicators();
         RefreshStationAvailability();
         RefreshStandIdentity();
     }
-    partial void OnIsMonitoringActiveChanged(bool value) => RefreshStationAvailability();
+    partial void OnIsMonitoringActiveChanged(bool value) { UpdateRegisterIndicators(); RefreshStationAvailability(); }
 
     private void RefreshStationAvailability()
     {
         OnPropertyChanged(nameof(HasRunningQuickActions));
         OnPropertyChanged(nameof(CanEditQuickActions));
         OnPropertyChanged(nameof(ShowQuickActions));
+        OnPropertyChanged(nameof(ShowQuickActionHeader));
+        OnPropertyChanged(nameof(ShowRegisterIndicators));
         OnPropertyChanged(nameof(ShowQuickActionTools));
         AddQuickActionCommand.NotifyCanExecuteChanged();
         EditQuickActionCommand.NotifyCanExecuteChanged();
         DeleteQuickActionCommand.NotifyCanExecuteChanged();
+        AddRegisterIndicatorCommand.NotifyCanExecuteChanged();
+        EditRegisterIndicatorCommand.NotifyCanExecuteChanged();
+        DeleteRegisterIndicatorCommand.NotifyCanExecuteChanged();
         foreach (var action in QuickActions) action.RefreshAvailability();
         OnPropertyChanged(nameof(CanEditGraph));
         OnPropertyChanged(nameof(CanPaste));

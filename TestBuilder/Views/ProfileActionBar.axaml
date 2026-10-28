@@ -30,13 +30,14 @@
     <Border x:Name="QuickActionsPanel" IsVisible="{Binding !IsQuickActionsCollapsed}" Width="280" Padding="12"
             Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12" IsVisible="{Binding ShowQuickActionHeader}">
           <TextBlock Text="Кнопки профиля" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
           <Button Grid.Column="1" Content="+" FontSize="22" Width="36" Padding="4" VerticalAlignment="Center"
                   Command="{Binding AddQuickActionCommand}" IsVisible="{Binding ShowQuickActionTools}"
                   ToolTip.Tip="Добавить кнопку в профиль" AutomationProperties.Name="Добавить кнопку в профиль" />
         </Grid>
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="16">
           <ItemsControl ItemsSource="{Binding QuickActions}">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -103,6 +104,8 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <views:RegisterIndicatorsView />
+          </StackPanel>
         </ScrollViewer>
       </Grid>
     </Border>

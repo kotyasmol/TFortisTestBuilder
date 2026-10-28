@@ -349,6 +349,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         Profiles.CollectionChanged += (_, _) => { if (!_refreshingProfiles) RefreshEngineerProfileGroups(); };
         BuildNodePaletteCategories();
         RootGraph.QuickActions.CollectionChanged += (_, _) => RefreshQuickActions();
+        RootGraph.RegisterIndicators.CollectionChanged += (_, _) => RefreshRegisterIndicators();
         RefreshProfiles();
 
         StatusMessage = "Готов к подключению.";
@@ -777,6 +778,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         ResetPartialRun();
         RootGraph.Clear();
         RootGraph.QuickActions.Clear();
+        RootGraph.RegisterIndicators.Clear();
         RootGraph.Hardware = null;
         RootGraph.Board = null;
         RootGraph.ProductKind = ProductFilter == "Платы" ? "Board" : "Switch";
@@ -2073,6 +2075,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
+        _indicatorsDisposed = true;
+        _indicatorTimer?.Stop();
         CancelQuickActions();
         _slaveManager.Slaves.CollectionChanged -= OnStandDevicesChanged;
         if (_standSerialRegister != null) _standSerialRegister.PropertyChanged -= OnStandSerialChanged;

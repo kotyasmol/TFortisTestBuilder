@@ -8,9 +8,9 @@ namespace TestBuilder.Views;
 
 public sealed class DeleteProfileActionDialog : Window
 {
-    public DeleteProfileActionDialog(string actionName)
+    public DeleteProfileActionDialog(string actionName, bool registerIndicator = false)
     {
-        Title = "Удалить кнопку?";
+        Title = registerIndicator ? "Удалить индикатор?" : "Удалить кнопку?";
         Width = 420;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
@@ -29,7 +29,7 @@ public sealed class DeleteProfileActionDialog : Window
             {
                 new TextBlock
                 {
-                    Text = $"Удалить кнопку «{actionName}» и её графы из профиля?",
+                    Text = registerIndicator ? $"Удалить индикатор «{actionName}» из профиля?" : $"Удалить кнопку «{actionName}» и её графы из профиля?",
                     TextWrapping = TextWrapping.Wrap
                 },
                 new StackPanel

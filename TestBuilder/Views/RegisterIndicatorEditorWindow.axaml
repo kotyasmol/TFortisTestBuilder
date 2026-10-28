@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.RegisterIndicatorEditorWindow"
+        x:DataType="vm:RegisterIndicatorEditorViewModel" Title="Индикатор регистра" Width="650" Height="690"
+        MinWidth="560" MinHeight="580" WindowStartupLocation="CenterOwner" Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="*,Auto" Margin="20">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Добавьте устройства и регистры в разделе «Оборудование» профиля." IsVisible="{Binding !HasEquipment}" TextWrapping="Wrap" />
+        <TextBlock Text="Устройство (slave)" />
+        <ComboBox x:Name="DeviceInput" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" HorizontalAlignment="Stretch" />
+        <TextBlock Text="Регистр" />
+        <Grid ColumnDefinitions="*,Auto">
+          <AutoCompleteBox x:Name="RegisterInput" ItemsSource="{Binding Registers}" SelectedItem="{Binding SelectedRegister}" MinimumPrefixLength="0" FilterMode="Contains" TextChanged="OnRegisterTextChanged" Watermark="Адрес или название регистра" />
+          <Button x:Name="RegisterListButton" Grid.Column="1" Content="⌄" Width="36" Margin="4,0,0,0" Click="OnChooseRegister"
+                  ToolTip.Tip="Список регистров" AutomationProperties.Name="Список регистров" />
+        </Grid>
+        <TextBlock Text="Название индикатора" />
+        <TextBox x:Name="NameInput" Text="{Binding Name}" MaxLength="100" />
+        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
+          <TextBlock Text="Делить значение на" />
+          <TextBlock Grid.Column="1" Text="Знаков после запятой" Margin="12,0,0,0" />
+          <TextBlock Grid.Column="2" Text="Единица измерения" Margin="12,0,0,0" />
+          <NumericUpDown x:Name="DivisorInput" Grid.Row="1" Value="{Binding Divisor}" Minimum="0.000001" Maximum="1000000000" Increment="1" />
+          <NumericUpDown x:Name="DecimalsInput" Grid.Row="1" Grid.Column="1" Value="{Binding DecimalPlaces}" Minimum="0" Maximum="6" Increment="1" Margin="12,0,0,0" />
+          <TextBox x:Name="UnitInput" Grid.Row="1" Grid.Column="2" Text="{Binding Unit}" MaxLength="24" Watermark="В, А, °C" Margin="12,0,0,0" />
+        </Grid>
+        <TextBlock Text="{Binding Preview}" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="Допуск в отображаемых единицах · для справки" />
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <TextBlock Text="Минимум (необязательно)" />
+          <TextBlock Grid.Column="1" Text="Максимум (необязательно)" Margin="12,0,0,0" />
+          <NumericUpDown x:Name="MinimumInput" Grid.Row="1" Value="{Binding Minimum}" />
+          <NumericUpDown x:Name="MaximumInput" Grid.Row="1" Grid.Column="1" Value="{Binding Maximum}" Margin="12,0,0,0" />
+        </Grid>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <TextBlock Text="Цвет" />
+          <TextBlock Grid.Column="1" Text="Код цвета" Margin="12,0,0,0" />
+          <ComboBox x:Name="ColorChoiceInput" Grid.Row="1" ItemsSource="{Binding Colors}" SelectedItem="{Binding SelectedColor}" HorizontalAlignment="Stretch" />
+          <TextBox x:Name="ColorInput" Grid.Row="1" Grid.Column="1" Text="{Binding Color}" Watermark="#2563EB" Margin="12,0,0,0" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Spacing="12" Margin="0,16,0,0">
+      <TextBlock Text="{Binding Error}" Foreground="{DynamicResource DangerTextBrush}" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Отмена" Click="OnCancel" />
+        <Button Content="Применить к профилю" Classes="primary" Click="OnApply" IsEnabled="{Binding HasEquipment}" />
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</Window>

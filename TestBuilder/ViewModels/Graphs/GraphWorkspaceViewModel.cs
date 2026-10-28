@@ -11,6 +11,7 @@ namespace TestBuilder.ViewModels.Graphs
     public sealed class GraphWorkspaceViewModel
     {
         public ObservableCollection<TestBuilder.Models.ProfileActionDefinition> QuickActions { get; } = new();
+        public ObservableCollection<TestBuilder.Models.RegisterIndicatorDefinition> RegisterIndicators { get; } = new();
         public string Title { get; set; } = "Граф";
         public System.DateTimeOffset? UpdatedAt { get; set; }
 
