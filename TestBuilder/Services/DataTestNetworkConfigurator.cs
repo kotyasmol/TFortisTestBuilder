@@ -42,6 +42,21 @@ public static class DataTestNetworkConfigurator
         .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToArray();
 
+    public static async Task<string?> RenameAsync(string adapterId, string newName)
+    {
+        if (!OperatingSystem.IsWindows()) return "Переименование карт Windows доступно только в Windows.";
+        newName = newName.Trim();
+        if (newName.Length is < 1 or > 128 || newName.Any(char.IsControl))
+            return "Введите название длиной 1–128 символов без управляющих символов.";
+        var adapters = GetAdapters();
+        var adapter = adapters.SingleOrDefault(a => a.Id.Equals(adapterId, StringComparison.OrdinalIgnoreCase));
+        if (adapter == null) return "Карта больше не найдена. Обновите список.";
+        if (adapters.Any(a => a.Id != adapter.Id && a.Name.Equals(newName, StringComparison.OrdinalIgnoreCase)))
+            return "Такое название уже есть у другой карты.";
+        if (adapter.Name == newName) return null;
+        return await RunNetshAsync(new[] { "interface", "set", "interface", $"name={adapter.Name}", $"newname={newName}" }, default);
+    }
+
     private static double GetSpeedMbps(NetworkInterface adapter)
     {
         try { return adapter.Speed > 0 ? adapter.Speed / 1_000_000.0 : 0; }

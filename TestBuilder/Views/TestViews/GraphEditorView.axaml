@@ -1410,11 +1410,6 @@
                       <TextBox Grid.Column="1" Text="{Binding UdpPort}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Целевая скорость, Мбит/с:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
-                      <TextBox Grid.Column="1" Text="{Binding TargetBandwidthMbps}" FontSize="{StaticResource FontCaption}" />
-                    </Grid>
-                    <CheckBox  IsChecked="{Binding AllowGigabit}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Разрешить до 1000 Мбит/с" TextWrapping="Wrap" /></CheckBox>
-                    <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Длительность, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding DurationMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
@@ -1438,10 +1433,10 @@
                       <TextBlock Grid.Column="0" Text="Переменная результата:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
-                    <Grid ColumnDefinitions="128,*">
-                      <TextBlock Grid.Column="0" Text="Пары портов:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
-                      <TextBox Grid.Column="1" Text="{Binding PortsText}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="72" />
-                    </Grid>
+                    <Button Content="Настроить пары…" Command="{Binding EditPairsCommand}" />
+                    <TextBlock Text="{Binding PairsSummary}" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" />
+                    <Button Content="Взять пары из плана сети" Command="{Binding ImportNetworkPlanCommand}" />
+                    <TextBlock Text="{Binding NetworkPlanStatus}" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" />
                     <CheckBox  IsChecked="{Binding Bidirectional}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять оба направления" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                   </StackPanel>

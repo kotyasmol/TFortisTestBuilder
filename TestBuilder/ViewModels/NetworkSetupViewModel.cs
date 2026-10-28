@@ -13,6 +13,9 @@ public partial class NetworkSetupRowViewModel : ObservableObject
 {
     public string Ip { get; }
     public string Port { get; }
+    public string Role { get; }
+    public string TestAssignment { get; }
+    public IAsyncRelayCommand RenameCommand { get; }
     public ObservableCollection<BenchAdapter> Adapters { get; }
 
     [ObservableProperty] private BenchAdapter? selectedAdapter;
@@ -29,10 +32,13 @@ public partial class NetworkSetupRowViewModel : ObservableObject
     }
     [RelayCommand] private void Clear() => SelectedAdapter = null;
 
-    public NetworkSetupRowViewModel(string ip, ObservableCollection<BenchAdapter> adapters, int index = 0)
+    public NetworkSetupRowViewModel(string ip, ObservableCollection<BenchAdapter> adapters, int index = 0, BenchNetworkAddress? definition = null, Func<NetworkSetupRowViewModel, Task>? rename = null)
     {
         Ip = ip;
-        Port = index.ToString();
+        Port = string.IsNullOrWhiteSpace(definition?.Name) ? $"Карта {index + 1}" : definition.Name;
+        Role = definition?.Role ?? "";
+        TestAssignment = definition?.IncludeInDataTest == true ? $"{definition.Pair} · тест {definition.TestMbps} Мбит/с" : "Не включена в план DataTest";
+        RenameCommand = new AsyncRelayCommand(() => rename?.Invoke(this) ?? Task.CompletedTask);
         Adapters = adapters;
     }
 }
@@ -61,6 +67,9 @@ public partial class NetworkSetupViewModel : ViewModelBase
         ResetCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
         EditAddressPlanCommand.NotifyCanExecuteChanged();
+        SaveBindingsCommand.NotifyCanExecuteChanged();
+        RememberLinksCommand.NotifyCanExecuteChanged();
+        CompareLinksCommand.NotifyCanExecuteChanged();
     }
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
     private void SelectionChanged(NetworkSetupRowViewModel row, BenchAdapter? previous)
@@ -107,12 +116,67 @@ public partial class NetworkSetupViewModel : ViewModelBase
         _getAdapters = getAdapters;
         _canUse = canUse;
         Rows = new(DataTestNetworkConfigurator.BenchIps.Select(
-            (ip, index) => new NetworkSetupRowViewModel(ip, Adapters, index)));
+            (ip, index) => CreateRow(ip, index)));
         foreach (var row in Rows) row.SelectionChanged += SelectionChanged;
         ResetCommand = new RelayCommand(Reset, () => CanEdit);
         RefreshCommand = new RelayCommand(Refresh, () => CanEdit);
         ApplyCommand = new AsyncRelayCommand(ApplyAsync, () => CanApply);
         Refresh();
+    }
+
+    private NetworkSetupRowViewModel CreateRow(string ip, int index) =>
+        new(ip, Adapters, index, AppSettings.Instance.NetworkPlan.Addresses.Single(a => a.Ip == ip), RenameAdapter);
+
+    private Dictionary<string, BenchAdapter>? _linkBaseline;
+    [ObservableProperty] private string linkChanges = "";
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void RememberLinks()
+    {
+        Refresh();
+        if (Validation.StartsWith("Не удалось")) return;
+        _linkBaseline = Adapters.ToDictionary(a => a.Id, StringComparer.OrdinalIgnoreCase);
+        LinkChanges = "Состояние запомнено. Отключите один кабель и нажмите «Найти изменение линка».";
+    }
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void CompareLinks()
+    {
+        if (_linkBaseline == null) { LinkChanges = "Сначала запомните состояние линков."; return; }
+        Refresh();
+        if (Validation.StartsWith("Не удалось")) { LinkChanges = Validation; return; }
+        var changes = Adapters.Where(a => !_linkBaseline.TryGetValue(a.Id, out var old) || old.Status != a.Status || old.SpeedMbps != a.SpeedMbps)
+            .Select(a => $"{a.Name} · MAC {a.Mac} · {a.Ipv4}: {(_linkBaseline.TryGetValue(a.Id, out var old) ? old.LinkDisplay : "не было")} → {a.LinkDisplay}")
+            .Concat(_linkBaseline.Values.Where(a => !Adapters.Any(now => now.Id.Equals(a.Id, StringComparison.OrdinalIgnoreCase)))
+                .Select(a => $"{a.Name} · MAC {a.Mac}: карта исчезла")).ToArray();
+        LinkChanges = changes.Length == 0 ? "Изменений нет. Проверьте кабель и обновите ещё раз."
+            : string.Join(Environment.NewLine, changes) + (changes.Length == 1 ? "" : Environment.NewLine + "Изменилось несколько карт. Повторите с одним кабелем.");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApply))]
+    private void SaveBindings()
+    {
+        if (!CanApply) return;
+        var previous = AppSettings.Instance.DataTestAdapterIds;
+        try
+        {
+            AppSettings.Instance.DataTestAdapterIds = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter!.Id);
+            AppSettings.Instance.SaveChecked();
+            Status = "Привязки сохранены. Для изменения IP используйте «Применить адреса».";
+        }
+        catch (Exception ex) { AppSettings.Instance.DataTestAdapterIds = previous; Status = ex.Message; }
+    }
+
+    private async Task RenameAdapter(NetworkSetupRowViewModel row)
+    {
+        if (!CanEdit || row.SelectedAdapter == null) return;
+        if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return;
+        var adapterId = row.SelectedAdapter.Id;
+        var name = await new TestBuilder.Views.NetworkAdapterNameWindow(row.SelectedAdapter.Name).ShowDialog<string?>(desktop.MainWindow);
+        if (name == null || !CanEdit) return;
+        IsBusy = true;
+        try { Status = await DataTestNetworkConfigurator.RenameAsync(adapterId, name) ?? "Карта переименована."; }
+        catch (Exception ex) { Status = ex.Message; }
+        finally { IsBusy = false; }
+        var result = Status; Refresh(); Status = result;
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
@@ -126,7 +190,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             Rows.Clear();
             foreach (var (ip, index) in DataTestNetworkConfigurator.BenchIps.Select((ip, index) => (ip, index)))
             {
-                var row = new NetworkSetupRowViewModel(ip, Adapters, index);
+                var row = CreateRow(ip, index);
                 row.SelectionChanged += SelectionChanged; Rows.Add(row);
             }
             _draft = null; Refresh();
@@ -194,7 +258,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             // Save the physical adapter mapping before changing IPs, so it survives a partial failure.
             AppSettings.Instance.DataTestAdapterIds = assignments.ToDictionary(
                 assignment => assignment.Ip, assignment => assignment.AdapterId);
-            AppSettings.Instance.Save();
+            AppSettings.Instance.SaveChecked();
 
             var progress = new Progress<string>(message => { Status = message; Journal.Add(message); });
             error = await DataTestNetworkConfigurator.ApplyAsync(assignments, progress);

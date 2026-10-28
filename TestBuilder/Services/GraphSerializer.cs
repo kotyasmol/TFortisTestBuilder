@@ -266,6 +266,7 @@ namespace TestBuilder.Services
                         n.AllowedTxDeficitPercent = d.AllowedTxDeficitPercent;
                         n.Bidirectional = d.Bidirectional;
                         n.PortsText = NormalizeDataTestPortsText(d.PortsText, d.AllowGigabit);
+                        n.DisabledPortsText = d.DisabledPortsText;
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
                         break;
@@ -632,6 +633,7 @@ namespace TestBuilder.Services
                         AllowedTxDeficitPercent = n.AllowedTxDeficitPercent ?? 2.0,
                         Bidirectional = n.Bidirectional ?? true,
                         PortsText = NormalizeDataTestPortsText(n.PortsText ?? PortsToText(n.Ports, n.AllowGigabit ?? false), n.AllowGigabit ?? false),
+                        DisabledPortsText = n.DisabledPortsText ?? "",
                         OutputVariableName = n.OutputVariableName ?? "DataTest",
                         FailOnError = n.FailOnError ?? true
                     },

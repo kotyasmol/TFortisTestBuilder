@@ -12,18 +12,19 @@ public sealed class NetworkPlanWindow : Window
 {
     public NetworkPlanWindow()
     {
-        Title = "План сети стенда"; Width = 760; Height = 600;
+        Title = "План сети стенда"; Width = 1200; MinWidth = 900; Height = 600;
         var plan = TestViewModel.CopyDefinition(AppSettings.Instance.NetworkPlan);
         var addresses = new ObservableCollection<BenchNetworkAddress>(plan.Addresses);
         var root = new DockPanel { Margin = new Thickness(20) };
         var top = new StackPanel { Spacing = 8, Margin = new Thickness(0, 0, 0, 12) };
         top.Children.Add(new TextBlock { Text = "Маска IPv4" });
         var mask = new TextBox { Text = plan.Mask }; top.Children.Add(mask);
-        top.Children.Add(new TextBlock { Text = "Временные адреса используются при обмене адресами между картами. Они должны быть свободны и отличаться от основных.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        top.Children.Add(new TextBlock { Text = "Задайте название, разъём и пару для каждого порта. Для DataTest отметьте по два порта с одинаковым именем пары и скоростью. Назначение разъёма подтверждается кабелем, а не IP или скоростью линка.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         var grid = new DataGrid { AutoGenerateColumns = false, ItemsSource = addresses };
-        foreach (var (title, path) in new[] { ("Адрес карты", "Ip"), ("Временный адрес", "TemporaryIp") })
+        foreach (var (title, path) in new[] { ("Название порта", "Name"), ("Назначение / разъём", "Role"), ("Пара DataTest", "Pair"), ("Мбит/с теста", "TestMbps"), ("Адрес карты", "Ip"), ("Временный адрес", "TemporaryIp") })
             grid.Columns.Add(new DataGridTextColumn { Header = title, Width = new DataGridLength(1, DataGridLengthUnitType.Star), Binding = new Binding(path) { Mode = BindingMode.TwoWay } });
+        grid.Columns.Add(new DataGridCheckBoxColumn { Header = "DataTest", Binding = new Binding("IncludeInDataTest") { Mode = BindingMode.TwoWay } });
         var bottom = new StackPanel { Spacing = 8, Margin = new Thickness(0, 12, 0, 0) };
         var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap }; bottom.Children.Add(status);
         var buttons = new WrapPanel();
@@ -36,7 +37,7 @@ public sealed class NetworkPlanWindow : Window
         Button("Удалить строку", () => { if (grid.SelectedItem is BenchNetworkAddress row) addresses.Remove(row); });
         Button("Сохранить план", () =>
         {
-            if (!grid.CommitEdit()) throw new InvalidOperationException("Исправьте значения адресов.");
+            if (!grid.CommitEdit(DataGridEditingUnit.Cell, true) || !grid.CommitEdit(DataGridEditingUnit.Row, true)) throw new InvalidOperationException("Исправьте значения адресов.");
             plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList(); plan.Validate();
             var old = AppSettings.Instance.NetworkPlan; AppSettings.Instance.NetworkPlan = plan;
             try { AppSettings.Instance.SaveChecked(); } catch { AppSettings.Instance.NetworkPlan = old; throw; }

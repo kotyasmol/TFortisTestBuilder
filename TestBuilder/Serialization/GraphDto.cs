@@ -404,6 +404,7 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("portsText")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PortsText { get; set; }
+        public string? DisabledPortsText { get; set; }
 
         [JsonPropertyName("ports")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

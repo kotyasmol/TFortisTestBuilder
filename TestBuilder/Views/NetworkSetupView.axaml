@@ -7,24 +7,35 @@
     <StackPanel DockPanel.Dock="Bottom" Margin="20,10" Spacing="8">
       <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontWeight="SemiBold"/>
       <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}"/>
         <Button Content="Применить адреса" Command="{Binding ApplyCommand}"/>
         <TextBlock Text="Нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center"/>
       </StackPanel>
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="15"/>
     </StackPanel>
-  <ScrollViewer HorizontalScrollBarVisibility="Auto">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
       <TextBlock Text="Выберите карту для каждого порта. Выбор занятой карты меняет две карты местами."
                  TextWrapping="Wrap"/>
-      <TextBlock Text="Адреса и маска задаются в плане сети. Те же адреса укажите в нодах DataTest. Windows изменяется только кнопкой «Применить адреса»."
+      <TextBlock Text="Адреса и маска задаются в плане сети. В ноде DataTest нажмите «Взять пары из плана сети», затем сохраните профиль. Адреса Windows изменяются только кнопкой «Применить адреса»."
                  TextWrapping="Wrap" Opacity="0.7"/>
       <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
         <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
-        <Button Content="Изменить план сети…" Command="{Binding EditAddressPlanCommand}"/>
+        <Button Content="Названия, порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
         <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
       </WrapPanel>
+      <Expander Header="Определить карту по кабелю" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="8">
+          <TextBlock Text="При включённом DUT запомните линки, отключите один кабель и сравните. После определения подключите кабель обратно. Несколько изменений не доказывают соответствие порту." TextWrapping="Wrap"/>
+          <WrapPanel>
+            <Button Content="Запомнить линки" Command="{Binding RememberLinksCommand}" Margin="0,0,8,0"/>
+            <Button Content="Найти изменение линка" Command="{Binding CompareLinksCommand}"/>
+          </WrapPanel>
+          <TextBlock Text="{Binding LinkChanges}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Expander>
       <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
       <Grid ColumnDefinitions="160,*,205,90" Margin="8,0">
         <TextBlock Text="Порт / адрес стенда" FontWeight="SemiBold"/>
@@ -37,8 +48,10 @@
             <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,10">
               <Grid ColumnDefinitions="160,*,205,90">
                 <StackPanel Spacing="4">
-                  <TextBlock Text="{Binding Port, StringFormat='Порт {0}'}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Port}" TextWrapping="Wrap" FontWeight="SemiBold"/>
                   <TextBlock Text="{Binding Ip}"/>
+                  <TextBlock Text="{Binding Role}" TextWrapping="Wrap" FontSize="12"/>
+                  <TextBlock Text="{Binding TestAssignment}" TextWrapping="Wrap" FontSize="12"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
                   <ComboBox HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -49,6 +62,7 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <TextBlock Text="{Binding Link}" FontSize="12" TextWrapping="Wrap"/>
+                  <Button Content="Название карты Windows…" Command="{Binding RenameCommand}" HorizontalAlignment="Left"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="6" Margin="0,0,8,0">
                   <TextBlock Text="{Binding CurrentAddress}" TextWrapping="Wrap"/>

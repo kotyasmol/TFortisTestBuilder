@@ -1,4 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using TestBuilder.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,9 +33,56 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private double allowedLossPercent = 1.0;
         [ObservableProperty] private double allowedTxDeficitPercent = 2.0;
         [ObservableProperty] private bool bidirectional = true;
-        [ObservableProperty] private string portsText = DefaultPortsText;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(PairsSummary))]
+        private string portsText = DefaultPortsText;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(PairsSummary))]
+        private string disabledPortsText = "";
         [ObservableProperty] private string outputVariableName = "DataTest";
         [ObservableProperty] private bool failOnError = true;
+
+        [ObservableProperty] private string networkPlanStatus = "";
+        [RelayCommand]
+        private void ImportNetworkPlan()
+        {
+            try
+            {
+                var plan = AppSettings.Instance.NetworkPlan;
+                var pairs = plan.BuildDataTestPairs();
+                AllowGigabit = plan.Addresses.Any(p => p.IncludeInDataTest && p.TestMbps > 100);
+                PortsText = pairs;
+                DisabledPortsText = "";
+                NetworkPlanStatus = "Пары скопированы. Сохраните профиль.";
+            }
+            catch (Exception ex) { NetworkPlanStatus = ex.Message; }
+        }
+
+        public string PairsSummary
+        {
+            get
+            {
+                try
+                {
+                    var rows = new DataTestPairEditorViewModel(this).Rows;
+                    return string.Join(Environment.NewLine, rows.Select(r =>
+                        $"{(r.Enabled ? "✓" : "—")} {r.Name}: {r.FirstIp} ↔ {r.SecondIp} · {r.Mbps} Мбит/с"));
+                }
+                catch { return "Не удалось прочитать пары. Проверьте профиль."; }
+            }
+        }
+
+        [RelayCommand]
+        private async System.Threading.Tasks.Task EditPairs()
+        {
+            if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return;
+            try
+            {
+                if (await new TestBuilder.Views.DataTestPairsWindow(this).ShowDialog<bool>(desktop.MainWindow))
+                    NetworkPlanStatus = "Пары изменены. Сохраните профиль.";
+            }
+            catch (Exception ex) { NetworkPlanStatus = ex.Message; }
+        }
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -98,6 +147,7 @@ namespace TestBuilder.ViewModels.StepVM
             AllowedTxDeficitPercent = AllowedTxDeficitPercent,
             Bidirectional = Bidirectional,
             PortsText = PortsText,
+            DisabledPortsText = DisabledPortsText,
             OutputVariableName = OutputVariableName,
             FailOnError = FailOnError
         };
