@@ -6,13 +6,15 @@
     <converters:ContrastTextConverter x:Key="ContrastText" />
     <ControlTheme x:Key="ActionButtonTheme" TargetType="Button">
       <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="Template"><ControlTemplate>
         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
           <ContentPresenter Background="Transparent" Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate></Setter>
       <Style Selector="^:pointerover"><Setter Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource Self}}" /></Style>
-      <Style Selector="^:pressed"><Setter Property="BorderThickness" Value="2" /></Style>
+      <Style Selector="^:pressed"><Setter Property="Opacity" Value="0.85" /></Style>
     </ControlTheme>
   </UserControl.Resources>
   <Grid x:Name="QuickActionsLayout" ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
@@ -41,43 +43,53 @@
                       </MultiBinding>
                     </Button.Foreground>
                     <Grid ColumnDefinitions="Auto,*">
-                      <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                      <Grid Width="34" Height="26" VerticalAlignment="Center" Margin="0,0,8,0">
                         <Border IsVisible="{Binding IsToggle}" Width="34" Height="20" CornerRadius="10" BorderThickness="2" BorderBrush="{Binding $parent[Button].Foreground}">
-                          <Ellipse Fill="{Binding $parent[Button].Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="{Binding ToggleAlignment}" Opacity="{Binding ToggleOpacity}" />
+                          <Ellipse Fill="{Binding $parent[Button].Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="Left" Opacity="{Binding ToggleOpacity}">
+                            <Ellipse.RenderTransform>
+                              <TranslateTransform X="{Binding ToggleOffset}">
+                                <TranslateTransform.Transitions>
+                                  <Transitions><DoubleTransition Property="X" Duration="0:0:0.35" Easing="CubicEaseInOut" /></Transitions>
+                                </TranslateTransform.Transitions>
+                              </TranslateTransform>
+                            </Ellipse.RenderTransform>
+                          </Ellipse>
                         </Border>
                         <views:ActionActivityIndicator Width="26" Height="26" IsActive="{Binding IsRunning}" Progress="{Binding Progress}" IsVisible="{Binding ShowProgress}" Stroke="{Binding $parent[Button].Foreground}" />
-                      </StackPanel>
+                      </Grid>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding StateText}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding StateText}" FontSize="11" Height="16" MaxLines="1" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </Grid>
                   </Button>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
-                    <Button Content="■" Margin="4,0,0,0" Padding="6,2" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
-                    <StackPanel Margin="4,0,0,0" Spacing="2" IsVisible="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
-                      <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                              ToolTip.Tip="Изменить кнопку" AutomationProperties.Name="Изменить кнопку"
-                              Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).EditQuickActionCommand}" CommandParameter="{Binding}">
-                        <Viewbox Width="16" Height="16">
-                          <Canvas Width="24" Height="24">
-                            <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeJoin="Round"
-                                  Data="M10 2 H14 L14.7 5.1 L16.1 5.9 L19.1 5 L21.1 8.5 L18.8 10.7 V13.3 L21.1 15.5 L19.1 19 L16.1 18.1 L14.7 18.9 L14 22 H10 L9.3 18.9 L7.9 18.1 L4.9 19 L2.9 15.5 L5.2 13.3 V10.7 L2.9 8.5 L4.9 5 L7.9 5.9 L9.3 5.1 Z" />
-                            <Ellipse Canvas.Left="9" Canvas.Top="9" Width="6" Height="6" Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" />
-                          </Canvas>
-                        </Viewbox>
-                      </Button>
-                      <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                              ToolTip.Tip="Удалить кнопку" AutomationProperties.Name="Удалить кнопку"
-                              Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).DeleteQuickActionCommand}" CommandParameter="{Binding}">
-                        <Viewbox Width="16" Height="16">
-                          <Canvas Width="24" Height="24">
-                            <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeLineCap="Round" Data="M2 2 L22 22 M22 2 L2 22" />
-                          </Canvas>
-                        </Viewbox>
-                      </Button>
-                    </StackPanel>
-                  </StackPanel>
+                  <Grid Grid.Column="1" Width="32" MinHeight="58" Margin="4,0,0,0" VerticalAlignment="Center">
+                    <Button Content="■" Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6,2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
+                    <Grid IsVisible="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
+                      <StackPanel Spacing="2" IsVisible="{Binding !IsRunning}">
+                        <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                ToolTip.Tip="Изменить кнопку" AutomationProperties.Name="Изменить кнопку"
+                                Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).EditQuickActionCommand}" CommandParameter="{Binding}">
+                          <Viewbox Width="16" Height="16">
+                            <Canvas Width="24" Height="24">
+                              <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeJoin="Round"
+                                    Data="M10 2 H14 L14.7 5.1 L16.1 5.9 L19.1 5 L21.1 8.5 L18.8 10.7 V13.3 L21.1 15.5 L19.1 19 L16.1 18.1 L14.7 18.9 L14 22 H10 L9.3 18.9 L7.9 18.1 L4.9 19 L2.9 15.5 L5.2 13.3 V10.7 L2.9 8.5 L4.9 5 L7.9 5.9 L9.3 5.1 Z" />
+                              <Ellipse Canvas.Left="9" Canvas.Top="9" Width="6" Height="6" Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" />
+                            </Canvas>
+                          </Viewbox>
+                        </Button>
+                        <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                ToolTip.Tip="Удалить кнопку" AutomationProperties.Name="Удалить кнопку"
+                                Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).DeleteQuickActionCommand}" CommandParameter="{Binding}">
+                          <Viewbox Width="16" Height="16">
+                            <Canvas Width="24" Height="24">
+                              <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeLineCap="Round" Data="M2 2 L22 22 M22 2 L2 22" />
+                            </Canvas>
+                          </Viewbox>
+                        </Button>
+                      </StackPanel>
+                    </Grid>
+                  </Grid>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

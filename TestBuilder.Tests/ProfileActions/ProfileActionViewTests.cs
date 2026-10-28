@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Ellipse = Avalonia.Controls.Shapes.Ellipse;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
@@ -18,6 +20,94 @@ namespace TestBuilder.Tests.ProfileActions;
 [Collection("Graph editor UI")]
 public class ProfileActionViewTests
 {
+    [Theory]
+    [InlineData(false, false, ProfileActionDisplay.Toggle)]
+    [InlineData(false, true, ProfileActionDisplay.Toggle)]
+    [InlineData(true, false, ProfileActionDisplay.Toggle)]
+    [InlineData(true, true, ProfileActionDisplay.Toggle)]
+    [InlineData(false, false, ProfileActionDisplay.Button)]
+    [InlineData(true, true, ProfileActionDisplay.Progress)]
+    public async Task ActionStates_DoNotMoveButtonContentOrNeighbours(bool operatorMode, bool light, ProfileActionDisplay display)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            ProfileActionTests.LoadEmpty(vm);
+            vm.IsOperatorView = operatorMode;
+            vm.IsQuickActionsCollapsed = false;
+            TaskCompletionSource<ProfileActionResult>? gate = null;
+            var action = new ProfileActionViewModel(new() { Name = "Внешнее питание стенда", Display = display },
+                (_, _, _, token) =>
+                {
+                    gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    return gate.Task.WaitAsync(token);
+                }, () => true, () => { });
+            vm.QuickActions.Add(action);
+            vm.QuickActions.Add(new(new() { Name = "Следующая кнопка" },
+                (_, _, _, _) => Task.FromResult(new ProfileActionResult(true, "OK")), () => true, () => { }));
+            var bar = new ProfileActionBar { DataContext = vm };
+            var window = new Window { Width = 420, Height = 420, Content = bar,
+                RequestedThemeVariant = light ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark };
+            try
+            {
+                window.Show(); Layout(window);
+                var buttons = bar.GetVisualDescendants().OfType<Button>().ToArray();
+                var run = buttons.Single(b => ReferenceEquals(b.Command, action.RunCommand));
+                var next = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[1].RunCommand));
+                var title = run.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == action.Name);
+                var thumb = run.GetVisualDescendants().OfType<Ellipse>().SingleOrDefault();
+                var slide = thumb?.RenderTransform as TranslateTransform;
+                Rect Position(Control control) => new(control.TranslatePoint(default, bar)!.Value, control.Bounds.Size);
+                var expected = (Position(run), Position(title), Position(next));
+                void AssertStable()
+                {
+                    Layout(window);
+                    Assert.Equal(expected, (Position(run), Position(title), Position(next)));
+                    if (display == ProfileActionDisplay.Toggle)
+                        Assert.DoesNotContain(run.GetVisualDescendants().OfType<ActionActivityIndicator>(), c => c.IsEffectivelyVisible);
+                }
+
+                var point = run.TranslatePoint(new Point(run.Bounds.Width / 2, run.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, MouseButton.Left); AssertStable();
+                window.MouseUp(point, MouseButton.Left);
+                var first = action.RunCommand.ExecutionTask!;
+                Assert.True(action.IsRunning); AssertStable();
+                Capture(window, $"action-{display}-{operatorMode}-{light}-running.png");
+                gate!.SetResult(new(true, "OK")); await first;
+                AssertStable();
+                if (action.IsToggle)
+                {
+                    Assert.True(action.IsOn);
+                    Assert.NotNull(slide);
+                    await Task.Delay(450);
+                    AssertStable();
+                    Assert.Equal(14, slide.X);
+                    Capture(window, $"action-{display}-{operatorMode}-{light}-on.png");
+                }
+                var second = action.RunCommand.ExecuteAsync(null); AssertStable();
+                gate!.SetResult(new(true, "OK")); await second; AssertStable();
+                if (action.IsToggle)
+                {
+                    Assert.False(action.IsOn);
+                    await Task.Delay(450); AssertStable();
+                    Assert.Equal(0, slide!.X);
+                }
+                var failed = action.RunCommand.ExecuteAsync(null);
+                gate!.SetResult(new(false, "Длинное описание ошибки подключения к оборудованию\nДополнительные сведения"));
+                await failed; AssertStable();
+                var cancelled = action.RunCommand.ExecuteAsync(null); AssertStable();
+                var stop = buttons.Single(b => ReferenceEquals(b.Command, action.CancelCommand));
+                Click(window, stop); await cancelled.WaitAsync(TimeSpan.FromSeconds(3)); AssertStable();
+                Assert.False(action.IsStateKnown);
+                Capture(window, $"action-{display}-{operatorMode}-{light}-stopped.png");
+            }
+            finally { action.Cancel(); window.Close(); }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task GraphPanel_CollapsesInsideCanvas_EngineerCanEdit_OperatorOnlyRunsSameButton()
     {

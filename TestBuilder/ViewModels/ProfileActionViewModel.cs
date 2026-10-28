@@ -23,7 +23,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private readonly Action _availabilityChanged;
     public string Name => Definition.Name;
     public bool IsToggle => Definition.Display == ProfileActionDisplay.Toggle;
-    public bool ShowProgress => Definition.Display == ProfileActionDisplay.Progress || IsRunning;
+    public bool ShowProgress => !IsToggle && (Definition.Display == ProfileActionDisplay.Progress || IsRunning);
     public IBrush Background => Brush.Parse(Definition.Color);
     [ObservableProperty] private bool isRunning;
     [ObservableProperty] private bool isOn;
@@ -35,7 +35,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     public double? Progress => ExpectedSteps is > 0 ? Math.Min(1, (double)CompletedSteps / ExpectedSteps.Value) : null;
     public string StateText => IsRunning ? $"{CurrentStep} · {CompletedSteps}{(ExpectedSteps.HasValue ? $"/{ExpectedSteps}" : " шагов")}" :
         !string.IsNullOrEmpty(Status) ? Status : IsToggle ? "Не задано" : "Готово";
-    public Avalonia.Layout.HorizontalAlignment ToggleAlignment => IsStateKnown && IsOn ? Avalonia.Layout.HorizontalAlignment.Right : Avalonia.Layout.HorizontalAlignment.Left;
+    public double ToggleOffset => IsStateKnown && IsOn ? 14 : 0;
     public double ToggleOpacity => IsStateKnown ? 1 : .4;
     public bool CanRun => !IsRunning && _canRun();
     public IAsyncRelayCommand RunCommand { get; }
@@ -62,7 +62,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private void NotifyState()
     {
         OnPropertyChanged(nameof(StateText)); OnPropertyChanged(nameof(ShowProgress));
-        OnPropertyChanged(nameof(ToggleAlignment)); OnPropertyChanged(nameof(ToggleOpacity)); OnPropertyChanged(nameof(Progress));
+        OnPropertyChanged(nameof(ToggleOffset)); OnPropertyChanged(nameof(ToggleOpacity)); OnPropertyChanged(nameof(Progress));
         StateChanged?.Invoke();
     }
     private async Task RunAsync()
