@@ -42,7 +42,6 @@ public class FullProfileSerializationTests
 
     [Theory]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json")]
-    [InlineData("PSW_UPS_Box_8x2Pro_parallel_start.json")]
     [InlineData("PSW_UPS_Box_8x2Pro_parallel_el60.json")]
     public void ProProfilesCheckBothSfpPortsAtGigabit(string file)
     {
@@ -73,6 +72,30 @@ public class FullProfileSerializationTests
         Assert.True(restored.AllowGigabit);
         Assert.Equal(node.PortsText, restored.PortsText);
         Assert.True(restored.Bidirectional);
+    }
+
+    [Fact]
+    public void StandProfileTestsEightCopperLinesAndKeepsSfpDisabledAfterRoundTrip()
+    {
+        using var profile = ReadProfile("PSW_UPS_Box_8x2Pro_parallel_start.json");
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize(profile.RootElement.GetRawText(), vm);
+        GraphSerializer.Deserialize(GraphSerializer.Serialize(vm, "Stand"), vm);
+        var subtest = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.Name.StartsWith("10. DataTest"));
+        var copper = subtest.BodyGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+        Assert.False(copper.AllowGigabit);
+        var pairs = copper.PortsText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(4, pairs.Length);
+        Assert.All(pairs, p => Assert.EndsWith(",100", p));
+        Assert.Contains("Медь 4,192.168.0.10,192.168.0.11,100", pairs);
+        Assert.DoesNotContain("192.168.0.8,", copper.PortsText);
+        var sfp = subtest.BodyGraph.Nodes.OfType<SubtestNodeViewModel>().Single();
+        Assert.False(sfp.IsEnabled);
+        var gigabit = sfp.BodyGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+        Assert.True(gigabit.AllowGigabit);
+        Assert.Equal("SFP,192.168.0.8,192.168.0.9,1000", gigabit.PortsText);
+        Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
     }
 
     [Fact]
