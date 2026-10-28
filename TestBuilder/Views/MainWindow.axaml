@@ -9,7 +9,7 @@
   <Window.DataContext>
     <vm:MainWindowViewModel />
   </Window.DataContext>
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Grid RowDefinitions="Auto,*">
     <Border Padding="16,8" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*,Auto">
@@ -34,20 +34,22 @@
         <Button Grid.Column="2" Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
       </Grid>
     </Border>
-    <Border Grid.Row="1" IsVisible="{Binding !IsSettingsOpen}"><views:ProfileActionBar DataContext="{Binding TestVM}" /></Border>
-    <Grid Grid.Row="2" IsVisible="{Binding !IsSettingsOpen}">
-      <Grid IsVisible="{Binding !IsEngineerWorkspace}">
-        <views:StationDashboardView DataContext="{Binding TestVM}" />
-      </Grid>
-      <Grid IsVisible="{Binding IsEngineerWorkspace}">
-        <Grid IsVisible="{Binding IsEditorPage}"><views:TestView x:Name="TestViewControl" /></Grid>
-        <Grid IsVisible="{Binding IsRegistersPage}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></Grid>
-        <Grid IsVisible="{Binding IsSelfTestPage}"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></Grid>
-        <Grid IsVisible="{Binding IsNetworkPage}"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></Grid>
-        <Grid IsVisible="{Binding IsLabelsPage}"><views:LabelPrintingView DataContext="{Binding LabelPrintingVM}" /></Grid>
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" IsVisible="{Binding !IsSettingsOpen}">
+      <views:ProfileActionBar DataContext="{Binding TestVM}" />
+      <Grid Grid.Column="1">
+        <Grid IsVisible="{Binding !IsEngineerWorkspace}">
+          <views:StationDashboardView DataContext="{Binding TestVM}" />
+        </Grid>
+        <Grid IsVisible="{Binding IsEngineerWorkspace}">
+          <Grid IsVisible="{Binding IsEditorPage}"><views:TestView x:Name="TestViewControl" /></Grid>
+          <Grid IsVisible="{Binding IsRegistersPage}"><views:ModbusMonitoringView x:Name="ModbusViewControl" /></Grid>
+          <Grid IsVisible="{Binding IsSelfTestPage}"><views:SelfTestPageView x:Name="SelfTestPageViewControl" /></Grid>
+          <Grid IsVisible="{Binding IsNetworkPage}"><views:NetworkSetupView x:Name="NetworkSetupViewControl" /></Grid>
+          <Grid IsVisible="{Binding IsLabelsPage}"><views:LabelPrintingView DataContext="{Binding LabelPrintingVM}" /></Grid>
+        </Grid>
       </Grid>
     </Grid>
-    <Grid Grid.Row="2" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">
+    <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">
       <views:SettingsView x:Name="ShellSettingsViewControl" />
       <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16" Margin="16,8">
         <TextBlock Text="{Binding OperatorName}" FontSize="{StaticResource FontSection}" />

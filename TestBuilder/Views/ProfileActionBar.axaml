@@ -6,7 +6,7 @@
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Template"><ControlTemplate>
         <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-          <ContentPresenter Background="Transparent" Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+          <ContentPresenter Background="Transparent" Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate></Setter>
       <Style Selector="^:pointerover"><Setter Property="Opacity" Value="0.9" /></Style>
@@ -14,44 +14,61 @@
       <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.7" /></Style>
     </ControlTheme>
   </UserControl.Resources>
-  <Border IsVisible="{Binding ShowQuickActions}" Padding="12,6" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-    <DockPanel LastChildFill="True">
-      <Button DockPanel.Dock="Right" Content="+" FontSize="22" Width="42" Margin="8,0,0,0" VerticalAlignment="Center"
-              Command="{Binding AddQuickActionCommand}" IsVisible="{Binding ShowQuickActionTools}"
-              ToolTip.Tip="Добавить кнопку в профиль" AutomationProperties.Name="Добавить кнопку в профиль" />
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-        <ItemsControl ItemsSource="{Binding QuickActions}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:ProfileActionViewModel">
-              <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                <Button Classes="profileAction" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}" Background="{Binding Background}" Foreground="{Binding Foreground}"
-                        MinWidth="160" MaxWidth="340" Padding="12,6" ToolTip.Tip="{Binding StateText}" AutomationProperties.Name="{Binding Name}">
-                  <Grid ColumnDefinitions="Auto,*">
-                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,8,0">
-                      <Border IsVisible="{Binding IsToggle}" Width="34" Height="20" CornerRadius="10" BorderThickness="2" BorderBrush="{Binding Foreground}">
-                        <Ellipse Fill="{Binding Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="{Binding ToggleAlignment}" Opacity="{Binding ToggleOpacity}" />
-                      </Border>
-                      <views:ActionActivityIndicator Width="26" Height="26" IsActive="{Binding IsRunning}" Progress="{Binding Progress}" IsVisible="{Binding ShowProgress}" Stroke="{Binding Foreground}" />
+  <Grid ColumnDefinitions="Auto,24" IsVisible="{Binding ShowQuickActions}">
+    <Border x:Name="QuickActionsPanel" IsVisible="{Binding !IsQuickActionsCollapsed}" Width="280" Padding="12"
+            Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+          <TextBlock Text="Кнопки профиля" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="+" FontSize="22" Width="36" Padding="4" VerticalAlignment="Center"
+                  Command="{Binding AddQuickActionCommand}" IsVisible="{Binding ShowQuickActionTools}"
+                  ToolTip.Tip="Добавить кнопку в профиль" AutomationProperties.Name="Добавить кнопку в профиль" />
+        </Grid>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding QuickActions}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProfileActionViewModel">
+                <Grid ColumnDefinitions="*,Auto">
+                  <Button Classes="profileAction" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}" Background="{Binding Background}" Foreground="{Binding Foreground}"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="52" Padding="10,8"
+                          ToolTip.Tip="{Binding StateText}" AutomationProperties.Name="{Binding Name}">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Border IsVisible="{Binding IsToggle}" Width="34" Height="20" CornerRadius="10" BorderThickness="2" BorderBrush="{Binding Foreground}">
+                          <Ellipse Fill="{Binding Foreground}" Width="10" Height="10" Margin="3,0" HorizontalAlignment="{Binding ToggleAlignment}" Opacity="{Binding ToggleOpacity}" />
+                        </Border>
+                        <views:ActionActivityIndicator Width="26" Height="26" IsActive="{Binding IsRunning}" Progress="{Binding Progress}" IsVisible="{Binding ShowProgress}" Stroke="{Binding Foreground}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Foreground="{Binding Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Foreground="{Binding Foreground}" Text="{Binding StateText}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                    <Button Content="■" Margin="4,0,0,0" Padding="6,2" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
+                    <StackPanel Margin="4,0,0,0" Spacing="2" IsVisible="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
+                      <Button Content="⚙" Padding="6,2" MinHeight="24" ToolTip.Tip="Изменить кнопку" AutomationProperties.Name="Изменить кнопку"
+                              Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).EditQuickActionCommand}" CommandParameter="{Binding}" />
+                      <Button Content="×" Padding="6,2" MinHeight="24" ToolTip.Tip="Удалить кнопку" AutomationProperties.Name="Удалить кнопку"
+                              Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).DeleteQuickActionCommand}" CommandParameter="{Binding}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="2">
-                      <TextBlock Foreground="{Binding Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Foreground="{Binding Foreground}" Text="{Binding StateText}" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="260" />
-                    </StackPanel>
-                  </Grid>
-                </Button>
-                <Button Content="■" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
-                <StackPanel VerticalAlignment="Center" Spacing="2" IsVisible="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
-                  <Button Content="⚙" Padding="6,2" MinHeight="24" ToolTip.Tip="Изменить кнопку" AutomationProperties.Name="Изменить кнопку"
-                          Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).EditQuickActionCommand}" CommandParameter="{Binding}" />
-                  <Button Content="×" Padding="6,2" MinHeight="24" ToolTip.Tip="Удалить кнопку" AutomationProperties.Name="Удалить кнопку"
-                          Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).DeleteQuickActionCommand}" CommandParameter="{Binding}" />
-                </StackPanel>
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
-    </DockPanel>
-  </Border>
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+    <Button Grid.Column="1" x:Name="QuickActionsHandle" Classes="edgeHandle" Command="{Binding ToggleQuickActionsCommand}"
+            ToolTip.Tip="{Binding QuickActionsToggleTip}" AutomationProperties.Name="Свернуть или развернуть кнопки профиля"
+            Width="24" MinWidth="24" Height="64" Padding="5,12" VerticalAlignment="Center">
+      <Grid>
+        <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsQuickActionsCollapsed}" Data="M2 0 L10 8 2 16 0 14 6 8 0 2 Z" />
+        <PathIcon Width="10" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding !IsQuickActionsCollapsed}" Data="M8 0 L0 8 8 16 10 14 4 8 10 2 Z" />
+      </Grid>
+    </Button>
+  </Grid>
 </UserControl>

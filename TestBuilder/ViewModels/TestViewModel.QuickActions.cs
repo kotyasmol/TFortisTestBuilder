@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Models;
@@ -17,6 +18,13 @@ namespace TestBuilder.ViewModels;
 
 public partial class TestViewModel
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(QuickActionsToggleTip))]
+    private bool isQuickActionsCollapsed = true;
+    public string QuickActionsToggleTip => IsQuickActionsCollapsed ? "Показать кнопки профиля" : "Скрыть кнопки профиля";
+    [RelayCommand]
+    private void ToggleQuickActions() => IsQuickActionsCollapsed = !IsQuickActionsCollapsed;
+
     public bool IsActionGraphEditor { get; internal set; }
     public ObservableCollection<ProfileActionViewModel> QuickActions { get; } = new();
     public bool HasRunningQuickActions => QuickActions.Any(a => a.IsRunning);

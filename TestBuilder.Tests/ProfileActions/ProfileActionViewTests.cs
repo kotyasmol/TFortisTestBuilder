@@ -19,7 +19,7 @@ namespace TestBuilder.Tests.ProfileActions;
 public class ProfileActionViewTests
 {
     [Fact]
-    public async Task Toolbar_EngineerCanEdit_OperatorOnlyRunsSameButton()
+    public async Task LeftPanel_CollapsesAndExpands_EngineerCanEdit_OperatorOnlyRunsSameButton()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
@@ -29,16 +29,34 @@ public class ProfileActionViewTests
             vm.RootGraph.QuickActions.Add(new() { Name = "Питание", Display = ProfileActionDisplay.Toggle });
             vm.RootGraph.QuickActions.Add(new() { Name = "Проверка", Display = ProfileActionDisplay.Progress });
             var bar = new ProfileActionBar { DataContext = vm };
-            var window = new Window { Width = 1050, Height = 160, Content = bar };
+            var workspace = new Border();
+            Grid.SetColumn(workspace, 1);
+            var host = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Children = { bar, workspace } };
+            var window = new Window { Width = 1050, Height = 500, Content = host };
             try
             {
                 window.Show(); Layout(window);
+                var handle = bar.FindControl<Button>("QuickActionsHandle")!;
+                var panel = bar.FindControl<Border>("QuickActionsPanel")!;
+                Assert.True(vm.IsQuickActionsCollapsed);
+                Assert.False(panel.IsEffectivelyVisible);
+                Assert.True(handle.IsEffectivelyVisible);
+                Assert.Equal(24, bar.Bounds.Width);
+                Click(window, handle);
+                Assert.False(vm.IsQuickActionsCollapsed);
+                Assert.True(panel.IsEffectivelyVisible);
+                Assert.Equal(304, bar.Bounds.Width);
+                Assert.True(workspace.Bounds.X >= bar.Bounds.Right);
                 var buttons = bar.GetVisualDescendants().OfType<Button>().ToArray();
                 var add = buttons.Single(b => AutomationProperties.GetName(b) == "Добавить кнопку в профиль");
                 Assert.True(add.IsEffectivelyVisible);
                 Assert.Equal(2, buttons.Count(b => AutomationProperties.GetName(b) == "Изменить кнопку" && b.IsEffectivelyVisible));
                 var run = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[0].RunCommand));
                 Assert.True(run.IsEffectivelyEnabled); Assert.True(run.Bounds.Width >= 160);
+                var second = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[1].RunCommand));
+                Assert.True(second.TranslatePoint(default, bar)!.Value.Y >= run.TranslatePoint(default, bar)!.Value.Y + run.Bounds.Height);
+                Click(window, handle); Assert.False(run.IsEffectivelyVisible);
+                Click(window, handle); Assert.True(run.IsEffectivelyVisible);
                 vm.IsOperatorView = true; Layout(window);
                 Assert.False(add.IsEffectivelyVisible);
                 Assert.DoesNotContain(buttons, b => AutomationProperties.GetName(b) == "Изменить кнопку" && b.IsEffectivelyVisible);
@@ -46,7 +64,10 @@ public class ProfileActionViewTests
                 Assert.True(vm.QuickActions[0].IsOn);
                 Click(window, run); await vm.QuickActions[0].RunCommand.ExecutionTask!;
                 Assert.False(vm.QuickActions[0].IsOn);
-                vm.IsOperatorView = false; Layout(window); Capture(window, "action-toolbar.png");
+                vm.IsOperatorView = false; Layout(window); Capture(window, "action-panel.png");
+                vm.IsOperatorView = true; vm.RootGraph.QuickActions.Clear(); Layout(window);
+                Assert.False(handle.IsEffectivelyVisible);
+                Assert.Equal(0, bar.Bounds.Width);
             }
             finally { window.Close(); }
             return true;
