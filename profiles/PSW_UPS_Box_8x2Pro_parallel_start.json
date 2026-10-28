@@ -5139,6 +5139,106 @@
           }
         ]
       }
+    },
+    {
+      "id": "8bcb5b70632e4ecb8f70984f5a013ffc",
+      "name": "UPS / АКБ",
+      "color": "#15803D",
+      "display": "Toggle",
+      "graph": {
+        "name": "Включить UPS / АКБ",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 320,
+            "y": 80,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 1,
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false,
+            "customName": "Включить UPS / АКБ"
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 880,
+            "y": 80,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "offGraph": {
+        "name": "Выключить UPS / АКБ",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80,
+            "color": "blue"
+          },
+          {
+            "id": "1",
+            "type": "Write Register",
+            "x": 320,
+            "y": 80,
+            "color": "blue",
+            "slaveId": 17,
+            "useCurrentSlaveId": false,
+            "address": 1706,
+            "value": 0,
+            "verifyWrite": true,
+            "runOnlyOnFirstRun": false,
+            "customName": "Выключить UPS / АКБ"
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 880,
+            "y": 80,
+            "color": "blue"
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     }
   ]
 }

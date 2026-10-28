@@ -539,21 +539,24 @@ public class ParallelGraphCompilationTests
         Assert.Equal(2, loadedVm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Count(n => n.RunOnFailure));
         if (file == ParallelProfile)
         {
-            var action = Assert.Single(loadedVm.RootGraph.QuickActions);
-            Assert.Equal(originalVm.RootGraph.QuickActions.Single().Id, action.Id);
-            Assert.Equal("AC1", action.Name);
-            Assert.Equal(TestBuilder.Models.ProfileActionDisplay.Toggle, action.Display);
-            foreach (var (graph, value) in new[] { (action.Graph, 1), (action.OffGraph, 0) })
+            Assert.Equal(2, loadedVm.RootGraph.QuickActions.Count);
+            foreach (var (name, slave, address) in new[] { ("AC1", 23, 1200), ("UPS / АКБ", 17, 1706) })
             {
-                var write = Assert.Single(graph.Nodes.OfType<ModbusWriteNodeViewModel>());
-                Assert.Equal(23, write.SlaveId);
-                Assert.Equal(1200, write.Address);
-                Assert.Equal(value, write.Value);
-                Assert.True(write.VerifyWrite);
-                Assert.False(write.UseCurrentSlaveId);
-                Assert.Equal(3, graph.Nodes.Count);
-                Assert.Equal(2, graph.Connections.Count);
-                Compile(graph);
+                var action = Assert.Single(loadedVm.RootGraph.QuickActions, a => a.Name == name);
+                Assert.Equal(originalVm.RootGraph.QuickActions.Single(a => a.Name == name).Id, action.Id);
+                Assert.Equal(TestBuilder.Models.ProfileActionDisplay.Toggle, action.Display);
+                foreach (var (graph, value) in new[] { (action.Graph, 1), (action.OffGraph, 0) })
+                {
+                    var write = Assert.Single(graph.Nodes.OfType<ModbusWriteNodeViewModel>());
+                    Assert.Equal(slave, write.SlaveId);
+                    Assert.Equal(address, write.Address);
+                    Assert.Equal(value, write.Value);
+                    Assert.True(write.VerifyWrite);
+                    Assert.False(write.UseCurrentSlaveId);
+                    Assert.Equal(3, graph.Nodes.Count);
+                    Assert.Equal(2, graph.Connections.Count);
+                    Compile(graph);
+                }
             }
         }
     }
