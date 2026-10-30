@@ -50,12 +50,10 @@ public class ProfileCardToolsTests
                 foreach (var tool in actionTools)
                 {
                     var face = faces.Single(f => ReferenceEquals(f.DataContext, tool.DataContext));
-                    Inside(tool, face); Assert.Equal(face.Foreground, tool.Foreground);
+                    Inside(tool, face); AssertReadable(tool);
                     Assert.Equal(28, tool.Bounds.Height);
-                    Assert.Equal(Colors.Transparent, Assert.IsAssignableFrom<ISolidColorBrush>(tool.Background).Color);
                     window.MouseMove(tool.TranslatePoint(new Point(14, 14), window)!.Value); Layout(window);
-                    Assert.Equal(face.Foreground, tool.Foreground);
-                    Assert.Equal(Colors.Transparent, Assert.IsAssignableFrom<ISolidColorBrush>(tool.Background).Color);
+                    AssertReadable(tool);
                     Assert.DoesNotContain(face, tool.GetVisualAncestors()); // sibling hit target, not a nested run button
                 }
                 foreach (var scale in new[] { 50d, 100d, 150d })
@@ -64,7 +62,7 @@ public class ProfileCardToolsTests
                     foreach (var tool in registerTools)
                     {
                         var face = cards.Single(c => ReferenceEquals(c.DataContext, tool.DataContext));
-                        Inside(tool, face); Assert.Equal(face.Foreground, tool.Foreground);
+                        Inside(tool, face); AssertReadable(tool);
                     }
                 }
                 vm.RegisterIndicatorsZoom = 100; Layout(window); Capture(window, $"embedded-tools-{dark}.png");
@@ -112,6 +110,20 @@ public class ProfileCardToolsTests
 
     private static bool IsEditOrDelete(Button button) => AutomationProperties.GetName(button) is
         "Изменить кнопку" or "Удалить кнопку" or "Изменить индикатор" or "Удалить индикатор";
+    private static void AssertReadable(Button tool)
+    {
+        var foreground = Assert.IsAssignableFrom<ISolidColorBrush>(tool.Foreground).Color;
+        var background = Assert.IsAssignableFrom<ISolidColorBrush>(tool.Background).Color;
+        Assert.Equal(255, background.A); // The icon remains readable on any profile color.
+        static double Luminance(Color color)
+        {
+            static double Channel(byte value) => value / 255d <= .04045
+                ? value / 255d / 12.92 : Math.Pow((value / 255d + .055) / 1.055, 2.4);
+            return .2126 * Channel(color.R) + .7152 * Channel(color.G) + .0722 * Channel(color.B);
+        }
+        var a = Luminance(foreground); var b = Luminance(background);
+        Assert.True((Math.Max(a, b) + .05) / (Math.Min(a, b) + .05) >= 4.5);
+    }
     private static void Inside(Control tool, Control face)
     {
         var point = tool.TranslatePoint(default, face)!.Value;

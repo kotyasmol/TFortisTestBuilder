@@ -282,8 +282,8 @@ public class ProfileActionViewTests
                 var edit = buttons.First(b => AutomationProperties.GetName(b) == "Изменить кнопку");
                 var delete = buttons.First(b => AutomationProperties.GetName(b) == "Удалить кнопку");
                 Assert.Equal(edit.Bounds.Size, delete.Bounds.Size);
-                Assert.Equal(new Size(16, 16), Assert.IsType<Viewbox>(edit.Content).Bounds.Size);
-                Assert.Equal(new Size(16, 16), Assert.IsType<Viewbox>(delete.Content).Bounds.Size);
+                Assert.Equal(new Size(20, 20), Assert.IsType<Viewbox>(edit.Content).Bounds.Size);
+                Assert.Equal(new Size(20, 20), Assert.IsType<Viewbox>(delete.Content).Bounds.Size);
                 var run = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[0].RunCommand));
                 Assert.True(run.IsEffectivelyEnabled); Assert.True(run.Bounds.Width >= 160);
                 var second = buttons.Single(b => ReferenceEquals(b.Command, vm.QuickActions[1].RunCommand));

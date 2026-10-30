@@ -4,19 +4,23 @@
     <Setter Property="Height" Value="28" />
     <Setter Property="MinWidth" Value="28" />
     <Setter Property="MinHeight" Value="28" />
-    <Setter Property="Padding" Value="5" />
+    <Setter Property="Padding" Value="3" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="Cursor" Value="Hand" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Template"><ControlTemplate>
       <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
       </Border>
     </ControlTemplate></Setter>
-    <Style Selector="^:pointerover"><Setter Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource Self}}" /></Style>
-    <Style Selector="^:pressed"><Setter Property="Opacity" Value="0.65" /></Style>
-    <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.4" /></Style>
+    <Style Selector="^:not(:disabled):pointerover">
+      <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="^:not(:disabled):pressed"><Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" /></Style>
+    <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.6" /></Style>
   </ControlTheme>
 </ResourceDictionary>
