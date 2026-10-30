@@ -51,14 +51,16 @@ public class LabelPreviewTests
     }
 
     [Fact]
-    public void ProSerial_IsCenteredInItsField_WithoutMovingMacOrBarcode()
+    public void ProSerialAndBarcode_ShareTheSameCenter_WithoutMovingMac()
     {
         var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "PswUpsBox8x2Pro");
         var preview = LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC");
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
         Assert.Equal(624, sn.X + sn.Width / 2);
         Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
-        Assert.Equal(480, preview.Elements.Single(e => e.Bars.Length > 0).X);
+        var bars = preview.Elements.Single(e => e.Bars.Length > 0);
+        Assert.Equal(246, bars.Width);
+        Assert.Equal(624, bars.X + bars.Width / 2);
         Assert.Empty(preview.Message);
     }
 

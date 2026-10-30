@@ -8,5 +8,10 @@
     "Id": "SerialOnlyEpl",
     "Language": "EPL",
     "Command": "\r\nN\r\nq{{WidthDots}}\r\nI8,C,001\r\nB{{BarcodeX}},24,0,1,2,1,47,N,\"{{Serial}}\"\r\nA{{TextX}},94,0,3,1,1,N,\"{{Serial}}\"\r\nP1,1\r\n"
+  },
+  {
+    "Id": "PswUpsBox8x2Pro",
+    "Language": "ZPL",
+    "Command": "^XA^MD10^FO494,35^A0,36,25^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO494,95^A0,25,20^FB260,1,0,C,0^FDSN: {{ShortSerial}}^FS^FO480,117^BY2^BCN,50,N,N,N^FD>:{{Barcode}}^FS^XZ "
   }
 ]
