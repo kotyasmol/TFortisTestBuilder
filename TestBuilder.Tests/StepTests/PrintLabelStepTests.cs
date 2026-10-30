@@ -145,7 +145,7 @@ public class PrintLabelStepTests
             "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
             "^FO494,95^A0,25,20^FB260,1,0,C,0^FDSN: 00428^FS" +
-            "^FO507,117^BY2^BCN,50,N,N,N^FD>:03200428^FS^XZ ";
+            "^FO510,117^BY2^BCN,50,N,N,N^FD>:03200428^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());

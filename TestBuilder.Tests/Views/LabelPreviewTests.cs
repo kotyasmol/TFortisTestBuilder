@@ -60,8 +60,8 @@ public class LabelPreviewTests
         Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
         Assert.Equal(246, bars.Width);
-        Assert.Equal(507, bars.X);
-        Assert.Equal(630, bars.X + bars.Width / 2);
+        Assert.Equal(510, bars.X);
+        Assert.Equal(633, bars.X + bars.Width / 2);
         Assert.Empty(preview.Message);
     }
 

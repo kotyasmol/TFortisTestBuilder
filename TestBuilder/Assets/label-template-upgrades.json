@@ -18,5 +18,10 @@
     "Id": "PswUpsBox8x2Pro",
     "Language": "ZPL",
     "Command": "^XA^MD10^FO494,35^A0,36,25^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO494,95^A0,25,20^FB260,1,0,C,0^FDSN: {{ShortSerial}}^FS^FO501,117^BY2^BCN,50,N,N,N^FD>:{{Barcode}}^FS^XZ "
+  },
+  {
+    "Id": "PswUpsBox8x2Pro",
+    "Language": "ZPL",
+    "Command": "^XA^MD10^FO494,35^A0,36,25^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO494,95^A0,25,20^FB260,1,0,C,0^FDSN: {{ShortSerial}}^FS^FO507,117^BY2^BCN,50,N,N,N^FD>:{{Barcode}}^FS^XZ "
   }
 ]
