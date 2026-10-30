@@ -263,7 +263,7 @@
     <Setter Property="Margin" Value="0,0,8,8" />
   </Style>
 
-  <Style Selector="Button">
+  <Style Selector="Button:not(.profileCardTool)">
     <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -277,20 +277,20 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
-  <Style Selector="Button:not(:disabled):pointerover">
+  <Style Selector="Button:not(.profileCardTool):not(:disabled):pointerover">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
   </Style>
 
-  <Style Selector="Button:not(:disabled):pressed">
+  <Style Selector="Button:not(.profileCardTool):not(:disabled):pressed">
     <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
   </Style>
 
-  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(.profileCardTool):not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
   </Style>
-  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button:not(.nodeHeaderAction):not(.profileAction):not(.profileCardTool):not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
   </Style>
   <Style Selector="Button.primary:not(:disabled):pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.primary:not(:disabled):pressed /template/ ContentPresenter#PART_ContentPresenter">

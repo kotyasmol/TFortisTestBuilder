@@ -12,6 +12,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://TestBuilder/Assets/Station/Icons.axaml" />
+        <ResourceInclude Source="avares://TestBuilder/Assets/ProfileCardTools.axaml" />
         <ResourceInclude Source="avares://Nodify/Theme.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>

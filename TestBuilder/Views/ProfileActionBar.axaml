@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views"
              xmlns:converters="using:TestBuilder.Converters"
+             xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
              x:Class="TestBuilder.Views.ProfileActionBar" x:DataType="vm:TestViewModel" Background="{DynamicResource SurfaceBrush}">
   <UserControl.Resources>
     <converters:ContrastTextConverter x:Key="ContrastText" />
@@ -42,9 +43,9 @@
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ProfileActionViewModel">
-                <Grid ColumnDefinitions="*,Auto">
-                  <Button Classes="profileAction" Classes.systemColor="{Binding UsesSystemColor}" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}"
-                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="52" Padding="10,8"
+                <Grid>
+                  <Button x:Name="ActionRunButton" Classes="profileAction" Classes.systemColor="{Binding UsesSystemColor}" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="70" Padding="10,8,42,8"
                           ToolTip.Tip="{Binding StateText}" AutomationProperties.Name="{Binding Name}">
                     <Button.Foreground>
                       <MultiBinding Converter="{StaticResource ContrastText}">
@@ -73,27 +74,34 @@
                       </StackPanel>
                     </Grid>
                   </Button>
-                  <Grid Grid.Column="1" Width="32" MinHeight="58" Margin="4,0,0,0" VerticalAlignment="Center">
-                    <Button Content="■" Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6,2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
+                  <!-- Siblings avoid nested run clicks; the transparent guard also intercepts clicks on disabled tools. -->
+                  <Grid Width="28" Height="58" Margin="0,6,6,6" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent">
+                    <Grid.IsVisible>
+                      <MultiBinding Converter="{x:Static avaloniaConverters:BoolConverters.Or}">
+                        <Binding Path="IsRunning" />
+                        <Binding Path="$parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools" />
+                      </MultiBinding>
+                    </Grid.IsVisible>
+                    <Button Content="■" Classes="profileCardTool" Theme="{StaticResource ProfileCardToolTheme}" Foreground="{Binding #ActionRunButton.Foreground}" VerticalAlignment="Center" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" ToolTip.Tip="Остановить действие" AutomationProperties.Name="Остановить действие" />
                     <Grid IsVisible="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
                       <StackPanel Spacing="2" IsVisible="{Binding !IsRunning}">
-                        <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        <Button Classes="profileCardTool" Theme="{StaticResource ProfileCardToolTheme}" Foreground="{Binding #ActionRunButton.Foreground}"
                                 ToolTip.Tip="Изменить кнопку" AutomationProperties.Name="Изменить кнопку"
                                 Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).EditQuickActionCommand}" CommandParameter="{Binding}">
                           <Viewbox Width="16" Height="16">
                             <Canvas Width="24" Height="24">
-                              <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeJoin="Round"
+                              <Path Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" StrokeJoin="Round"
                                     Data="M10 2 H14 L14.7 5.1 L16.1 5.9 L19.1 5 L21.1 8.5 L18.8 10.7 V13.3 L21.1 15.5 L19.1 19 L16.1 18.1 L14.7 18.9 L14 22 H10 L9.3 18.9 L7.9 18.1 L4.9 19 L2.9 15.5 L5.2 13.3 V10.7 L2.9 8.5 L4.9 5 L7.9 5.9 L9.3 5.1 Z" />
-                              <Ellipse Canvas.Left="9" Canvas.Top="9" Width="6" Height="6" Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" />
+                              <Ellipse Canvas.Left="9" Canvas.Top="9" Width="6" Height="6" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" />
                             </Canvas>
                           </Viewbox>
                         </Button>
-                        <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        <Button Classes="profileCardTool" Theme="{StaticResource ProfileCardToolTheme}" Foreground="{Binding #ActionRunButton.Foreground}"
                                 ToolTip.Tip="Удалить кнопку" AutomationProperties.Name="Удалить кнопку"
                                 Command="{Binding $parent[views:ProfileActionBar].((vm:TestViewModel)DataContext).DeleteQuickActionCommand}" CommandParameter="{Binding}">
                           <Viewbox Width="16" Height="16">
                             <Canvas Width="24" Height="24">
-                              <Path Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1.8" StrokeLineCap="Round" Data="M2 2 L22 22 M22 2 L2 22" />
+                              <Path Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" StrokeLineCap="Round" Data="M2 2 L22 22 M22 2 L2 22" />
                             </Canvas>
                           </Viewbox>
                         </Button>
