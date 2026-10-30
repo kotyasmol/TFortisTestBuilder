@@ -29,6 +29,9 @@ namespace TestBuilder.ViewModels.StepVM
         private bool runOnFailure;
 
         [ObservableProperty]
+        private int? failureOrder;
+
+        [ObservableProperty]
         private int stepCount;
 
         [ObservableProperty]
@@ -145,7 +148,8 @@ namespace TestBuilder.ViewModels.StepVM
             Description = Description,
             IsEnabled = IsEnabled,
             StopOnError = StopOnError,
-            RunOnFailure = RunOnFailure
+            RunOnFailure = RunOnFailure,
+            FailureOrder = FailureOrder
         };
     }
 }

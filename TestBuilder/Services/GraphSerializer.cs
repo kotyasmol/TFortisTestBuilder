@@ -64,6 +64,7 @@ namespace TestBuilder.Services
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel => "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
+            SubtestNodeViewModel { FailureOrder: not null } => "Subtest (cleanup order v1)",
             SubtestNodeViewModel => "Subtest",
             ForEachSlaveNodeViewModel f => f.RepeatOnSameSlave ? "For Slaves (repeat v1)" : "For Slaves",
             _ => node.Title
@@ -365,11 +366,14 @@ namespace TestBuilder.Services
                         break;
 
                     case SubtestNodeViewModel s:
+                        if (s.FailureOrder is <= 0)
+                            throw new InvalidOperationException("Порядок аварийного подтеста должен быть положительным числом.");
                         n.Name = s.Name;
                         n.Description = s.Description;
                         n.IsEnabled = s.IsEnabled;
                         n.StopOnError = s.StopOnError;
                         n.RunOnFailure = s.RunOnFailure;
+                        n.FailureOrder = s.FailureOrder;
                         n.BodyGraph = SerializeGraph(s.BodyGraph, s.BodyGraph.Title);
                         break;
 
@@ -832,7 +836,7 @@ namespace TestBuilder.Services
                     "Run Program" => RunProgramNodeViewModel.FromOptions(n.RunProgram ?? new RunProgramOptions()),
                     "Parse Response" => ParseResponseNodeViewModel.FromOptions(n.ParseResponse ?? new ParseResponseOptions()),
                     "Check LED Color" => CheckLedColorNodeViewModel.FromOptions(n.CheckLedColor ?? new CheckLedColorOptions()),
-                    "Subtest" or "SUBTEST" or "Подтест" => CreateSubtestNode(n, location),
+                    "Subtest" or "SUBTEST" or "Подтест" or "Subtest (cleanup order v1)" => CreateSubtestNode(n, location),
 
                     "For Slaves" or "For Slaves (repeat v1)" or "Цикл For" => CreateForEachSlaveNode(n, location),
 
@@ -979,6 +983,9 @@ namespace TestBuilder.Services
 
         private static SubtestNodeViewModel CreateSubtestNode(NodeDto n, Point location)
         {
+            if (n.FailureOrder is <= 0 ||
+                UnwrapNodeType(n.Type) == "Subtest (cleanup order v1)" && n.FailureOrder == null)
+                throw new InvalidOperationException("Порядок аварийного подтеста должен быть положительным числом.");
             var node = new SubtestNodeViewModel
             {
                 Location = location,
@@ -986,7 +993,8 @@ namespace TestBuilder.Services
                 Description = n.Description ?? string.Empty,
                 IsEnabled = n.IsEnabled ?? true,
                 StopOnError = n.StopOnError ?? true,
-                RunOnFailure = n.RunOnFailure ?? false
+                RunOnFailure = n.RunOnFailure ?? false,
+                FailureOrder = n.FailureOrder
             };
 
             var body = n.BodyGraph ?? n.Body;

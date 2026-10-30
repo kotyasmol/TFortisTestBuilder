@@ -1422,10 +1422,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     internal async Task<bool> RunFailureCleanupAsync(TestContext context)
     {
-        var cleanupNodes = RootGraph.Nodes
-            .OfType<SubtestNodeViewModel>()
-            .Where(node => node.RunOnFailure && node.IsEnabled)
-            .ToList();
+        var cleanupNodes = FailureCleanupOrder.GetNodes(RootGraph);
 
         if (cleanupNodes.Count == 0)
         {

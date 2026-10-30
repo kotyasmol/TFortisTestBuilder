@@ -85,6 +85,12 @@ public partial class GraphEditorView : UserControl, IDisposable
             await vm.ConfigurePingCommand.ExecuteAsync(owner);
     }
 
+    private async void OnConfigureFailureCleanup(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel vm && TopLevel.GetTopLevel(this) is Window owner)
+            await vm.ConfigureFailureCleanupCommand.ExecuteAsync(owner);
+    }
+
     private void OnSelectAllClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel { CanEditGraph: true } vm)

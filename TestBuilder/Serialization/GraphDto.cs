@@ -520,6 +520,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? RunOnFailure { get; set; }
 
+        [JsonPropertyName("failureOrder")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? FailureOrder { get; set; }
+
         [JsonPropertyName("body")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public GraphDto? Body { get; set; }

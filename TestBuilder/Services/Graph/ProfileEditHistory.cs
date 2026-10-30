@@ -28,7 +28,7 @@ public sealed class ProfileEditHistory : IDisposable
         "NodeColor", "NormalizeBandwidth", "OutputPrefix", "OutputVariableName", "PacketSizeBytes", "PollAction",
         "PollIntervalMs", "PrinterName", "Psw2G6FHardwareChecks", "ReadAttempts", "ReadIntervalMs", "ReportName", "ReportVariableName",
         "RequestTimeoutMs", "ResponseType", "RetryCount", "RetryDelayMs", "RightVariableName", "RunArpdBat",
-        "RunOnFailure", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
+        "RunOnFailure", "FailureOrder", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
         "SlaveId", "Step", "StopOnError", "TargetVersion", "TestType", "Text",
         "TimeoutMs", "ToSlaveId", "UdpPort", "Url", "UseCurrentSlaveId", "UseFixedSerialNumber",
         "UseManualSerialNumber", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",

@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.FailureCleanupOrderWindow"
+        x:DataType="vm:FailureCleanupOrderViewModel" Title="Порядок аварийных действий"
+        Width="640" Height="470" MinWidth="500" MinHeight="340" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <TextBlock Text="При ошибке или остановке подтесты выполняются сверху вниз. Отключённые подтесты пропускаются."
+               TextWrapping="Wrap" Margin="0,0,0,16" />
+    <TextBlock Grid.Row="1" IsVisible="{Binding !HasItems}" TextWrapping="Wrap"
+               Foreground="{DynamicResource TextSecondaryBrush}"
+               Text="Нет аварийных подтестов. Включите у нужного подтеста в основном графе «Выполнять при ошибке и остановке»." />
+    <ScrollViewer Grid.Row="1" IsVisible="{Binding HasItems}" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:FailureCleanupItemViewModel">
+            <Border Margin="0,0,0,8" Padding="12" CornerRadius="8" BorderThickness="1"
+                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
+              <Grid ColumnDefinitions="32,*,Auto">
+                <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" Margin="10,0">
+                  <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                  <TextBlock Text="Отключён" IsVisible="{Binding IsDisabled}" FontSize="12"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Command="{Binding $parent[Window].((vm:FailureCleanupOrderViewModel)DataContext).MoveUpCommand}"
+                          CommandParameter="{Binding}" AutomationProperties.Name="Поднять действие" ToolTip.Tip="Поднять"
+                          Width="36" Height="36" Padding="8">
+                    <PathIcon Width="16" Height="16" Data="M12 3 L4 11 L6 13 L11 8 V21 H13 V8 L18 13 L20 11 Z" />
+                  </Button>
+                  <Button Command="{Binding $parent[Window].((vm:FailureCleanupOrderViewModel)DataContext).MoveDownCommand}"
+                          CommandParameter="{Binding}" AutomationProperties.Name="Опустить действие" ToolTip.Tip="Опустить"
+                          Width="36" Height="36" Padding="8">
+                    <PathIcon Width="16" Height="16" Data="M12 21 L4 13 L6 11 L11 16 V3 H13 V16 L18 11 L20 13 Z" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Отмена" Click="OnCancel" />
+      <Button Content="Применить к профилю" IsEnabled="{Binding HasItems}" Classes="primary" Click="OnApply" />
+    </StackPanel>
+  </Grid>
+</Window>
