@@ -213,6 +213,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public ObservableCollection<NodePaletteCategoryViewModel> AvailableNodeCategories { get; } = new();
 
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
+    public IReadOnlyList<GraphProfile> AllProfiles => _profileCatalog;
+    public event Action<LastTestLabelSnapshot>? LastTestCompleted;
 
     private string _profileSearch = string.Empty;
 
@@ -1416,6 +1418,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             // Cleanup uses the same context and may fail itself; keep the main run's original cause last.
             if (runFailure != null)
                 TestingLogger.Error(runFailure.LogMessage);
+            if (!preparing && !partialRun && !IsTraining)
+                LastTestCompleted?.Invoke(new LastTestLabelSnapshot(DateTimeOffset.Now, profileName,
+                    context?.DeviceModel ?? RootGraph.DeviceModel ?? "", executionStatus,
+                    runFailure?.Summary ?? "", context?.LabelPrinting.Last));
             if (!IsTraining) LoggingService.Instance.StopFileLogForRun();
         }
     }
@@ -1744,6 +1750,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             RefreshStationProfiles();
             RefreshEngineerProfileGroups();
             OnPropertyChanged(nameof(SelectedProfile));
+            OnPropertyChanged(nameof(AllProfiles));
         }
         finally { _refreshingProfiles = false; }
     }

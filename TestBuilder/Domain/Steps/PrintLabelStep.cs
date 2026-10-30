@@ -129,11 +129,6 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Language", _template.Language);
             context.SetVariable("PrintLabel.Template", _template.Id);
 
-            if (string.IsNullOrWhiteSpace(_printerName))
-            {
-                return Fail(context, 3, "Имя принтера не задано.");
-            }
-
             string serial;
             string serialSource;
 
@@ -280,6 +275,15 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Zpl", language == "ZPL" ? printData : string.Empty);
             context.SetVariable("PrintLabel.RawData", printData);
             context.SetVariable("PrintLabel.Bytes", bytes.Length);
+
+            // A printer failure must not discard the validated product identity/template.
+            if (!context.IsCleanup)
+                context.LabelPrinting.Set(new PreparedLabel(printTemplate,
+                    _useQtProZplFormat ? context.GetVariable<int>("PrintLabel.FullSerial").ToString(CultureInfo.InvariantCulture) : serial,
+                    _useQtProZplFormat ? context.GetVariable<string>("PrintLabel.Mac") ?? "" : "",
+                    _printerName, _copies));
+            if (string.IsNullOrWhiteSpace(_printerName))
+                return Fail(context, 3, "Имя принтера не задано.");
 
             _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
 

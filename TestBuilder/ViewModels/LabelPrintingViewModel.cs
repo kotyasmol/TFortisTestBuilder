@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -18,6 +19,26 @@ namespace TestBuilder.ViewModels;
 public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 {
     public ObservableCollection<LabelTemplatePreviewItem> LabelOptions { get; } = new();
+    public ObservableCollection<string> ProductNames { get; } = new();
+    [ObservableProperty] private string? selectedProductName;
+    private readonly Func<IReadOnlyList<GraphProfile>>? _profiles;
+    private readonly Action? _refreshProfiles;
+    private bool _refreshingProducts;
+    public bool HasProducts => ProductNames.Count > 0;
+    public bool ShowProductPicker => _profiles != null;
+    private LastTestLabelSnapshot? _lastTest;
+    [ObservableProperty] private LabelPreview? lastTestPreview;
+    public bool HasLastTest => _lastTest != null;
+    public bool HasLastTestLabel => _lastTest?.Label != null;
+    public bool CanPrintLastTest => CanEdit && HasLastTestLabel;
+    public string LastTestDescription => _lastTest == null ? "Завершённых тестов пока нет." :
+        (_lastTest.Label is { } label ? $"{label.Template.Name} · SN {label.Serial}" +
+            (label.Mac.Length == 0 ? "" : $" · MAC {label.Mac}") : _lastTest.DeviceModel);
+    public string LastTestResult => _lastTest == null ? "" :
+        $"{_lastTest.FinishedAt.ToLocalTime():dd.MM.yyyy HH:mm} · {_lastTest.ProfileName} · " +
+        (_lastTest.Result switch { ExecutionStatus.Completed => "Тест завершён", ExecutionStatus.Cancelled => "Тест остановлен", _ => "Тест завершён с ошибкой" });
+    public string LastTestMessage => _lastTest == null ? "" :
+        _lastTest.Error + (HasLastTestLabel ? "" : " Данные этикетки в этом тесте не были подготовлены.");
     [ObservableProperty] private LabelPreview? preview;
     [ObservableProperty] private LabelPreview? lastPreview;
     public bool HasLastPreview => LastPreview != null;
@@ -34,7 +55,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private readonly IRawLabelPrinter _printer;
     private readonly Func<bool> _canUse;
     private readonly Func<string?> _deviceModel;
-    public string ProfileDeviceName => _deviceModel() ?? "";
+    public string ProfileDeviceName => _profiles == null ? _deviceModel() ?? "" : SelectedProductName ?? "";
     private CancellationTokenSource? _operation;
     private LabelData? _last;
     private LabelTemplateDefinition? _lastTemplate;
@@ -47,12 +68,54 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     partial void OnMacAddressChanged(string value) => UpdatePreview();
     partial void OnLastPreviewChanged(LabelPreview? value) => OnPropertyChanged(nameof(HasLastPreview));
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
+    partial void OnSelectedProductNameChanged(string? value)
+    {
+        if (!_refreshingProducts) RefreshTemplates();
+    }
 
-    public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null)
-        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter(), deviceModel) { }
+    public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null,
+        Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
+        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter(), deviceModel, profiles, refreshProfiles) { }
 
-    internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer, Func<string?>? deviceModel = null)
-    { _logger = logger; _canUse = canUse; _http = http; _printer = printer; _deviceModel = deviceModel ?? (() => null); RefreshTemplates(); }
+    internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer,
+        Func<string?>? deviceModel = null, Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
+    {
+        _logger = logger; _canUse = canUse; _http = http; _printer = printer;
+        _deviceModel = deviceModel ?? (() => null); _profiles = profiles; _refreshProfiles = refreshProfiles;
+        RefreshProductNames();
+    }
+
+    internal void RefreshProductNames()
+    {
+        var names = (_profiles?.Invoke() ?? Array.Empty<GraphProfile>()).Select(p => p.DeviceModel?.Trim())
+            .Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!)
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => EquipmentCatalog.SortKey(n), StringComparer.Ordinal).ToArray();
+        var selected = SelectedProductName ?? _deviceModel();
+        _refreshingProducts = true;
+        try
+        {
+            ProductNames.Clear();
+            foreach (var name in names) ProductNames.Add(name);
+            SelectedProductName = names.FirstOrDefault(n => string.Equals(n, selected, StringComparison.OrdinalIgnoreCase))
+                ?? (names.Length == 1 ? names[0] : null);
+        }
+        finally { _refreshingProducts = false; }
+        OnPropertyChanged(nameof(HasProducts));
+        RefreshTemplates();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void RefreshProducts() { _refreshProfiles?.Invoke(); RefreshProductNames(); }
+
+    public void SetLastTest(LastTestLabelSnapshot? snapshot)
+    {
+        _lastTest = snapshot?.Copy();
+        LastTestPreview = _lastTest?.Label is { } label
+            ? LabelPreview.FromInput(label.Template, label.Serial, label.Mac) : null;
+        foreach (var property in new[] { nameof(HasLastTest), nameof(HasLastTestLabel), nameof(LastTestDescription), nameof(LastTestResult), nameof(LastTestMessage) })
+            OnPropertyChanged(property);
+        RefreshAvailability();
+    }
 
     private static bool IsDeviceTemplate(LabelTemplateDefinition t) =>
         t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" && t.Language == "ZPL";
@@ -104,6 +167,8 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public void RefreshAvailability()
     {
         OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanRepeat));
+        OnPropertyChanged(nameof(CanPrintLastTest));
+        PrintLastTestCommand.NotifyCanExecuteChanged(); RefreshProductsCommand.NotifyCanExecuteChanged();
         EditTemplatesCommand.NotifyCanExecuteChanged();
         PrintCommand.NotifyCanExecuteChanged(); RepeatLastCommand.NotifyCanExecuteChanged();
         FindBySerialCommand.NotifyCanExecuteChanged(); FindByMacCommand.NotifyCanExecuteChanged();
@@ -128,7 +193,10 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         Status = "Получение данных с сервера…";
         var data = await new LabelLookupService(_http).FindAsync(AppSettings.Instance.ServerBaseUrl,
             byMac ? MacAddress : SerialNumber, byMac, token);
-        var id = OptionId(AppSettings.Instance.LabelTemplates[data.Kind]);
+        var foundTemplate = AppSettings.Instance.LabelTemplates[data.Kind];
+        var product = ProductNames.FirstOrDefault(n => string.Equals(n, foundTemplate.Name, StringComparison.OrdinalIgnoreCase));
+        if (product != null) SelectedProductName = product;
+        var id = OptionId(foundTemplate);
         SelectedType = LabelOptions.ToList().FindIndex(t => t.Id == id);
         SerialNumber = data.Serial; MacAddress = data.Mac;
         Status = "Данные получены. Проверьте этикетку и нажмите «Печатать».";
@@ -138,11 +206,17 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private Task Print() => PrintData(new(SelectedType, SerialNumber.Trim(), MacAddress.Trim()));
     [RelayCommand(CanExecute = nameof(CanRepeat))]
     private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last, _lastTemplate);
+    [RelayCommand(CanExecute = nameof(CanPrintLastTest))]
+    private Task PrintLastTest() => _lastTest?.Label is not { } label ? Task.CompletedTask :
+        PrintData(new LabelData(0, label.Serial, label.Mac), label.Template);
 
     private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null) => Run(async token =>
     {
+        if (savedTemplate == null && _profiles != null && SelectedTemplate?.Language == "ZPL" &&
+            (SelectedProductName == null || !ProductNames.Contains(SelectedProductName)))
+            throw new InvalidOperationException("Выберите изделие из профилей. Название изделия задаётся в редакторе профиля.");
         var template = savedTemplate?.Copy() ?? LabelPrintContent.ForDevice(
-            SelectedTemplate ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите профиль изделия."), ProfileDeviceName);
+            SelectedTemplate ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
         template.Validate();
         if (Copies is < 1 or > 100) throw new InvalidOperationException("Количество этикеток: от 1 до 100.");
         var printer = PrinterName.Trim(); var count = Copies;

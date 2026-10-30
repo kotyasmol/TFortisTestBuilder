@@ -5,8 +5,30 @@
     <StackPanel Margin="24" Spacing="16" MaxWidth="1120" HorizontalAlignment="Stretch">
       <TextBlock Text="Проверка печати этикетки" FontSize="24" FontWeight="SemiBold" />
       <TextBlock Text="Печать на принтере Windows без запуска графа и подключения стенда." TextWrapping="Wrap" />
+      <Border Padding="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}">
+        <Grid ColumnDefinitions="*,16,Auto">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Последний тест" FontWeight="SemiBold" />
+          <SelectableTextBlock Text="{Binding LastTestDescription}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding LastTestResult}" TextWrapping="Wrap" IsVisible="{Binding HasLastTest}" />
+          <TextBlock Text="{Binding LastTestMessage}" TextWrapping="Wrap" IsVisible="{Binding HasLastTest}" />
+          <Button x:Name="PrintLastTestButton" Content="Печатать из последнего теста" Command="{Binding PrintLastTestCommand}"
+                  ToolTip.Tip="Данные и шаблон берутся из последнего теста. Принтер и количество — из полей ниже." />
+        </StackPanel>
+        <views:LabelPreviewControl Grid.Column="2" Preview="{Binding LastTestPreview}" IsVisible="{Binding HasLastTestLabel}" Height="110" Width="260" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
       <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
-        <TextBlock Text="{Binding ProfileDeviceName}" FontWeight="SemiBold" />
+        <StackPanel Spacing="8" IsVisible="{Binding ShowProductPicker}">
+          <TextBlock Text="Изделие" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,Auto">
+            <ComboBox x:Name="LabelProductPicker" ItemsSource="{Binding ProductNames}" SelectedItem="{Binding SelectedProductName, Mode=TwoWay}"
+                      PlaceholderText="Выберите изделие" HorizontalAlignment="Stretch" />
+            <Button Grid.Column="1" Content="Обновить изделия" Command="{Binding RefreshProductsCommand}" Margin="12,0,0,0" />
+          </Grid>
+          <TextBlock Text="В профилях нет названий изделий. Укажите изделие в редакторе профиля." IsVisible="{Binding !HasProducts}" TextWrapping="Wrap" />
+        </StackPanel>
+        <TextBlock Text="{Binding ProfileDeviceName}" IsVisible="{Binding !ShowProductPicker}" FontWeight="SemiBold" />
         <TextBlock Text="Выберите этикетку" FontWeight="SemiBold" />
         <ListBox x:Name="LabelTemplatePicker" ItemsSource="{Binding LabelOptions}" SelectedIndex="{Binding SelectedType}"
                  Background="Transparent" Padding="0" MaxHeight="320" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

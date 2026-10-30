@@ -24,6 +24,7 @@ namespace TestBuilder.ViewModels
         public SettingsViewModel SettingsVM { get; }
         public NetworkSetupViewModel NetworkSetupVM { get; }
         public LabelPrintingViewModel LabelPrintingVM { get; }
+        private readonly LastTestLabelStore _lastTestLabels = new();
         public string OperatorName => string.IsNullOrWhiteSpace(App.StartupUserName) ? "Локальный оператор" : App.StartupUserName;
         public string SessionStatus => !App.StartupOptions.IsValid ? "Ошибка параметров запуска" :
             string.IsNullOrEmpty(App.StartupSessionId) ? "Локальный запуск" : "Сессия лаунчера получена";
@@ -44,6 +45,7 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(IsSelfTestPage));
             OnPropertyChanged(nameof(IsNetworkPage));
             OnPropertyChanged(nameof(IsLabelsPage));
+            if (IsLabelsPage) TestVM.RefreshProfiles();
         }
         [RelayCommand]
         private void SelectPage(string page)
@@ -87,8 +89,11 @@ namespace TestBuilder.ViewModels
             NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
             LabelPrintingVM = new LabelPrintingViewModel(TestVM.TestingLogger,
                 () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,
-                () => TestVM.DeviceName);
+                () => TestVM.DeviceName, () => TestVM.AllProfiles, TestVM.RefreshProfiles);
             LabelPrintingVM.PropertyChanged += OnLabelPrintingChanged;
+            try { LabelPrintingVM.SetLastTest(_lastTestLabels.Load()); }
+            catch (Exception ex) { TestVM.TestingLogger.Warning("Не удалось восстановить данные последнего теста: " + ex.Message); }
+            TestVM.LastTestCompleted += OnLastTestCompleted;
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
             SettingsVM.PropertyChanged += OnSettingsPropertyChanged;
@@ -122,7 +127,7 @@ namespace TestBuilder.ViewModels
                 if (!ShowSwitchTools && SelectedPage is "SelfTest" or "Network") SelectedPage = "Editor";
                 OnSelectedPageChanged(SelectedPage);
             }
-            if (e.PropertyName == nameof(TestVM.DeviceName)) LabelPrintingVM.RefreshTemplates();
+            if (e.PropertyName is nameof(TestVM.DeviceName) or nameof(TestVM.AllProfiles)) LabelPrintingVM.RefreshProductNames();
             if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
                 IsSlavesFound = TestVM.IsMonitoringActive;
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting) or nameof(TestVM.HasRunningQuickActions))
@@ -143,12 +148,20 @@ namespace TestBuilder.ViewModels
             if (e.PropertyName == nameof(LabelPrintingVM.IsBusy)) TestVM.IsLabelToolBusy = LabelPrintingVM.IsBusy;
         }
 
+        private void OnLastTestCompleted(LastTestLabelSnapshot snapshot)
+        {
+            LabelPrintingVM.SetLastTest(snapshot);
+            try { _lastTestLabels.Save(snapshot); }
+            catch (Exception ex) { TestVM.TestingLogger.Warning("Данные последнего теста доступны до закрытия программы, но не сохранены на диск: " + ex.Message); }
+        }
+
         private void RefreshProfileSettings() =>
             SettingsVM.SetProfileContext(TestVM.ProfileProductKind, TestVM.HasConsoleSettings);
 
         public void Dispose()
         {
             TestVM.PropertyChanged -= OnTestVmPropertyChanged;
+            TestVM.LastTestCompleted -= OnLastTestCompleted;
             SettingsVM.PropertyChanged -= OnSettingsPropertyChanged;
             SelfTestPageVM.Dispose();
             LabelPrintingVM.Dispose();

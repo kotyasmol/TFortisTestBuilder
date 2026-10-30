@@ -36,6 +36,7 @@ namespace TestBuilder.Domain.Execution
 
         public string? ProfileName { get; set; }
         public string? DeviceModel { get; set; }
+        public LabelPrintCapture LabelPrinting { get; private init; } = new();
 
         public bool HasCriticalError { get; set; }
 
@@ -75,6 +76,7 @@ namespace TestBuilder.Domain.Execution
                 HasExecutionException = HasExecutionException,
                 ProfileName = ProfileName,
                 DeviceModel = DeviceModel,
+                LabelPrinting = LabelPrinting,
                 HasCriticalError = HasCriticalError,
                 CurrentSlaveId = CurrentSlaveId,
                 ExecutionObserver = ExecutionObserver,
