@@ -1,6 +1,6 @@
 {
   "name": "PSW_UPS_Box_8x2Pro_parallel_start",
-  "updatedAt": "2026-10-30T04:33:58.707993+00:00",
+  "updatedAt": "2026-10-30T05:16:01.8601598+00:00",
   "deviceModelId": "psw-ups-box-8x2pro",
   "deviceModel": "PSW+UPS-Box 8x2Pro",
   "configurationName": "параллельный старт · без проверки SFP",
@@ -2645,63 +2645,6 @@
     ]
   },
   "productKind": "Switch",
-  "registerIndicators": [
-    {
-      "id": "c15eb40dfa5c443eaabf648017602271",
-      "name": "PoE: напряжение A · slave 1",
-      "slaveId": 1,
-      "address": 1402,
-      "area": "Holding",
-      "divisor": 1000,
-      "decimalPlaces": 2,
-      "unit": "В",
-      "color": "#2563EB"
-    },
-    {
-      "id": "ca3c8c7c57ee473cae86480a12dbb25d",
-      "name": "PoE: ток A · slave 3",
-      "slaveId": 3,
-      "address": 1400,
-      "area": "Holding",
-      "divisor": 1000,
-      "decimalPlaces": 3,
-      "unit": "А",
-      "color": "#0891B2"
-    },
-    {
-      "id": "7f7de672695c43ac8b67874a4e3b6bbd",
-      "name": "PoE: напряжение A · slave 15",
-      "slaveId": 15,
-      "address": 1402,
-      "area": "Holding",
-      "divisor": 1000,
-      "decimalPlaces": 2,
-      "unit": "В",
-      "color": "#7C3AED"
-    },
-    {
-      "id": "0841241f2d9d43aaa3fb770869501ef8",
-      "name": "АКБ: напряжение зарядки",
-      "slaveId": 17,
-      "address": 1701,
-      "area": "Holding",
-      "divisor": 1000,
-      "decimalPlaces": 2,
-      "unit": "В",
-      "color": "#D97706"
-    },
-    {
-      "id": "3ccd71475a72414c8e53456d0052066c",
-      "name": "Нагреватель 2: ток",
-      "slaveId": 23,
-      "address": 1221,
-      "area": "Holding",
-      "divisor": 1000,
-      "decimalPlaces": 3,
-      "unit": "А",
-      "color": "#DC2626"
-    }
-  ],
   "quickActions": [
     {
       "id": "e4243dd30c2e4d05ae62c5ebd99a282e",
@@ -3072,10 +3015,85 @@
       }
     }
   ],
+  "registerIndicators": [
+    {
+      "id": "c15eb40dfa5c443eaabf648017602271",
+      "name": "PoE: напряжение A · slave 1",
+      "slaveId": 1,
+      "address": 1402,
+      "area": "Holding",
+      "divisor": 1000,
+      "decimalPlaces": 2,
+      "unit": "В",
+      "minimum": null,
+      "maximum": null,
+      "color": "#2563EB"
+    },
+    {
+      "id": "ca3c8c7c57ee473cae86480a12dbb25d",
+      "name": "PoE: ток A · slave 3",
+      "slaveId": 3,
+      "address": 1400,
+      "area": "Holding",
+      "divisor": 1000,
+      "decimalPlaces": 3,
+      "unit": "А",
+      "minimum": null,
+      "maximum": null,
+      "color": "#0891B2"
+    },
+    {
+      "id": "7f7de672695c43ac8b67874a4e3b6bbd",
+      "name": "PoE: напряжение A · slave 15",
+      "slaveId": 15,
+      "address": 1402,
+      "area": "Holding",
+      "divisor": 1000,
+      "decimalPlaces": 2,
+      "unit": "В",
+      "minimum": null,
+      "maximum": null,
+      "color": "#7C3AED"
+    },
+    {
+      "id": "0841241f2d9d43aaa3fb770869501ef8",
+      "name": "АКБ: напряжение зарядки",
+      "slaveId": 17,
+      "address": 1701,
+      "area": "Holding",
+      "divisor": 1000,
+      "decimalPlaces": 2,
+      "unit": "В",
+      "minimum": null,
+      "maximum": null,
+      "color": "#D97706"
+    },
+    {
+      "id": "3ccd71475a72414c8e53456d0052066c",
+      "name": "Нагреватель 2: ток",
+      "slaveId": 23,
+      "address": 1221,
+      "area": "Holding",
+      "divisor": 1000,
+      "decimalPlaces": 3,
+      "unit": "А",
+      "minimum": null,
+      "maximum": null,
+      "color": "#DC2626"
+    }
+  ],
+  "pingMonitor": {
+    "enabled": true,
+    "host": "192.168.0.1",
+    "intervalMs": 1000,
+    "timeoutMs": 1000,
+    "showInEngineer": true,
+    "showInOperator": true
+  },
   "nodes": [
     {
       "id": "0",
-      "type": "Start (indicators v1)",
+      "type": "Start (ping v1)",
       "x": 80,
       "y": 120,
       "color": "blue",
