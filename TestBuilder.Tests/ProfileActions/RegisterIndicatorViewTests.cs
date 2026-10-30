@@ -1,3 +1,4 @@
+using TestBuilder.Models;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -152,6 +153,42 @@ public class RegisterIndicatorViewTests
             finally { if (vm.IsConnected) await vm.ToggleConnectionCommand.ExecuteAsync(null); File.Delete(path); }
             return true;
         }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task BoundAction_UpdatesWithoutIndicatorCards_AndStopsOnDisconnect()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var path = Path.Combine(Path.GetTempPath(), "action-state-" + Guid.NewGuid().ToString("N") + ".json");
+            using var port = new FakePort(); var devices = new FakeDevices { Raw = 1 }; var manager = new SlaveManager(devices);
+            using var vm = new TestViewModel(port, manager) { IsOperatorView = false, AvailableStandPorts = () => new[] { "SIM" } };
+            try
+            {
+                ProfileActionTests.LoadEmpty(vm);
+                var hardware = ProfileActionStateTests.Hardware(); hardware.Devices[0].Registers.RemoveAt(1);
+                hardware.PollIntervalMs = 100;
+                vm.RootGraph.Hardware = hardware;
+                vm.RootGraph.QuickActions.Add(new() { Display = ProfileActionDisplay.Toggle, StateBinding = ProfileActionStateTests.Binding() });
+                await vm.SaveGraphToPathAsync(path);
+                await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+                Assert.Empty(vm.RegisterIndicators);
+                Assert.False(vm.QuickActions[0].CanRun);
+                await vm.ToggleConnectionCommand.ExecuteAsync(null);
+                await Until(() => vm.QuickActions[0].IsStateKnown && vm.QuickActions[0].IsOn);
+                devices.Raw = 0;
+                await Until(() => vm.QuickActions[0].IsStateKnown && !vm.QuickActions[0].IsOn);
+                devices.Raw = 2;
+                await Until(() => !vm.QuickActions[0].IsStateKnown);
+                Assert.False(vm.QuickActions[0].CanRun);
+                await vm.ToggleConnectionCommand.ExecuteAsync(null);
+                Assert.False(vm.QuickActions[0].CanRun);
+                Assert.Contains("Нет связи", vm.QuickActions[0].DetailText);
+            }
+            finally { if (vm.IsConnected) await vm.ToggleConnectionCommand.ExecuteAsync(null); File.Delete(path); }
+            return true;
+        }, default);
     }
 
     private static async Task Until(Func<bool> condition)

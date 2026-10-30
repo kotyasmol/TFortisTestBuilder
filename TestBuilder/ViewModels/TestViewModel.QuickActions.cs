@@ -46,8 +46,9 @@ public partial class TestViewModel
             definition.Graph.Hardware = RootGraph.Hardware; definition.OffGraph.Hardware = RootGraph.Hardware;
             QuickActions.Add(new ProfileActionViewModel(definition, ExecuteProfileActionAsync,
                 () => !IsActionGraphEditor && !IsTraining && !IsConnecting && !IsStopping && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && _profileLoadError.Length == 0,
-                RefreshStationAvailability));
+                RefreshStationAvailability, RefreshRegisterIndicatorValues));
         }
+        UpdateRegisterIndicators();
         RefreshStationAvailability();
     }
     public void CancelQuickActions() { foreach (var action in QuickActions) action.Cancel(); }

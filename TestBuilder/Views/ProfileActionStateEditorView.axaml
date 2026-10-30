@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TestBuilder.Views.ProfileActionStateEditorView" x:CompileBindings="False">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="14" Margin="12">
+      <CheckBox Content="Определять состояние по Modbus" IsChecked="{Binding UseModbus}" />
+      <TextBlock Text="Без привязки переключатель показывает последнюю успешную команду." TextWrapping="Wrap" />
+      <StackPanel IsVisible="{Binding UseModbus}" Spacing="14">
+        <TextBlock IsVisible="{Binding !HasEquipment}" Text="Сначала добавьте устройства и регистры в оборудование профиля." TextWrapping="Wrap" />
+        <TextBlock Text="Оба правила используют свежие показания. Если подходят оба или ни одно, состояние неизвестно и переключение недоступно." TextWrapping="Wrap" />
+        <TextBlock Text="Подписи состояний меняются на вкладке «Тексты»." />
+        <ItemsControl ItemsSource="{Binding Rules}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,14">
+                <StackPanel Spacing="10">
+                  <StackPanel Orientation="Horizontal" Spacing="16">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" Width="110" />
+                    <ComboBox ItemsSource="{Binding MatchChoices}" SelectedIndex="{Binding MatchIndex}" Width="200" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="170,*,170,110,110,40">
+                    <TextBlock Text="Устройство" />
+                    <TextBlock Grid.Column="1" Text="Регистр" />
+                    <TextBlock Grid.Column="2" Text="Сравнение" />
+                    <TextBlock Grid.Column="3" Text="Значение" />
+                    <TextBlock Grid.Column="4" Text="Маска" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding Conditions}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="170,*,170,110,110,40" Margin="0,0,0,8">
+                          <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" HorizontalAlignment="Stretch" ToolTip.Tip="Устройство" />
+                          <ComboBox Margin="4,0" Grid.Column="1" ItemsSource="{Binding Registers}" SelectedItem="{Binding SelectedRegister}" HorizontalAlignment="Stretch" ToolTip.Tip="Область, адрес и название регистра" />
+                          <ComboBox Margin="4,0" Grid.Column="2" ItemsSource="{Binding Comparisons}" SelectedItem="{Binding SelectedComparison}" HorizontalAlignment="Stretch" />
+                          <NumericUpDown ShowButtonSpinner="False" Margin="4,0" Grid.Column="3" Value="{Binding Value}" Minimum="0" Maximum="65535" FormatString="0" ToolTip.Tip="Сравниваемое значение" />
+                          <NumericUpDown ShowButtonSpinner="False" Margin="4,0" Grid.Column="4" Value="{Binding Mask}" Minimum="1" Maximum="65535" FormatString="0" Watermark="Нет" ToolTip.Tip="Пусто — всё значение; иначе перед сравнением применяется побитовое И" />
+                          <Button Grid.Column="5" Content="×" Command="{Binding RemoveCommand}" ToolTip.Tip="Удалить условие" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Button Content="Добавить условие" Command="{Binding AddConditionCommand}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="Адреса — с нуля. Значения и маски — десятичные, без масштабирования. Для бита 3: маска 8, включено = 8, выключено = 0. Диапазон задаётся двумя условиями: ≥ нижней границы и ≤ верхней, режим «Все условия»." TextWrapping="Wrap" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

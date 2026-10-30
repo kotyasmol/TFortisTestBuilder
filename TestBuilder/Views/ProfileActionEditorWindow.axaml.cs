@@ -21,6 +21,8 @@ public partial class ProfileActionEditorWindow : Window
     private readonly string _id;
     private readonly HardwareConfiguration? _hardware;
     private bool _ready;
+    private readonly ProfileActionStateEditorViewModel _state;
+    private readonly ProfileActionLabels _labels;
 
     public ProfileActionEditorWindow() : this(new ProfileActionDefinition(), null) { }
 
@@ -28,6 +30,8 @@ public partial class ProfileActionEditorWindow : Window
     {
         InitializeComponent();
         _id = source.Id; _hardware = hardware;
+        _labels = source.GetLabels(); LabelsEditor.DataContext = _labels;
+        _state = new(source.StateBinding, hardware, _labels); StateEditor.DataContext = _state;
         _on = CreateEditor(source.Graph);
         _off = CreateEditor(source.OffGraph);
         OnEditor.DataContext = _on; OffEditor.DataContext = _off;
@@ -51,7 +55,8 @@ public partial class ProfileActionEditorWindow : Window
     private void UpdateDisplay()
     {
         var toggle = DisplayInput.SelectedIndex == (int)ProfileActionDisplay.Toggle;
-        OnTab.Header = toggle ? "Первое нажатие — включить" : "Действие";
+        OnTab.Header = toggle ? "Включить" : "Действие";
+        OffTab.Header = "Выключить";
         OffTab.IsVisible = toggle; ToggleHint.IsVisible = toggle;
         if (!toggle) GraphTabs.SelectedIndex = 0;
     }
@@ -82,7 +87,7 @@ public partial class ProfileActionEditorWindow : Window
         var result = new ProfileActionDefinition {
             Id = _id, Name = NameInput.Text?.Trim() ?? "", Color = SelectedColor,
             Display = (ProfileActionDisplay)DisplayInput.SelectedIndex,
-            Graph = _on.RootGraph, OffGraph = _off.RootGraph
+            Labels = _labels.Copy(), StateBinding = _state.BuildResult(), Graph = _on.RootGraph, OffGraph = _off.RootGraph
         };
         result.Validate();
         using var compiler = new GraphCompiler(_modbus, _on.TestingLogger) { ProfileHardware = _hardware };

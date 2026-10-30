@@ -46,7 +46,7 @@
                 <Grid>
                   <Button x:Name="ActionRunButton" Classes="profileAction" Classes.systemColor="{Binding UsesSystemColor}" Theme="{StaticResource ActionButtonTheme}" Command="{Binding RunCommand}"
                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="70" Padding="10,8,42,8"
-                          ToolTip.Tip="{Binding DetailText}" AutomationProperties.Name="{Binding Name}">
+                          ToolTip.ShowOnDisabled="True" ToolTip.Tip="{Binding DetailText}" AutomationProperties.Name="{Binding Name}">
                     <Button.Foreground>
                       <MultiBinding Converter="{StaticResource ContrastText}">
                         <Binding Path="Background" RelativeSource="{RelativeSource Self}" />
@@ -70,7 +70,7 @@
                       </Grid>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding StateText}" FontSize="11" Height="16" MaxLines="1" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Foreground="{Binding $parent[Button].Foreground}" Text="{Binding StateText}" IsVisible="{Binding ShowStatusText}" FontSize="11" Height="16" MaxLines="1" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </Grid>
                   </Button>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -54,7 +55,7 @@ public partial class TestViewModel
     {
         if (_indicatorsDisposed) return;
         // UI snapshots use the existing polling cache. No additional Modbus requests.
-        if (IsConnected && RegisterIndicators.Count > 0)
+        if (IsConnected && (RegisterIndicators.Count > 0 || QuickActions.Any(a => a.HasStateBinding)))
         {
             if (_indicatorTimer == null)
             {
@@ -70,6 +71,8 @@ public partial class TestViewModel
     internal void RefreshRegisterIndicatorValues()
     {
         if (_indicatorsDisposed) return;
+        foreach (var action in QuickActions)
+            action.RefreshFeedback(_registerState, RootGraph.Hardware, IsConnected, IsMonitoringActive);
         foreach (var indicator in RegisterIndicators)
             indicator.Refresh(_registerState, RootGraph.Hardware, IsConnected, IsMonitoringActive);
     }

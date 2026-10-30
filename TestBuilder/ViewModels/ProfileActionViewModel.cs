@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Monitoring;
+using TestBuilder.Services;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
@@ -21,6 +26,14 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
     private CancellationTokenSource? _cancellation;
     private readonly Action _availabilityChanged;
+    private readonly Action? _refreshFeedback;
+    private readonly ProfileActionLabels _labels;
+    private bool _hasOutcome;
+    private long _feedbackNotBefore;
+    private string _feedbackReason = "Нет данных";
+    public bool HasStateBinding => Definition.StateBinding != null;
+    public string FeedbackText => IsStateKnown ? (IsOn ? _labels.On : _labels.Off) : _labels.Unknown;
+    public bool ShowStatusText => _labels.ShowStatus;
     public string Name => Definition.Name;
     public bool IsToggle => Definition.Display == ProfileActionDisplay.Toggle;
     public bool ShowProgress => !IsToggle && (Definition.Display == ProfileActionDisplay.Progress || IsRunning);
@@ -31,25 +44,29 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     [ObservableProperty] private bool isStateKnown;
     [ObservableProperty] private string status = "";
     [ObservableProperty] private string errorMessage = "";
-    public string DetailText => string.IsNullOrEmpty(ErrorMessage) ? StateText : ErrorMessage;
+    public string DetailText => string.IsNullOrEmpty(ErrorMessage) ?
+        HasStateBinding && !IsStateKnown ? _feedbackReason : DisplayStatus : ErrorMessage;
     [ObservableProperty] private string currentStep = "";
     [ObservableProperty] private int completedSteps;
     public int? ExpectedSteps { get; private set; }
     public double? Progress => ExpectedSteps is > 0 ? Math.Min(1, (double)CompletedSteps / ExpectedSteps.Value) : null;
-    public string StateText => IsRunning ? $"{CurrentStep} · {CompletedSteps}{(ExpectedSteps.HasValue ? $"/{ExpectedSteps}" : " шагов")}" :
-        !string.IsNullOrEmpty(Status) ? Status : IsToggle ? "Не задано" : "Готово";
+    public string StateText => ShowStatusText ? DisplayStatus : "";
+    private string DisplayStatus => IsRunning ? Regex.Replace(_labels.Running, @"\{(step|done|total)\}", match => match.Groups[1].Value switch {
+        "step" => CurrentStep, "done" => CompletedSteps.ToString(), "total" => ExpectedSteps?.ToString() ?? "?", _ => match.Value
+    }) : HasStateBinding ? string.Join(" · ", new[] { FeedbackText, Status }.Where(s => !string.IsNullOrEmpty(s))) :
+        _hasOutcome ? Status : IsToggle ? FeedbackText : _labels.Ready;
     public double ToggleOffset => IsStateKnown && IsOn ? 14 : 0;
     public double ToggleOpacity => IsStateKnown ? 1 : .4;
-    public bool CanRun => !IsRunning && _canRun();
+    public bool CanRun => !IsRunning && _canRun() && (!IsToggle || !HasStateBinding || IsStateKnown);
     public IAsyncRelayCommand RunCommand { get; }
     public IRelayCommand CancelCommand { get; }
     public event Action? StateChanged;
 
     public ProfileActionViewModel(ProfileActionDefinition definition,
         Func<ProfileActionDefinition, bool, IExecutionObserver, CancellationToken, Task<ProfileActionResult>> run,
-        Func<bool> canRun, Action availabilityChanged)
+        Func<bool> canRun, Action availabilityChanged, Action? refreshFeedback = null)
     {
-        Definition = definition; _run = run; _canRun = canRun; _availabilityChanged = availabilityChanged;
+        Definition = definition; _labels = definition.GetLabels(); _refreshFeedback = refreshFeedback; _run = run; _canRun = canRun; _availabilityChanged = availabilityChanged;
         RunCommand = new AsyncRelayCommand(RunAsync, () => CanRun);
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
     }
@@ -71,12 +88,13 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     }
     private async Task RunAsync()
     {
+        _refreshFeedback?.Invoke();
         if (!CanRun) return;
-        // Retry an unsuccessful command in the same direction. Only success flips IsOn.
+        // Bound toggles follow feedback; unbound toggles retry an unsuccessful command in the same direction.
         var turnOff = IsToggle && IsOn;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         ExpectedSteps = CountLinearSteps(turnOff ? Definition.OffGraph : Definition.Graph);
-        IsRunning = true; Status = ""; ErrorMessage = ""; CurrentStep = "Запуск"; CompletedSteps = 0;
+        IsRunning = true; _hasOutcome = false; Status = ""; ErrorMessage = ""; CurrentStep = Name; CompletedSteps = 0;
         CancelCommand.NotifyCanExecuteChanged(); _availabilityChanged(); NotifyState();
         try
         {
@@ -84,16 +102,24 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
             cancellation.Token.ThrowIfCancellationRequested();
             if (result.Success)
             {
-                if (IsToggle) { IsOn = !turnOff; IsStateKnown = true; }
-                Status = IsToggle ? (IsOn ? "Включено" : "Выключено") : "Выполнено";
+                if (IsToggle && !HasStateBinding) { IsOn = !turnOff; IsStateKnown = true; }
+                Status = HasStateBinding ? "" : IsToggle ? FeedbackText : _labels.Success;
             }
-            else { IsStateKnown = false; Status = "Ошибка"; ErrorMessage = result.Message; }
+            else { if (!HasStateBinding) IsStateKnown = false; Status = _labels.Error; ErrorMessage = result.Message; }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        { IsStateKnown = false; Status = "Остановлено"; }
-        catch (Exception e) { IsStateKnown = false; Status = "Ошибка"; ErrorMessage = e.Message; }
+        { if (!HasStateBinding) IsStateKnown = false; Status = _labels.Cancelled; }
+        catch (Exception e) { if (!HasStateBinding) IsStateKnown = false; Status = _labels.Error; ErrorMessage = e.Message; }
         finally
         {
+            if (HasStateBinding)
+            {
+                // Completion is not feedback. Require a read started after the command graph finished.
+                _feedbackNotBefore = Stopwatch.GetTimestamp();
+                IsStateKnown = false; _feedbackReason = "Ожидание свежих данных";
+                _refreshFeedback?.Invoke();
+            }
+            _hasOutcome = true;
             _cancellation = null; IsRunning = false; CancelCommand.NotifyCanExecuteChanged();
             _availabilityChanged(); RefreshAvailability(); NotifyState();
         }
@@ -117,10 +143,21 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
         }
         return null;
     }
+    internal void RefreshFeedback(RegisterState state, HardwareConfiguration? hardware, bool connected, bool monitoring, long? now = null)
+    {
+        if (Definition.StateBinding is not { } binding) return;
+        var result = ProfileActionStateEvaluator.Evaluate(binding, state, hardware, connected, monitoring, _feedbackNotBefore, now);
+        var changed = IsStateKnown != result.IsOn.HasValue || IsOn != (result.IsOn ?? false) || _feedbackReason != result.Reason;
+        IsStateKnown = result.IsOn.HasValue; IsOn = result.IsOn ?? false; _feedbackReason = result.Reason;
+        if (changed) { RefreshAvailability(); NotifyState(); }
+    }
+
     public void InvalidateState()
     {
         IsStateKnown = false; IsOn = false;
-        if (!IsRunning) { Status = ""; ErrorMessage = ""; }
+        _feedbackNotBefore = Stopwatch.GetTimestamp(); _feedbackReason = "Нет данных";
+        RefreshAvailability();
+        if (!IsRunning) { _hasOutcome = false; Status = ""; ErrorMessage = ""; }
         NotifyState();
     }
     public Task NodeStartedAsync(TestNode node, TestContext context, CancellationToken token) =>

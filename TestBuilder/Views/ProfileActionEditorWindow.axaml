@@ -1,5 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:editor="using:TestBuilder.Views.TestViews" xmlns:converters="using:TestBuilder.Converters" xmlns:models="using:TestBuilder.Models"
+        xmlns:views="using:TestBuilder.Views" xmlns:editor="using:TestBuilder.Views.TestViews" xmlns:converters="using:TestBuilder.Converters" xmlns:models="using:TestBuilder.Models"
         x:Class="TestBuilder.Views.ProfileActionEditorWindow"
         x:CompileBindings="False" Title="Кнопка профиля" Width="1200" Height="800" MinWidth="940" MinHeight="620"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource AppBackgroundBrush}">
@@ -56,12 +56,41 @@
         <Button Classes="colorSwatch" Background="#EA580C" Width="32" Height="28" Tag="#EA580C" Click="OnPickColor" ToolTip.Tip="Оранжевый" />
         <Button Classes="colorSwatch" Background="#B91C1C" Width="32" Height="28" Tag="#B91C1C" Click="OnPickColor" ToolTip.Tip="Красный" />
         <Button Classes="colorSwatch" Background="#7C3AED" Width="32" Height="28" Tag="#7C3AED" Click="OnPickColor" ToolTip.Tip="Фиолетовый" />
-        <TextBlock x:Name="ToggleHint" Text="Одна кнопка: первое нажатие включает, следующее выключает." VerticalAlignment="Center" Margin="12,0,0,0" />
+        <TextBlock x:Name="ToggleHint" Text="Источник показаний — на вкладке «Состояние»." VerticalAlignment="Center" Margin="12,0,0,0" />
       </StackPanel>
     </StackPanel>
     <TabControl x:Name="GraphTabs" Grid.Row="1">
       <TabItem x:Name="OnTab" Header="Действие"><editor:GraphEditorView x:Name="OnEditor" /></TabItem>
       <TabItem x:Name="OffTab" Header="Повторное нажатие — выключить"><editor:GraphEditorView x:Name="OffEditor" /></TabItem>
+      <TabItem Header="Состояние"><views:ProfileActionStateEditorView x:Name="StateEditor" /></TabItem>
+      <TabItem Header="Тексты">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="LabelsEditor" Spacing="12" Margin="16" MaxWidth="820" HorizontalAlignment="Left">
+            <CheckBox Content="Показывать строку состояния на кнопке" IsChecked="{Binding ShowStatus}" />
+            <TextBlock Text="Пустое поле убирает подпись для этого состояния. Причина ошибки остаётся в подсказке и журнале." TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="240,500" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+              <TextBlock Text="До запуска (обычная кнопка)" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding Ready}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="1" Text="Состояние неизвестно" VerticalAlignment="Center" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Unknown}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="2" Text="Включено" VerticalAlignment="Center" />
+              <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding On}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="3" Text="Выключено" VerticalAlignment="Center" />
+              <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Off}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="4" Text="Во время выполнения" VerticalAlignment="Center" />
+              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Running}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="5" Text="Успешное завершение" VerticalAlignment="Center" />
+              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Success}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="6" Text="Ошибка" VerticalAlignment="Center" />
+              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Error}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="7" Text="Остановлено оператором" VerticalAlignment="Center" />
+              <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding Cancelled}" MaxLength="120" Margin="0,4" />
+            </Grid>
+            <TextBlock Text="Во время выполнения можно указать свой текст или шаблон: {step} — название шага, {done} — выполнено шагов, {total} — всего шагов («?» для ветвлений и циклов)." TextWrapping="Wrap" />
+            <TextBlock Text="Переключатель после успешной команды показывает подпись «Включено» или «Выключено». При привязке к Modbus она определяется показаниями регистров." TextWrapping="Wrap" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
       <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />

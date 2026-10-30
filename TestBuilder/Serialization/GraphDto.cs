@@ -52,6 +52,12 @@ namespace TestBuilder.Serialization
 
     public sealed class ProfileActionDto
     {
+        [JsonPropertyName("labels")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Models.ProfileActionLabels? Labels { get; set; }
+        [JsonPropertyName("stateBinding")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Models.ProfileActionStateBinding? StateBinding { get; set; }
         [JsonPropertyName("id")] public string Id { get; set; } = "";
         [JsonPropertyName("name")] public string Name { get; set; } = "";
         [JsonPropertyName("color")] public string Color { get; set; } = "#2563EB";

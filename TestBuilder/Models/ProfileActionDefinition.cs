@@ -21,12 +21,20 @@ public sealed class ProfileActionDefinition
     public GraphWorkspaceViewModel Graph { get; set; } = EmptyGraph("Действие");
     public GraphWorkspaceViewModel OffGraph { get; set; } = EmptyGraph("Выключить");
 
+    public ProfileActionLabels? Labels { get; set; }
+    public ProfileActionLabels GetLabels() => Labels?.Copy() ?? new() {
+        On = StateBinding?.OnText ?? "Включено", Off = StateBinding?.OffText ?? "Выключено"
+    };
+    public ProfileActionStateBinding? StateBinding { get; set; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || Id.Length > 100) throw new InvalidOperationException("Некорректный ID кнопки.");
         if (string.IsNullOrWhiteSpace(Name) || Name.Length > 100 || Name.Any(char.IsControl)) throw new InvalidOperationException("Введите название кнопки до 100 символов.");
         if ((!IsSystemColor(Color) && !Avalonia.Media.Color.TryParse(Color, out _)) || !Enum.IsDefined(Display))
             throw new InvalidOperationException("Некорректный цвет или вид кнопки.");
+        StateBinding?.Validate();
+        Labels?.Validate();
         if (Graph == null || OffGraph == null) throw new InvalidOperationException("Не задан граф действия.");
         if (Graph.QuickActions.Count != 0 || OffGraph.QuickActions.Count != 0)
             throw new InvalidOperationException("Кнопки не могут содержать другие кнопки.");

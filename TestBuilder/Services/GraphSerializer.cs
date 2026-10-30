@@ -90,7 +90,7 @@ namespace TestBuilder.Services
                 ValidateActions(vm.RootGraph);
                 dto.QuickActions = vm.RootGraph.QuickActions.Select(a => new ProfileActionDto {
                     Id = a.Id, Name = a.Name, Color = a.Color, Display = a.Display.ToString(),
-                    Graph = ExportActionGraph(a.Graph), OffGraph = ExportActionGraph(a.OffGraph)
+                    Labels = a.Labels?.Copy(), StateBinding = a.StateBinding?.Copy(), Graph = ExportActionGraph(a.Graph), OffGraph = ExportActionGraph(a.OffGraph)
                 }).ToList();
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (actions v1)";
             }
@@ -104,6 +104,10 @@ namespace TestBuilder.Services
             dto.PingMonitor = vm.RootGraph.PingMonitor?.Copy();
             if (dto.PingMonitor != null)
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (ping v1)";
+            if (vm.RootGraph.QuickActions.Any(a => a.StateBinding != null))
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (action state v1)";
+            if (vm.RootGraph.QuickActions.Any(a => a.Labels != null))
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (action labels v1)";
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
@@ -446,7 +450,7 @@ namespace TestBuilder.Services
                 {
                     if (action == null || !Enum.TryParse<ProfileActionDisplay>(action.Display, out var display) || !Enum.IsDefined(display))
                         throw new InvalidOperationException("Неизвестный вид кнопки профиля.");
-                    var definition = new ProfileActionDefinition { Id = action.Id, Name = action.Name, Color = action.Color, Display = display };
+                    var definition = new ProfileActionDefinition { Id = action.Id, Name = action.Name, Color = action.Color, Display = display, StateBinding = action.StateBinding, Labels = action.Labels };
                     loaded.QuickActions.Add(definition);
                     definition.Graph = ImportActionGraph(action.Graph, dto.Hardware);
                     definition.OffGraph = ImportActionGraph(action.OffGraph, dto.Hardware);
@@ -602,7 +606,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 
