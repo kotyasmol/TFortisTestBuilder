@@ -129,15 +129,19 @@ public class FailureCleanupOrderTests
                     Layout(dialog);
                     var draft = Assert.IsType<FailureCleanupOrderViewModel>(dialog.DataContext);
                     var row = draft.Items.Single(i => i.Node == c);
-                    for (var i = 0; i < 2; i++) Click(dialog, dialog.GetVisualDescendants().OfType<Button>()
-                        .Single(b => ReferenceEquals(b.CommandParameter, row) && AutomationProperties.GetName(b) == "Поднять действие"));
+                    var from = RowPoint(dialog, row, 0.5);
+                    var to = RowPoint(dialog, draft.Items[0], 0.1);
+                    dialog.MouseDown(from, MouseButton.Left);
+                    dialog.MouseMove(to, RawInputModifiers.LeftMouseButton); Layout(dialog);
+                    Assert.True(row.IsDragging);
+                    Assert.True(draft.Items[0].DropBefore);
+                    Assert.Equal(new[] { a, b, c }, draft.BuildResult()); // Commit only on release.
+                    dialog.MouseUp(to, MouseButton.Left); Layout(dialog);
                     Assert.Equal(new[] { c, a, b }, draft.BuildResult());
                     Assert.Equal(new[] { 1, 2, 3 }, draft.Items.Select(i => i.Number));
                     Assert.Null(c.FailureOrder); // Draft must not mutate the live document.
                     Assert.True(draft.Items.Last().IsDisabled);
-                    var firstUp = dialog.GetVisualDescendants().OfType<Button>()
-                        .Single(b => ReferenceEquals(b.CommandParameter, row) && AutomationProperties.GetName(b) == "Поднять действие");
-                    Assert.False(firstUp.IsEffectivelyEnabled);
+                    Assert.All(draft.Items, i => Assert.False(i.IsDragging || i.DropBefore || i.DropAfter));
                     var folder = Environment.GetEnvironmentVariable("TFORTIS_CLEANUP_ORDER_CAPTURES");
                     if (folder != null) { Directory.CreateDirectory(folder); using var frame = dialog.CaptureRenderedFrame(); frame!.Save(Path.Combine(folder, $"order-{dark}.png")); }
                     Click(dialog, dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, apply == 1 ? "Применить к профилю" : "Отмена")));
@@ -167,6 +171,63 @@ public class FailureCleanupOrderTests
         }, CancellationToken.None);
     }
 
+    [Fact]
+    public async Task Drag_DownAndUp_AutoScrolls_AndOutsideOrEscapeCancels()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var nodes = Enumerable.Range(1, 10).Select(i => Cleanup($"Действие {i}")).ToArray();
+            var draft = new FailureCleanupOrderViewModel(nodes);
+            var window = new FailureCleanupOrderWindow(draft);
+            try
+            {
+                window.Show(); Layout(window);
+                var scroll = window.FindControl<ScrollViewer>("OrderScroll")!;
+                var viewport = new Rect(scroll.TranslatePoint(default, window)!.Value, scroll.Bounds.Size);
+                var top = new Point(viewport.Center.X, viewport.Top + 3);
+                var bottom = new Point(viewport.Center.X, viewport.Bottom - 3);
+                var item = draft.Items[0];
+                var from = RowPoint(window, item, 0.5);
+                // A click or small accidental motion must not change the list.
+                window.MouseDown(from, MouseButton.Left); window.MouseMove(from + new Vector(2, 1), RawInputModifiers.LeftMouseButton);
+                window.MouseUp(from + new Vector(2, 1), MouseButton.Left); Layout(window);
+                Assert.Equal(nodes, draft.BuildResult());
+                // Dropping over the footer cancels; it must not activate Apply/Cancel.
+                window.MouseDown(from, MouseButton.Left); window.MouseMove(bottom, RawInputModifiers.LeftMouseButton); Layout(window);
+                var outside = new Point(viewport.Center.X, window.Bounds.Height - 8);
+                window.MouseMove(outside, RawInputModifiers.LeftMouseButton); window.MouseUp(outside, MouseButton.Left); Layout(window);
+                Assert.True(window.IsVisible); Assert.Equal(nodes, draft.BuildResult());
+                window.MouseDown(from, MouseButton.Left); window.MouseMove(bottom, RawInputModifiers.LeftMouseButton); Layout(window);
+                window.KeyPress(Key.Escape, RawInputModifiers.None); window.KeyRelease(Key.Escape, RawInputModifiers.None);
+                window.MouseUp(bottom, MouseButton.Left); Layout(window);
+                Assert.True(window.IsVisible); Assert.Equal(nodes, draft.BuildResult());
+                Assert.All(draft.Items, i => Assert.False(i.IsDragging || i.DropBefore || i.DropAfter));
+
+                window.MouseDown(RowPoint(window, item, 0.5), MouseButton.Left);
+                window.MouseMove(bottom, RawInputModifiers.LeftMouseButton); Layout(window);
+                for (var i = 0; i < 70 && scroll.Offset.Y < scroll.Extent.Height - scroll.Viewport.Height; i++)
+                { await Task.Delay(40); Layout(window); }
+                Assert.True(scroll.Offset.Y > 0);
+                Assert.True(draft.Items[^1].DropAfter);
+                window.MouseUp(bottom, MouseButton.Left); Layout(window);
+                Assert.Same(item, draft.Items[^1]);
+                Assert.Equal(Enumerable.Range(1, 10), draft.Items.Select(i => i.Number));
+
+                window.MouseDown(RowPoint(window, item, 0.5), MouseButton.Left);
+                window.MouseMove(top, RawInputModifiers.LeftMouseButton); Layout(window);
+                for (var i = 0; i < 70 && scroll.Offset.Y > 0; i++) { await Task.Delay(40); Layout(window); }
+                Assert.Equal(0, scroll.Offset.Y);
+                Assert.True(draft.Items[0].DropBefore);
+                window.MouseUp(top, MouseButton.Left); Layout(window);
+                Assert.Equal(nodes, draft.BuildResult());
+                Assert.All(nodes, n => Assert.Null(n.FailureOrder));
+            }
+            finally { window.Close(); }
+            return true;
+        }, CancellationToken.None);
+    }
+
     private static SubtestNodeViewModel Cleanup(string name, bool fails = false)
     {
         var sub = new SubtestNodeViewModel { Name = name, RunOnFailure = true };
@@ -183,6 +244,11 @@ public class FailureCleanupOrderTests
     }
 
     private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); }
+    private static Point RowPoint(Window window, FailureCleanupItemViewModel item, double y)
+    {
+        var row = window.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "CleanupOrderRow" && ReferenceEquals(g.DataContext, item));
+        return row.TranslatePoint(new Point(row.Bounds.Width / 2, row.Bounds.Height * y), window)!.Value;
+    }
     private static void Click(Window window, Button button)
     {
         var p = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;

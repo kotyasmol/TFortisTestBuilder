@@ -3,39 +3,50 @@
         x:DataType="vm:FailureCleanupOrderViewModel" Title="Порядок аварийных действий"
         Width="640" Height="470" MinWidth="500" MinHeight="340" WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}">
+  <Window.Styles>
+    <Style Selector="Border.cleanupRow">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+    <Style Selector="Border.cleanupRow.dragging">
+      <Setter Property="Opacity" Value="0.55" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    </Style>
+    <Style Selector="Border.cleanupRow:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="Auto,*,Auto" Margin="20">
-    <TextBlock Text="При ошибке или остановке подтесты выполняются сверху вниз. Отключённые подтесты пропускаются."
+    <TextBlock Text="Перетащите строки в нужном порядке. Подтесты выполняются сверху вниз; отключённые пропускаются."
                TextWrapping="Wrap" Margin="0,0,0,16" />
     <TextBlock Grid.Row="1" IsVisible="{Binding !HasItems}" TextWrapping="Wrap"
                Foreground="{DynamicResource TextSecondaryBrush}"
                Text="Нет аварийных подтестов. Включите у нужного подтеста в основном графе «Выполнять при ошибке и остановке»." />
-    <ScrollViewer Grid.Row="1" IsVisible="{Binding HasItems}" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
-      <ItemsControl ItemsSource="{Binding Items}">
+    <ScrollViewer x:Name="OrderScroll" Grid.Row="1" IsVisible="{Binding HasItems}" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+      <ItemsControl x:Name="OrderItems" ItemsSource="{Binding Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:FailureCleanupItemViewModel">
-            <Border Margin="0,0,0,8" Padding="12" CornerRadius="8" BorderThickness="1"
-                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
-              <Grid ColumnDefinitions="32,*,Auto">
-                <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" Margin="10,0">
+            <Grid x:Name="CleanupOrderRow" Margin="0,0,0,8" Background="Transparent" Cursor="SizeAll"
+                  PointerPressed="OnRowPressed" ToolTip.Tip="Перетащите для изменения порядка">
+              <Border Classes="cleanupRow" Classes.dragging="{Binding IsDragging}" Padding="12" CornerRadius="8" BorderThickness="1"
+                      MinHeight="62">
+              <Grid ColumnDefinitions="24,32,*">
+                <Path Width="12" Height="20" Stretch="Uniform" VerticalAlignment="Center"
+                      Fill="{DynamicResource TextSecondaryBrush}"
+                      Data="M0 0 H4 V4 H0 Z M8 0 H12 V4 H8 Z M0 8 H4 V12 H0 Z M8 8 H12 V12 H8 Z M0 16 H4 V20 H0 Z M8 16 H12 V20 H8 Z" />
+                <TextBlock Grid.Column="1" Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" Margin="10,0,0,0">
                   <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
                   <TextBlock Text="Отключён" IsVisible="{Binding IsDisabled}" FontSize="12"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                  <Button Command="{Binding $parent[Window].((vm:FailureCleanupOrderViewModel)DataContext).MoveUpCommand}"
-                          CommandParameter="{Binding}" AutomationProperties.Name="Поднять действие" ToolTip.Tip="Поднять"
-                          Width="36" Height="36" Padding="8">
-                    <PathIcon Width="16" Height="16" Data="M12 3 L4 11 L6 13 L11 8 V21 H13 V8 L18 13 L20 11 Z" />
-                  </Button>
-                  <Button Command="{Binding $parent[Window].((vm:FailureCleanupOrderViewModel)DataContext).MoveDownCommand}"
-                          CommandParameter="{Binding}" AutomationProperties.Name="Опустить действие" ToolTip.Tip="Опустить"
-                          Width="36" Height="36" Padding="8">
-                    <PathIcon Width="16" Height="16" Data="M12 21 L4 13 L6 11 L11 16 V3 H13 V16 L18 11 L20 13 Z" />
-                  </Button>
-                </StackPanel>
               </Grid>
-            </Border>
+              </Border>
+              <Border IsVisible="{Binding DropBefore}" Height="3" VerticalAlignment="Top" CornerRadius="1"
+                      Background="{DynamicResource PrimaryBrush}" IsHitTestVisible="False" />
+              <Border IsVisible="{Binding DropAfter}" Height="3" VerticalAlignment="Bottom" CornerRadius="1"
+                      Background="{DynamicResource PrimaryBrush}" IsHitTestVisible="False" />
+            </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
