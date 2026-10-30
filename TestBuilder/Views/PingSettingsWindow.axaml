@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.PingSettingsWindow"
+        x:DataType="vm:PingSettingsViewModel" Title="Пинг в профиле" Width="530" Height="460" MinWidth="460" MinHeight="430"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="*,Auto" Margin="20">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12">
+        <CheckBox x:Name="EnabledInput" Content="Пинговать при открытии профиля" IsChecked="{Binding Enabled}" />
+        <TextBlock Text="IP-адрес или имя узла" />
+        <TextBox x:Name="HostInput" Text="{Binding Host}" Watermark="Адрес коммутатора" MaxLength="253" />
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <TextBlock Text="Период опроса, мс" />
+          <TextBlock Grid.Column="1" Text="Таймаут ответа, мс" Margin="12,0,0,0" />
+          <NumericUpDown x:Name="IntervalInput" Grid.Row="1" Minimum="250" Maximum="60000" Increment="250" Value="{Binding IntervalMs}" />
+          <NumericUpDown x:Name="TimeoutInput" Grid.Row="1" Grid.Column="1" Minimum="100" Maximum="30000" Increment="100" Value="{Binding TimeoutMs}" Margin="12,0,0,0" />
+        </Grid>
+        <CheckBox x:Name="EngineerInput" Content="Показывать справа от логов" IsChecked="{Binding ShowInEngineer}" />
+        <CheckBox x:Name="OperatorInput" Content="Показывать в пульте" IsChecked="{Binding ShowInOperator}" />
+        <TextBlock Text="Пинг работает независимо от COM и выполнения теста. Настройки сохраняются в профиле." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Spacing="12" Margin="0,12,0,0">
+      <TextBlock Text="{Binding Error}" Foreground="{DynamicResource DangerTextBrush}" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Отмена" Click="OnCancel" />
+        <Button Content="Применить к профилю" Classes="primary" Click="OnApply" />
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -46,6 +46,7 @@ public partial class TestViewModel
     private readonly Dictionary<NodeViewModel, string> _boardNodeStates = new();
     public void NotifyProfileMetadataChanged()
     {
+        RefreshPingMonitor();
         UpdateRegisterIndicators();
         _boardNodeStates.Clear();
         OnPropertyChanged(nameof(IsBoardProfile));

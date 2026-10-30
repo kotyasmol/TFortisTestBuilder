@@ -99,6 +99,10 @@ namespace TestBuilder.Services
                 dto.RegisterIndicators = vm.RootGraph.RegisterIndicators.Select(i => i.Copy()).ToList();
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (indicators v1)";
             }
+            vm.RootGraph.PingMonitor?.Validate();
+            dto.PingMonitor = vm.RootGraph.PingMonitor?.Copy();
+            if (dto.PingMonitor != null)
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (ping v1)";
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
@@ -417,6 +421,7 @@ namespace TestBuilder.Services
 
             dto.Hardware?.Validate();
             dto.Board?.Validate();
+            dto.PingMonitor?.Validate();
             if (dto.ProductKind is not ("Switch" or "Board")) throw new InvalidOperationException("Неизвестный вид изделия.");
             RejectRemovedNodes(dto);
             // Parse the entire document before replacing the user's open graph.
@@ -449,10 +454,12 @@ namespace TestBuilder.Services
                 DisposeLoadedNodes(loaded);
                 throw;
             }
+            vm.ResetPingMonitor();
             vm.ResetToRootGraph();
             vm.RootGraph.Clear();
             vm.RootGraph.QuickActions.Clear();
             vm.RootGraph.RegisterIndicators.Clear();
+            vm.RootGraph.PingMonitor = dto.PingMonitor?.Copy();
             vm.RootGraph.Title = loaded.Title;
             vm.RootGraph.UpdatedAt = dto.UpdatedAt;
             vm.RootGraph.IsBodyGraph = false;
@@ -479,13 +486,13 @@ namespace TestBuilder.Services
 
         internal static GraphDto ExportActionGraph(GraphWorkspaceViewModel graph)
         {
-            if (graph.QuickActions.Count != 0 || graph.RegisterIndicators.Count != 0) throw new InvalidOperationException("Кнопки и индикаторы разрешены только в корневом профиле.");
+            if (graph.QuickActions.Count != 0 || graph.RegisterIndicators.Count != 0 || graph.PingMonitor != null) throw new InvalidOperationException("Кнопки, индикаторы и пинг разрешены только в корневом профиле.");
             ValidateRegisterIndicators(graph);
             return SerializeGraph(graph, graph.Title);
         }
         internal static GraphWorkspaceViewModel ImportActionGraph(GraphDto dto, TestBuilder.Domain.Modbus.HardwareConfiguration? hardware = null)
         {
-            if (dto == null || dto.QuickActions?.Count > 0 || dto.RegisterIndicators?.Count > 0) throw new InvalidOperationException("Некорректный граф кнопки.");
+            if (dto == null || dto.QuickActions?.Count > 0 || dto.RegisterIndicators?.Count > 0 || dto.PingMonitor != null) throw new InvalidOperationException("Некорректный граф кнопки.");
             RejectRemovedNodes(dto);
             var graph = new GraphWorkspaceViewModel();
             try { DeserializeGraph(dto, graph, false); graph.Hardware = hardware; GraphCompiler.ValidateConnections(graph, hardware); return graph; }
@@ -514,8 +521,8 @@ namespace TestBuilder.Services
             }
             foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
             {
-                if (composite.BodyGraph.RegisterIndicators.Count > 0)
-                    throw new InvalidOperationException("Индикаторы разрешены только в корневом профиле.");
+                if (composite.BodyGraph.RegisterIndicators.Count > 0 || composite.BodyGraph.PingMonitor != null)
+                    throw new InvalidOperationException("Индикаторы и пинг разрешены только в корневом профиле.");
                 ValidateRegisterIndicators(composite.BodyGraph);
             }
         }
@@ -563,8 +570,9 @@ namespace TestBuilder.Services
                     node.PollAction?.Trim().ToLowerInvariant() is "getupsstatus" or "getupsvoltage" or "getirpstatus")
                     throw new InvalidOperationException($"Режим опроса '{node.PollAction}' удалён. Обновите Wait Variable Until: используйте HttpGet с явно заданными endpoint и типом ответа.");
                 if (node.BodyGraph?.QuickActions?.Count > 0 || node.Body?.QuickActions?.Count > 0 ||
-                    node.BodyGraph?.RegisterIndicators?.Count > 0 || node.Body?.RegisterIndicators?.Count > 0)
-                    throw new InvalidOperationException("Кнопки и индикаторы разрешены только в корневом профиле.");
+                    node.BodyGraph?.RegisterIndicators?.Count > 0 || node.Body?.RegisterIndicators?.Count > 0 ||
+                    node.BodyGraph?.PingMonitor != null || node.Body?.PingMonitor != null)
+                    throw new InvalidOperationException("Кнопки, индикаторы и пинг разрешены только в корневом профиле.");
                 if (node.BodyGraph != null) RejectRemovedNodes(node.BodyGraph);
                 if (node.Body != null) RejectRemovedNodes(node.Body);
             }
@@ -589,7 +597,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 

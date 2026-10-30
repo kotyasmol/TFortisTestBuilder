@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.PingMonitorView" x:DataType="vm:TestViewModel">
+  <UserControl.Styles>
+    <Style Selector="Ellipse.pingState"><Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}" /></Style>
+    <Style Selector="Ellipse.pingState.reply"><Setter Property="Fill" Value="{DynamicResource SuccessTextBrush}" /></Style>
+    <Style Selector="Ellipse.pingState.noReply"><Setter Property="Fill" Value="{DynamicResource DangerTextBrush}" /></Style>
+    <Style Selector="Ellipse.pingState.error"><Setter Property="Fill" Value="{DynamicResource ChangedTextBrush}" /></Style>
+  </UserControl.Styles>
+  <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="5">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="Пинг" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Content="⋯" Width="30" Height="26" MinWidth="30" MinHeight="26" Padding="3,0" Grid.Column="1"
+                  Click="OnConfigure" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
+                  ToolTip.Tip="Настройки пинга" AutomationProperties.Name="Настройки пинга" />
+        </Grid>
+        <TextBlock Text="{Binding PingMonitor.HostText}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PingMonitor.HostText}" />
+        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
+          <Ellipse Classes="pingState" Classes.reply="{Binding PingMonitor.HasReply}" Classes.noReply="{Binding PingMonitor.NoReply}" Classes.error="{Binding PingMonitor.HasError}" Width="10" Height="10" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" x:Name="PingStatus" Text="{Binding PingMonitor.StatusText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PingMonitor.Detail}" />
+        </Grid>
+        <TextBlock Text="{Binding PingMonitor.LastReplyText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock Text="{Binding PingMonitor.IntervalText}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

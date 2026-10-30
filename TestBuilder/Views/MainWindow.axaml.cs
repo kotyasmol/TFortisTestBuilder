@@ -42,6 +42,11 @@ namespace TestBuilder.Views
             if (!vm.TestVM.CanEditHardware) { vm.TestVM.TestingLogger.Warning("Остановите тест и отключите стенд для редактирования оборудования."); return; }
             await new HardwareEditorWindow(vm.TestVM).ShowDialog(this);
         }
+        protected override void OnOpened(System.EventArgs e)
+        {
+            base.OnOpened(e);
+            if (DataContext is MainWindowViewModel vm) vm.TestVM.SetPingMonitoringActive(true);
+        }
         private async void OnOpenBoard(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             if (DataContext is MainWindowViewModel vm)

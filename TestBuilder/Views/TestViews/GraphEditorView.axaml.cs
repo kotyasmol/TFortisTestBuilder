@@ -79,6 +79,12 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     public void SelectAllNodes() => Editor.SelectAll();
 
+    private async void OnConfigurePing(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel vm && TopLevel.GetTopLevel(this) is Window owner)
+            await vm.ConfigurePingCommand.ExecuteAsync(owner);
+    }
+
     private void OnSelectAllClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel { CanEditGraph: true } vm)

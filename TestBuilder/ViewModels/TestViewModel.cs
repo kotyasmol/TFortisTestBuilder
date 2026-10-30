@@ -241,6 +241,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
 
         var reconnect = IsConnected;
+        ResetPingMonitor();
         IsConnecting = true;
         try
         {
@@ -779,6 +780,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.Clear();
         RootGraph.QuickActions.Clear();
         RootGraph.RegisterIndicators.Clear();
+        RootGraph.PingMonitor = null;
         RootGraph.Hardware = null;
         RootGraph.Board = null;
         RootGraph.ProductKind = ProductFilter == "Платы" ? "Board" : "Switch";
@@ -2075,6 +2077,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public void Dispose()
     {
+        PingMonitor.Dispose();
         _indicatorsDisposed = true;
         _indicatorTimer?.Stop();
         CancelQuickActions();

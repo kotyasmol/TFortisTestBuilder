@@ -39,6 +39,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<TestBuilder.Models.RegisterIndicatorDefinition>? RegisterIndicators { get; set; }
 
+        [JsonPropertyName("pingMonitor")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
+
         [JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 

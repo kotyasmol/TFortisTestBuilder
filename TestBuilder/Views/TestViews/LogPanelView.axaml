@@ -20,6 +20,9 @@
             Margin="0,0,0,8">
         <TextBlock Grid.Column="0"
                    Text="Логи выполнения"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip.Tip="Логи выполнения"
+                   Margin="0,0,8,0"
                    FontSize="{StaticResource FontBody}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"

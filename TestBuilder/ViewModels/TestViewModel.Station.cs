@@ -203,6 +203,7 @@ public partial class TestViewModel
         AddRegisterIndicatorCommand.NotifyCanExecuteChanged();
         EditRegisterIndicatorCommand.NotifyCanExecuteChanged();
         DeleteRegisterIndicatorCommand.NotifyCanExecuteChanged();
+        ConfigurePingCommand.NotifyCanExecuteChanged();
         foreach (var action in QuickActions) action.RefreshAvailability();
         OnPropertyChanged(nameof(CanEditGraph));
         OnPropertyChanged(nameof(CanPaste));
