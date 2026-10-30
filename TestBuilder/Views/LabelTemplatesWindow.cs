@@ -39,20 +39,38 @@ public sealed class LabelTemplatesWindow : Window
         actions.Children.Add(add); actions.Children.Add(copy); actions.Children.Add(remove); DockPanel.SetDock(actions, Dock.Bottom); left.Children.Add(actions); left.Children.Add(list);
         grid.Children.Add(left);
         var fields = new StackPanel { Spacing = 6 }; var inputs = new List<TextBox>();
+        fields.Children.Add(new TextBlock { Text = "Пример этикетки", FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        var preview = new LabelPreviewControl { Height = 150, MaxWidth = 500 };
+        var previewMessage = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        fields.Children.Add(preview); fields.Children.Add(previewMessage);
+        void UpdatePreview()
+        {
+            preview.Preview = list.SelectedItem is LabelTemplateDefinition t ? LabelPreview.FromInput(t, "", "") : null;
+            previewMessage.Text = preview.Preview?.Message;
+        }
+        var previewTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        previewTimer.Tick += (_, _) => { previewTimer.Stop(); UpdatePreview(); };
+        void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
+        Closed += (_, _) => previewTimer.Stop();
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
             ("Ширина, точки", "WidthDots"), ("Смещение полного серийника", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
             ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
         {
             fields.Children.Add(new TextBlock { Text = label });
             var box = new TextBox(); box.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box); inputs.Add(box);
+            box.TextChanged += (_, _) => SchedulePreview();
         }
         foreach (var (label, property) in new[] { ("Использовать полный и короткий серийный номер", "UseShortSerial"),
             ("Требовать MAC", "RequiresMac"), ("Определять шаблон по диапазону серийника с сервера", "MatchServerSerial") })
-        { var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box); }
+        {
+            var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
+            box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };
+        }
         fields.Children.Add(new TextBlock { Text = "Команда принтера. Подстановки: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Barcode}}, {{WidthDots}}, {{BarcodeX}}, {{TextX}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
-        list.SelectionChanged += (_, _) => fields.DataContext = list.SelectedItem;
+        command.TextChanged += (_, _) => SchedulePreview();
+        list.SelectionChanged += (_, _) => { fields.DataContext = list.SelectedItem; UpdatePreview(); };
         var scroll = new ScrollViewer { Content = fields }; Grid.SetColumn(scroll, 2); grid.Children.Add(scroll);
         root.Children.Add(grid); Content = root;
         list.SelectedItem = templates.FirstOrDefault(t => t.Id == profileTemplate?.Id) ?? templates.FirstOrDefault();

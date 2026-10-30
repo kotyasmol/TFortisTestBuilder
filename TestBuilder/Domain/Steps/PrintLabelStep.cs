@@ -185,12 +185,12 @@ namespace TestBuilder.Domain.Steps
 
                 if (_useManualSerialNumber)
                 {
-                    if (!TryResolveManualSerial(serial, out fullSerial, out shortSerial, out var serialError))
+                    if (!LabelPrintContent.TryResolveSerial(_template, serial, out fullSerial, out shortSerial, out var serialError))
                     {
                         return Fail(context, 6, serialError);
                     }
 
-                    if (_template.RequiresMac && !TryNormalizeMac(_manualMacAddress, out mac))
+                    if (_template.RequiresMac && !LabelPrintContent.TryNormalizeMac(_manualMacAddress, out mac))
                     {
                         return Fail(
                             context,
@@ -231,7 +231,7 @@ namespace TestBuilder.Domain.Steps
                     }
 
                     if (_template.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
-                        !TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
+                        !LabelPrintContent.TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
                     {
                         return Fail(
                             context,
@@ -244,7 +244,7 @@ namespace TestBuilder.Domain.Steps
                 }
 
                 var barcode = _template.Barcode(shortSerial);
-                singleLabel = _template.Render(fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
+                singleLabel = LabelPrintContent.Render(_template, fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
                 language = _template.Language;
                 logDescription =
                     $"этикеток {DeviceName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
@@ -261,9 +261,7 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
-                singleLabel = _template.Render(serial, 0, "",
-                    Math.Max(0, _template.WidthDots / 2 - CalculateBarcodeWidth(serial) / 2),
-                    Math.Max(0, _template.WidthDots / 2 - 20 * serial.Length / 2));
+                singleLabel = LabelPrintContent.Render(_template, serial, 0, "");
                 language = _template.Language;
                 logDescription = $"серийного номера {serial}";
             }
@@ -333,8 +331,7 @@ namespace TestBuilder.Domain.Steps
         internal static string BuildEpl(string serial)
         {
             var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "SerialOnlyEpl");
-            return template.Render(serial, 0, "", Math.Max(0, template.WidthDots / 2 - CalculateBarcodeWidth(serial) / 2),
-                Math.Max(0, template.WidthDots / 2 - 20 * serial.Length / 2));
+            return LabelPrintContent.Render(template, serial, 0, "");
         }
         internal static string BuildPswUpsBox8x2ProZpl(int shortSerial, string mac) => BuildLegacy("PswUpsBox8x2Pro", shortSerial, mac);
         internal static string BuildPsw2G6FPlusZpl(int shortSerial, string mac) => BuildLegacy("Psw2G6FPlus", shortSerial, mac);
@@ -343,43 +340,6 @@ namespace TestBuilder.Domain.Steps
             var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == id);
             if (shortSerial < 0 || shortSerial > template.ShortSerialMax) throw new ArgumentOutOfRangeException(nameof(shortSerial));
             return template.Render((template.SerialOffset + shortSerial).ToString(CultureInfo.InvariantCulture), shortSerial, mac);
-        }
-
-        private bool TryResolveManualSerial(
-            string serial,
-            out int fullSerial,
-            out int shortSerial,
-            out string error)
-        {
-            fullSerial = 0;
-            shortSerial = 0;
-            error = string.Empty;
-
-            if (!int.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
-            {
-                error = $"Серийный номер '{serial}' слишком большой или имеет неверный формат.";
-                return false;
-            }
-
-            if (parsed <= _template.ShortSerialMax)
-            {
-                shortSerial = parsed;
-                fullSerial = SerialOffset + shortSerial;
-                return true;
-            }
-
-            shortSerial = parsed - SerialOffset;
-            if (shortSerial < 0 || shortSerial > _template.ShortSerialMax)
-            {
-                error =
-                    $"Для {DeviceName} введите полный серийник " +
-                    $"{SerialOffset}..{SerialOffset + _template.ShortSerialMax} " +
-                    $"или короткий номер 0..{_template.ShortSerialMax}.";
-                return false;
-            }
-
-            fullSerial = parsed;
-            return true;
         }
 
         private static bool TryReadIntVariable(TestContext context, string variableName, out int value)
@@ -407,47 +367,6 @@ namespace TestBuilder.Domain.Steps
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out value);
-        }
-
-        private static bool TryNormalizeMac(string value, out string normalized)
-        {
-            normalized = string.Empty;
-            var compact = (value ?? string.Empty)
-                .Trim()
-                .Replace(":", string.Empty, StringComparison.Ordinal)
-                .Replace("-", string.Empty, StringComparison.Ordinal)
-                .Replace(".", string.Empty, StringComparison.Ordinal)
-                .Replace(" ", string.Empty, StringComparison.Ordinal);
-
-            if (compact.Length != 12 || compact.Any(character => !Uri.IsHexDigit(character)))
-            {
-                return false;
-            }
-
-            normalized = string.Join(
-                ":",
-                Enumerable.Range(0, 6)
-                    .Select(index => compact.Substring(index * 2, 2).ToUpperInvariant()));
-            return true;
-        }
-
-        private static int CalculateBarcodeWidth(string serial)
-        {
-            var baseWidth = serial.Length switch
-            {
-                12 or 14 => 17.0,
-                19 => 16.3,
-                15 => 17.7,
-                20 => 15.0,
-                _ => 20.0
-            };
-            var nonDigits = serial.Count(character => !char.IsDigit(character));
-            if (serial.Length == 14 && nonDigits == 8)
-            {
-                return 370;
-            }
-
-            return (int)(serial.Length * baseWidth + nonDigits * 1.7 * baseWidth);
         }
 
         private StepResult Fail(TestContext context, int errorCode, string error)

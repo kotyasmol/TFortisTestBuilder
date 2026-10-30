@@ -1,14 +1,38 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.LabelPrintingView"
+             xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views" x:Class="TestBuilder.Views.LabelPrintingView"
              x:DataType="vm:LabelPrintingViewModel">
   <ScrollViewer>
-    <StackPanel Margin="24" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+    <StackPanel Margin="24" Spacing="16" MaxWidth="1120" HorizontalAlignment="Stretch">
       <TextBlock Text="Проверка печати этикетки" FontSize="24" FontWeight="SemiBold" />
       <TextBlock Text="Печать на принтере Windows без запуска графа и подключения стенда." TextWrapping="Wrap" />
       <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
-        <TextBlock Text="Тип этикетки" />
-        <ComboBox ItemsSource="{Binding LabelTypes}" SelectedIndex="{Binding SelectedType}" HorizontalAlignment="Stretch" />
+        <TextBlock Text="Выберите этикетку" FontWeight="SemiBold" />
+        <ListBox x:Name="LabelTemplatePicker" ItemsSource="{Binding LabelOptions}" SelectedIndex="{Binding SelectedType}"
+                 Background="Transparent" Padding="0" MaxHeight="320" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="10"/><Setter Property="Margin" Value="0,0,8,8"/>
+              <Setter Property="BorderThickness" Value="2"/><Setter Property="CornerRadius" Value="8"/>
+              <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            </Style>
+            <Style Selector="ListBoxItem:selected">
+              <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:LabelTemplatePreviewItem">
+              <StackPanel Width="240" Spacing="8" ToolTip.Tip="{Binding Preview.Message}">
+                <views:LabelPreviewControl Preview="{Binding Preview}" Height="106" IsHitTestVisible="False" />
+                <TextBlock Text="Предпросмотр недоступен" IsVisible="{Binding !Preview.HasContent}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontWeight="SemiBold" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
         <Button Content="Настроить шаблоны…" Command="{Binding EditTemplatesCommand}"/>
+        <Grid x:Name="LabelDetailsGrid" ColumnDefinitions="*,24,400">
+        <StackPanel Spacing="12">
         <TextBlock Text="Серийный номер" />
         <Grid ColumnDefinitions="*,Auto">
           <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Для поиска — полный серверный номер" MinWidth="320" />
@@ -26,6 +50,16 @@
           <TextBlock Text="Количество этикеток" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Value="{Binding Copies}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="120" Margin="12,0,0,0" />
         </Grid>
+        </StackPanel>
+        <Border x:Name="PreviewPanel" Grid.Column="2" Padding="16" VerticalAlignment="Top" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Предпросмотр" FontWeight="SemiBold"/>
+            <views:LabelPreviewControl x:Name="CurrentLabelPreview" Preview="{Binding Preview}" Height="190" MaxWidth="560" HorizontalAlignment="Stretch" IsVisible="{Binding Preview.HasContent}"/>
+            <TextBlock Text="{Binding Preview.Message}" IsVisible="{Binding Preview.HasMessage}" TextWrapping="Wrap"/>
+            <TextBlock Text="Приблизительный вид. Точные шрифты и поля зависят от принтера." TextWrapping="Wrap" FontSize="12"/>
+          </StackPanel>
+        </Border>
+        </Grid>
       </StackPanel>
       <WrapPanel>
         <Button Content="Печатать" Classes="primary" Command="{Binding PrintCommand}" Margin="0,0,12,8" />
@@ -36,6 +70,7 @@
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="16" />
       <TextBlock Text="Последняя этикетка этой вкладки" FontWeight="SemiBold" />
       <SelectableTextBlock Text="{Binding LastLabelDescription}" TextWrapping="Wrap" />
+      <views:LabelPreviewControl x:Name="LastLabelPreview" Preview="{Binding LastPreview}" IsVisible="{Binding HasLastPreview}" Height="130" Width="340" HorizontalAlignment="Left"/>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

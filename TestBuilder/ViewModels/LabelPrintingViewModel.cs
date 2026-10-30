@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
+using System.Collections.ObjectModel;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -16,7 +17,10 @@ namespace TestBuilder.ViewModels;
 
 public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 {
-    public string[] LabelTypes => AppSettings.Instance.LabelTemplates.Select(t => t.Name).ToArray();
+    public ObservableCollection<LabelTemplatePreviewItem> LabelOptions { get; } = new();
+    [ObservableProperty] private LabelPreview? preview;
+    [ObservableProperty] private LabelPreview? lastPreview;
+    public bool HasLastPreview => LastPreview != null;
     [ObservableProperty] private int selectedType;
     [ObservableProperty] private string serialNumber = "";
     [ObservableProperty] private string macAddress = "";
@@ -36,14 +40,34 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public bool CanEdit => !IsBusy && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
     public bool HasMac => SelectedType >= 0 && SelectedType < AppSettings.Instance.LabelTemplates.Count && AppSettings.Instance.LabelTemplates[SelectedType].RequiresMac;
-    partial void OnSelectedTypeChanged(int value) => OnPropertyChanged(nameof(HasMac));
+    partial void OnSelectedTypeChanged(int value) { OnPropertyChanged(nameof(HasMac)); UpdatePreview(); }
+    partial void OnSerialNumberChanged(string value) => UpdatePreview();
+    partial void OnMacAddressChanged(string value) => UpdatePreview();
+    partial void OnLastPreviewChanged(LabelPreview? value) => OnPropertyChanged(nameof(HasLastPreview));
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
 
     public LabelPrintingViewModel(ILogger logger, Func<bool> canUse)
         : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter()) { }
 
     internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer)
-    { _logger = logger; _canUse = canUse; _http = http; _printer = printer; }
+    { _logger = logger; _canUse = canUse; _http = http; _printer = printer; RefreshTemplates(); }
+
+    internal void RefreshTemplates(string? selectedId = null)
+    {
+        selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
+        LabelOptions.Clear();
+        foreach (var template in AppSettings.Instance.LabelTemplates)
+            LabelOptions.Add(new(template.Id, template.Name, LabelPreview.FromInput(template, "", "")));
+        SelectedType = Math.Max(0, AppSettings.Instance.LabelTemplates.FindIndex(t => t.Id == selectedId));
+        OnPropertyChanged(nameof(HasMac));
+        UpdatePreview();
+    }
+
+    private void UpdatePreview()
+    {
+        Preview = SelectedType >= 0 && SelectedType < AppSettings.Instance.LabelTemplates.Count
+            ? LabelPreview.FromInput(AppSettings.Instance.LabelTemplates[SelectedType], SerialNumber, MacAddress) : null;
+    }
 
     public void RefreshAvailability()
     {
@@ -59,9 +83,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
         {
             var selected = await new TestBuilder.Views.LabelTemplatesWindow().ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
-            OnPropertyChanged(nameof(LabelTypes));
-            if (selected != null) SelectedType = AppSettings.Instance.LabelTemplates.FindIndex(t => t.Id == selected.Id);
-            OnPropertyChanged(nameof(HasMac));
+            RefreshTemplates(selected?.Id);
         }
     }
 
@@ -98,6 +120,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         var result = await step.ExecuteAsync(context, token);
         if (result == StepResult.False) throw new InvalidOperationException(context.GetVariable<string>("PrintLabel.Error"));
         _last = data; _lastTemplate = template.Copy();
+        LastPreview = LabelPreview.Parse(template, context.GetVariable<string>("PrintLabel.SingleCommand") ?? "");
         LastLabelDescription = $"{template.Name} · SN {data.Serial}" + (!template.RequiresMac ? "" : $" · MAC {data.Mac}");
         Status = context.GetVariable<string>("PrintLabel.CompletionStatus") == "SentToPrinter"
             ? $"Передано принтеру: {count} шт. Драйвер не подтверждает физический выход этикетки."
@@ -118,3 +141,5 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void Cancel() => _operation?.Cancel();
     public void Dispose() { _disposed = true; _operation?.Cancel(); (_http as IDisposable)?.Dispose(); }
 }
+
+public sealed record LabelTemplatePreviewItem(string Id, string Name, LabelPreview Preview);
