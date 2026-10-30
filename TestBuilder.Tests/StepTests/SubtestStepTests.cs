@@ -39,14 +39,17 @@ public class SubtestStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenBodyFailsAndStopOnErrorDisabled_ReturnsFalse()
+    public async Task ExecuteAsync_WhenBodyFailsAndStopOnErrorDisabled_ReturnsTrueButKeepsFailedReport()
     {
         var bodyStep = new CountingStep(StepResult.False);
         var step = CreateSubtestStep(isEnabled: true, stopOnError: false, bodyStep);
 
-        var result = await step.ExecuteAsync(CreateContext(), CancellationToken.None);
+        var context = CreateContext();
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-        Assert.Equal(StepResult.False, result);
+        Assert.Equal(StepResult.True, result);
+        Assert.False(context.HasCriticalError);
+        Assert.False(Assert.Single(context.ReportEntries).IsSuccess);
         Assert.Equal(1, bodyStep.ExecuteCount);
     }
 

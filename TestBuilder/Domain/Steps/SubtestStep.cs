@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -46,6 +47,8 @@ namespace TestBuilder.Domain.Steps
             ExecutionStatus status;
 
             var previousCleanup = context.IsCleanup;
+            var failureState = ExecutionFailureState.Capture(context);
+            var reportStart = context.ReportEntries.Count;
             context.IsCleanup |= _runOnFailure;
             try
             {
@@ -54,27 +57,30 @@ namespace TestBuilder.Domain.Steps
                     context,
                     cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 context.AddReportEntry(_name, false, "Отменён до завершения.");
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!ExecutionCleanupException.Contains(ex))
             {
-                context.HasExecutionException = true;
+                context.HasExecutionException |= _stopOnError;
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
                 _logger.Warning(message);
                 context.AddReportEntry(_name, false, ex.Message);
+                if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
                 if (_stopOnError)
                     context.HasCriticalError = true;
-
-                return StepResult.False;
+                else failureState.Restore(context);
+                return _stopOnError ? StepResult.False : StepResult.True;
             }
             finally { context.IsCleanup = previousCleanup; }
 
             if (status == ExecutionStatus.Completed)
             {
+                if (_runOnFailure && context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))
+                    context.SetVariable("Cleanup.Succeeded", false);
                 _logger.Info($"[OK] Подтест '{_name}' завершён.");
                 context.AddReportEntry(_name, true, "true");
                 return StepResult.True;
@@ -83,11 +89,12 @@ namespace TestBuilder.Domain.Steps
             var failureMessage = $"[ОШИБКА] Подтест '{_name}' завершился с результатом {status}.";
             _logger.Warning(failureMessage);
             context.AddReportEntry(_name, false, status.ToString());
+            if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
             if (_stopOnError)
                 context.HasCriticalError = true;
-
-            return StepResult.False;
+            else failureState.Restore(context);
+            return _stopOnError ? StepResult.False : StepResult.True;
         }
     }
 }

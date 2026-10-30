@@ -126,6 +126,7 @@ namespace TestBuilder.Domain.Steps
 
             var error = $"Таймаут ожидания {_variableName} == {_expectedValue}. Последнее значение: '{lastActual}'. {lastError}".Trim();
             SaveState(context, false, attempt, lastActual, error);
+            context.AddReportEntry($"Ожидание значения: {_variableName}", false, error);
             _logger.Warning($"[ОШИБКА] {error}");
             return _failOnTimeout ? StepResult.False : StepResult.True;
         }
@@ -159,8 +160,14 @@ namespace TestBuilder.Domain.Steps
                     pollIntervalMs: _intervalMs,
                     enforceMinimumDeviceReadyTimeout: false);
 
-                var snapshotResult = await snapshotStep.ExecuteAsync(context, cancellationToken);
-                if (snapshotResult == StepResult.True)
+                var reportStart = context.ReportEntries.Count;
+                try { await snapshotStep.ExecuteAsync(context, cancellationToken); }
+                finally
+                {
+                    // Poll attempts are diagnostics; only the final wait result is a check.
+                    context.ReportEntries.RemoveRange(reportStart, context.ReportEntries.Count - reportStart);
+                }
+                if (context.GetVariable<bool>("SelfTest.Ok"))
                 {
                     return string.Empty;
                 }

@@ -12,6 +12,7 @@ using TestBuilder.Models;
 namespace TestBuilder.ViewModels;
 
 public sealed record ProfileActionResult(bool Success, string Message);
+public sealed record ProfileActionNotification(string Name, string Message);
 
 public partial class ProfileActionViewModel : ObservableObject, IExecutionObserver
 {
@@ -21,6 +22,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
     private CancellationTokenSource? _cancellation;
     private readonly Action _availabilityChanged;
+    private readonly Action<string>? _notifyError;
     public string Name => Definition.Name;
     public bool IsToggle => Definition.Display == ProfileActionDisplay.Toggle;
     public bool ShowProgress => !IsToggle && (Definition.Display == ProfileActionDisplay.Progress || IsRunning);
@@ -30,6 +32,8 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     [ObservableProperty] private bool isOn;
     [ObservableProperty] private bool isStateKnown;
     [ObservableProperty] private string status = "";
+    [ObservableProperty] private string errorMessage = "";
+    public string DetailText => string.IsNullOrEmpty(ErrorMessage) ? StateText : ErrorMessage;
     [ObservableProperty] private string currentStep = "";
     [ObservableProperty] private int completedSteps;
     public int? ExpectedSteps { get; private set; }
@@ -45,9 +49,10 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
 
     public ProfileActionViewModel(ProfileActionDefinition definition,
         Func<ProfileActionDefinition, bool, IExecutionObserver, CancellationToken, Task<ProfileActionResult>> run,
-        Func<bool> canRun, Action availabilityChanged)
+        Func<bool> canRun, Action availabilityChanged, Action<string>? notifyError = null)
     {
         Definition = definition; _run = run; _canRun = canRun; _availabilityChanged = availabilityChanged;
+        _notifyError = notifyError;
         RunCommand = new AsyncRelayCommand(RunAsync, () => CanRun);
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
     }
@@ -63,6 +68,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private void NotifyState()
     {
         OnPropertyChanged(nameof(StateText)); OnPropertyChanged(nameof(ShowProgress));
+        OnPropertyChanged(nameof(DetailText));
         OnPropertyChanged(nameof(ToggleOffset)); OnPropertyChanged(nameof(ToggleOpacity)); OnPropertyChanged(nameof(Progress));
         StateChanged?.Invoke();
     }
@@ -73,7 +79,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
         var turnOff = IsToggle && IsOn;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         ExpectedSteps = CountLinearSteps(turnOff ? Definition.OffGraph : Definition.Graph);
-        IsRunning = true; Status = ""; CurrentStep = "Запуск"; CompletedSteps = 0;
+        IsRunning = true; Status = ""; ErrorMessage = ""; CurrentStep = "Запуск"; CompletedSteps = 0;
         CancelCommand.NotifyCanExecuteChanged(); _availabilityChanged(); NotifyState();
         try
         {
@@ -84,16 +90,17 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
                 if (IsToggle) { IsOn = !turnOff; IsStateKnown = true; }
                 Status = IsToggle ? (IsOn ? "Включено" : "Выключено") : "Выполнено";
             }
-            else { IsStateKnown = false; Status = "Ошибка: " + result.Message; }
+            else { IsStateKnown = false; Status = "Ошибка"; ErrorMessage = result.Message; }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        { IsStateKnown = false; Status = "Остановлено · состояние не подтверждено"; }
-        catch (Exception e) { IsStateKnown = false; Status = "Ошибка: " + e.Message; }
+        { IsStateKnown = false; Status = "Остановлено"; }
+        catch (Exception e) { IsStateKnown = false; Status = "Ошибка"; ErrorMessage = e.Message; }
         finally
         {
             _cancellation = null; IsRunning = false; CancelCommand.NotifyCanExecuteChanged();
             _availabilityChanged(); RefreshAvailability(); NotifyState();
         }
+        if (!string.IsNullOrEmpty(ErrorMessage)) _notifyError?.Invoke(ErrorMessage);
     }
     // Percentages are exact only for a linear route. Loops, subtests and conditional
     // paths use the activity ring with the number of steps already completed.
@@ -117,7 +124,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     public void InvalidateState()
     {
         IsStateKnown = false; IsOn = false;
-        if (!IsRunning) Status = "";
+        if (!IsRunning) { Status = ""; ErrorMessage = ""; }
         NotifyState();
     }
     public Task NodeStartedAsync(TestNode node, TestContext context, CancellationToken token) =>

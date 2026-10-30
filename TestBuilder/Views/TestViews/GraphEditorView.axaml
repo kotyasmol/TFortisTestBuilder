@@ -507,7 +507,7 @@
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять питание, SFP и PoE PSW-2G6F+" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox
                               IsChecked="{Binding FailOnError}"
-                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
@@ -597,7 +597,7 @@
 
                     <CheckBox
                               IsChecked="{Binding FailOnError}"
-                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
+                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>

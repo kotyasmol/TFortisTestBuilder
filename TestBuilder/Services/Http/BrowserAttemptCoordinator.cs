@@ -32,7 +32,7 @@ internal sealed class BrowserAttemptCoordinator
     }
 }
 
-internal sealed class BrowserCleanupException : InvalidOperationException
+internal sealed class BrowserCleanupException : Domain.Execution.ExecutionCleanupException
 {
     public BrowserCleanupException(string message, Exception inner) : base(message, inner) { }
 }

@@ -77,6 +77,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Warning($"[ОШИБКА] HTTP variable {_outputVariableName} не получена: {read.Error}");
+            context.AddReportEntry($"Чтение HTTP: {_outputVariableName}", false, read.Error);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 

@@ -85,6 +85,7 @@ namespace TestBuilder.Domain.Steps
                 ? $"Очистка ARP завершилась с кодом {result.ExitCode}. stderr: {result.StdErr}"
                 : $"arpd.bat не очистил ARP (код {bat!.ExitCode}). stderr: {bat.StdErr}";
             _logger.Warning($"[ОШИБКА] {error}");
+            context.AddReportEntry("Очистка ARP", false, error);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
@@ -186,7 +187,7 @@ namespace TestBuilder.Domain.Steps
         }
 
         private sealed class ProcessCleanupException(string message, Exception innerException)
-            : InvalidOperationException(message, innerException);
+            : ExecutionCleanupException(message, innerException);
 
         private static string NormalizeArguments(string command, string? arguments)
         {

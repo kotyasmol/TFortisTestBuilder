@@ -411,6 +411,7 @@ namespace TestBuilder.Domain.Steps
         {
             context.SetVariable("SetMac.Success", false);
             context.SetVariable("SetMac.Error", error);
+            context.AddReportEntry("Запись MAC Pro", false, error);
             _logger.Warning($"[ОШИБКА] MAC Pro не записан: {error}");
             return _failOnError ? StepResult.False : StepResult.True;
         }

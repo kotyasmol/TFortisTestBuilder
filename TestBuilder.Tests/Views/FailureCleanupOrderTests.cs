@@ -22,6 +22,33 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class FailureCleanupOrderTests
 {
+    [Fact]
+    public async Task ContinuedPrintFailure_CompletesNormalPath_WithoutRepeatingEmergencyActions()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(async () =>
+        {
+            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            vm.NewProfileCommand.Execute(null);
+            var sub = new SubtestNodeViewModel { Name = "Печать", StopOnError = false };
+            var print = new PrintLabelNodeViewModel { UseManualSerialNumber = true, ManualSerialNumber = "12345678", PrinterName = "" };
+            sub.BodyGraph.Nodes.Add(print);
+            sub.BodyGraph.Connections.Add(new(sub.BodyGraph.Nodes.OfType<StartNodeViewModel>().Single().Output[0], print.In));
+            sub.BodyGraph.Connections.Add(new(print.TrueOut, sub.BodyGraph.Nodes.OfType<EndNodeViewModel>().Single().Input[0]));
+            var start = new StartNodeViewModel(); var end = new EndNodeViewModel();
+            var cleanup = Cleanup("Аварийные действия");
+            foreach (var node in new NodeViewModel[] { start, sub, end, cleanup }) vm.RootGraph.Nodes.Add(node);
+            vm.RootGraph.Connections.Add(new(start.Output[0], sub.Input[0]));
+            vm.RootGraph.Connections.Add(new(sub.Output[0], end.Input[0]));
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.True(end.HasExecutionSucceeded);
+            Assert.False(vm.Station.IsSuccessful);
+            Assert.DoesNotContain(vm.TestingLogger.Entries, entry => entry.Message.StartsWith("[ШАГ] Cleanup '"));
+            Assert.False(vm.IsTestRunning); Assert.False(vm.NeedsStandInspection);
+            return true;
+        }, default);
+    }
+
     [Theory]
     [InlineData(false)] [InlineData(true)]
     public async Task FailureAndStop_RunExplicitOrder_AndContinueAfterFailedCleanup(bool cancel)

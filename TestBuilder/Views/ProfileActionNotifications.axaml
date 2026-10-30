@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views"
+             x:Class="TestBuilder.Views.ProfileActionNotifications" x:DataType="vm:TestViewModel">
+  <ItemsControl ItemsSource="{Binding ActionNotifications}" MaxWidth="460">
+    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="vm:ProfileActionNotification">
+        <Border Padding="16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource DangerBrush}"
+                BorderThickness="2" CornerRadius="8" BoxShadow="0 4 16 0 #40000000">
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,12,8" />
+            <Button Grid.Column="1" Content="×" Width="30" Height="30" Padding="0" VerticalAlignment="Top"
+                    Command="{Binding $parent[views:ProfileActionNotifications].((vm:TestViewModel)DataContext).DismissActionNotificationCommand}"
+                    CommandParameter="{Binding}" AutomationProperties.Name="Закрыть уведомление" ToolTip.Tip="Закрыть уведомление" />
+            <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" MaxHeight="200" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <SelectableTextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="14" />
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

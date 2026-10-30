@@ -1261,7 +1261,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             foreach (var graph in graphs)
             {
                 result = await new TestExecutor().ExecuteAsync(graph.StartNode, context, _testRunCts.Token);
-                if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess)) break;
+                if (result != ExecutionStatus.Completed || context.HasCriticalError || context.HasExecutionException) break;
             }
             executionStatus = result;
             runFailure = context.CriticalFailure ?? context.Failure;
@@ -1270,9 +1270,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess))
             {
-                runCleanup = true;
+                // A completed graph has already run its normal final actions. Failed report
+                // entries affect the verdict, but must not start the emergency path again.
+                runCleanup = result != ExecutionStatus.Completed || context.HasCriticalError || context.HasExecutionException ||
+                    (context.Variables.ContainsKey("Cleanup.Succeeded") && !context.GetVariable<bool>("Cleanup.Succeeded"));
                 executionStatus = ExecutionStatus.Failed;
-                context.HasCriticalError = true;
+                context.HasCriticalError |= runCleanup;
                 context.SetVariable("Execution.Status", executionStatus.ToString());
                 runFailure ??= new ExecutionFailure("Выполнение графа", $"Граф завершён с результатом {result}.");
                 context.SetVariable("Execution.Error", runFailure.Summary);
@@ -1472,13 +1475,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 try
                 {
                     TestingLogger.Warning($"[ШАГ] Cleanup '{cleanupNode.Name}' начат.");
+                    var reportStart = context.ReportEntries.Count;
                     var cleanupGraph = compiler.Compile(cleanupNode.BodyGraph);
                     var result = await new TestExecutor().ExecuteAsync(
                         cleanupGraph.StartNode,
                         context,
                         cleanupCts.Token);
 
-                    if (result == ExecutionStatus.Completed)
+                    if (result == ExecutionStatus.Completed && !context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))
                     {
                         cleanupSucceeded = true;
                         TestingLogger.Info($"[OK] Cleanup '{cleanupNode.Name}' завершён.");

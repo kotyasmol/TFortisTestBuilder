@@ -167,6 +167,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberRawResponse", raw);
             context.SetVariable("SerialNumberRequestUrl", url);
             context.SetVariable("SerialNumberError", error);
+            context.AddReportEntry("Получение серийного номера", false, error);
 
             _logger.Warning($"[ОШИБКА] Серийный номер не получен: {error}");
             return _failOnError ? StepResult.False : StepResult.True;

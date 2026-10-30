@@ -115,8 +115,10 @@ public class RtlFullProfileSimulationTests
                     {
                         using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
                         ctx.CancellationToken = cleanupCts.Token; vm.Station.BeginCleanup(cleanup);
+                        var reportStart = ctx.ReportEntries.Count;
                         var result = await new TestExecutor().ExecuteAsync(compiler.Compile(cleanup.BodyGraph).StartNode, ctx, cleanupCts.Token);
-                        vm.Station.FinishCleanup(cleanup, result == ExecutionStatus.Completed);
+                        vm.Station.FinishCleanup(cleanup, result == ExecutionStatus.Completed &&
+                            !ctx.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess));
                         cleanupResults.Add(new { cleanup.Name, result = result.ToString() });
                     }
                 }

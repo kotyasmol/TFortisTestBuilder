@@ -250,6 +250,7 @@ namespace TestBuilder.Domain.Steps
         private StepResult Fail(TestContext context, string error)
         {
             SetError(context, error);
+            context.AddReportEntry($"Selftest: {_outputPrefix}", false, error);
 
             if (_failOnError)
             {
@@ -257,7 +258,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Warning($"[ERROR] Selftest failed: {error}");
-            return StepResult.False;
+            return _failOnError ? StepResult.False : StepResult.True;
         }
 
         private static void SetError(TestContext context, string error)

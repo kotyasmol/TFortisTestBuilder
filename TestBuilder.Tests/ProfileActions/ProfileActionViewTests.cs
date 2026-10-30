@@ -20,6 +20,54 @@ namespace TestBuilder.Tests.ProfileActions;
 [Collection("Graph editor UI")]
 public class ProfileActionViewTests
 {
+    [Theory]
+    [InlineData(false, false)] [InlineData(true, false)]
+    [InlineData(false, true)] [InlineData(true, true)]
+    public async Task FailedAction_ShowsReadableDismissibleNotification_WithoutGrowingButton(bool operatorMode, bool light)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(async () =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            ProfileActionTests.LoadEmpty(vm);
+            vm.IsOperatorView = operatorMode; vm.IsQuickActionsCollapsed = false;
+            var message = "Принтер в режиме «Работать автономно». Включите принтер и проверьте USB-подключение.\n" +
+                string.Join("\n", Enumerable.Repeat("Дополнительные сведения об ошибке печати.", 20));
+            var calls = 0;
+            var action = new ProfileActionViewModel(new() { Name = "Повторить этикетку" },
+                (_, _, _, _) => { calls++; return Task.FromResult(new ProfileActionResult(false, message)); },
+                () => true, () => { }, detail => vm.NotifyActionError("Повторить этикетку", detail));
+            vm.QuickActions.Add(action);
+            var bar = new ProfileActionBar { DataContext = vm, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+            var notifications = new ProfileActionNotifications { DataContext = vm,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top };
+            var content = new Grid(); content.Children.Add(bar); content.Children.Add(notifications);
+            var window = new Window { Width = 800, Height = 500, Content = content,
+                RequestedThemeVariant = light ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark };
+            try
+            {
+                window.Show(); Layout(window);
+                var run = bar.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, action.RunCommand));
+                var size = run.Bounds.Size;
+                Click(window, run); await action.RunCommand.ExecutionTask!; Layout(window);
+                Assert.Equal(size, run.Bounds.Size); Assert.Equal("Ошибка", action.StateText);
+                Assert.Equal(message, action.DetailText);
+                var text = Assert.Single(notifications.GetVisualDescendants().OfType<SelectableTextBlock>());
+                Assert.Equal(message, text.Text); Assert.True(text.IsEffectivelyVisible);
+                var scroll = notifications.GetVisualDescendants().OfType<ScrollViewer>().Single();
+                Assert.True(scroll.Bounds.Height <= 200); Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+                Capture(window, $"action-error-notification-{operatorMode}-{light}.png");
+                var close = notifications.GetVisualDescendants().OfType<Button>().Single(button => AutomationProperties.GetName(button) == "Закрыть уведомление");
+                Click(window, close); Layout(window);
+                Assert.Empty(vm.ActionNotifications); Assert.Equal(1, calls);
+                Assert.True(action.RunCommand.CanExecute(null));
+            }
+            finally { window.Close(); }
+            return true;
+        }, default);
+    }
+
     [Fact]
     public async Task SystemColor_CanBeSelectedAndReopened_AndFollowsThemeWithoutChangingCustomColors()
     {

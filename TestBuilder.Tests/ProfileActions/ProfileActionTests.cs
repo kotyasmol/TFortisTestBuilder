@@ -134,7 +134,9 @@ public class ProfileActionTests
         def.Graph.Nodes.Add(new ModbusWriteNodeViewModel());
         vm.RootGraph.QuickActions.Add(def);
         await vm.QuickActions[0].RunCommand.ExecuteAsync(null);
-        Assert.Contains("Подключитесь", vm.QuickActions[0].Status);
+        Assert.Equal("Ошибка", vm.QuickActions[0].Status);
+        Assert.Contains("Подключитесь", vm.QuickActions[0].ErrorMessage);
+        Assert.Contains("Подключитесь", Assert.Single(vm.ActionNotifications).Message);
         Assert.False(bus.IsConnected);
     }
 

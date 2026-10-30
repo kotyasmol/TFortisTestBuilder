@@ -96,7 +96,9 @@ public class ReprintLabelActionTests
             await vm.RunGraphCommand.ExecuteAsync(null);
             Assert.Equal(2, results.Count); Assert.Null(results[1].Label);
             await button.RunCommand.ExecuteAsync(null);
-            Assert.Equal(2, printer.Jobs.Count); Assert.Contains("нет подготовленной этикетки", button.Status);
+            Assert.Equal(2, printer.Jobs.Count); Assert.Equal("Ошибка", button.Status);
+            Assert.Contains("нет подготовленной этикетки", button.ErrorMessage);
+            Assert.Contains("нет подготовленной этикетки", Assert.Single(vm.ActionNotifications).Message);
             return true;
         }, default);
     }

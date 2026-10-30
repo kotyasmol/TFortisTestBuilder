@@ -89,6 +89,7 @@ namespace TestBuilder.Domain.Steps
         {
             context.SetVariable("BuildMac.Success", false);
             context.SetVariable("BuildMac.Error", error);
+            context.AddReportEntry("Расчёт MAC", false, error);
             _logger.Warning($"[ОШИБКА] MAC не рассчитан: {error}");
             return _failOnError ? StepResult.False : StepResult.True;
         }

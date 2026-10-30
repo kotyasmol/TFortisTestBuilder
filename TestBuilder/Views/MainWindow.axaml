@@ -57,5 +57,7 @@
         <TextBlock Text="{Binding SessionStatus}" FontSize="{StaticResource FontSection}" Foreground="{DynamicResource TextSecondaryBrush}" />
       </StackPanel>
     </Grid>
+    <views:ProfileActionNotifications Grid.Row="1" DataContext="{Binding TestVM}"
+                                     HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" />
   </Grid>
 </Window>

@@ -109,6 +109,7 @@ public sealed class SetPswMacStep : ITestStep
     private StepResult Fail(TestContext context, string error)
     {
         context.SetVariable("SetMac.Error", error);
+        context.AddReportEntry("Запись MAC PSW", false, error);
         _logger.Warning($"[ОШИБКА] UDP MAC: {error}");
         return _failOnError ? StepResult.False : StepResult.True;
     }

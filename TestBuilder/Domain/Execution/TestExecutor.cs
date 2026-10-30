@@ -92,11 +92,16 @@ namespace TestBuilder.Domain.Execution
             {
                 if (context.ExecutionObserver != null)
                     await context.ExecutionObserver.NodeStartedAsync(node, context, cancellationToken);
+                var reportStart = context.ReportEntries.Count;
                 if (node.Step != null)
                     result = await node.Step.ExecuteAsync(context, cancellationToken);
+                // Routing may continue after an optional failure, while the UI must still
+                // show the actual failed check (especially an unsuccessful power-off).
+                var observedResult = context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess)
+                    ? StepResult.False : result;
                 if (context.ExecutionObserver != null)
-                    await context.ExecutionObserver.NodeCompletedAsync(node, result, context, CancellationToken.None);
-                if (result == StepResult.False)
+                    await context.ExecutionObserver.NodeCompletedAsync(node, observedResult, context, CancellationToken.None);
+                if (observedResult == StepResult.False)
                 {
                     failureNotificationAttempted = true;
                     await NotifyNodeFailedAsync(node, context);

@@ -187,6 +187,27 @@ namespace TestBuilder.Services
 
         private ITestStep CreateStep(NodeViewModel node)
         {
+            var step = CreateStepCore(node);
+            var continueOnError = node switch
+            {
+                SelfTestCheckNodeViewModel n => !n.FailOnError,
+                ClearArpCacheNodeViewModel n => !n.FailOnError,
+                GetSerialNumberFromServerNodeViewModel n => !n.FailOnError,
+                SetProMacNodeViewModel n => !n.FailOnError,
+                SetPswMacNodeViewModel n => !n.FailOnError,
+                RunDataTestNodeViewModel n => !n.FailOnError,
+                ReadHttpVariableNodeViewModel n => !n.FailOnError,
+                BuildMacFromSerialNodeViewModel n => !n.FailOnError,
+                PrintLabelNodeViewModel n => !n.FailOnPrinterError,
+                SendTestReportNodeViewModel n => !n.FailOnError,
+                WaitVariableUntilNodeViewModel n => !n.FailOnTimeout,
+                _ => false
+            };
+            return continueOnError ? new ContinueOnErrorStep(step, node.DisplayTitle, _logger) : step;
+        }
+
+        private ITestStep CreateStepCore(NodeViewModel node)
+        {
             return node switch
             {
                 SerialConsoleNodeViewModel opSerialConsole => opSerialConsole.CreateStep(_console, _logger, ResolveConsole(opSerialConsole)),
