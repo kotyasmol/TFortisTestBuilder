@@ -51,12 +51,12 @@ public class LabelPreviewTests
     }
 
     [Fact]
-    public void ProBarcode_UsesCalibratedPosition_WithoutMovingText()
+    public void ProLabel_AlignsSerialWithMac_AndKeepsCalibratedBarcodePosition()
     {
         var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "PswUpsBox8x2Pro");
         var preview = LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC");
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
-        Assert.Equal(624, sn.X + sn.Width / 2);
+        Assert.Equal(510, sn.X);
         Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
         Assert.Equal(246, bars.Width);
