@@ -17,7 +17,7 @@ namespace TestBuilder.Tests.Views;
 public class ProfileOpenToggleTests
 {
     [Fact]
-    public async Task NodeHeaderToggle_IsVisibleUndoable_AndLockedDuringRun()
+    public async Task NodeBodyToggle_IsVisibleUndoable_AndLockedDuringRun()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>

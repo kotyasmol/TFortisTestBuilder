@@ -7,6 +7,7 @@
              xmlns:views="using:TestBuilder.Views"
              xmlns:presentation="using:TestBuilder.Presentation"
              xmlns:converters="using:TestBuilder.Converters"
+             xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
              xmlns:testviews="using:TestBuilder.Views.TestViews"
              x:Name="Root"
              x:Class="TestBuilder.Views.TestViews.GraphEditorView"
@@ -117,23 +118,6 @@
                    FontWeight="SemiBold"
                    Foreground="{Binding NodeHeaderTextBrush}"
                    VerticalAlignment="Center" />
-          <Border IsVisible="{Binding CanRunOnlyOnFirstRun}"
-                  HorizontalAlignment="Left"
-                  Background="{DynamicResource SurfaceBrush}"
-                  CornerRadius="4" Padding="6,0">
-          <StackPanel IsVisible="{Binding !$parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).IsActionGraphEditor}">
-          <CheckBox x:Name="ProfileOpenToggle"
-                    Background="Transparent"
-                    Content="При открытии профиля"
-                    FontSize="11"
-                    FontWeight="SemiBold"
-                    MinHeight="24"
-                    Foreground="{DynamicResource TextPrimaryBrush}"
-                    IsVisible="{Binding CanRunOnlyOnFirstRun}"
-                    IsChecked="{Binding RunOnlyOnFirstRun, Mode=TwoWay}"
-                    IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}"
-                    ToolTip.Tip="Выполнять при каждом открытии профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. При обычных запусках теста пропускать. Подтест и цикл выполняются целиком." />
-          </StackPanel></Border>
         </StackPanel>
       </DockPanel>
     </DataTemplate>
@@ -141,6 +125,26 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
+    <Style Selector="CheckBox.profileOpenToggle" x:DataType="nodifyvm:NodeViewModel">
+      <Setter Property="Content" Value="При открытии профиля" />
+      <Setter Property="ContentTemplate">
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+        </DataTemplate>
+      </Setter>
+      <Setter Property="FontSize" Value="{StaticResource FontCaption}" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="IsChecked" Value="{Binding RunOnlyOnFirstRun, Mode=TwoWay}" />
+      <Setter Property="IsEnabled" Value="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}" />
+      <Setter Property="IsVisible">
+        <MultiBinding Converter="{x:Static avaloniaConverters:BoolConverters.And}">
+          <Binding Path="CanRunOnlyOnFirstRun" />
+          <Binding Path="!$parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).IsActionGraphEditor" />
+        </MultiBinding>
+      </Setter>
+      <Setter Property="ToolTip.Tip" Value="Выполнять при каждом открытии профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. При обычных запусках теста пропускать. Подтест и цикл выполняются целиком." />
+    </Style>
     <Style Selector="nodify|Node.inactive">
       <Setter Property="Background" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
       <Setter Property="ContentBrush" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
@@ -323,6 +327,7 @@
                                          Anchor="{Binding Anchor, Mode=OneWayToSource}" />
                     </DataTemplate>
                   </nodify:Node.OutputConnectorTemplate>
+                  <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" Margin="12" />
                 </nodify:Node>
               </DataTemplate>
             </views:NodeTemplateSelector.DefaultTemplate>
@@ -430,6 +435,7 @@
                     <CheckBox
                               IsChecked="{Binding VerifyWrite}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверка" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -502,6 +508,7 @@
                     <CheckBox
                               IsChecked="{Binding FailOnError}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -591,6 +598,7 @@
                     <CheckBox
                               IsChecked="{Binding FailOnError}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Критическая ошибка при провале" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -634,6 +642,7 @@
                       <TextBlock Grid.Column="0" Text="Сообщение об ошибке:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
                     </Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -679,6 +688,7 @@
                       <TextBlock Grid.Column="0" Text="Сообщение об ошибке:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
                     </Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -798,6 +808,7 @@
                       <TextBlock Grid.Column="0" Text="Максимум:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding Max}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -830,6 +841,7 @@
                       <TextBlock Grid.Column="0" Text="Мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding Milliseconds}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -933,6 +945,8 @@
                               IsChecked="{Binding RunOnFailure}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Выполнять при ошибке и остановке" TextWrapping="Wrap" /></CheckBox>
 
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
+
                     <TextBlock Text="{Binding StepCount, StringFormat='Шагов: {0}'}"
                                FontSize="{StaticResource FontCaption}"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -998,6 +1012,7 @@
                     </StackPanel>
                     <TextBlock Text="Время ожидания, мс" TextWrapping="Wrap" />
                     <TextBox Text="{Binding TimeoutMs}" />
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1037,6 +1052,7 @@
                     <TextBox Text="{Binding ExpectedExitCode}" />
                     <TextBlock Text="Префикс переменных" TextWrapping="Wrap" />
                     <TextBox Text="{Binding OutputPrefix}" />
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1074,6 +1090,7 @@
                     <ComboBox  ItemsSource="{x:Static presentation:RussianUiOptions.ValueTypes}" SelectedItem="{Binding ValueType, Mode=TwoWay}" ItemTemplate="{StaticResource RussianOptionTemplate}" HorizontalAlignment="Stretch" />
                     <TextBlock Text="Переменная результата" TextWrapping="Wrap" />
                     <TextBox Text="{Binding OutputVariableName}" />
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1120,6 +1137,7 @@
                     <TextBox Text="{Binding MinIntensity}" />
                     <TextBlock Text="Префикс результата" TextWrapping="Wrap" />
                     <TextBox Text="{Binding OutputPrefix}" />
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1174,6 +1192,8 @@
                     <CheckBox
                               IsChecked="{Binding StopOnError}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Стоп при ошибке" TextWrapping="Wrap" /></CheckBox>
+
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
 
                     <Button Content="Редактировать тело"
                             x:CompileBindings="False"
@@ -1242,6 +1262,7 @@
                       <TextBlock Grid.Column="0" Text="Таймаут мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1288,6 +1309,7 @@
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1333,6 +1355,7 @@
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1355,6 +1378,7 @@
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="Переменная MAC:" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" /></Grid>
                     <Grid ColumnDefinitions="110,*"><TextBlock Text="Таймаут, мс:" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1375,6 +1399,7 @@
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия:" /><TextBox Grid.Column="1" Text="{Binding TargetVersion}" /></Grid>
                     <Grid ColumnDefinitions="115,*"><TextBlock Text="Версия из:" /><TextBox Grid.Column="1" Text="{Binding VersionVariable}" /></Grid>
                     <CheckBox  IsChecked="{Binding ForceUpdate}" ><TextBlock Text="Прошивать даже при более новой версии" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1445,6 +1470,7 @@
                     <TextBlock Text="{Binding NetworkPlanStatus}" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" />
                     <CheckBox  IsChecked="{Binding Bidirectional}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять оба направления" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1462,6 +1488,7 @@
                     <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Таймаут, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="120,*"><TextBlock Grid.Column="0" Text="Переменная результата:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding OutputVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1479,6 +1506,7 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная короткого номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная MAC:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1494,6 +1522,7 @@
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Вторая переменная:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RightVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Тип сравнения:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><ComboBox Grid.Column="1" FontSize="{StaticResource FontCaption}"  ItemsSource="{x:Static presentation:RussianUiOptions.ComparisonTypes}" SelectedItem="{Binding ComparisonType, Mode=TwoWay}" ItemTemplate="{StaticResource RussianOptionTemplate}" HorizontalAlignment="Stretch" /></Grid>
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Сообщение об ошибке:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" /></Grid>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1516,6 +1545,7 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Таймаут, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Интервал, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnTimeout}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Таймаут ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1532,6 +1562,7 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource RussianUiText}, ConverterParameter=testType, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включать все переменные" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1554,6 +1585,7 @@
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Переменная MAC:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Число копий:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding Copies}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnPrinterError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка печати ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1574,6 +1606,7 @@
                     <CheckBox  IsChecked="{Binding SaveLocalCopy}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Сохранять локальную копию" TextWrapping="Wrap" /></CheckBox>
                     <Grid ColumnDefinitions="132,*"><TextBlock Grid.Column="0" Text="Папка локальных копий:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding LocalReportsDirectory}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnError}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>
@@ -1617,6 +1650,7 @@
                     </Grid>
                     <TextBlock Text="Переменная ввода (пусто — подтверждение)" TextWrapping="Wrap" />
                     <TextBox Text="{Binding InputVariable, Mode=TwoWay}" />
+                    <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
               </DataTemplate>

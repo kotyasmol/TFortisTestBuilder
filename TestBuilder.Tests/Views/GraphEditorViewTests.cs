@@ -255,7 +255,7 @@ public class GraphEditorViewTests
                 parent.IsVisible = true;
                 Layout(window);
                 Assert.Equal("Offset graph", vm.CurrentProfileName);
-                Assert.Equal(string.Empty, vm.StatusMessage);
+                Assert.Equal("Профиль выбран.", vm.StatusMessage);
                 AssertGraphVisible(view, 2);
 
                 // Loading another profile must also recover a viewport panned away by the operator.
@@ -584,7 +584,13 @@ public class GraphEditorViewTests
                 }
                 var profileToggle = node.GetVisualDescendants().OfType<CheckBox>()
                     .Single(c => c.Name == "ProfileOpenToggle");
-                Assert.Equal(0, ((ISolidColorBrush)profileToggle.Background!).Color.A);
+                var enabledToggle = node.GetVisualDescendants().OfType<CheckBox>()
+                    .Single(c => c.Content is TextBlock { Text: "Включен" });
+                Assert.Equal(((ISolidColorBrush)enabledToggle.Background!).Color,
+                    ((ISolidColorBrush)profileToggle.Background!).Color);
+                Assert.Contains(profileToggle, Assert.IsType<StackPanel>(node.Content).Children);
+                Assert.True(profileToggle.TranslatePoint(default, node)!.Value.Y >=
+                    enabledToggle.TranslatePoint(new Point(0, enabledToggle.Bounds.Height), node)!.Value.Y);
                 var captureFolder = Environment.GetEnvironmentVariable("TESTBUILDER_LAYOUT_CAPTURES");
                 if (!string.IsNullOrEmpty(captureFolder))
                 {
