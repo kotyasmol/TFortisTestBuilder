@@ -89,8 +89,8 @@ public class LabelPreviewTests
         try
         {
             AppSettings.Instance.LabelTemplates = LabelTemplateCatalog.Defaults();
-            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), new Printer()) { SelectedType = 2, SerialNumber = "1234" };
-            var selectedId = vm.LabelOptions[2].Id;
+            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), new Printer()) { SelectedType = 1, SerialNumber = "1234" };
+            var selectedId = vm.LabelOptions[1].Id;
             AppSettings.Instance.LabelTemplates.RemoveAt(0);
             AppSettings.Instance.LabelTemplates[1].Command = "^XA^FO30,40^A0N,20,12^FDNew {{Serial}}^FS^XZ";
             AppSettings.Instance.LabelTemplates[1].Language = "ZPL";
@@ -142,10 +142,10 @@ public class LabelPreviewTests
             {
                 window.Show(); Layout();
                 var picker = view.FindControl<ListBox>("LabelTemplatePicker")!;
-                var third = picker.GetVisualDescendants().OfType<ListBoxItem>().Single(i => ReferenceEquals(i.DataContext, vm.LabelOptions[2]));
+                var third = picker.GetVisualDescendants().OfType<ListBoxItem>().Single(i => ReferenceEquals(i.DataContext, vm.LabelOptions[1]));
                 var point = third.TranslatePoint(new Point(100, 50), window)!.Value;
                 window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout();
-                Assert.Equal(2, vm.SelectedType);
+                Assert.Equal(1, vm.SelectedType);
                 view.FindControl<TextBox>("LabelSerialInput")!.Text = "12345678"; Layout();
                 Assert.Contains(vm.Preview!.Elements, e => e.Text == "12345678");
                 Assert.Empty(printer.Commands); Assert.Equal(0, http.Requests);
@@ -158,7 +158,7 @@ public class LabelPreviewTests
                 var printed = Assert.Single(printer.Commands);
                 Assert.Equal(LabelPreview.Parse(AppSettings.Instance.LabelTemplates[0], printed).Elements, vm.LastPreview!.Elements);
                 var last = vm.LastPreview;
-                vm.SerialNumber = "invalid"; vm.SelectedType = 2;
+                vm.SerialNumber = "invalid"; vm.SelectedType = 1;
                 Assert.False(vm.Preview!.HasContent); Assert.Same(last, vm.LastPreview);
                 await vm.RepeatLastCommand.ExecuteAsync(null);
                 Assert.Equal(printed, printer.Commands.Last());

@@ -33,40 +33,72 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private readonly IHttpRequestService _http;
     private readonly IRawLabelPrinter _printer;
     private readonly Func<bool> _canUse;
+    private readonly Func<string?> _deviceModel;
+    public string ProfileDeviceName => _deviceModel() ?? "";
     private CancellationTokenSource? _operation;
     private LabelData? _last;
     private LabelTemplateDefinition? _lastTemplate;
     private bool _disposed;
     public bool CanEdit => !IsBusy && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
-    public bool HasMac => SelectedType >= 0 && SelectedType < AppSettings.Instance.LabelTemplates.Count && AppSettings.Instance.LabelTemplates[SelectedType].RequiresMac;
+    public bool HasMac => SelectedTemplate?.RequiresMac == true;
     partial void OnSelectedTypeChanged(int value) { OnPropertyChanged(nameof(HasMac)); UpdatePreview(); }
     partial void OnSerialNumberChanged(string value) => UpdatePreview();
     partial void OnMacAddressChanged(string value) => UpdatePreview();
     partial void OnLastPreviewChanged(LabelPreview? value) => OnPropertyChanged(nameof(HasLastPreview));
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
 
-    public LabelPrintingViewModel(ILogger logger, Func<bool> canUse)
-        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter()) { }
+    public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null)
+        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter(), deviceModel) { }
 
-    internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer)
-    { _logger = logger; _canUse = canUse; _http = http; _printer = printer; RefreshTemplates(); }
+    internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer, Func<string?>? deviceModel = null)
+    { _logger = logger; _canUse = canUse; _http = http; _printer = printer; _deviceModel = deviceModel ?? (() => null); RefreshTemplates(); }
+
+    private static bool IsDeviceTemplate(LabelTemplateDefinition t) =>
+        t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" && t.Language == "ZPL";
+    private static string OptionId(LabelTemplateDefinition t) => IsDeviceTemplate(t) ? "DeviceZpl" : t.Id;
+    private LabelTemplateDefinition? SelectedTemplate
+    {
+        get
+        {
+            var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
+            var candidates = AppSettings.Instance.LabelTemplates.Where(t => OptionId(t) == id).ToArray();
+            return candidates.FirstOrDefault(t => t.Name == ProfileDeviceName)
+                ?? candidates.FirstOrDefault(t => int.TryParse(SerialNumber, out var serial)
+                    && serial >= t.SerialOffset && (long)serial <= (long)t.SerialOffset + t.ShortSerialMax)
+                ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(SerialNumber) ? candidates.FirstOrDefault() : null);
+        }
+    }
 
     internal void RefreshTemplates(string? selectedId = null)
     {
         selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
+        var selected = AppSettings.Instance.LabelTemplates.FirstOrDefault(t => t.Id == selectedId);
+        if (selected != null) selectedId = OptionId(selected);
         LabelOptions.Clear();
-        foreach (var template in AppSettings.Instance.LabelTemplates)
-            LabelOptions.Add(new(template.Id, template.Name, LabelPreview.FromInput(template, "", "")));
-        SelectedType = Math.Max(0, AppSettings.Instance.LabelTemplates.FindIndex(t => t.Id == selectedId));
+        foreach (var group in AppSettings.Instance.LabelTemplates.GroupBy(OptionId))
+        {
+            var template = group.FirstOrDefault(t => t.Name == ProfileDeviceName) ?? group.First();
+            var name = group.Key == "DeviceZpl" ? "ZPL · Изделие, MAC, SN" :
+                template.Id == "SerialOnlyEpl" ? "EPL · Серийный номер" : template.Name;
+            LabelOptions.Add(new(group.Key, name, PreviewFor(template, "", "")));
+        }
+        SelectedType = Math.Max(0, LabelOptions.ToList().FindIndex(t => t.Id == selectedId));
+        OnPropertyChanged(nameof(ProfileDeviceName));
         OnPropertyChanged(nameof(HasMac));
         UpdatePreview();
     }
 
+    private LabelPreview PreviewFor(LabelTemplateDefinition template, string serial, string mac)
+    {
+        try { return LabelPreview.FromInput(LabelPrintContent.ForDevice(template, ProfileDeviceName), serial, mac); }
+        catch (InvalidOperationException ex) { return new LabelPreview(Array.Empty<LabelPreviewElement>(), 0, 0, 354, 150, ex.Message); }
+    }
+
     private void UpdatePreview()
     {
-        Preview = SelectedType >= 0 && SelectedType < AppSettings.Instance.LabelTemplates.Count
-            ? LabelPreview.FromInput(AppSettings.Instance.LabelTemplates[SelectedType], SerialNumber, MacAddress) : null;
+        var template = SelectedTemplate;
+        Preview = template == null ? null : PreviewFor(template, SerialNumber, MacAddress);
     }
 
     public void RefreshAvailability()
@@ -96,7 +128,9 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         Status = "Получение данных с сервера…";
         var data = await new LabelLookupService(_http).FindAsync(AppSettings.Instance.ServerBaseUrl,
             byMac ? MacAddress : SerialNumber, byMac, token);
-        SelectedType = data.Kind; SerialNumber = data.Serial; MacAddress = data.Mac;
+        var id = OptionId(AppSettings.Instance.LabelTemplates[data.Kind]);
+        SelectedType = LabelOptions.ToList().FindIndex(t => t.Id == id);
+        SerialNumber = data.Serial; MacAddress = data.Mac;
         Status = "Данные получены. Проверьте этикетку и нажмите «Печатать».";
     });
 
@@ -107,8 +141,8 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 
     private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null) => Run(async token =>
     {
-        if (savedTemplate == null && (data.Kind < 0 || data.Kind >= AppSettings.Instance.LabelTemplates.Count)) throw new InvalidOperationException("Выберите тип этикетки.");
-        var template = (savedTemplate ?? AppSettings.Instance.LabelTemplates[data.Kind]).Copy();
+        var template = savedTemplate?.Copy() ?? LabelPrintContent.ForDevice(
+            SelectedTemplate ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите профиль изделия."), ProfileDeviceName);
         template.Validate();
         if (Copies is < 1 or > 100) throw new InvalidOperationException("Количество этикеток: от 1 до 100.");
         var printer = PrinterName.Trim(); var count = Copies;

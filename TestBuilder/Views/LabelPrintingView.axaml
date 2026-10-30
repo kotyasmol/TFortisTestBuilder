@@ -6,6 +6,7 @@
       <TextBlock Text="Проверка печати этикетки" FontSize="24" FontWeight="SemiBold" />
       <TextBlock Text="Печать на принтере Windows без запуска графа и подключения стенда." TextWrapping="Wrap" />
       <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
+        <TextBlock Text="{Binding ProfileDeviceName}" FontWeight="SemiBold" />
         <TextBlock Text="Выберите этикетку" FontWeight="SemiBold" />
         <ListBox x:Name="LabelTemplatePicker" ItemsSource="{Binding LabelOptions}" SelectedIndex="{Binding SelectedType}"
                  Background="Transparent" Padding="0" MaxHeight="320" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

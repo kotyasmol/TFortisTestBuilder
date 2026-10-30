@@ -35,6 +35,7 @@ namespace TestBuilder.Domain.Execution
         public bool HasExecutionException { get; set; }
 
         public string? ProfileName { get; set; }
+        public string? DeviceModel { get; set; }
 
         public bool HasCriticalError { get; set; }
 
@@ -73,6 +74,7 @@ namespace TestBuilder.Domain.Execution
                 IsCleanup = IsCleanup,
                 HasExecutionException = HasExecutionException,
                 ProfileName = ProfileName,
+                DeviceModel = DeviceModel,
                 HasCriticalError = HasCriticalError,
                 CurrentSlaveId = CurrentSlaveId,
                 ExecutionObserver = ExecutionObserver,

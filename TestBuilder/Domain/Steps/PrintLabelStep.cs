@@ -171,6 +171,9 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
+            LabelTemplateDefinition printTemplate;
+            try { printTemplate = LabelPrintContent.ForDevice(_template, context.DeviceModel); }
+            catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
             string singleLabel;
             string language;
             string logDescription;
@@ -244,15 +247,15 @@ namespace TestBuilder.Domain.Steps
                 }
 
                 var barcode = _template.Barcode(shortSerial);
-                singleLabel = LabelPrintContent.Render(_template, fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
+                singleLabel = LabelPrintContent.Render(printTemplate, fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
                 language = _template.Language;
                 logDescription =
-                    $"этикеток {DeviceName}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
+                    $"этикеток {printTemplate.Name}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
 
                 context.SetVariable("PrintLabel.Template", _template.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
-                context.SetVariable("PrintLabel.DeviceName", DeviceName);
+                context.SetVariable("PrintLabel.DeviceName", printTemplate.Name);
                 context.SetVariable("PrintLabel.DeviceType", DeviceType);
                 context.SetVariable("PrintLabel.Mac", mac);
                 context.SetVariable("PrintLabel.MacSource", macSource);
@@ -261,7 +264,7 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
-                singleLabel = LabelPrintContent.Render(_template, serial, 0, "");
+                singleLabel = LabelPrintContent.Render(printTemplate, serial, 0, "");
                 language = _template.Language;
                 logDescription = $"серийного номера {serial}";
             }

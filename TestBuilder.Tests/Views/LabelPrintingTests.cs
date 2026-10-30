@@ -15,8 +15,8 @@ public class LabelPrintingTests
 {
     [Theory]
     [InlineData(0, "3200428", "03200428")]
-    [InlineData(1, "612447", "00612447")]
-    [InlineData(2, "12345678", "12345678")]
+    [InlineData(0, "612447", "00612447")]
+    [InlineData(1, "12345678", "12345678")]
     public async Task PrintsSelectedTemplate_RepeatKeepsSnapshot_AndFailureDoesNotReplaceIt(int kind, string serial, string barcode)
     {
         var printer = new Printer();
@@ -34,6 +34,39 @@ public class LabelPrintingTests
         vm.Copies = 0;
         await vm.RepeatLastCommand.ExecuteAsync(null);
         Assert.Equal(2, printer.Jobs.Count);
+    }
+
+    [Fact]
+    public async Task AmbiguousShortSerialWithoutProfileDoesNotPrint()
+    {
+        var printer = new Printer();
+        using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer)
+            { SerialNumber = "42", MacAddress = "C0:11:A6:20:01:AC" };
+        await vm.PrintCommand.ExecuteAsync(null);
+        Assert.Empty(printer.Jobs);
+        Assert.Contains("полный серийный", vm.Status);
+    }
+
+    [Fact]
+    public async Task FormatsUseProfileNameAndModelParameters_RepeatKeepsOriginalProfile()
+    {
+        var device = "PSW-2G6F+";
+        var printer = new Printer();
+        using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer, () => device)
+            { SerialNumber = "12447", MacAddress = "C0:11:A6:06:01:AC" };
+        Assert.Equal(2, vm.LabelOptions.Count);
+        Assert.Contains(vm.Preview!.Elements, e => e.Text == device);
+        await vm.PrintCommand.ExecuteAsync(null);
+        Assert.Contains("00612447", Assert.Single(printer.Jobs));
+        Assert.Contains("^FDPSW-2G6F+", printer.Jobs[0]);
+        device = "PSW+UPS-Box 8x2Pro";
+        vm.RefreshTemplates();
+        await vm.RepeatLastCommand.ExecuteAsync(null);
+        Assert.Equal(printer.Jobs[0], printer.Jobs[1]);
+        vm.SerialNumber = "428";
+        await vm.PrintCommand.ExecuteAsync(null);
+        Assert.Contains("03200428", printer.Jobs[2]);
+        Assert.Contains("^FDPSW+UPS-Box 8x2Pro", printer.Jobs[2]);
     }
 
     [Fact]

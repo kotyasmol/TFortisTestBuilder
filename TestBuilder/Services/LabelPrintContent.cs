@@ -7,6 +7,14 @@ namespace TestBuilder.Services;
 /// <summary>Shared data normalization and command formatting for printing and preview.</summary>
 internal static class LabelPrintContent
 {
+    public static LabelTemplateDefinition ForDevice(LabelTemplateDefinition template, string? deviceModel)
+    {
+        var copy = template.Copy();
+        if (!string.IsNullOrWhiteSpace(deviceModel)) copy.Name = deviceModel.Trim();
+        copy.Validate();
+        return copy;
+    }
+
     public static bool TryResolveSerial(LabelTemplateDefinition template, string serial,
         out int fullSerial, out int shortSerial, out string error)
     {

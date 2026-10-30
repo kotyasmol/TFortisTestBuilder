@@ -1211,7 +1211,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                 CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
-                ProfileName = profileName,
+                ProfileName = profileName, DeviceModel = RootGraph.DeviceModel,
                 ExecutionObserver = this,
                 WaitIfPausedAsync = WaitIfPausedAsync,
                 SelfTestPageState = SelfTestPageState,
@@ -1320,7 +1320,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             {
                 context ??= new TestContext(_registerState)
                 {
-                    IsConnected = IsConnected, ProfileName = profileName, HasCriticalError = true,
+                    IsConnected = IsConnected, ProfileName = profileName, DeviceModel = RootGraph.DeviceModel, HasCriticalError = true,
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };

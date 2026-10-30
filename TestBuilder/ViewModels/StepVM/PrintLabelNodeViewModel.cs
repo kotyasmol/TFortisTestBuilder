@@ -10,12 +10,25 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class PrintLabelNodeViewModel : NodeViewModel
     {
+        public string[] PrintFormats { get; } = { "ZPL · Изделие, MAC, SN", "EPL · Серийный номер" };
+        public int SelectedPrintFormat
+        {
+            get => (LabelTemplate?.Language ?? (UseQtProZplFormat ? "ZPL" : "EPL")) == "ZPL" ? 0 : 1;
+            set
+            {
+                if (value is < 0 or > 1 || value == SelectedPrintFormat) return;
+                LabelTemplate = null;
+                UseQtProZplFormat = value == 0;
+                OnPropertyChanged(nameof(SelectedPrintFormat));
+            }
+        }
         [ObservableProperty] private LabelTemplateDefinition? labelTemplate;
         public string CurrentTemplateName => LabelTemplate?.Name ?? (UseQtProZplFormat ? LabelModel.ToString() : "Только серийный номер");
         partial void OnLabelTemplateChanged(LabelTemplateDefinition? value)
         {
             if (value != null) UseQtProZplFormat = value.UseShortSerial;
             OnPropertyChanged(nameof(CurrentTemplateName));
+            OnPropertyChanged(nameof(SelectedPrintFormat));
         }
         [RelayCommand]
         private async System.Threading.Tasks.Task ChooseTemplate()
@@ -93,6 +106,7 @@ namespace TestBuilder.ViewModels.StepVM
         partial void OnUseQtProZplFormatChanged(bool value)
         {
             OnPropertyChanged(nameof(CurrentTemplateName));
+            OnPropertyChanged(nameof(SelectedPrintFormat));
             OnPropertyChanged(nameof(IsManualQtProMode));
             OnPropertyChanged(nameof(IsVariableQtProMode));
         }

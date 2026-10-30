@@ -8,6 +8,24 @@ namespace TestBuilder.Tests.StepTests;
 
 public class PrintLabelStepTests
 {
+    [Theory]
+    [InlineData("Profile product", true)]
+    [InlineData("Bad^XZ", false)]
+    public async Task DeviceNameComesFromContext_AndCannotInjectCommands(string name, bool valid)
+    {
+        var context = new TestContext(new RegisterState()) { DeviceModel = name, ProfileName = "Run without SFP" };
+        Assert.Equal(name, context.CreateParallelBranch(CancellationToken.None).DeviceModel);
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var step = CreateStep(printer, 1, manualSerial: "3200428", manualMacAddress: "C0:11:A6:20:01:AC", useQtProZplFormat: true);
+        Assert.Equal(valid ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(valid ? 1 : 0, printer.Calls);
+        if (valid)
+        {
+            Assert.Contains("^FDProfile product^FS", Encoding.UTF8.GetString(printer.Bytes));
+            Assert.DoesNotContain("Run without SFP", Encoding.UTF8.GetString(printer.Bytes));
+        }
+    }
+
     [Fact]
     public async Task DriverCompleteKeepsHonestCompletionStatusInReport()
     {

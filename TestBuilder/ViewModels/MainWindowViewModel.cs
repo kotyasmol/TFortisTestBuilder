@@ -86,7 +86,8 @@ namespace TestBuilder.ViewModels
                 () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
             LabelPrintingVM = new LabelPrintingViewModel(TestVM.TestingLogger,
-                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,
+                () => TestVM.DeviceName);
             LabelPrintingVM.PropertyChanged += OnLabelPrintingChanged;
 
             TestVM.PropertyChanged += OnTestVmPropertyChanged;
@@ -121,6 +122,7 @@ namespace TestBuilder.ViewModels
                 if (!ShowSwitchTools && SelectedPage is "SelfTest" or "Network") SelectedPage = "Editor";
                 OnSelectedPageChanged(SelectedPage);
             }
+            if (e.PropertyName == nameof(TestVM.DeviceName)) LabelPrintingVM.RefreshTemplates();
             if (e.PropertyName == nameof(TestVM.IsMonitoringActive))
                 IsSlavesFound = TestVM.IsMonitoringActive;
             if (e.PropertyName is nameof(TestVM.IsTestRunning) or nameof(TestVM.IsConnecting) or nameof(TestVM.HasRunningQuickActions))

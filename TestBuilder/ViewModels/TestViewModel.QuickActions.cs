@@ -113,7 +113,7 @@ public partial class TestViewModel
             GraphCompiler.ValidateRunConnections(graph, RootGraph.Hardware, IsConnected ? SelectedPort : null);
             var compiled = compiler.Compile(graph);
             var context = new TestContext(_registerState) {
-                CancellationToken = token, IsConnected = IsConnected, ProfileName = action.Name,
+                CancellationToken = token, IsConnected = IsConnected, ProfileName = action.Name, DeviceModel = RootGraph.DeviceModel,
                 RegisterMonitor = _registerMonitor, RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),
                 ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
