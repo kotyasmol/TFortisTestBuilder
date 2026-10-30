@@ -148,7 +148,9 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="16">
+    <Grid Grid.Column="1" x:Name="StationIndicatorWorkspace" RowDefinitions="Auto,*">
+      <views:RegisterIndicatorsView x:Name="OperatorRegisterIndicators" WorkspaceHeight="{Binding #StationIndicatorWorkspace.Bounds.Height}" />
+    <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="16">
       <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
         <StackPanel Spacing="6">
           <TextBlock Text="{Binding StationProfileName}" FontSize="{StaticResource FontTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -310,6 +312,7 @@
         </WrapPanel>
         <views:PingMonitorView x:Name="OperatorPingPanel" Grid.Column="1" Grid.RowSpan="2" Width="250" Margin="12,0,0,0" IsVisible="{Binding ShowOperatorPing}" />
       </Grid>
+    </Grid>
     </Grid>
   </Grid>
 </UserControl>

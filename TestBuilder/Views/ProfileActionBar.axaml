@@ -104,7 +104,6 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <views:RegisterIndicatorsView />
           </StackPanel>
         </ScrollViewer>
       </Grid>

@@ -11,6 +11,8 @@ public sealed class WorkspacePreferences
     public bool ProfilesCollapsed { get; set; }
     public bool PaletteCollapsed { get; set; }
     public bool QuickActionsCollapsed { get; set; } = true;
+    public bool RegisterIndicatorsCollapsed { get; set; }
+    public double RegisterIndicatorsZoom { get; set; } = 100;
     public double LogHeight { get; set; } = 160;
     public double BoardStagesWidth { get; set; } = 290;
     public double WindowWidth { get; set; } = 1280;
@@ -24,6 +26,7 @@ public sealed class WorkspacePreferences
         if (EngineerPage is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels")) EngineerPage = "Editor";
         LogHeight = ValidSize(LogHeight, 160, 100, 4000);
         BoardStagesWidth = ValidSize(BoardStagesWidth, 290, 220, 4000);
+        RegisterIndicatorsZoom = NormalizeRegisterIndicatorsZoom(RegisterIndicatorsZoom);
         WindowWidth = ValidSize(WindowWidth, 1280, 1100, 10000);
         WindowHeight = ValidSize(WindowHeight, 800, 680, 10000);
         ExpandedSections ??= new();
@@ -31,4 +34,7 @@ public sealed class WorkspacePreferences
 
     private static double ValidSize(double value, double fallback, double min, double max) =>
         double.IsFinite(value) && value > 0 ? Math.Clamp(value, min, max) : fallback;
+
+    internal static double NormalizeRegisterIndicatorsZoom(double value) =>
+        double.IsFinite(value) && value > 0 ? Math.Clamp(value, 50, 150) : 100;
 }

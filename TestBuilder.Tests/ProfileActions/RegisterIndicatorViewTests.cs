@@ -32,7 +32,7 @@ public class RegisterIndicatorViewTests
             vm.RootGraph.RegisterIndicators.Add(custom); vm.IsQuickActionsCollapsed = false;
             var state = new RegisterState(); state.Update(42, 123, 251);
             foreach (var card in vm.RegisterIndicators) card.Refresh(state, vm.RootGraph.Hardware, true, true);
-            var bar = new ProfileActionBar { DataContext = vm };
+            var bar = new RegisterIndicatorsView { DataContext = vm };
             var window = new Window { Width = 400, Height = 700, Content = bar };
             try
             {
@@ -61,7 +61,7 @@ public class RegisterIndicatorViewTests
                     Capture(window, $"register-indicators-{theme}.png");
                 }
                 vm.IsOperatorView = true; Layout(window);
-                Assert.True(vm.ShowQuickActions); Assert.False(add.IsEffectivelyVisible);
+                Assert.True(vm.ShowRegisterIndicators); Assert.False(vm.ShowQuickActions); Assert.False(add.IsEffectivelyVisible);
                 Assert.All(edit, b => Assert.False(b.IsEffectivelyVisible));
                 Assert.False(vm.DeleteRegisterIndicatorCommand.CanExecute(vm.RegisterIndicators[0]));
                 Assert.All(cards, c => Assert.True(c.IsEffectivelyVisible)); Capture(window, "register-indicators-operator.png");

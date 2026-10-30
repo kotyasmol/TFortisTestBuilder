@@ -21,7 +21,7 @@ public partial class TestViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(QuickActionsToggleTip))]
     private bool isQuickActionsCollapsed = true;
-    public string QuickActionsToggleTip => IsQuickActionsCollapsed ? "Показать кнопки и регистры" : "Скрыть кнопки и регистры";
+    public string QuickActionsToggleTip => IsQuickActionsCollapsed ? "Показать кнопки профиля" : "Скрыть кнопки профиля";
     [RelayCommand]
     private void ToggleQuickActions() => IsQuickActionsCollapsed = !IsQuickActionsCollapsed;
 
@@ -30,7 +30,7 @@ public partial class TestViewModel
     public bool HasRunningQuickActions => QuickActions.Any(a => a.IsRunning);
     public bool CanEditQuickActions => CanEditGraph && !IsActionGraphEditor && !IsTraining;
     public bool ShowQuickActionTools => _allowEditing && !IsOperatorView && !IsActionGraphEditor && !IsTraining;
-    public bool ShowQuickActions => QuickActions.Count > 0 || RegisterIndicators.Count > 0 || ShowQuickActionTools;
+    public bool ShowQuickActions => QuickActions.Count > 0 || ShowQuickActionTools;
     public bool ShowQuickActionHeader => QuickActions.Count > 0 || ShowQuickActionTools;
     private Window? ActionOwner => Avalonia.Application.Current?.ApplicationLifetime is
         Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life ? life.MainWindow : null;

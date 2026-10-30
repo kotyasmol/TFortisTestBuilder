@@ -1,11 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views" xmlns:converters="using:TestBuilder.Converters"
-             x:Class="TestBuilder.Views.RegisterIndicatorsView" x:DataType="vm:TestViewModel">
+             x:Class="TestBuilder.Views.RegisterIndicatorsView" x:DataType="vm:TestViewModel"
+             Background="{DynamicResource SurfaceBrush}" VerticalAlignment="Top" IsVisible="{Binding ShowRegisterIndicators}">
   <UserControl.Resources>
     <converters:ContrastTextConverter x:Key="IndicatorContrast" />
     <ControlTheme x:Key="IndicatorCardTheme" TargetType="ContentControl">
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Padding" Value="10" />
+      <Setter Property="Padding" Value="8" />
       <Setter Property="BorderThickness" Value="2" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="Template"><ControlTemplate>
@@ -26,32 +27,51 @@
       <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
     </Style>
   </UserControl.Styles>
-  <StackPanel Spacing="8" IsVisible="{Binding ShowRegisterIndicators}">
-    <Grid ColumnDefinitions="*,Auto">
+  <Grid RowDefinitions="*,Auto">
+    <Border x:Name="RegisterIndicatorsPanel" IsVisible="{Binding !IsRegisterIndicatorsCollapsed}" Padding="12,8"
+            Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+    <Grid RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="*,Auto,Auto">
       <TextBlock Text="Регистры" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
-      <Button Grid.Column="1" Content="+" FontSize="22" Width="36" Padding="4" Command="{Binding AddRegisterIndicatorCommand}"
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="8,0">
+        <Button x:Name="IndicatorsZoomOut" Content="−" Width="28" Height="28" MinWidth="28" MinHeight="28" Padding="2"
+                Command="{Binding ZoomRegisterIndicatorsOutCommand}" ToolTip.Tip="Уменьшить карточки" AutomationProperties.Name="Уменьшить масштаб регистров" />
+        <Slider x:Name="IndicatorsZoomSlider" Width="100" Minimum="50" Maximum="150" TickFrequency="10" IsSnapToTickEnabled="True"
+                Value="{Binding RegisterIndicatorsZoom, Mode=TwoWay}" ToolTip.Tip="Масштаб карточек регистров" AutomationProperties.Name="Масштаб регистров" />
+        <Button x:Name="IndicatorsZoomIn" Content="+" Width="28" Height="28" MinWidth="28" MinHeight="28" Padding="2"
+                Command="{Binding ZoomRegisterIndicatorsInCommand}" ToolTip.Tip="Увеличить карточки" AutomationProperties.Name="Увеличить масштаб регистров" />
+        <Button x:Name="IndicatorsZoomReset" Content="{Binding RegisterIndicatorsZoom, StringFormat={}{0:0}%}" Width="50" Height="28" MinWidth="50" MinHeight="28" Padding="2"
+                Command="{Binding ResetRegisterIndicatorsZoomCommand}" ToolTip.Tip="Вернуть масштаб 100%" AutomationProperties.Name="Сбросить масштаб регистров" />
+      </StackPanel>
+      <Button Grid.Column="2" Content="+" FontSize="22" Width="36" Height="32" MinHeight="32" Padding="4,0" Command="{Binding AddRegisterIndicatorCommand}"
               IsVisible="{Binding ShowQuickActionTools}" ToolTip.Tip="Добавить индикатор регистра" AutomationProperties.Name="Добавить индикатор регистра" />
     </Grid>
-    <ItemsControl ItemsSource="{Binding RegisterIndicators}">
-      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+    <ScrollViewer x:Name="RegisterIndicatorsScroll" Grid.Row="1" Margin="0,8,0,0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <ItemsControl x:Name="IndicatorCards" ItemsSource="{Binding RegisterIndicators}">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:RegisterIndicatorViewModel">
-          <Grid ColumnDefinitions="*,Auto">
+          <LayoutTransformControl Margin="0,0,8,8" HorizontalAlignment="Left">
+            <LayoutTransformControl.LayoutTransform>
+              <ScaleTransform ScaleX="{Binding $parent[views:RegisterIndicatorsView].((vm:TestViewModel)DataContext).RegisterIndicatorsScale}"
+                              ScaleY="{Binding $parent[views:RegisterIndicatorsView].((vm:TestViewModel)DataContext).RegisterIndicatorsScale}" />
+            </LayoutTransformControl.LayoutTransform>
+          <Grid ColumnDefinitions="*,Auto" Width="244" Height="132">
             <ContentControl Classes="registerIndicator" Classes.systemColor="{Binding UsesSystemColor}" Classes.alert="{Binding IsOutOfRange}"
                             Theme="{StaticResource IndicatorCardTheme}" ToolTip.Tip="{Binding SourceText}" AutomationProperties.Name="{Binding Name}">
               <ContentControl.Foreground>
                 <MultiBinding Converter="{StaticResource IndicatorContrast}">
                   <Binding Path="Background" RelativeSource="{RelativeSource Self}" />
-                  <Binding Path="$parent[views:ProfileActionBar].Background" />
+                  <Binding Path="$parent[views:RegisterIndicatorsView].Background" />
                 </MultiBinding>
               </ContentControl.Foreground>
-              <StackPanel Spacing="4">
-                <TextBlock Text="{Binding Name}" Foreground="{Binding $parent[ContentControl].Foreground}" TextWrapping="Wrap" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding ValueText}" ToolTip.Tip="{Binding ValueText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding LimitsText}" Foreground="{Binding $parent[ContentControl].Foreground}" IsVisible="{Binding HasLimits}" FontSize="11" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding StatusText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="11" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding SourceText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="10" TextWrapping="Wrap" />
-              </StackPanel>
+              <Grid RowDefinitions="32,32,16,16,12">
+                <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Name}" Foreground="{Binding $parent[ContentControl].Foreground}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="1" Text="{Binding ValueText}" ToolTip.Tip="{Binding ValueText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Row="2" Text="{Binding LimitsText}" ToolTip.Tip="{Binding LimitsText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Row="3" Text="{Binding StatusText}" ToolTip.Tip="{Binding StatusText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Row="4" Text="{Binding SourceText}" Foreground="{Binding $parent[ContentControl].Foreground}" FontSize="10" TextTrimming="CharacterEllipsis" />
+              </Grid>
             </ContentControl>
             <StackPanel Grid.Column="1" Margin="4,0,0,0" Spacing="2" VerticalAlignment="Top" IsVisible="{Binding $parent[views:RegisterIndicatorsView].((vm:TestViewModel)DataContext).ShowQuickActionTools}">
               <Button Width="32" Height="28" MinWidth="32" MinHeight="28" Padding="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
@@ -71,8 +91,20 @@
               </Button>
             </StackPanel>
           </Grid>
+          </LayoutTransformControl>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-  </StackPanel>
+    </ScrollViewer>
+    </Grid>
+    </Border>
+    <Button x:Name="RegisterIndicatorsHandle" Grid.Row="1" Classes="edgeHandle" Command="{Binding ToggleRegisterIndicatorsCommand}"
+            ToolTip.Tip="{Binding RegisterIndicatorsToggleTip}" AutomationProperties.Name="Свернуть или развернуть регистры"
+            Width="64" MinWidth="64" Height="24" MinHeight="24" Padding="12,5" HorizontalAlignment="Center">
+      <Grid>
+        <PathIcon Width="16" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsRegisterIndicatorsCollapsed}" Data="M0 2 L8 10 16 2 14 0 8 6 2 0 Z" />
+        <PathIcon Width="16" Height="10" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding !IsRegisterIndicatorsCollapsed}" Data="M0 8 L8 0 16 8 14 10 8 4 2 10 Z" />
+      </Grid>
+    </Button>
+  </Grid>
 </UserControl>

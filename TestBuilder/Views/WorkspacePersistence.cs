@@ -44,6 +44,8 @@ internal sealed class WorkspacePersistence : IDisposable
         test.IsProfilesCollapsed = _state.ProfilesCollapsed;
         test.IsPaletteCollapsed = _state.PaletteCollapsed;
         test.IsQuickActionsCollapsed = _state.QuickActionsCollapsed;
+        test.IsRegisterIndicatorsCollapsed = _state.RegisterIndicatorsCollapsed;
+        test.RegisterIndicatorsZoom = _state.RegisterIndicatorsZoom;
         _vm.SelectPageCommand.Execute(_state.EngineerPage);
 
         _restoreEngineerGroups = WatchGroups(test.EngineerProfileGroups, g => "profiles/engineer/" + g.Key,
@@ -139,6 +141,8 @@ internal sealed class WorkspacePersistence : IDisposable
             case nameof(test.IsProfilesCollapsed): _state.ProfilesCollapsed = test.IsProfilesCollapsed; break;
             case nameof(test.IsPaletteCollapsed): _state.PaletteCollapsed = test.IsPaletteCollapsed; break;
             case nameof(test.IsQuickActionsCollapsed): _state.QuickActionsCollapsed = test.IsQuickActionsCollapsed; break;
+            case nameof(test.IsRegisterIndicatorsCollapsed): _state.RegisterIndicatorsCollapsed = test.IsRegisterIndicatorsCollapsed; break;
+            case nameof(test.RegisterIndicatorsZoom): _state.RegisterIndicatorsZoom = test.RegisterIndicatorsZoom; break;
             case nameof(test.ProfileSearch): _restoreEngineerGroups(); return;
             case nameof(test.StationProfileSearch): _restoreStationGroups(); return;
             default: return;

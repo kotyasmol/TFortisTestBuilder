@@ -69,6 +69,8 @@ public class WorkspacePersistenceTests
                 Assert.True(saves > 0); // Written while the application is still open.
                 Assert.Equal("Board", JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(settingsPath))!.Workspace.ProductFilter);
                 vm.TestVM.IsQuickActionsCollapsed = false;
+                vm.TestVM.IsRegisterIndicatorsCollapsed = true;
+                vm.TestVM.RegisterIndicatorsZoom = 70;
                 first.Close(); // Flush the last change without waiting for the debounce.
 
                 settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(settingsPath))!;
@@ -83,6 +85,8 @@ public class WorkspacePersistenceTests
                 Assert.True(restored.TestVM.IsProfilesCollapsed);
                 Assert.True(restored.TestVM.IsPaletteCollapsed);
                 Assert.False(restored.TestVM.IsQuickActionsCollapsed);
+                Assert.True(restored.TestVM.IsRegisterIndicatorsCollapsed);
+                Assert.Equal(70, restored.TestVM.RegisterIndicatorsZoom);
                 Assert.False(restored.TestVM.AvailableNodeCategories[0].IsExpanded);
                 Assert.False(restored.SelfTestPageVM.Categories[0].IsExpanded);
                 Assert.True(second.FindControl<NetworkSetupView>("NetworkSetupViewControl")!.FindControl<Expander>("IdentifyCableSection")!.IsExpanded);
@@ -129,8 +133,11 @@ public class WorkspacePersistenceTests
                 using var bus = new TestBuilder.Services.Modbus.ModbusService();
                 using var other = new TestViewModel(bus, new TestBuilder.Domain.Modbus.SlaveManager(bus));
                 other.ProductFilter = "Платы"; other.IsProfilesCollapsed = true;
+                other.IsRegisterIndicatorsCollapsed = true; other.RegisterIndicatorsZoom = 50;
                 Assert.Equal("Switch", settings.Workspace.ProductFilter);
                 Assert.False(settings.Workspace.ProfilesCollapsed);
+                Assert.False(settings.Workspace.RegisterIndicatorsCollapsed);
+                Assert.Equal(100, settings.Workspace.RegisterIndicatorsZoom);
             }
             finally { window.Close(); }
         }, CancellationToken.None);
@@ -142,6 +149,8 @@ public class WorkspacePersistenceTests
         var legacy = JsonSerializer.Deserialize<AppSettings>("{\"theme\":\"Dark\"}")!;
         Assert.Equal(160, legacy.Workspace.LogHeight);
         Assert.True(legacy.Workspace.QuickActionsCollapsed);
+        Assert.False(legacy.Workspace.RegisterIndicatorsCollapsed);
+        Assert.Equal(100, legacy.Workspace.RegisterIndicatorsZoom);
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
@@ -150,7 +159,7 @@ public class WorkspacePersistenceTests
             var settings = new AppSettings { Workspace = new WorkspacePreferences
             {
                 ProductFilter = "invalid", EngineerPage = "invalid", LogHeight = 2000, BoardStagesWidth = -20,
-                WindowWidth = double.NaN, WindowHeight = -1, ExpandedSections = null!
+                WindowWidth = double.NaN, WindowHeight = -1, ExpandedSections = null!, RegisterIndicatorsZoom = double.NaN
             } };
             var window = new MainWindow();
             try
@@ -160,6 +169,7 @@ public class WorkspacePersistenceTests
                 var vm = (MainWindowViewModel)window.DataContext!;
                 Assert.Equal("Все изделия", vm.TestVM.ProductFilter);
                 Assert.Equal("Editor", vm.SelectedPage);
+                Assert.Equal(100, vm.TestVM.RegisterIndicatorsZoom);
                 var grid = window.FindControl<TestView>("TestViewControl")!.FindControl<Grid>("EditorLogLayout")!;
                 Assert.True(grid.RowDefinitions[0].ActualHeight >= 160);
                 Assert.True(grid.RowDefinitions[2].ActualHeight >= 100);

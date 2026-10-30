@@ -2,15 +2,42 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Models;
+using TestBuilder.Services;
 
 namespace TestBuilder.ViewModels;
 
 public partial class TestViewModel
 {
     public ObservableCollection<RegisterIndicatorViewModel> RegisterIndicators { get; } = new();
-    public bool ShowRegisterIndicators => RegisterIndicators.Count > 0 || ShowQuickActionTools;
+    public bool ShowRegisterIndicators => !IsActionGraphEditor && !IsTraining && (RegisterIndicators.Count > 0 || ShowQuickActionTools);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RegisterIndicatorsToggleTip))]
+    private bool isRegisterIndicatorsCollapsed;
+    public string RegisterIndicatorsToggleTip => IsRegisterIndicatorsCollapsed ? "Показать регистры" : "Скрыть регистры";
+    private double _registerIndicatorsZoom = 100;
+    public double RegisterIndicatorsZoom
+    {
+        get => _registerIndicatorsZoom;
+        set
+        {
+            if (!SetProperty(ref _registerIndicatorsZoom, WorkspacePreferences.NormalizeRegisterIndicatorsZoom(value))) return;
+            OnPropertyChanged(nameof(RegisterIndicatorsScale));
+            ZoomRegisterIndicatorsInCommand.NotifyCanExecuteChanged();
+            ZoomRegisterIndicatorsOutCommand.NotifyCanExecuteChanged();
+        }
+    }
+    public double RegisterIndicatorsScale => RegisterIndicatorsZoom / 100;
+    [RelayCommand] private void ToggleRegisterIndicators() => IsRegisterIndicatorsCollapsed = !IsRegisterIndicatorsCollapsed;
+    private bool CanZoomRegisterIndicatorsIn => RegisterIndicatorsZoom < 150;
+    private bool CanZoomRegisterIndicatorsOut => RegisterIndicatorsZoom > 50;
+    [RelayCommand(CanExecute = nameof(CanZoomRegisterIndicatorsIn))]
+    private void ZoomRegisterIndicatorsIn() => RegisterIndicatorsZoom += 10;
+    [RelayCommand(CanExecute = nameof(CanZoomRegisterIndicatorsOut))]
+    private void ZoomRegisterIndicatorsOut() => RegisterIndicatorsZoom -= 10;
+    [RelayCommand] private void ResetRegisterIndicatorsZoom() => RegisterIndicatorsZoom = 100;
     private DispatcherTimer? _indicatorTimer;
     private bool _indicatorsDisposed;
 
@@ -20,7 +47,6 @@ public partial class TestViewModel
         foreach (var definition in RootGraph.RegisterIndicators)
             RegisterIndicators.Add(new RegisterIndicatorViewModel(definition));
         UpdateRegisterIndicators();
-        OnPropertyChanged(nameof(ShowQuickActions));
         OnPropertyChanged(nameof(ShowRegisterIndicators));
     }
 
