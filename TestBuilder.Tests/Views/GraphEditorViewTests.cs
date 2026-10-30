@@ -586,6 +586,8 @@ public class GraphEditorViewTests
                     .Single(c => c.Name == "ProfileOpenToggle");
                 var enabledToggle = node.GetVisualDescendants().OfType<CheckBox>()
                     .Single(c => c.Content is TextBlock { Text: "Включен" });
+                Assert.Equal(enabledToggle.MinHeight, profileToggle.MinHeight);
+                Assert.Equal(enabledToggle.FontSize, profileToggle.FontSize);
                 Assert.Equal(((ISolidColorBrush)enabledToggle.Background!).Color,
                     ((ISolidColorBrush)profileToggle.Background!).Color);
                 Assert.Contains(profileToggle, Assert.IsType<StackPanel>(node.Content).Children);
@@ -598,6 +600,18 @@ public class GraphEditorViewTests
                     using var frame = window.CaptureRenderedFrame();
                     frame!.Save(Path.Combine(captureFolder, $"inactive-node-{(dark ? "dark" : "light")}.png"));
                 }
+                vm.IsTestRunning = true;
+                Layout(window);
+                Assert.Equal(enabledToggle.IsEffectivelyEnabled, profileToggle.IsEffectivelyEnabled);
+                Assert.False(profileToggle.IsHitTestVisible);
+                Assert.False(profileToggle.Focusable);
+                if (!string.IsNullOrEmpty(captureFolder))
+                {
+                    using var frame = window.CaptureRenderedFrame();
+                    frame!.Save(Path.Combine(captureFolder, $"running-node-{(dark ? "dark" : "light")}.png"));
+                }
+                vm.IsTestRunning = false;
+                Layout(window);
                 foreach (var field in node.GetVisualDescendants().OfType<TextBox>())
                 {
                     var color = ((ISolidColorBrush)field.Background!).Color;

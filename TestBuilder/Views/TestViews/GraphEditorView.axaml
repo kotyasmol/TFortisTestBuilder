@@ -133,10 +133,7 @@
         </DataTemplate>
       </Setter>
       <Setter Property="FontSize" Value="{StaticResource FontCaption}" />
-      <Setter Property="MinHeight" Value="24" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="IsChecked" Value="{Binding RunOnlyOnFirstRun, Mode=TwoWay}" />
-      <Setter Property="IsEnabled" Value="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}" />
       <Setter Property="IsVisible">
         <MultiBinding Converter="{x:Static avaloniaConverters:BoolConverters.And}">
           <Binding Path="CanRunOnlyOnFirstRun" />

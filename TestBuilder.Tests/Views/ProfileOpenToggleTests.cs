@@ -78,15 +78,24 @@ public class ProfileOpenToggleTests
                 Assert.Equal("Задержка", prep.DisplayTitle);
                 flyout.Hide();
 
+                check.Focus();
                 vm.IsTestRunning = true;
                 Layout();
-                Assert.False(check.IsEffectivelyEnabled);
+                Assert.True(check.IsEffectivelyEnabled);
+                Assert.False(check.IsHitTestVisible);
+                Assert.False(check.Focusable);
                 ClickToggle();
+                Assert.True(prep.RunOnlyOnFirstRun);
+                window.KeyPressQwerty(PhysicalKey.Space, Avalonia.Input.RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Space, Avalonia.Input.RawInputModifiers.None);
+                Layout();
                 Assert.True(prep.RunOnlyOnFirstRun);
 
                 vm.IsTestRunning = false;
                 Layout();
                 Assert.True(check.IsEffectivelyEnabled);
+                Assert.True(check.IsHitTestVisible);
+                Assert.True(check.Focusable);
                 ClickToggle();
                 Assert.False(prep.RunOnlyOnFirstRun);
 
