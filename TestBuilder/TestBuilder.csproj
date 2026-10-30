@@ -60,4 +60,5 @@
 	  </Compile>
 	</ItemGroup>
   <ItemGroup><EmbeddedResource Include="Assets/label-templates.json" LogicalName="TestBuilder.label-templates.json" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Assets/label-template-upgrades.json" LogicalName="TestBuilder.label-template-upgrades.json" /></ItemGroup>
 </Project>

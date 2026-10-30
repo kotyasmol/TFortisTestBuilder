@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace TestBuilder.Services;
 
@@ -53,14 +54,39 @@ internal static class LabelPrintContent
     }
 
     public static string Render(LabelTemplateDefinition template, string serial, int shortSerial, string mac)
-        => template.UseShortSerial ? template.Render(serial, shortSerial, mac)
-            : template.Render(serial, 0, "", Math.Max(0, template.WidthDots / 2 - CalculateBarcodeWidth(serial) / 2),
-                Math.Max(0, template.WidthDots / 2 - 20 * serial.Length / 2));
-
-    private static int CalculateBarcodeWidth(string serial)
     {
-        var baseWidth = serial.Length switch { 12 or 14 => 17.0, 19 => 16.3, 15 => 17.7, 20 => 15.0, _ => 20.0 };
-        var nonDigits = serial.Count(c => !char.IsDigit(c));
-        return serial.Length == 14 && nonDigits == 8 ? 370 : (int)(serial.Length * baseWidth + nonDigits * 1.7 * baseWidth);
+        if (template.UseShortSerial) return template.Render(serial, shortSerial, mac);
+        var kind = Code128Encoding.CanUseC(serial) ? "1C" : "1B";
+        var module = 2;
+        var font = 3;
+        var multiplier = 1;
+        // Read the parameters next to the centering placeholders, so editing the
+        // module width or font in a custom EPL template keeps centering correct.
+        var bar = Regex.Match(template.Command, @"(?m)^B\{\{BarcodeX\}\},\d+,0,([^,]+),(\d+),");
+        if (bar.Success)
+        {
+            if (bar.Groups[1].Value != "{{BarcodeType}}") kind = bar.Groups[1].Value;
+            module = int.Parse(bar.Groups[2].Value, CultureInfo.InvariantCulture);
+        }
+        var text = Regex.Match(template.Command, @"(?m)^A\{\{TextX\}\},\d+,0,([1-5]),(\d+),");
+        if (text.Success)
+        {
+            font = int.Parse(text.Groups[1].Value, CultureInfo.InvariantCulture);
+            multiplier = int.Parse(text.Groups[2].Value, CultureInfo.InvariantCulture);
+        }
+        var bars = kind == "1" ? Code128Encoding.EncodeAuto(serial)
+            : Code128Encoding.Encode(serial, kind == "1C");
+        var barcodeWidth = (bars?.Sum(c => c - '0') ?? 0) * (long)module;
+        var textWidth = (long)EplFontMetrics.Size(font, template.PrinterDpi).Width * multiplier * serial.Length;
+        return template.Render(serial, 0, "", (int)Math.Max(0, (template.WidthDots - barcodeWidth) / 2),
+            (int)Math.Max(0, (template.WidthDots - textWidth) / 2));
     }
+}
+
+internal static class EplFontMetrics
+{
+    // EPL Programming Guide, A command: fixed-pitch fonts at each resolution.
+    public static (int Width, int Height) Size(int font, int dpi) => dpi == 300
+        ? new[] { (12, 20), (16, 28), (20, 36), (24, 44), (48, 80) }[font - 1]
+        : new[] { (8, 12), (10, 16), (12, 20), (14, 24), (32, 48) }[font - 1];
 }

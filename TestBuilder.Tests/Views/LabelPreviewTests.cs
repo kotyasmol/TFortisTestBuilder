@@ -18,6 +18,73 @@ namespace TestBuilder.Tests.Views;
 public class LabelPreviewTests
 {
     [Theory]
+    [InlineData("00000000", "1C", 158)]
+    [InlineData("3200428", "1B", 224)]
+    [InlineData("00428", "1B", 180)]
+    public void SerialLabel_CentersExactCode128AndText(string serial, string kind, int expectedWidth)
+    {
+        var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "SerialOnlyEpl");
+        var command = LabelPrintContent.Render(template, serial, 0, "");
+        Assert.Contains("\r\nZB\r\n", command);
+        Assert.Contains($",0,{kind},2,1,47,N,\"{serial}\"", command);
+        var preview = LabelPreview.Parse(template, command);
+        var bars = Assert.Single(preview.Elements.Where(e => e.Bars.Length > 0));
+        var text = Assert.Single(preview.Elements.Where(e => e.Text == serial));
+        Assert.Equal(expectedWidth, bars.Width);
+        Assert.Equal(template.WidthDots / 2.0, bars.X + bars.Width / 2);
+        Assert.Equal(template.WidthDots / 2.0, text.X + text.Width / 2);
+        Assert.Equal(36, text.Height);
+        Assert.Empty(preview.Message);
+    }
+
+    [Fact]
+    public void CustomEplFontAndModuleWidth_KeepBothFieldsCentered()
+    {
+        var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "SerialOnlyEpl");
+        template.WidthDots = 600;
+        template.PrinterDpi = 203;
+        template.Command = template.Command.Replace(",2,1,47", ",4,1,47").Replace(",0,3,1,1,N", ",0,2,2,1,N");
+        var preview = LabelPreview.FromInput(template, "12345678", "");
+        Assert.All(preview.Elements, e => Assert.Equal(300, e.X + e.Width / 2));
+        Assert.Equal(316, preview.Elements.Single(e => e.Bars.Length > 0).Width);
+        Assert.Equal(16, preview.Elements.Single(e => e.Text.Length > 0).Height);
+    }
+
+    [Fact]
+    public void ProSerial_IsCenteredInItsField_WithoutMovingMacOrBarcode()
+    {
+        var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "PswUpsBox8x2Pro");
+        var preview = LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC");
+        var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
+        Assert.Equal(624, sn.X + sn.Width / 2);
+        Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
+        Assert.Equal(480, preview.Elements.Single(e => e.Bars.Length > 0).X);
+        Assert.Empty(preview.Message);
+    }
+
+    [Fact]
+    public void BuiltInUpgrade_PreservesCustomCommandsAndMetadata_AndIsIdempotent()
+    {
+        using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
+        var previous = System.Text.Json.JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
+        foreach (var old in previous)
+        {
+            old.Name = "Название пользователя";
+            old.WidthDots = 400;
+            old.PrinterDpi = 203;
+            var copy = old.CopyUpgraded();
+            Assert.Equal(LabelTemplateCatalog.Defaults().Single(t => t.Id == old.Id).Command, copy.Command);
+            Assert.NotEqual(old.Command, copy.Command);
+            Assert.Equal(old.Name, copy.Name);
+            Assert.Equal(old.WidthDots, copy.WidthDots);
+            Assert.Equal(old.PrinterDpi, copy.PrinterDpi);
+            Assert.Equal(copy.Command, copy.CopyUpgraded().Command);
+            old.Command += "\n";
+            Assert.Equal(old.Command, old.CopyUpgraded().Command);
+        }
+    }
+
+    [Theory]
     [InlineData(0, "3200428", "SN: 00428")]
     [InlineData(1, "612447", "SN: 12447")]
     [InlineData(2, "12345678", "12345678")]
@@ -76,10 +143,10 @@ public class LabelPreviewTests
     [Fact]
     public void Code128_ContainsStartDataChecksumAndStop_ForBAndC()
     {
-        Assert.Equal("211214" + "111323" + "131123" + "411131" + "2331112", Code128Preview.Encode("AB", false));
-        Assert.Equal("211232" + "112232" + "131123" + "121241" + "2331112", Code128Preview.Encode("1234", true));
-        Assert.Null(Code128Preview.Encode("123", true));
-        Assert.Null(Code128Preview.Encode("текст", false));
+        Assert.Equal("211214" + "111323" + "131123" + "411131" + "2331112", Code128Encoding.Encode("AB", false));
+        Assert.Equal("211232" + "112232" + "131123" + "121241" + "2331112", Code128Encoding.Encode("1234", true));
+        Assert.Null(Code128Encoding.Encode("123", true));
+        Assert.Null(Code128Encoding.Encode("текст", false));
     }
 
     [Fact]

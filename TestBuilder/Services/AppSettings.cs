@@ -93,6 +93,7 @@ namespace TestBuilder.Services
 
         private static AppSettings ApplyProfileFolderDefault(AppSettings settings)
         {
+            foreach (var template in settings.LabelTemplates) LabelTemplateCatalog.UpgradeBuiltIn(template);
             if (string.IsNullOrWhiteSpace(settings.GraphsFolder) ||
                 !Directory.Exists(settings.GraphsFolder))
             {

@@ -53,7 +53,7 @@ public sealed class LabelTemplatesWindow : Window
         void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
         Closed += (_, _) => previewTimer.Stop();
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
-            ("Ширина, точки", "WidthDots"), ("Смещение полного серийника", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
+            ("Ширина, точки", "WidthDots"), ("Разрешение EPL, dpi (203 или 300)", "PrinterDpi"), ("Смещение полного серийника", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
             ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
         {
             fields.Children.Add(new TextBlock { Text = label });
@@ -66,7 +66,7 @@ public sealed class LabelTemplatesWindow : Window
             var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
             box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };
         }
-        fields.Children.Add(new TextBlock { Text = "Команда принтера. Подстановки: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Barcode}}, {{WidthDots}}, {{BarcodeX}}, {{TextX}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        fields.Children.Add(new TextBlock { Text = "Команда принтера. Подстановки: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Barcode}}, {{WidthDots}}, {{BarcodeX}}, {{TextX}}, {{BarcodeType}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
         command.TextChanged += (_, _) => SchedulePreview();

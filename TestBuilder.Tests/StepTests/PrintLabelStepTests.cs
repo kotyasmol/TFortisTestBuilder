@@ -91,8 +91,8 @@ public class PrintLabelStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         const string singleLabel =
-            "\r\nN\r\nq354\r\nI8,C,001\r\n" +
-            "B107,24,0,1,2,1,47,N,\"3200428\"\r\n" +
+            "\r\nN\r\nZB\r\nq354\r\nI8,C,001\r\n" +
+            "B65,24,0,1B,2,1,47,N,\"3200428\"\r\n" +
             "A107,94,0,3,1,1,N,\"3200428\"\r\n" +
             "P1,1\r\n";
         Assert.Equal(StepResult.True, result);
@@ -144,7 +144,7 @@ public class PrintLabelStepTests
         const string singleLabel =
             "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
+            "^FO494,95^A0,25,20^FB260,1,0,C,0^FDSN: 00428^FS" +
             "^FO480,117^BY2^BCN,50,N,N,N^FD>:03200428^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);

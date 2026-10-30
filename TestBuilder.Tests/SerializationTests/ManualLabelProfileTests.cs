@@ -9,6 +9,29 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class ManualLabelProfileTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SavedLabelSnapshot_UpgradesOnlyUnmodifiedShippedCommand(bool customized)
+    {
+        using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
+        var template = System.Text.Json.JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!.First();
+        template.Name = "Изделие пользователя";
+        template.PrinterDpi = 203;
+        if (customized) template.Command += "\n";
+        using var modbus = new ModbusService();
+        var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        vm.RootGraph.Nodes.Add(new PrintLabelNodeViewModel { LabelTemplate = template, Copies = 2 });
+        var json = GraphSerializer.Serialize(vm, "Печать");
+        var loaded = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize(json, loaded);
+        var node = Assert.Single(loaded.RootGraph.Nodes.OfType<PrintLabelNodeViewModel>());
+        Assert.Equal(customized ? template.Command : LabelTemplateCatalog.Defaults()[0].Command, node.LabelTemplate!.Command);
+        Assert.Equal(template.Name, node.LabelTemplate.Name);
+        Assert.Equal(203, node.LabelTemplate.PrinterDpi);
+        Assert.Equal(2, node.Copies);
+    }
+
     [Fact]
     public void ManualLabelProfile_LoadsAsStandaloneFourCopyGraph()
     {

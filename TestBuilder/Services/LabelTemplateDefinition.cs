@@ -20,19 +20,26 @@ public sealed class LabelTemplateDefinition
     public int DeviceCode { get; set; }
     public string BarcodePrefix { get; set; } = "";
     public int WidthDots { get; set; } = 354;
+    public int PrinterDpi { get; set; } = 300;
     public string Command { get; set; } = "^XA^FO20,20^A0N,30,30^FD{{Serial}}^FS^XZ";
     public LabelTemplateDefinition Copy() => JsonSerializer.Deserialize<LabelTemplateDefinition>(JsonSerializer.Serialize(this))!;
+    public LabelTemplateDefinition CopyUpgraded()
+    {
+        var copy = Copy();
+        LabelTemplateCatalog.UpgradeBuiltIn(copy);
+        return copy;
+    }
     public override string ToString() => Name;
     public string Barcode(int shortSerial) => BarcodePrefix + shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture);
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||
-            WidthDots is < 1 or > 10000 || SerialOffset < 0 || ShortSerialMax < 0 ||
+            WidthDots is < 1 or > 10000 || PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
             (long)SerialOffset + ShortSerialMax > int.MaxValue || ShortSerialDigits is < 1 or > 10 ||
             string.IsNullOrWhiteSpace(Command) || Command.Length > 100000 || (RequiresMac && !UseShortSerial) || (MatchServerSerial && !UseShortSerial))
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийников и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
-            if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "WidthDots", "BarcodeX", "TextX" }.Contains(token.Groups[1].Value))
+            if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "WidthDots", "BarcodeX", "TextX", "BarcodeType" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (Name.IndexOfAny(new[] { '^', '~', '"', '\r', '\n' }) >= 0 || BarcodePrefix.Any(c => !char.IsAsciiDigit(c)))
             throw new InvalidOperationException("Название не должно содержать команды принтера; префикс штрихкода — только цифры.");
@@ -43,6 +50,7 @@ public sealed class LabelTemplateDefinition
         var values = new Dictionary<string, string> {
             ["Serial"] = serial, ["ShortSerial"] = shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture),
             ["Mac"] = mac, ["Barcode"] = UseShortSerial ? Barcode(shortSerial) : serial, ["Name"] = Name,
+            ["BarcodeType"] = Code128Encoding.CanUseC(serial) ? "1C" : "1B",
             ["WidthDots"] = WidthDots.ToString(CultureInfo.InvariantCulture), ["BarcodeX"] = barcodeX.ToString(CultureInfo.InvariantCulture),
             ["TextX"] = textX.ToString(CultureInfo.InvariantCulture) };
         return Regex.Replace(Command, @"\{\{(.*?)\}\}", m => values[m.Groups[1].Value]);
@@ -50,6 +58,15 @@ public sealed class LabelTemplateDefinition
 }
 public static class LabelTemplateCatalog
 {
+    // Only exact shipped commands are upgraded; user-authored commands and metadata survive.
+    public static void UpgradeBuiltIn(LabelTemplateDefinition? template)
+    {
+        if (template == null) return;
+        using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
+        var previous = JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
+        if (previous.Any(t => t.Id == template.Id && t.Language == template.Language && t.Command == template.Command))
+            template.Command = Defaults().Single(t => t.Id == template.Id).Command;
+    }
     public static List<LabelTemplateDefinition> Defaults()
     {
         using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-templates.json")!;

@@ -813,7 +813,7 @@ namespace TestBuilder.Services
                         Copies = n.Copies ?? 4,
                         UseQtProZplFormat = n.UseQtProZplFormat ?? false,
                         LabelModel = n.LabelModel ?? DeviceLabelModel.PswUpsBox8x2Pro,
-                        LabelTemplate = n.LabelTemplate?.Copy(),
+                        LabelTemplate = n.LabelTemplate?.CopyUpgraded(),
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 

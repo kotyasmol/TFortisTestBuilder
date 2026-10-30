@@ -50,7 +50,7 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
     public static LabelPreview Parse(LabelTemplateDefinition template, string command)
     {
         if (command.Length > 100000) return Empty("Шаблон слишком большой для предпросмотра.");
-        var parser = new Parser(template.WidthDots);
+        var parser = new Parser(template.WidthDots, template.PrinterDpi);
         try
         {
             if (template.Language == "ZPL") parser.Zpl(command);
@@ -62,7 +62,7 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
         { return Empty("Не удалось разобрать команду шаблона для предпросмотра."); }
     }
 
-    private sealed class Parser(int width)
+    private sealed class Parser(int width, int dpi)
     {
         private readonly List<LabelPreviewElement> _elements = new();
         private readonly HashSet<string> _unsupported = new();
@@ -89,9 +89,9 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
             if (text.Length > 256) { _unsupported.Add("длинный текст"); return; }
             Add(new(x, y, Math.Max(charWidth, text.Length * charWidth), height, text));
         }
-        private void Barcode(double x, double y, double height, double module, string text, bool subsetC, bool readable, bool above = false)
+        private void Barcode(double x, double y, double height, double module, string text, bool subsetC, bool readable, bool above = false, bool automatic = false)
         {
-            var bars = Code128Preview.Encode(text, subsetC);
+            var bars = automatic ? Code128Encoding.EncodeAuto(text) : Code128Encoding.Encode(text, subsetC);
             if (bars == null) { _unsupported.Add("содержимое Code128"); return; }
             var w = bars.Sum(c => c - '0') * module;
             Add(new(x, y, w, height, Bars: bars));
@@ -104,6 +104,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
         {
             double x = 0, y = 0, homeX = 0, homeY = 0, fontH = 30, fontW = 18, defaultH = 30, defaultW = 18, module = 2, barH = 50;
             var barcode = false; var readable = true; var above = false; var skip = false; var auto = false;
+            double blockWidth = 0;
+            var justification = "L";
             var matches = Regex.Matches(command, @"[\^~]([A-Za-z0-9@]{2})([^\^~]*)");
             if (matches.Count == 0) _unsupported.Add("формат ZPL");
             foreach (Match match in matches)
@@ -122,6 +124,11 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         if (Part(a, 0) is not ("" or "N")) { _unsupported.Add("поворот текста"); skip = true; }
                         fontH = Number(a, 1, defaultH); fontW = Number(a, 2, fontH * .6); break;
                     case "BY": module = Number(a, 0, 2); barH = Number(a, 2, 50); break;
+                    case "FB":
+                        blockWidth = Number(a, 0); justification = Part(a, 3, "L");
+                        if (Number(a, 1, 1) != 1 || Number(a, 4) != 0 || justification is not ("L" or "C" or "R"))
+                        { _unsupported.Add("многострочный ^FB"); skip = true; }
+                        break;
                     case "BC":
                         barcode = true;
                         if (Part(a, 0) is not ("" or "N")) { _unsupported.Add("поворот штрихкода"); skip = true; }
@@ -129,17 +136,24 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         barH = Number(a, 1, barH); readable = Part(a, 2, "Y") != "N"; above = Part(a, 3) == "Y"; auto = Part(a, 5) == "A"; break;
                     case "FD":
                         if (skip) break;
-                        if (!barcode) Text(x, y, fontH, fontW * .65, value);
+                        if (!barcode)
+                        {
+                            var textWidth = value.Length * fontW * .65;
+                            if (blockWidth > 0 && (textWidth > blockWidth || value.Contains('\\')))
+                            { _unsupported.Add("переносы ^FB"); break; }
+                            var offset = blockWidth > 0 ? justification switch { "C" => (blockWidth - textWidth) / 2, "R" => blockWidth - textWidth, _ => 0 } : 0;
+                            Text(x + offset, y, fontH, fontW * .65, value);
+                        }
                         else
                         {
                             var subsetC = value.StartsWith(">;", StringComparison.Ordinal);
                             var data = value.StartsWith(">:", StringComparison.Ordinal) || subsetC ? value[2..] : value;
                             if (data.Contains('>')) { _unsupported.Add("переключение Code128"); break; }
-                            Barcode(x, y, barH, module, data, subsetC || (auto && Code128Preview.CanUseC(data)), readable, above);
+                            Barcode(x, y, barH, module, data, subsetC || (auto && Code128Encoding.CanUseC(data)), readable, above);
                         }
                         break;
                     case "GB": Add(new(x, y, Math.Max(1, Number(a, 0)), Math.Max(1, Number(a, 1)), Stroke: Math.Max(1, Number(a, 2, 1)))); break;
-                    case "FS": barcode = skip = auto = false; fontH = defaultH; fontW = defaultW; break;
+                    case "FS": barcode = skip = auto = false; blockWidth = 0; justification = "L"; fontH = defaultH; fontW = defaultW; break;
                     case "MD": case "PR": case "PQ": case "CI": case "FX": break; // Nonvisual settings/comment.
                     default: _unsupported.Add("^" + op); skip = true; break;
                 }
@@ -154,6 +168,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 if (op == 'q') { _width = Number(a, 0); _explicitWidth = true; continue; }
                 if (op == 'Q') { _height = Number(a, 0); continue; }
                 if (op == 'P') break;
+                // Orientation relative to the feed does not change the readable layout.
+                if (line is "ZT" or "ZB") continue;
                 if (op is 'N' or 'I' or 'S' or 'D') continue;
                 if (op is not ('A' or 'B')) { _unsupported.Add(line[..Math.Min(2, line.Length)]); continue; }
                 var field = Regex.Match(line, "^[AB]([^\"]*)\"([^\"]*)\"$");
@@ -165,15 +181,15 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 {
                     var font = (int)Number(a, 3, 3);
                     if (font is < 1 or > 5 || Part(a, 6) != "N") { _unsupported.Add("шрифт EPL"); continue; }
-                    var widths = new[] { 8, 10, 12, 14, 32 }; var heights = new[] { 12, 16, 20, 24, 48 };
-                    Text(x, y, heights[font - 1] * Number(a, 5, 1), widths[font - 1] * Number(a, 4, 1), data);
+                    var size = EplFontMetrics.Size(font, dpi);
+                    Text(x, y, size.Height * Number(a, 5, 1), size.Width * Number(a, 4, 1), data);
                 }
                 else
                 {
                     var kind = Part(a, 3);
                     if (kind is not ("1" or "1B" or "1C")) { _unsupported.Add("штрихкод EPL " + kind); continue; }
                     Barcode(x, y, Number(a, 6, 50), Number(a, 4, 2), data,
-                        kind == "1C" || (kind == "1" && Code128Preview.CanUseC(data)), Part(a, 7) == "B");
+                        kind == "1C", Part(a, 7) == "B", automatic: kind == "1");
                 }
             }
         }
@@ -193,31 +209,5 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 message += " Часть содержимого выходит за размер этикетки.";
             return new(_elements.ToArray(), left, top, w, h, message.Trim());
         }
-    }
-}
-
-internal static class Code128Preview
-{
-    // Code128 symbol bar/space widths, indexed by symbol value (0..106, stop).
-    private static readonly string[] Patterns = ("212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 " +
-        "112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 " +
-        "312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 " +
-        "112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 " +
-        "312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 " +
-        "122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 " +
-        "411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 " +
-        "114131 311141 411131 211412 211214 211232 2331112").Split(' ');
-    public static bool CanUseC(string text) => text.Length > 0 && text.Length % 2 == 0 && text.All(char.IsAsciiDigit);
-    public static string? Encode(string text, bool subsetC)
-    {
-        if (text.Length is 0 or > 256 || text.Any(c => c is < ' ' or > '~') || (subsetC && !CanUseC(text))) return null;
-        var codes = new List<int> { subsetC ? 105 : 104 };
-        if (subsetC)
-            for (var i = 0; i < text.Length; i += 2) codes.Add((text[i] - '0') * 10 + text[i + 1] - '0');
-        else codes.AddRange(text.Select(c => c - 32));
-        var checksum = codes[0];
-        for (var i = 1; i < codes.Count; i++) checksum += i * codes[i];
-        codes.Add(checksum % 103); codes.Add(106);
-        return string.Concat(codes.Select(c => Patterns[c]));
     }
 }
