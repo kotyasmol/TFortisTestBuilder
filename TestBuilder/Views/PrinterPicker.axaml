@@ -8,9 +8,15 @@
                        IsTextCompletionEnabled="False" MaxDropDownHeight="260"
                        Watermark="Выберите принтер или введите имя"
                        AutomationProperties.Name="Принтер для этикеток" />
-      <Button x:Name="ChoosePrinterButton" Grid.Column="1" Content="⌄" Width="36" Margin="4,0,0,0"
+      <Button x:Name="ChoosePrinterButton" Grid.Column="1" Width="36" Height="36" Padding="0" Margin="4,0,0,0"
+              HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
               Click="OnChoosePrinter" IsEnabled="{Binding CanChoose}"
-              AutomationProperties.Name="Выбрать принтер из списка" ToolTip.Tip="Установленные принтеры Windows" />
+              AutomationProperties.Name="Выбрать принтер из списка" ToolTip.Tip="Установленные принтеры Windows">
+        <Canvas Width="16" Height="16" IsHitTestVisible="False">
+          <Path Data="M3 5.5 L8 10.5 L13 5.5" Stroke="{Binding $parent[Button].Foreground}"
+                StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" />
+        </Canvas>
+      </Button>
       <Button x:Name="RefreshPrintersButton" Grid.Column="2" Content="Обновить" Margin="8,0,0,0"
               Command="{Binding RefreshCommand}" AutomationProperties.Name="Обновить список принтеров" />
     </Grid>
