@@ -12,7 +12,6 @@ using TestBuilder.Models;
 namespace TestBuilder.ViewModels;
 
 public sealed record ProfileActionResult(bool Success, string Message);
-public sealed record ProfileActionNotification(string Name, string Message);
 
 public partial class ProfileActionViewModel : ObservableObject, IExecutionObserver
 {
@@ -22,7 +21,6 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
     private CancellationTokenSource? _cancellation;
     private readonly Action _availabilityChanged;
-    private readonly Action<string>? _notifyError;
     public string Name => Definition.Name;
     public bool IsToggle => Definition.Display == ProfileActionDisplay.Toggle;
     public bool ShowProgress => !IsToggle && (Definition.Display == ProfileActionDisplay.Progress || IsRunning);
@@ -49,10 +47,9 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
 
     public ProfileActionViewModel(ProfileActionDefinition definition,
         Func<ProfileActionDefinition, bool, IExecutionObserver, CancellationToken, Task<ProfileActionResult>> run,
-        Func<bool> canRun, Action availabilityChanged, Action<string>? notifyError = null)
+        Func<bool> canRun, Action availabilityChanged)
     {
         Definition = definition; _run = run; _canRun = canRun; _availabilityChanged = availabilityChanged;
-        _notifyError = notifyError;
         RunCommand = new AsyncRelayCommand(RunAsync, () => CanRun);
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
     }
@@ -100,7 +97,6 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
             _cancellation = null; IsRunning = false; CancelCommand.NotifyCanExecuteChanged();
             _availabilityChanged(); RefreshAvailability(); NotifyState();
         }
-        if (!string.IsNullOrEmpty(ErrorMessage)) _notifyError?.Invoke(ErrorMessage);
     }
     // Percentages are exact only for a linear route. Loops, subtests and conditional
     // paths use the activity ring with the number of steps already completed.

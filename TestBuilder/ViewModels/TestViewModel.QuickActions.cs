@@ -28,16 +28,6 @@ public partial class TestViewModel
 
     public bool IsActionGraphEditor { get; internal set; }
     public ObservableCollection<ProfileActionViewModel> QuickActions { get; } = new();
-    public ObservableCollection<ProfileActionNotification> ActionNotifications { get; } = new();
-
-    internal void NotifyActionError(string name, string message)
-    {
-        while (ActionNotifications.Count >= 3) ActionNotifications.RemoveAt(0);
-        ActionNotifications.Add(new(name, message));
-    }
-
-    [RelayCommand]
-    private void DismissActionNotification(ProfileActionNotification notification) => ActionNotifications.Remove(notification);
     internal IRawLabelPrinter? ActionLabelPrinter { get; set; }
     public bool HasRunningQuickActions => QuickActions.Any(a => a.IsRunning);
     public bool CanEditQuickActions => CanEditGraph && !IsActionGraphEditor && !IsTraining;
@@ -56,7 +46,7 @@ public partial class TestViewModel
             definition.Graph.Hardware = RootGraph.Hardware; definition.OffGraph.Hardware = RootGraph.Hardware;
             QuickActions.Add(new ProfileActionViewModel(definition, ExecuteProfileActionAsync,
                 () => !IsActionGraphEditor && !IsTraining && !IsConnecting && !IsStopping && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && _profileLoadError.Length == 0,
-                RefreshStationAvailability, message => NotifyActionError(definition.Name, message)));
+                RefreshStationAvailability));
         }
         RefreshStationAvailability();
     }
