@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.PrinterPicker"
+             x:Name="PickerRoot" x:DataType="vm:PrinterPickerViewModel">
+  <StackPanel Spacing="6" DataContext="{Binding State, ElementName=PickerRoot}">
+    <Grid ColumnDefinitions="*,Auto,Auto">
+      <AutoCompleteBox x:Name="PrinterNameInput" Text="{Binding PrinterName, ElementName=PickerRoot, Mode=TwoWay}"
+                       ItemsSource="{Binding Printers}" MinimumPrefixLength="0" FilterMode="None"
+                       IsTextCompletionEnabled="False" MaxDropDownHeight="260"
+                       Watermark="Выберите принтер или введите имя"
+                       AutomationProperties.Name="Принтер для этикеток" />
+      <Button x:Name="ChoosePrinterButton" Grid.Column="1" Content="⌄" Width="36" Margin="4,0,0,0"
+              Click="OnChoosePrinter" IsEnabled="{Binding CanChoose}"
+              AutomationProperties.Name="Выбрать принтер из списка" ToolTip.Tip="Установленные принтеры Windows" />
+      <Button x:Name="RefreshPrintersButton" Grid.Column="2" Content="Обновить" Margin="8,0,0,0"
+              Command="{Binding RefreshCommand}" AutomationProperties.Name="Обновить список принтеров" />
+    </Grid>
+    <TextBlock Text="{Binding Message}" IsVisible="{Binding HasMessage}" TextWrapping="Wrap" FontSize="12"/>
+  </StackPanel>
+</UserControl>

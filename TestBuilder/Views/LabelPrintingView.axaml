@@ -45,8 +45,8 @@
           <Button Grid.Column="1" Content="Получить по MAC" Command="{Binding FindByMacCommand}" Margin="12,0,0,0" />
         </Grid>
         <TextBlock Text="Выбранный шаблон не требует MAC." IsVisible="{Binding !HasMac}" />
-        <TextBlock Text="Имя принтера Windows" />
-        <TextBox Text="{Binding PrinterName}" Watermark="TSC TE310" />
+        <TextBlock Text="Принтер" />
+        <views:PrinterPicker PrinterName="{Binding PrinterName, Mode=TwoWay}" />
         <Grid ColumnDefinitions="Auto,Auto">
           <TextBlock Text="Количество этикеток" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Value="{Binding Copies}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="120" Margin="12,0,0,0" />
