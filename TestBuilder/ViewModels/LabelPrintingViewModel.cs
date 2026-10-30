@@ -142,4 +142,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public void Dispose() { _disposed = true; _operation?.Cancel(); (_http as IDisposable)?.Dispose(); }
 }
 
-public sealed record LabelTemplatePreviewItem(string Id, string Name, LabelPreview Preview);
+public sealed record LabelTemplatePreviewItem(string Id, string Name, LabelPreview Preview)
+{
+    public override string ToString() => Name;
+}

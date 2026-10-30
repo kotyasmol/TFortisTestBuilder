@@ -9,6 +9,7 @@ namespace TestBuilder.Views;
 
 public sealed class LabelPreviewControl : Control
 {
+    private static readonly Typeface PreviewTypeface = new("avares://Avalonia.Fonts.Inter/Assets#Inter");
     public static readonly StyledProperty<LabelPreview?> PreviewProperty =
         AvaloniaProperty.Register<LabelPreviewControl, LabelPreview?>(nameof(Preview));
     public LabelPreview? Preview { get => GetValue(PreviewProperty); set => SetValue(PreviewProperty, value); }
@@ -41,7 +42,7 @@ public sealed class LabelPreviewControl : Control
                 else if (element.Text.Length > 0)
                 {
                     var text = new FormattedText(element.Text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                        Typeface.Default, rect.Height, Brushes.Black);
+                        PreviewTypeface, rect.Height, Brushes.Black);
                     if (text.Width <= 0 || text.Height <= 0) continue;
                     using (context.PushTransform(Matrix.CreateScale(rect.Width / text.Width, rect.Height / text.Height)
                         * Matrix.CreateTranslation(rect.X, rect.Y)))
