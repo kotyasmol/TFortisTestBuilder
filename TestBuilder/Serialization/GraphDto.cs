@@ -433,6 +433,10 @@ namespace TestBuilder.Serialization
         public List<DataTestPortDto>? Ports { get; set; }
 
         // --- Print Label ---
+        [JsonPropertyName("useLastTestLabel")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseLastTestLabel { get; set; }
+
         [JsonPropertyName("printerName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PrinterName { get; set; }

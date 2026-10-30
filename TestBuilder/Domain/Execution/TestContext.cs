@@ -37,6 +37,8 @@ namespace TestBuilder.Domain.Execution
         public string? ProfileName { get; set; }
         public string? DeviceModel { get; set; }
         public LabelPrintCapture LabelPrinting { get; private init; } = new();
+        // Frozen at the start of an action; independent of its own print diagnostics.
+        public PreparedLabel? LastTestLabel { get; init; }
 
         public bool HasCriticalError { get; set; }
 
@@ -77,6 +79,7 @@ namespace TestBuilder.Domain.Execution
                 ProfileName = ProfileName,
                 DeviceModel = DeviceModel,
                 LabelPrinting = LabelPrinting,
+                LastTestLabel = LastTestLabel?.Copy(),
                 HasCriticalError = HasCriticalError,
                 CurrentSlaveId = CurrentSlaveId,
                 ExecutionObserver = ExecutionObserver,

@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Models;
 using TestBuilder.Services;
@@ -27,6 +28,7 @@ public partial class TestViewModel
 
     public bool IsActionGraphEditor { get; internal set; }
     public ObservableCollection<ProfileActionViewModel> QuickActions { get; } = new();
+    internal IRawLabelPrinter? ActionLabelPrinter { get; set; }
     public bool HasRunningQuickActions => QuickActions.Any(a => a.IsRunning);
     public bool CanEditQuickActions => CanEditGraph && !IsActionGraphEditor && !IsTraining;
     public bool ShowQuickActionTools => _allowEditing && !IsOperatorView && !IsActionGraphEditor && !IsTraining;
@@ -109,11 +111,12 @@ public partial class TestViewModel
             if (GraphConnectionRequirements.RequiresStandConnection(graph) && !IsConnected)
                 throw new InvalidOperationException("Подключитесь к стенду для выполнения этой кнопки.");
             logger.Info(turnOff ? "Выключение начато." : "Действие начато.");
-            using var compiler = new GraphCompiler(_modbusService, logger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
+            using var compiler = new GraphCompiler(_modbusService, logger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null, LabelPrinter = ActionLabelPrinter };
             GraphCompiler.ValidateRunConnections(graph, RootGraph.Hardware, IsConnected ? SelectedPort : null);
             var compiled = compiler.Compile(graph);
             var context = new TestContext(_registerState) {
                 CancellationToken = token, IsConnected = IsConnected, ProfileName = action.Name, DeviceModel = RootGraph.DeviceModel,
+                LastTestLabel = _lastCompletedTest?.Label?.Copy(),
                 RegisterMonitor = _registerMonitor, RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),
                 ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),

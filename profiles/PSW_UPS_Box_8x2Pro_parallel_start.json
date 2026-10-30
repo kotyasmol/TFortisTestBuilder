@@ -3013,6 +3013,79 @@
           }
         ]
       }
+    },
+    {
+      "id": "b0c6bfd264f14358af020712c7038b44",
+      "name": "Повторить этикетку",
+      "color": "system",
+      "display": "Button",
+      "graph": {
+        "name": "Повтор этикетки",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "1",
+            "type": "Print Label (last test v1)",
+            "x": 320,
+            "y": 80,
+            "customName": "Повтор этикетки последнего теста",
+            "useLastTestLabel": true,
+            "printerName": "",
+            "copies": 1,
+            "failOnPrinterError": true
+          },
+          {
+            "id": "2",
+            "type": "End",
+            "x": 944,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "offGraph": {
+        "name": "Выключить",
+        "nodes": [
+          {
+            "id": "0",
+            "type": "Start",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "1",
+            "type": "End",
+            "x": 320,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          }
+        ]
+      }
     }
   ],
   "registerIndicators": [

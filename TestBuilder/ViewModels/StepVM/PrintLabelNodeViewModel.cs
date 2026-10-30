@@ -10,6 +10,31 @@ namespace TestBuilder.ViewModels.StepVM
 {
     public partial class PrintLabelNodeViewModel : NodeViewModel
     {
+        public string[] DataSources { get; } = { "Из переменных", "Ввести вручную", "Из последнего теста" };
+        public int SelectedDataSource
+        {
+            get => UseLastTestLabel ? 2 : UseManualSerialNumber ? 1 : 0;
+            set
+            {
+                if (value is < 0 or > 2) return;
+                UseLastTestLabel = value == 2;
+                UseManualSerialNumber = value == 1;
+                RefreshDataSource();
+            }
+        }
+        [ObservableProperty] private bool useLastTestLabel;
+        public bool IsNewLabelMode => !UseLastTestLabel;
+        public bool IsManualSerialMode => !UseLastTestLabel && UseManualSerialNumber;
+        partial void OnUseLastTestLabelChanged(bool value) => RefreshDataSource();
+        private void RefreshDataSource()
+        {
+            OnPropertyChanged(nameof(SelectedDataSource));
+            OnPropertyChanged(nameof(IsNewLabelMode));
+            OnPropertyChanged(nameof(IsManualSerialMode));
+            OnPropertyChanged(nameof(IsVariableSerialMode));
+            OnPropertyChanged(nameof(IsManualQtProMode));
+            OnPropertyChanged(nameof(IsVariableQtProMode));
+        }
         public string[] PrintFormats { get; } = { "ZPL · Изделие, MAC, SN", "EPL · Серийный номер" };
         public int SelectedPrintFormat
         {
@@ -90,17 +115,15 @@ namespace TestBuilder.ViewModels.StepVM
                 FailOnPrinterError,
                 printer ?? new WindowsRawLabelPrinter(),
                 30000,
-                LabelModel, LabelTemplate);
+                LabelModel, LabelTemplate, UseLastTestLabel);
 
-        public bool IsVariableSerialMode => !UseManualSerialNumber;
-        public bool IsManualQtProMode => UseManualSerialNumber && UseQtProZplFormat;
-        public bool IsVariableQtProMode => !UseManualSerialNumber && UseQtProZplFormat;
+        public bool IsVariableSerialMode => !UseLastTestLabel && !UseManualSerialNumber;
+        public bool IsManualQtProMode => IsManualSerialMode && UseQtProZplFormat;
+        public bool IsVariableQtProMode => IsVariableSerialMode && UseQtProZplFormat;
 
         partial void OnUseManualSerialNumberChanged(bool value)
         {
-            OnPropertyChanged(nameof(IsVariableSerialMode));
-            OnPropertyChanged(nameof(IsManualQtProMode));
-            OnPropertyChanged(nameof(IsVariableQtProMode));
+            RefreshDataSource();
         }
 
         partial void OnUseQtProZplFormatChanged(bool value)
@@ -118,6 +141,7 @@ namespace TestBuilder.ViewModels.StepVM
             SerialShortVariableName = SerialShortVariableName,
             MacVariableName = MacVariableName,
             UseManualSerialNumber = UseManualSerialNumber,
+            UseLastTestLabel = UseLastTestLabel,
             ManualSerialNumber = ManualSerialNumber,
             ManualMacAddress = ManualMacAddress,
             Copies = Copies,

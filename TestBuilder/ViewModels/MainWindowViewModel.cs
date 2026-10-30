@@ -91,7 +91,12 @@ namespace TestBuilder.ViewModels
                 () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,
                 () => TestVM.DeviceName, () => TestVM.AllProfiles, TestVM.RefreshProfiles);
             LabelPrintingVM.PropertyChanged += OnLabelPrintingChanged;
-            try { LabelPrintingVM.SetLastTest(_lastTestLabels.Load()); }
+            try
+            {
+                var lastTest = _lastTestLabels.Load();
+                TestVM.RestoreLastTest(lastTest);
+                LabelPrintingVM.SetLastTest(lastTest);
+            }
             catch (Exception ex) { TestVM.TestingLogger.Warning("Не удалось восстановить данные последнего теста: " + ex.Message); }
             TestVM.LastTestCompleted += OnLastTestCompleted;
 

@@ -526,7 +526,7 @@ public class ParallelGraphCompilationTests
         if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
-        Assert.Equal(file == ParallelProfile ? "Start (actions v1)" : "Start (connections v1)",
+        Assert.Equal(file == ParallelProfile ? "Start (ping v1)" : "Start (connections v1)",
             JsonNode.Parse(saved)!["nodes"]![0]!["type"]!.GetValue<string>());
         var loadedVm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(saved, loadedVm);
@@ -539,7 +539,11 @@ public class ParallelGraphCompilationTests
         Assert.Equal(2, loadedVm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Count(n => n.RunOnFailure));
         if (file == ParallelProfile)
         {
-            Assert.Equal(2, loadedVm.RootGraph.QuickActions.Count);
+            Assert.Equal(3, loadedVm.RootGraph.QuickActions.Count);
+            var reprint = Assert.Single(loadedVm.RootGraph.QuickActions, a => a.Name == "Повторить этикетку");
+            var label = Assert.Single(reprint.Graph.Nodes.OfType<PrintLabelNodeViewModel>());
+            Assert.True(label.UseLastTestLabel); Assert.Equal(1, label.Copies); Assert.Equal("", label.PrinterName);
+            Compile(reprint.Graph);
             foreach (var (name, slave, address) in new[] { ("AC1", 23, 1200), ("UPS / АКБ", 17, 1706) })
             {
                 var action = Assert.Single(loadedVm.RootGraph.QuickActions, a => a.Name == name);

@@ -215,6 +215,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
     public IReadOnlyList<GraphProfile> AllProfiles => _profileCatalog;
     public event Action<LastTestLabelSnapshot>? LastTestCompleted;
+    private LastTestLabelSnapshot? _lastCompletedTest;
+    internal void RestoreLastTest(LastTestLabelSnapshot? snapshot) => _lastCompletedTest = snapshot?.Copy();
 
     private string _profileSearch = string.Empty;
 
@@ -1214,6 +1216,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
                 ProfileName = profileName, DeviceModel = RootGraph.DeviceModel,
+                LastTestLabel = _lastCompletedTest?.Label?.Copy(),
                 ExecutionObserver = this,
                 WaitIfPausedAsync = WaitIfPausedAsync,
                 SelfTestPageState = SelfTestPageState,
@@ -1419,9 +1422,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (runFailure != null)
                 TestingLogger.Error(runFailure.LogMessage);
             if (!preparing && !partialRun && !IsTraining)
-                LastTestCompleted?.Invoke(new LastTestLabelSnapshot(DateTimeOffset.Now, profileName,
+            {
+                var snapshot = new LastTestLabelSnapshot(DateTimeOffset.Now, profileName,
                     context?.DeviceModel ?? RootGraph.DeviceModel ?? "", executionStatus,
-                    runFailure?.Summary ?? "", context?.LabelPrinting.Last));
+                    runFailure?.Summary ?? "", context?.LabelPrinting.Last);
+                RestoreLastTest(snapshot);
+                LastTestCompleted?.Invoke(snapshot);
+            }
             if (!IsTraining) LoggingService.Instance.StopFileLogForRun();
         }
     }

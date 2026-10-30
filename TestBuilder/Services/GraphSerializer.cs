@@ -62,7 +62,7 @@ namespace TestBuilder.Services
             CompareVariablesNodeViewModel => "Compare Variables",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
             BuildTestReportNodeViewModel => "Build Test Report",
-            PrintLabelNodeViewModel => "Print Label",
+            PrintLabelNodeViewModel p => p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
             SubtestNodeViewModel { FailureOrder: not null } => "Subtest (cleanup order v1)",
             SubtestNodeViewModel => "Subtest",
@@ -339,6 +339,7 @@ namespace TestBuilder.Services
                         break;
 
                     case PrintLabelNodeViewModel pl:
+                        n.UseLastTestLabel = pl.UseLastTestLabel ? true : null;
                         n.PrinterName = pl.PrinterName;
                         n.SerialVariableName = pl.SerialVariableName;
                         n.SerialShortVariableName = pl.SerialShortVariableName;
@@ -800,9 +801,10 @@ namespace TestBuilder.Services
                         IncludeAllVariables = n.IncludeAllVariables ?? false
                     },
 
-                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" => new PrintLabelNodeViewModel
+                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" or "Print Label (last test v1)" => new PrintLabelNodeViewModel
                     {
                         Location = location,
+                        UseLastTestLabel = n.UseLastTestLabel ?? (type == "Print Label (last test v1)"),
                         PrinterName = n.PrinterName ?? "TSC TE310",
                         SerialVariableName = n.SerialVariableName ?? "SerialNumber",
                         SerialShortVariableName = n.SerialShortVariableName ?? "SerialShort",

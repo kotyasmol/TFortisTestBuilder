@@ -43,6 +43,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _printerTimeoutMs;
         private readonly DeviceLabelModel _labelModel;
         private readonly LabelTemplateDefinition _template;
+        private readonly bool _useLastTestLabel;
         private string DeviceName => _template.Name;
         private int DeviceType => _template.DeviceCode;
         private int SerialOffset => _template.SerialOffset;
@@ -60,7 +61,7 @@ namespace TestBuilder.Domain.Steps
             bool useQtProZplFormat,
             bool failOnPrinterError,
             DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
-            LabelTemplateDefinition? template = null)
+            LabelTemplateDefinition? template = null, bool useLastTestLabel = false)
             : this(
                 logger,
                 printerName,
@@ -75,7 +76,7 @@ namespace TestBuilder.Domain.Steps
                 failOnPrinterError,
                 new WindowsRawLabelPrinter(),
                 DefaultPrinterTimeoutMs,
-                labelModel, template)
+                labelModel, template, useLastTestLabel)
         {
         }
 
@@ -94,7 +95,7 @@ namespace TestBuilder.Domain.Steps
             IRawLabelPrinter printer,
             int printerTimeoutMs,
             DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
-            LabelTemplateDefinition? template = null)
+            LabelTemplateDefinition? template = null, bool useLastTestLabel = false)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
@@ -111,7 +112,9 @@ namespace TestBuilder.Domain.Steps
             _manualSerialNumber = manualSerialNumber?.Trim() ?? string.Empty;
             _manualMacAddress = manualMacAddress?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
-            _template = (template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).Copy();
+            _useLastTestLabel = useLastTestLabel;
+            _template = (useLastTestLabel ? new LabelTemplateDefinition() :
+                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).Copy();
             _template.Validate();
             _useQtProZplFormat = _template.UseShortSerial;
             _failOnPrinterError = failOnPrinterError;
@@ -121,6 +124,27 @@ namespace TestBuilder.Domain.Steps
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_useLastTestLabel) return await ExecuteCoreAsync(context, cancellationToken);
+            var label = context.LastTestLabel?.Copy();
+            if (label == null)
+            {
+                ResetDiagnostics(context);
+                return Fail(context, 6, "В последнем полном тесте нет подготовленной этикетки для повтора.");
+            }
+            var printer = string.IsNullOrWhiteSpace(_printerName) ? label.PrinterName : _printerName;
+            _logger.Info($"Повтор этикетки последнего теста: {label.Template.Name}, SN {label.Serial}, MAC {label.Mac}.");
+            var step = new PrintLabelStep(_logger, printer, "", "", "", true, label.Serial, label.Mac,
+                _copies, label.Template.UseShortSerial, _failOnPrinterError, _printer, _printerTimeoutMs,
+                template: label.Template);
+            var result = await step.ExecuteCoreAsync(context, cancellationToken, preserveTemplateName: true);
+            context.SetVariable("PrintLabel.SerialSource", "LastTest");
+            return result;
+        }
+
+        private async Task<StepResult> ExecuteCoreAsync(TestContext context, CancellationToken cancellationToken,
+            bool preserveTemplateName = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ResetDiagnostics(context);
@@ -167,7 +191,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             LabelTemplateDefinition printTemplate;
-            try { printTemplate = LabelPrintContent.ForDevice(_template, context.DeviceModel); }
+            try { printTemplate = preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel); }
             catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
             string singleLabel;
             string language;

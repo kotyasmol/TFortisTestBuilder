@@ -32,7 +32,7 @@ public class ProfileCopyTests
         Assert.NotEqual(sourcePath, firstCopy.FilePath);
         Assert.Equal(source.DisplayName + " — копия", firstCopy.DisplayName);
         Assert.Equal(source.DeviceModel, firstCopy.DeviceModel);
-        Assert.Equal(2, vm.RootGraph.QuickActions.Count);
+        Assert.Equal(3, vm.RootGraph.QuickActions.Count);
         var copied = JsonNode.Parse(File.ReadAllText(firstCopy.FilePath))!;
         foreach (var key in new[] { "nodes", "connections", "hardware", "quickActions", "extensionData" })
             Assert.True(JsonNode.DeepEquals(original[key], copied[key]), key);
