@@ -741,10 +741,8 @@ namespace TestBuilder.Domain.Steps
                 ? uri.Scheme == Uri.UriSchemeHttps ? 443 : 80
                 : uri.Port;
 
-            var icmpProbe = ProbeIcmpAsync(uri.Host, timeout, cancellationToken);
-            var tcpProbe = ProbeTcpAsync(uri.Host, port, timeout, cancellationToken);
-            var results = await Task.WhenAll(icmpProbe, tcpProbe).ConfigureAwait(false);
-            return results.Any(result => result);
+            // An ICMP reply does not mean the HTTP server has started.
+            return await ProbeTcpAsync(uri.Host, port, timeout, cancellationToken).ConfigureAwait(false);
         }
 
         private static async Task<bool> ProbeIcmpAsync(
@@ -870,6 +868,7 @@ namespace TestBuilder.Domain.Steps
 
                 var pageSource = await ReadPageSourceLikeLegacyHelperAsync(
                     webSocketUrl,
+                    url,
                     timeoutCts.Token,
                     Stage);
                 Stage($"DOM received: {pageSource.Length} characters");
@@ -956,7 +955,9 @@ namespace TestBuilder.Domain.Steps
             startInfo.ArgumentList.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
             startInfo.ArgumentList.Add("--remote-debugging-port=" + debuggingPort);
             startInfo.ArgumentList.Add("--user-data-dir=" + userDataDir);
-            startInfo.ArgumentList.Add(url);
+            // Navigate explicitly after attaching CDP; initial about:blank must never
+            // satisfy readiness for the requested device page.
+            startInfo.ArgumentList.Add("about:blank");
             return startInfo;
         }
 
@@ -1054,56 +1055,80 @@ namespace TestBuilder.Domain.Steps
             return false;
         }
 
+        internal static bool IsRequestedDocument(string actualUrl, string requestedUrl)
+        {
+            if (!Uri.TryCreate(actualUrl, UriKind.Absolute, out var actual) ||
+                !Uri.TryCreate(requestedUrl, UriKind.Absolute, out var requested)) return false;
+            if (requested.Scheme == "data") return actual.Scheme == "data";
+            return actual.Scheme == requested.Scheme && actual.Host == requested.Host &&
+                actual.Port == requested.Port && actual.AbsolutePath == requested.AbsolutePath;
+        }
+
         private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
-            string webSocketUrl,
+            string webSocketUrl, string requestedUrl,
             CancellationToken cancellationToken,
             Action<string> reportStage)
         {
             using var socket = new ClientWebSocket();
             reportStage("connecting to DevTools WebSocket");
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
-            reportStage("initial document: " + await EvaluateStringAsync(socket, 900001,
-                "JSON.stringify({url:location.origin+location.pathname,state:document.readyState,length:document.documentElement.outerHTML.length})", cancellationToken));
-            reportStage("waiting for document.readyState=complete");
-
             var commandId = 1;
+            reportStage("navigating to requested document");
+            await SendDevToolsCommandAsync(socket, commandId, "Page.navigate",
+                new Dictionary<string, object> { ["url"] = requestedUrl }, cancellationToken);
+            var navigation = await ReceiveDevToolsResponseAsync(socket, commandId++, cancellationToken);
+            using (var response = JsonDocument.Parse(navigation))
+            {
+                if (response.RootElement.TryGetProperty("error", out var protocolError))
+                    throw new InvalidOperationException("Browser navigation failed: " + protocolError);
+                if (response.RootElement.TryGetProperty("result", out var result) &&
+                    result.TryGetProperty("errorText", out var errorText))
+                    throw new InvalidOperationException("Browser navigation failed: " + errorText.GetString());
+            }
+            reportStage("waiting for requested document.readyState=complete");
+            Stopwatch? settled = null;
+            string? lastState = null;
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    var readyState = await EvaluateStringAsync(
-                        socket,
-                        commandId++,
-                        "document.readyState",
+                    // Read URL/state/DOM atomically in the same document context. A completed
+                    // blank document or an in-flight redirect must not start the settle timer.
+                    var json = await EvaluateStringAsync(socket, commandId++,
+                        "JSON.stringify({url:location.href,state:document.readyState,html:document.documentElement?.outerHTML||'',status:performance.getEntriesByType('navigation')[0]?.responseStatus||0})",
                         cancellationToken);
-
-                    if (string.Equals(readyState, "complete", StringComparison.OrdinalIgnoreCase))
+                    using var document = JsonDocument.Parse(json);
+                    var root = document.RootElement;
+                    var actualUrl = root.GetProperty("url").GetString() ?? "";
+                    var ready = root.GetProperty("state").GetString();
+                    var html = root.GetProperty("html").GetString() ?? "";
+                    var status = root.GetProperty("status").GetInt32();
+                    var safeUrl = Uri.TryCreate(actualUrl, UriKind.Absolute, out var uri) && uri.Scheme != "data"
+                        ? uri.GetLeftPart(UriPartial.Path) : "data:document";
+                    var state = $"document url={safeUrl}, state={ready}, HTTP={status}, characters={html.Length}";
+                    if (state != lastState) { reportStage(state); lastState = state; }
+                    if (actualUrl.StartsWith("chrome-error:", StringComparison.OrdinalIgnoreCase))
+                        throw new IOException("Browser displayed a network error document.");
+                    if (IsRequestedDocument(actualUrl, requestedUrl) && ready == "complete")
                     {
-                        break;
+                        if (status >= 400) throw new IOException($"Device page returned HTTP {status}.");
+                        if (settled == null)
+                        {
+                            settled = Stopwatch.StartNew();
+                            reportStage($"requested page loaded; waiting {BrowserDomSettleDelayMs} ms before snapshot");
+                        }
+                        if (settled.ElapsedMilliseconds >= BrowserDomSettleDelayMs) return html;
                     }
+                    else settled = null;
                 }
                 catch (InvalidOperationException)
                 {
-                    // Selenium's GoToUrl also waits through redirects/navigation.
-                    // A CDP execution context can disappear briefly during that transition.
+                    // The old execution context disappears during navigation/redirects.
+                    settled = null;
                 }
-
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(250, cancellationToken);
             }
-
-            // Match the legacy helper: Selenium GoToUrl waits for page load,
-            // then the program sleeps for a full ten seconds before PageSource.
-            reportStage($"page loaded; waiting {BrowserDomSettleDelayMs} ms before snapshot");
-            await Task.Delay(BrowserDomSettleDelayMs, cancellationToken);
-
-            reportStage("snapshot document: " + await EvaluateStringAsync(socket, 900002,
-                "JSON.stringify({url:location.origin+location.pathname,state:document.readyState,length:document.documentElement.outerHTML.length})", cancellationToken));
-            reportStage("reading document.documentElement.outerHTML");
-            return await EvaluateStringAsync(
-                socket,
-                commandId,
-                "document.documentElement.outerHTML",
-                cancellationToken);
         }
 
         private static async Task<string> EvaluateStringAsync(

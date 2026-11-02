@@ -178,7 +178,7 @@ public class SelfTestCheckStepTests
     }
 
     [Fact]
-    public void SelfTestCheckStep_StartsBrowserOnRequestedUrlUsingNormalNetworkSettings()
+    public void SelfTestCheckStep_StartsBlankBrowserForExplicitNavigationUsingNormalNetworkSettings()
     {
         const string url =
             "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin";
@@ -189,12 +189,22 @@ public class SelfTestCheckStepTests
             debuggingPort: 9222,
             userDataDir: @"C:\Temp\TestBuilderHeadlessChrome_test");
 
-        Assert.Equal(url, startInfo.ArgumentList[^1]);
-        Assert.DoesNotContain("about:blank", startInfo.ArgumentList);
+        Assert.Equal("about:blank", startInfo.ArgumentList[^1]);
+        Assert.DoesNotContain(url, startInfo.ArgumentList);
         Assert.DoesNotContain("--no-proxy-server", startInfo.ArgumentList);
         Assert.DoesNotContain("--no-sandbox", startInfo.ArgumentList);
         Assert.DoesNotContain("--remote-allow-origins=*", startInfo.ArgumentList);
     }
+
+    [Theory]
+    [InlineData("about:blank", false)]
+    [InlineData("chrome-error://chromewebdata/", false)]
+    [InlineData("http://192.168.0.1/login", false)]
+    [InlineData("http://192.168.0.2/test.shtml", false)]
+    [InlineData("http://192.168.0.1/test.shtml", true)]
+    [InlineData("http://192.168.0.1/test.shtml?session=redirected", true)]
+    public void BrowserReadiness_RequiresRequestedDocument(string url, bool expected)
+        => Assert.Equal(expected, SelfTestCheckStep.IsRequestedDocument(url, "http://192.168.0.1/test.shtml"));
 
     [Fact]
     public async Task SelfTestCheckStep_DoesNotStartBrowserIfProbeExhaustedDeadline()
