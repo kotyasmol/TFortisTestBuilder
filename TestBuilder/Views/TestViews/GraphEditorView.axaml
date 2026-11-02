@@ -37,6 +37,7 @@
       </Style>
     </ControlTheme>
     <converters:RussianUiTextConverter x:Key="RussianUiText" />
+    <converters:ServerTestTypeConverter x:Key="ServerTestType" />
     <DataTemplate x:Key="RussianOptionTemplate" x:CompileBindings="False">
       <TextBlock Text="{Binding Converter={StaticResource RussianUiText}}" TextWrapping="Wrap" />
     </DataTemplate>
@@ -1571,7 +1572,7 @@
                   <StackPanel Margin="12" Spacing="8" Width="340">
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource RussianUiText}, ConverterParameter=testType, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource ServerTestType}, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включать все переменные" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>

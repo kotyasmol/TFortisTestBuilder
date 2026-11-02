@@ -1,5 +1,6 @@
 """Release profile selection can be checked without publishing or hardware."""
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +10,22 @@ import package_windows_release as release
 
 
 class ReleaseProfilesTests(unittest.TestCase):
+    def test_failed_integrity_check_prevents_publish(self):
+        with patch.object(release.subprocess, "run", side_effect=subprocess.CalledProcessError(1, "dotnet test")) as run:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release.publish_checked_bundle(Path("unused-output"), "1.2.3")
+        self.assertEqual(1, run.call_count)
+        self.assertEqual(["dotnet", "test"], run.call_args.args[0][:2])
+        self.assertTrue(run.call_args.kwargs["check"])
+
+    def test_publish_follows_fresh_integrity_check(self):
+        with patch.object(release.subprocess, "run") as run:
+            release.publish_checked_bundle(Path("unused-output"), "1.2.3")
+        self.assertEqual(["test", "publish"], [c.args[0][1] for c in run.call_args_list])
+        self.assertNotIn("--no-build", run.call_args_list[0].args[0])
+        self.assertIn(release.PROFILE_UI_TEST_FILTER, run.call_args_list[0].args[0])
+        self.assertTrue(all(c.kwargs["check"] for c in run.call_args_list))
+
     def test_selection_is_explicit_and_preserves_requested_order(self):
         names = ["PSW_UPS_Box_8x2Pro_parallel_start.json", "PSW_2G6F_plus_full_algorithm.json",
                  "RTL_SW_board.json", "RTL_POE_board.json"]

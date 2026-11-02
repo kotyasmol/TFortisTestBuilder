@@ -24,6 +24,8 @@ public class RussianInterfaceTests
     [InlineData("Регулярное выражение", null)]
     [InlineData("Зелёный", null)]
     [InlineData("Производственная", "unknownParameter")]
+    [InlineData("Производственная", "testType")]
+    [InlineData("Программный генератор трафика", "editableText")]
     public void DisplayConverterCannotOverwriteSourceKeys(string label, string? parameter)
     {
         Assert.Same(BindingOperations.DoNothing, new RussianUiTextConverter().ConvertBack(
@@ -31,14 +33,18 @@ public class RussianInterfaceTests
     }
 
     [Theory]
-    [InlineData("Производственная", "testType", "production")]
-    [InlineData("Ремонтная", "testType", "repair")]
-    [InlineData("custom-server-code", "testType", "custom-server-code")]
-    [InlineData("Напряжение канала A", "editableText", "Напряжение канала A")]
-    public void ExplicitlyEditableLabelsStillWriteBack(string text, string parameter, string expected)
+    [InlineData("Производственная", "production")]
+    [InlineData("Ремонтная", "repair")]
+    [InlineData("custom-server-code", "custom-server-code")]
+    [InlineData("SoftwarePcap", "SoftwarePcap")]
+    [InlineData("Json", "Json")]
+    [InlineData("green", "green")]
+    public void ServerTestTypeMappingPreservesCustomCodes(string text, string expected)
     {
-        Assert.Equal(expected, new RussianUiTextConverter().ConvertBack(
-            text, typeof(string), parameter, System.Globalization.CultureInfo.InvariantCulture));
+        var converter = new ServerTestTypeConverter();
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        Assert.Equal(expected, converter.ConvertBack(text, typeof(string), null, culture));
+        Assert.Equal(text, converter.Convert(expected, typeof(string), null, culture));
     }
 
     [Fact]

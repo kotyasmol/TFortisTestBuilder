@@ -14,6 +14,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging" / "windows"
+PROFILE_UI_TEST_FILTER = (
+    "FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
+    "FullyQualifiedName~DataTestModeTests"
+)
+
+
+def publish_checked_bundle(bundle, version):
+    # Always build and run the regression suite against this working tree before
+    # publishing. No --no-build or skip flag: a stale green result is not a gate.
+    subprocess.run(["dotnet", "test", "TestBuilder.Tests/TestBuilder.Tests.csproj",
+                    "-c", "Release", "--filter", PROFILE_UI_TEST_FILTER], cwd=ROOT, check=True)
+    subprocess.run(["dotnet", "publish", "TestBuilder/TestBuilder.csproj", "-c", "Release",
+                    "-r", "win-x64", "--self-contained", "true", "-p:PublishTrimmed=false",
+                    f"-p:Version={version}", "-p:DebugSymbols=false", "-p:DebugType=None",
+                    "-o", str(bundle)], cwd=ROOT, check=True)
 
 
 def sha256(path):
@@ -186,10 +201,7 @@ def main():
     dirty = bool(git("status", "--porcelain"))
     with tempfile.TemporaryDirectory(prefix="release-build-", dir=output) as temporary:
         bundle = Path(temporary) / name
-        subprocess.run(["dotnet", "publish", "TestBuilder/TestBuilder.csproj", "-c", "Release",
-                        "-r", "win-x64", "--self-contained", "true", "-p:PublishTrimmed=false",
-                        f"-p:Version={version}",
-                        "-p:DebugSymbols=false", "-p:DebugType=None", "-o", str(bundle)], cwd=ROOT, check=True)
+        publish_checked_bundle(bundle, version)
         stage_profiles(bundle, profiles)
         browser_root = bundle / "Browser"
         browser_root.mkdir()
@@ -235,6 +247,7 @@ def main():
                     "sourceCommit": commit, "sourceDirty": dirty,
                     "builtAtUtc": datetime.now(timezone.utc).isoformat(), "browser": browser,
                     "profiles": [p.name for p in profiles], "nugetPackageCount": len(packages),
+                    "profileUiIntegrityChecks": {"passed": True, "filter": PROFILE_UI_TEST_FILTER},
                     "externalFirmware": firmware_references(profiles),
                     "externalRequirements": ["Npcap driver", "USB/COM adapter driver if needed",
                         "Configured printer queue", "Bench network configuration", "Launcher session/server access"],

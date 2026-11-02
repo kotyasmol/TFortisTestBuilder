@@ -357,12 +357,6 @@ public static class RussianUiText
         var key = value?.ToString() ?? string.Empty;
         return Labels.TryGetValue(key, out var label) ? label : key;
     }
-
-    // Used by editable server test-type fields; custom codes pass through unchanged.
-    public static string TestTypeKey(string text) => text switch
-    {
-        "Производственная" => "production", "Ремонтная" => "repair", _ => text
-    };
 }
 
 public static class RussianUiOptions

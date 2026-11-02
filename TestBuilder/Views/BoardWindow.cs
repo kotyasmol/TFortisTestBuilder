@@ -4,7 +4,6 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
-using TestBuilder.Converters;
 using TestBuilder.Presentation;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
@@ -51,7 +50,17 @@ public sealed class BoardWindow : Window
             _regions.ScrollIntoView(region, null);
         };
         foreach (var name in editing ? new[] { "Id", "Name", "X", "Y", "Width", "Height" } : new[] { "Id", "Name" })
-            _regions.Columns.Add(new DataGridTextColumn { Header = name switch { "Id" => "Код", "Name" => "Название", "Width" => "Ширина", "Height" => "Высота", _ => name }, Binding = new Binding(name) { Mode = BindingMode.TwoWay, Converter = name == "Name" ? new RussianUiTextConverter() : null, ConverterParameter = "editableText", StringFormat = name is "Id" or "Name" ? null : "{0:0.####}" }, Width = editing ? new DataGridLength(name is "Id" or "Name" ? 115 : 65) : new DataGridLength(1, DataGridLengthUnitType.Star), MinWidth = name is "Id" or "Name" ? 95 : 58 });
+        {
+            DataGridTextColumn column = name == "Name" ? new TranslatedNameColumn()
+                : new DataGridTextColumn { Binding = new Binding(name) {
+                    Mode = BindingMode.TwoWay, StringFormat = name == "Id" ? null : "{0:0.####}"
+                } };
+            column.Header = name switch { "Id" => "Код", "Name" => "Название", "Width" => "Ширина", "Height" => "Высота", _ => name };
+            column.Width = editing ? new DataGridLength(name is "Id" or "Name" ? 115 : 65)
+                : new DataGridLength(1, DataGridLengthUnitType.Star);
+            column.MinWidth = name is "Id" or "Name" ? 95 : 58;
+            _regions.Columns.Add(column);
+        }
         _regions.IsReadOnly = !editing;
         if (!editing) _regions.Columns.Add(new DataGridTextColumn { Header = "Результат", Binding = new Binding("Id") { Converter = new FuncValueConverter<string, string>(id => vm.GetBoardRegionState(id ?? "")) }, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _regions.SelectionChanged += (_, _) => { _canvas.SelectedId = (_regions.SelectedItem as BoardRegion)?.Id; _canvas.InvalidateVisual(); };
