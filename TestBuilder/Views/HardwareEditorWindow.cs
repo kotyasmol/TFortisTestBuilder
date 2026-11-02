@@ -298,7 +298,7 @@ public sealed partial class HardwareEditorWindow : Window
             })
         });
     }
-    private static void AddColumn(DataGrid grid, string title, string path) => grid.Columns.Add(new DataGridTextColumn { Header = title, Binding = new Binding(path) { Mode = BindingMode.TwoWay, Converter = path == "Name" ? new RussianUiTextConverter() : null }, Width = path == "Name" ? new DataGridLength(1, DataGridLengthUnitType.Star) : new DataGridLength(path == "Category" ? 110 : path == "Unit" ? 65 : 75), MinWidth = path == "Name" ? 180 : 60 });
+    private static void AddColumn(DataGrid grid, string title, string path) => grid.Columns.Add(new DataGridTextColumn { Header = title, Binding = new Binding(path) { Mode = BindingMode.TwoWay, Converter = path == "Name" ? new RussianUiTextConverter() : null, ConverterParameter = "editableText" }, Width = path == "Name" ? new DataGridLength(1, DataGridLengthUnitType.Star) : new DataGridLength(path == "Category" ? 110 : path == "Unit" ? 65 : 75), MinWidth = path == "Name" ? 180 : 60 });
     private static void Field(Panel panel, string name, Control input) { input.MinWidth = 85; var stack = new StackPanel { Margin = new Thickness(0, 0, 10, 0) }; stack.Children.Add(new TextBlock { Text = name }); stack.Children.Add(input); panel.Children.Add(stack); }
     private static Button Button(string title, Action action) { var b = new Button { Content = title, Margin = new Thickness(0, 4, 8, 4) }; b.Click += (_, _) => action(); return b; }
 }

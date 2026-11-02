@@ -1441,7 +1441,7 @@
                   <StackPanel Margin="12" Spacing="8" Width="370">
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Режим:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
-                      <TextBox Grid.Column="1" Text="{Binding Mode, Converter={StaticResource RussianUiText}}" IsReadOnly="True" FontSize="{StaticResource FontCaption}" />
+                      <TextBox Grid.Column="1" Text="{Binding Mode, Mode=OneWay, Converter={StaticResource RussianUiText}}" IsReadOnly="True" FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <Grid ColumnDefinitions="128,*">
                       <TextBlock Grid.Column="0" Text="Размер пакета, байт:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />

@@ -76,7 +76,7 @@ namespace TestBuilder.Domain.Steps
             bool allowGigabit = false)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _mode = string.IsNullOrWhiteSpace(mode) ? "SoftwarePcap" : mode.Trim();
+            _mode = NormalizeMode(mode);
             _expectedPackets = Math.Max(1, expectedPackets);
             _packetSizeBytes = Math.Max(MinEthernetFrameLength, packetSizeBytes);
             _udpPort = udpPort <= 0 ? 43962 : udpPort;
@@ -1090,6 +1090,16 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.SendEngine", result.SendEngine);
             context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
             context.SetVariable($"{prefix}.Error", result.Error);
+        }
+
+        public static string NormalizeMode(string? mode)
+        {
+            if (string.IsNullOrWhiteSpace(mode)) return "SoftwarePcap";
+            var value = mode.Trim();
+            // Compatibility for profiles saved by the former TwoWay display
+            // binding. Keep this historical literal independent of future UI copy.
+            return IsSoftwarePcapMode(value) || value.Equals("Программный генератор трафика", StringComparison.OrdinalIgnoreCase)
+                ? "SoftwarePcap" : value;
         }
 
         private static bool IsSoftwarePcapMode(string mode)

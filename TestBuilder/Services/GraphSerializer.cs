@@ -277,7 +277,7 @@ namespace TestBuilder.Services
                         break;
 
                     case RunDataTestNodeViewModel d:
-                        n.Mode = d.Mode;
+                        n.Mode = RunDataTestStep.NormalizeMode(d.Mode);
                         n.ExpectedPackets = d.ExpectedPackets;
                         n.PacketSizeBytes = d.PacketSizeBytes;
                         n.UdpPort = d.UdpPort;
@@ -725,7 +725,7 @@ namespace TestBuilder.Services
                     "Run Data Test" or "RUN_DATA_TEST" or "Тест передачи данных" => new RunDataTestNodeViewModel
                     {
                         Location = location,
-                        Mode = n.Mode ?? "SoftwarePcap",
+                        Mode = RunDataTestStep.NormalizeMode(n.Mode),
                         ExpectedPackets = n.ExpectedPackets ?? 10000,
                         PacketSizeBytes = n.PacketSizeBytes ?? 1514,
                         UdpPort = n.UdpPort ?? 43962,

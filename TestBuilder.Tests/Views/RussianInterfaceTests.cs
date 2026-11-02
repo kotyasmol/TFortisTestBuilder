@@ -1,10 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Converters;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
@@ -17,6 +19,67 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class RussianInterfaceTests
 {
+    [Theory]
+    [InlineData("Программный генератор трафика", null)]
+    [InlineData("Регулярное выражение", null)]
+    [InlineData("Зелёный", null)]
+    [InlineData("Производственная", "unknownParameter")]
+    public void DisplayConverterCannotOverwriteSourceKeys(string label, string? parameter)
+    {
+        Assert.Same(BindingOperations.DoNothing, new RussianUiTextConverter().ConvertBack(
+            label, typeof(string), parameter, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Theory]
+    [InlineData("Производственная", "testType", "production")]
+    [InlineData("Ремонтная", "testType", "repair")]
+    [InlineData("custom-server-code", "testType", "custom-server-code")]
+    [InlineData("Напряжение канала A", "editableText", "Напряжение канала A")]
+    public void ExplicitlyEditableLabelsStillWriteBack(string text, string parameter, string expected)
+    {
+        Assert.Equal(expected, new RussianUiTextConverter().ConvertBack(
+            text, typeof(string), parameter, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task OpeningAndSavingDataTest_PreservesRuntimeModeAndDisabledPairs()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            vm.Nodes.Clear();
+            vm.Nodes.Add(new RunDataTestNodeViewModel {
+                PortsText = "Медь,192.168.0.2,192.168.0.3,100",
+                DisabledPortsText = "SFP,192.168.0.8,192.168.0.9,1000"
+            });
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 1250, Height = 1000, Content = view };
+            try
+            {
+                window.Show();
+                for (var i = 0; i < 3; i++)
+                {
+                    Layout(window);
+                    var node = vm.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+                    var display = view.GetVisualDescendants().OfType<TextBox>()
+                        .Single(t => ReferenceEquals(t.DataContext, node) && t.IsReadOnly);
+                    Assert.Equal("Программный генератор трафика", display.Text);
+                    Assert.Equal("SoftwarePcap", node.Mode);
+                    var saved = GraphSerializer.Serialize(vm, "DataTest round trip");
+                    using var json = System.Text.Json.JsonDocument.Parse(saved);
+                    Assert.Equal("SoftwarePcap", json.RootElement.GetProperty("nodes")[0].GetProperty("mode").GetString());
+                    GraphSerializer.Deserialize(saved, vm);
+                    var restored = vm.Nodes.OfType<RunDataTestNodeViewModel>().Single();
+                    Assert.Equal("Медь,192.168.0.2,192.168.0.3,100", restored.PortsText);
+                    Assert.Equal("SFP,192.168.0.8,192.168.0.9,1000", restored.DisabledPortsText);
+                }
+            }
+            finally { window.Close(); }
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task PaletteRendersRussianNames_AndAddingFromPaletteKeepsLegacyIdentifiers()
     {
