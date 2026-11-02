@@ -30,6 +30,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="TestBuilder.Tests" />
+        <InternalsVisibleTo Include="SelftestProbe" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1062,6 +1062,8 @@ namespace TestBuilder.Domain.Steps
             using var socket = new ClientWebSocket();
             reportStage("connecting to DevTools WebSocket");
             await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+            reportStage("initial document: " + await EvaluateStringAsync(socket, 900001,
+                "JSON.stringify({url:location.origin+location.pathname,state:document.readyState,length:document.documentElement.outerHTML.length})", cancellationToken));
             reportStage("waiting for document.readyState=complete");
 
             var commandId = 1;
@@ -1094,6 +1096,8 @@ namespace TestBuilder.Domain.Steps
             reportStage($"page loaded; waiting {BrowserDomSettleDelayMs} ms before snapshot");
             await Task.Delay(BrowserDomSettleDelayMs, cancellationToken);
 
+            reportStage("snapshot document: " + await EvaluateStringAsync(socket, 900002,
+                "JSON.stringify({url:location.origin+location.pathname,state:document.readyState,length:document.documentElement.outerHTML.length})", cancellationToken));
             reportStage("reading document.documentElement.outerHTML");
             return await EvaluateStringAsync(
                 socket,
