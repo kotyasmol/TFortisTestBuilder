@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace TestBuilder.Services;
 
@@ -8,6 +10,7 @@ public sealed class LauncherOptions
 {
     public string SessionId { get; private init; } = string.Empty;
     public string UserName { get; private init; } = string.Empty;
+    public int? LauncherHelpType { get; private init; }
     public string Error { get; private init; } = string.Empty;
     public bool IsValid => Error.Length == 0;
 
@@ -30,8 +33,18 @@ public sealed class LauncherOptions
                 return Invalid("Неизвестный параметр запуска. Используйте --session и --user.");
             positional.Add(argument);
         }
-        if (positional.Count > 2 || (positional.Count > 0 && (session != null || user != null)))
+        if (positional.Count > 0 && (session != null || user != null))
             return Invalid("Укажите сессию и имя двумя аргументами либо через --session и --user.");
+        int? helpType = null;
+        if (positional.Count >= 3)
+        {
+            // Stand_Launcher.StartStand concatenates session, user and HelpTypeInLauncher
+            // with spaces. Windows also splits an unquoted display name into words.
+            if (!int.TryParse(positional[^1], NumberStyles.None, CultureInfo.InvariantCulture, out var value))
+                return Invalid("Некорректный код справки в параметрах лаунчера.");
+            helpType = value;
+            user = string.Join(" ", positional.Skip(1).Take(positional.Count - 2));
+        }
         session ??= positional.Count > 0 ? positional[0] : string.Empty;
         user ??= positional.Count > 1 ? positional[1] : string.Empty;
         // The legacy protocol embeds the session in a cookie and in a line-based report.
@@ -40,7 +53,7 @@ public sealed class LauncherOptions
                 return Invalid("Идентификатор сессии содержит недопустимые символы.");
         foreach (var ch in user)
             if (char.IsControl(ch)) return Invalid("Имя пользователя содержит недопустимые символы.");
-        return new LauncherOptions { SessionId = session, UserName = user };
+        return new LauncherOptions { SessionId = session, UserName = user, LauncherHelpType = helpType };
     }
 
     private static LauncherOptions Invalid(string message) => new() { Error = message };

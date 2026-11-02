@@ -88,6 +88,28 @@ def firmware_references(profiles):
     return references
 
 
+def select_profiles(names=None):
+    available = {p.name: p for p in sorted((ROOT / "profiles").glob("*.json"))}
+    if names is None:
+        return list(available.values())
+    if not names or len(set(names)) != len(names):
+        raise ValueError("Select at least one profile; duplicate names are not allowed")
+    missing = [name for name in names if name not in available]
+    if missing:
+        raise ValueError(f"Unknown profile(s): {', '.join(missing)}")
+    return [available[name] for name in names]
+
+
+def stage_profiles(bundle, profiles):
+    # Only filter the fresh publish output. Repository profiles and catalog stay intact.
+    selected = {p.name for p in profiles}
+    for path in (bundle / "profiles").glob("*.json"):
+        if path.name not in selected:
+            path.unlink()
+    for source in profiles:
+        shutil.copy2(source, bundle / "profiles" / source.name)
+
+
 def validate_bundle(bundle, profiles):
     required = ["TestBuilder.exe", "TestBuilder.dll", "TestBuilder.deps.json", "coreclr.dll",
                 "hostfxr.dll", "hostpolicy.dll", "System.Private.CoreLib.dll", "System.IO.Ports.dll",
@@ -102,7 +124,7 @@ def validate_bundle(bundle, profiles):
         raise RuntimeError("The publish output is not self-contained")
     actual = sorted(p.name for p in (bundle / "profiles").glob("*.json"))
     if actual != sorted(p.name for p in profiles):
-        raise RuntimeError("Profile inventory does not match the repository")
+        raise RuntimeError("Profile inventory does not match the selected release profiles")
     for profile in profiles:
         if sha256(profile) != sha256(bundle / "profiles" / profile.name):
             raise RuntimeError(f"Profile content changed: {profile.name}")
@@ -126,7 +148,10 @@ def main():
     browser_input.add_argument("--browser-bundle", type=Path, help="Previous local release with a verified browser manifest")
     parser.add_argument("--version", help="Release version; defaults to the project version")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts")
+    parser.add_argument("--profile", action="append", dest="profiles", metavar="FILENAME",
+                        help="Include this profile from profiles/; repeat to select a release subset (default: all)")
     args = parser.parse_args()
+    profiles = select_profiles(args.profiles)
     browser = json.loads((PACKAGING / "browser.json").read_text())
     if args.browser_zip and sha256(args.browser_zip) != browser["sha256"]:
         raise RuntimeError("Browser archive SHA-256 does not match packaging/windows/browser.json")
@@ -165,6 +190,7 @@ def main():
                         "-r", "win-x64", "--self-contained", "true", "-p:PublishTrimmed=false",
                         f"-p:Version={version}",
                         "-p:DebugSymbols=false", "-p:DebugType=None", "-o", str(bundle)], cwd=ROOT, check=True)
+        stage_profiles(bundle, profiles)
         browser_root = bundle / "Browser"
         browser_root.mkdir()
         if args.browser_zip:
@@ -182,6 +208,12 @@ def main():
         for filename in ("Start-TestBuilder.cmd", "Check-Installation.cmd", "Check-Installation.ps1", "README-FIRST.txt"):
             encoding = "utf-8-sig" if filename.endswith(".ps1") else "utf-8"
             text = (PACKAGING / filename).read_text(encoding="utf-8-sig")
+            if filename == "README-FIRST.txt":
+                descriptions = []
+                for profile in profiles:
+                    data = json.loads(profile.read_text(encoding="utf-8-sig"))
+                    descriptions.append(f"  - {data.get('deviceModel', profile.stem)}: {data.get('configurationName', profile.stem)}")
+                text = text.replace("{{PROFILE_LIST}}", f"• Профилей в комплекте: {len(profiles)}.\n" + "\n".join(descriptions))
             (bundle / filename).write_bytes(text.replace("\r\n", "\n").replace("\n", "\r\n").encode(encoding))
         # Ship tracked documentation only, never local logs, credentials or build scratch files.
         for relative in git("ls-files", "-z", "docs").split("\0"):
@@ -196,7 +228,6 @@ def main():
             "graphsFolder": "", "serverBaseUrl": "https://iccid.fort-telecom.ru", "standId": "тест",
             "theme": "Light", "engineerMode": False, "enableFileLogging": True,
             "logFolder": "", "dataTestAdapterIds": {}})
-        profiles = sorted((ROOT / "profiles").glob("*.json"))
         frameworks = validate_bundle(bundle, profiles)
         packages = collect_licenses(bundle)
         manifest = {"version": version, "runtime": "win-x64", "configuration": "Release",

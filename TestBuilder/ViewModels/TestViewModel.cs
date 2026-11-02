@@ -268,7 +268,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 if (_profileLoadError.Length == 0)
                 {
                     if (reconnect)
-                        await ValidateConnectedProfileAsync();
+                        await EnsureConnectedProfileAsync();
                     else StatusMessage = GraphConnectionRequirements.RequiresStandConnection(RootGraph)
                         ? "Профиль выбран. Подключите стенд." : "Профиль выбран.";
                 }
@@ -886,8 +886,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             else
             {
                 await ConnectAsync();
-                if (IsConnected && _currentProfilePath != null && _profileLoadError.Length == 0)
-                    await ValidateConnectedProfileAsync();
             }
         }
         catch (Exception ex)
@@ -910,7 +908,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     internal Func<string[]> AvailableStandPorts { get; set; } = SerialPort.GetPortNames;
 
-    private async Task ConnectAsync()
+    private async Task ConnectAsync(string? rejectedPort = null)
     {
         ResetProfilePreparation();
         IsMonitoringActive = false;
@@ -919,12 +917,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _slaveManager.Slaves.Clear();
         SlaveRegistry.Instance.SyncSlaves(_slaveManager.Slaves);
         var settings = AppSettings.Instance.Discovery;
-        foreach (var port in GetStandPortCandidates(null, AvailableStandPorts(), AppSettings.Instance.StandPort))
+        var automatic = string.IsNullOrWhiteSpace(AppSettings.Instance.StandPort);
+        var validateProfile = _currentProfilePath != null && _profileLoadError.Length == 0;
+        foreach (var port in GetStandPortCandidates(validateProfile ? RootGraph.Hardware : null,
+                     AvailableStandPorts(), AppSettings.Instance.StandPort)
+                     .Where(port => !string.Equals(port, rejectedPort, StringComparison.OrdinalIgnoreCase)))
         {
             if (!await _modbusService.ConnectAsync(port, settings.BaudRate, settings.Parity,
                     settings.DataBits, settings.StopBits))
             {
-                ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), true);
+                ReportPortSearchFailure(port, new IOException(_modbusService.LastError ?? "Порт недоступен"), automatic);
                 continue;
             }
             SelectedPort = port;
@@ -933,13 +935,26 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             SlaveRegistry.Instance.NotifyConnected(true);
             StatusMessage = "COM-порт открыт. Выберите профиль.";
             TestingLogger.Info($"Открыт COM-порт {port}.");
-            return;
+            if (!validateProfile || await ValidateConnectedProfileAsync(automatic)) return;
+            if (!automatic) return;
+            await DisconnectAsync();
         }
-        StatusMessage = "Нет доступного COM-порта.";
+        StatusMessage = validateProfile ? "Стенд для выбранного профиля не найден на доступных COM-портах." : "Нет доступного COM-порта.";
         TestingLogger.Error(StatusMessage);
     }
 
-    private async Task<bool> ValidateConnectedProfileAsync()
+    private async Task<bool> EnsureConnectedProfileAsync()
+    {
+        var automatic = string.IsNullOrWhiteSpace(AppSettings.Instance.StandPort);
+        if (await ValidateConnectedProfileAsync(automatic)) return true;
+        if (!automatic) return false;
+        var rejected = SelectedPort;
+        await DisconnectAsync();
+        await ConnectAsync(rejected);
+        return IsConnected && (!ProfileRequiresHardware || IsMonitoringActive);
+    }
+
+    private async Task<bool> ValidateConnectedProfileAsync(bool automaticSearch = false)
     {
         ResetProfilePreparation();
         IsMonitoringActive = false;
@@ -963,7 +978,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             SlaveRegistry.Instance.NotifyConnected(IsConnected);
             IsMonitoringActive = false;
             StatusMessage = "Оборудование не соответствует профилю. Подробности в журнале.";
-            TestingLogger.Error($"Проверка оборудования на {SelectedPort}: {ex.Message}");
+            if (automaticSearch) ReportPortSearchFailure(SelectedPort, ex, true);
+            else TestingLogger.Error($"Проверка оборудования на {SelectedPort}: {ex.Message}");
             return false;
         }
     }

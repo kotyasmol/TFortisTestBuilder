@@ -75,7 +75,7 @@ public class FullProfileSerializationTests
     }
 
     [Fact]
-    public void StandProfileTestsEightCopperLinesAndKeepsSfpDisabledAfterRoundTrip()
+    public void StandProfileTestsEightCopperLinesAndBothSfpPortsAfterRoundTrip()
     {
         using var profile = ReadProfile("PSW_UPS_Box_8x2Pro_parallel_start.json");
         using var modbus = new ModbusService();
@@ -91,10 +91,18 @@ public class FullProfileSerializationTests
         Assert.Contains("Медь 4,192.168.0.10,192.168.0.11,100", pairs);
         Assert.DoesNotContain("192.168.0.8,", copper.PortsText);
         var sfp = subtest.BodyGraph.Nodes.OfType<SubtestNodeViewModel>().Single();
-        Assert.False(sfp.IsEnabled);
+        Assert.True(sfp.IsEnabled);
+        Assert.True(sfp.StopOnError);
         var gigabit = sfp.BodyGraph.Nodes.OfType<RunDataTestNodeViewModel>().Single();
         Assert.True(gigabit.AllowGigabit);
         Assert.Equal("SFP,192.168.0.8,192.168.0.9,1000", gigabit.PortsText);
+        Assert.True(gigabit.Bidirectional);
+        Assert.True(gigabit.FailOnError);
+        var waits = AllNodes(profile.RootElement).Where(n => n.GetProperty("type").GetString() == "Selftest Check")
+            .Select(n => n.GetProperty("timeoutMs").GetInt32()).ToArray();
+        Assert.Equal(3, waits.Count(t => t == 250000));
+        Assert.DoesNotContain(300000, waits);
+        Assert.Contains(subtest.BodyGraph.Connections, c => ReferenceEquals(c.Source.Parent, copper) && ReferenceEquals(c.Target.Parent, sfp));
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
     }
 

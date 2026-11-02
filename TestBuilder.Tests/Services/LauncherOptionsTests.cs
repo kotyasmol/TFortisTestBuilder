@@ -15,6 +15,29 @@ public class LauncherOptionsTests
         Assert.Equal("Тестовый оператор", options.UserName);
     }
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("46")]
+    public void CorporateLauncher_PassesSessionUserAndHelpType(string helpType)
+    {
+        var options = LauncherOptions.Parse(new[] { "test-session-42", "operator", helpType });
+        Assert.True(options.IsValid);
+        Assert.Equal("test-session-42", options.SessionId);
+        Assert.Equal("operator", options.UserName);
+        Assert.Equal(int.Parse(helpType), options.LauncherHelpType);
+    }
+
+    [Fact]
+    public void CorporateLauncher_UnquotedDisplayName_KeepsAllWordsWithoutHelpType()
+    {
+        var options = LauncherOptions.Parse(new[] { "test-session-42", "Тестовый", "оператор", "46" });
+        Assert.True(options.IsValid);
+        Assert.Equal("Тестовый оператор", options.UserName);
+        Assert.Equal(46, options.LauncherHelpType);
+        Assert.False(LauncherOptions.Parse(new[] { "session", "operator", "not-a-help-code" }).IsValid);
+        Assert.False(LauncherOptions.Parse(new[] { "session;bad", "operator", "46" }).IsValid);
+    }
+
     [Fact]
     public void NamedArguments_DoNotBecomeSessionAndName()
     {

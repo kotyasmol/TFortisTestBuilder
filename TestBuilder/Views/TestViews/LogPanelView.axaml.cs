@@ -26,13 +26,23 @@ public partial class LogPanelView : UserControl, IDisposable
     public LogPanelView()
     {
         InitializeComponent();
-        LogList.ItemsSource = _historySnapshot;
+        ShowLiveEntries();
         LogSelection.Enable(LogList);
         LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
         LogList.AddHandler(PointerWheelChangedEvent, OnLogWheel, RoutingStrategies.Tunnel);
         LogList.AddHandler(PointerPressedEvent, OnLogPointerPressed, RoutingStrategies.Tunnel);
         LogList.AddHandler(PointerReleasedEvent, OnLogPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
         LogList.AddHandler(KeyDownEvent, OnLogKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (Following)
+        {
+            ShowLiveEntries();
+            RequestScrollToBottom();
+        }
     }
 
     private void OnClearLogs(object? sender, RoutedEventArgs e)
@@ -163,7 +173,7 @@ public partial class LogPanelView : UserControl, IDisposable
                 if (!_disposed && Following) Viewer?.ScrollToEnd();
                 _scrollPending = false;
             }, DispatcherPriority.Loaded);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.Loaded);
     }
 
     public void Dispose()

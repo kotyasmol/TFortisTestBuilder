@@ -306,7 +306,7 @@ public class FirstRunSessionTests
         Assert.False(vm.IsTestRunning);
         Assert.False(vm.IsConnected);
         Assert.False(vm.Station.HasResult);
-        Assert.Equal(string.Empty, vm.StatusMessage);
+        Assert.Contains("Подключите стенд", vm.StatusMessage);
         Assert.All(vm.Nodes, node => Assert.False(node.HasExecutionSucceeded));
         Assert.Equal(starts, PreparationStarts(vm));
     });
@@ -333,6 +333,10 @@ public class FirstRunSessionTests
             Registers = new() { new() { Address = 123 } } } } };
         var path = files.PathFor("hardware");
         await vm.SaveGraphToPathAsync(path);
+        var previousRequestedPort = AppSettings.Instance.StandPort;
+        AppSettings.Instance.StandPort = "COM2";
+        try
+        {
         await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
         Assert.True(vm.IsConnected);
         Assert.Equal(2, port.Opened.Count); // no release/reopen or fallback to COM3
@@ -359,6 +363,66 @@ public class FirstRunSessionTests
             Assert.Equal(2, port.Opened.Count);
         }
         await vm.ToggleConnectionCommand.ExecuteAsync(null);
+        }
+        finally { AppSettings.Instance.StandPort = previousRequestedPort; }
+    });
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public Task ProfileSearch_SkipsOpenPortWithWrongEquipment_AndPreparesMatchingStand(bool connectFirst, bool manual) => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var port = new FakePort();
+        var devices = new FakeDevices { IdentityForRead = () => port.Opened.LastOrDefault() == "COM3" ? (ushort)77 : (ushort)78 };
+        var previousPort = AppSettings.Instance.StandPort;
+        AppSettings.Instance.StandPort = manual ? "COM2" : "";
+        using var vm = new TestViewModel(port, new SlaveManager(devices)) {
+            IsOperatorView = false, AvailableStandPorts = () => new[] { "COM1", "COM2", "COM3" } };
+        try
+        {
+            if (connectFirst) await vm.ToggleConnectionCommand.ExecuteAsync(null);
+            Chain(vm.RootGraph, PreparationDelay(), new DelayNodeViewModel { Milliseconds = 0 });
+            vm.RootGraph.Hardware = new() { Devices = new() { new() {
+                Name = "Stand", SlaveId = 42, IdentificationValue = 77,
+                Registers = new() { new() { Address = 123 } } } } };
+            var path = files.PathFor("port-fallback");
+            await vm.SaveGraphToPathAsync(path);
+            await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+            if (!connectFirst) await vm.ToggleConnectionCommand.ExecuteAsync(null);
+            Assert.Equal(manual ? "COM2" : "COM3", vm.SelectedPort);
+            Assert.Equal(!manual, vm.IsMonitoringActive);
+            Assert.Equal(!manual, vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
+            Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().Last().HasExecutionSucceeded);
+            Assert.Equal(!manual, vm.CanStartRun);
+            if (manual) Assert.DoesNotContain("COM3", port.Opened);
+            else Assert.Equal(connectFirst ? new[] { "COM1", "COM2", "COM1", "COM3" } : new[] { "COM1", "COM2", "COM3" }, port.Opened);
+        }
+        finally { if (vm.IsConnected) await vm.ToggleConnectionCommand.ExecuteAsync(null); AppSettings.Instance.StandPort = previousPort; }
+    });
+
+    [Fact]
+    public Task CorporateLauncherArguments_AllowAutomaticPreparation_WithoutStartingTest() => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        App.ConfigureStartupArguments(new[] { "test-session", "Тестовый", "оператор", "46" });
+        try
+        {
+            using var vm = CreateViewModel(bus);
+            Chain(vm.RootGraph, PreparationDelay(), new DelayNodeViewModel { Milliseconds = 0 });
+            var path = files.PathFor("corporate-launcher");
+            await vm.SaveGraphToPathAsync(path);
+            await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+            Assert.True(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
+            Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().Last().HasExecutionSucceeded);
+            Assert.True(vm.CanStartRun);
+            App.ConfigureStartupArguments(new[] { "--unknown" });
+            Assert.False(await vm.PrepareOpenedProfileAsync());
+            Assert.Equal(App.StartupOptions.Error, vm.StatusMessage);
+        }
+        finally { App.ConfigureStartupArguments(Array.Empty<string>()); }
     });
 
     private sealed class FakePort : ModbusService
@@ -376,11 +440,12 @@ public class FirstRunSessionTests
     private sealed class FakeDevices : IModbusService
     {
         public ushort Identity;
+        public Func<ushort>? IdentityForRead;
         public int Reads;
         public Task<ushort[]> ReadRegistersAsync(byte slave, ushort address, ushort count, CancellationToken ct = default)
         {
             Reads++;
-            return Task.FromResult(Enumerable.Repeat(address == 0 ? Identity : (ushort)0, count).ToArray());
+            return Task.FromResult(Enumerable.Repeat(address == 0 ? IdentityForRead?.Invoke() ?? Identity : (ushort)0, count).ToArray());
         }
         public Task<bool> WriteRegisterAsync(byte slave, ushort address, ushort value, bool verify = true, CancellationToken ct = default) => throw new InvalidOperationException("Unexpected write");
         public Task<bool> CheckPortAsync(CancellationToken ct = default) => throw new InvalidOperationException("Unexpected probe");

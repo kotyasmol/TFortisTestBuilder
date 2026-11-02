@@ -36,7 +36,7 @@ public partial class TestViewModel
                 if (_registerMonitor != null) await _registerMonitor.StopAsync();
                 DisposeRegisterMonitor();
                 _registerState.Clear();
-                if (!await ValidateConnectedProfileAsync()) return;
+                if (!await EnsureConnectedProfileAsync()) return;
             }
             catch (Exception ex)
             {
@@ -60,10 +60,17 @@ public partial class TestViewModel
 
     internal async Task<bool> PrepareOpenedProfileAsync()
     {
+        if (!App.StartupOptions.IsValid)
+        {
+            StatusMessage = App.StartupOptions.Error;
+            TestingLogger.Error($"Подготовка заблокирована: {App.StartupOptions.Error}");
+            RefreshStationAvailability();
+            return false;
+        }
         if (!CanPrepareProfile || _isPreparingProfile || HasRunningQuickActions) return false;
         if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
         {
-            StatusMessage = string.Empty;
+            // Keep the equipment failure visible instead of erasing its cause.
             RefreshStationAvailability();
             return false;
         }
