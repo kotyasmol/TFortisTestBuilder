@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
@@ -743,31 +742,6 @@ namespace TestBuilder.Domain.Steps
 
             // An ICMP reply does not mean the HTTP server has started.
             return await ProbeTcpAsync(uri.Host, port, timeout, cancellationToken).ConfigureAwait(false);
-        }
-
-        private static async Task<bool> ProbeIcmpAsync(
-            string host,
-            TimeSpan timeout,
-            CancellationToken cancellationToken)
-        {
-            using var ping = new Ping();
-
-            try
-            {
-                var timeoutMs = Math.Max(1, (int)timeout.TotalMilliseconds);
-                var reply = await ping.SendPingAsync(host, timeoutMs)
-                    .WaitAsync(timeout, cancellationToken)
-                    .ConfigureAwait(false);
-                return reply.Status == IPStatus.Success;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                return false;
-            }
         }
 
         private static async Task<bool> ProbeTcpAsync(

@@ -47,7 +47,11 @@ internal sealed class WindowsProcessJob : IDisposable
                 0x00000004 | 0x08000000, IntPtr.Zero, // CREATE_SUSPENDED | CREATE_NO_WINDOW
                 string.IsNullOrEmpty(info.WorkingDirectory) ? null : info.WorkingDirectory,
                 ref startup, out var native))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "Не удалось запустить браузер.");
+        {
+            var error = Marshal.GetLastWin32Error();
+            throw new Win32Exception(error,
+                $"Не удалось запустить браузер '{info.FileName}': {new Win32Exception(error).Message}");
+        }
         Process? process = null;
         try
         {

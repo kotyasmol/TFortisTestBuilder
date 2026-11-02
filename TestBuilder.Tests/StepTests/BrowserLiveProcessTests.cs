@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using TestBuilder.Domain.Steps;
 
 namespace TestBuilder.Tests.StepTests;
@@ -6,6 +9,69 @@ namespace TestBuilder.Tests.StepTests;
 [Collection("Browser process lifecycle")]
 public class BrowserLiveProcessTests
 {
+    [LiveBrowserFact]
+    public async Task DelayedHttpDocument_IsReadAfterNavigationAndCompleteBody()
+    {
+        // Cover both a slow first byte (the completed about:blank race) and a
+        // partially received document whose correct URL is already visible.
+        foreach (var headersFirst in new[] { false, true })
+        {
+            var result = await ReadLocalResponseAsync(200, TimeSpan.FromSeconds(15), headersFirst);
+            Assert.True(string.IsNullOrEmpty(result.ErrorMessage), result.ErrorMessage);
+            Assert.Contains("TFortisDelayedDocumentEnd", result.Body);
+            Assert.True(result.Elapsed >= TimeSpan.FromSeconds(25), result.Elapsed.ToString());
+        }
+    }
+
+    [LiveBrowserFact]
+    public async Task HttpError_IsReportedInsteadOfAcceptingItsCompleteDocument()
+    {
+        var result = await ReadLocalResponseAsync(503, TimeSpan.Zero, false);
+        Assert.Contains("HTTP 503", result.ErrorMessage);
+        Assert.Empty(result.Body);
+    }
+
+    private static async Task<TestBuilder.Services.Http.HttpRequestResult> ReadLocalResponseAsync(
+        int status, TimeSpan delay, bool headersFirst)
+    {
+        using var stop = new CancellationTokenSource();
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var server = ServeAsync();
+        try
+        {
+            return await SelfTestCheckStep.GetPageWithBrowserAsync(
+                Environment.GetEnvironmentVariable("TFORTIS_BROWSER_TEST_EXECUTABLE")!,
+                $"http://127.0.0.1:{port}/deviceinfo", TimeSpan.FromSeconds(40), stop.Token);
+        }
+        finally
+        {
+            stop.Cancel();
+            try { await server; }
+            catch (OperationCanceledException) { }
+        }
+
+        async Task ServeAsync()
+        {
+            using var client = await listener.AcceptTcpClientAsync(stop.Token);
+            using var stream = client.GetStream();
+            using var reader = new StreamReader(stream, leaveOpen: true);
+            while (!string.IsNullOrEmpty(await reader.ReadLineAsync(stop.Token))) { }
+            var body = Encoding.UTF8.GetBytes("<html><body>TFortisDelayedDocumentEnd</body></html>");
+            var header = Encoding.ASCII.GetBytes(
+                $"HTTP/1.1 {status} Fixture\r\nContent-Type: text/html\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
+            if (headersFirst)
+            {
+                await stream.WriteAsync(header, stop.Token);
+                await stream.WriteAsync(body.AsMemory(0, 12), stop.Token);
+            }
+            await Task.Delay(delay, stop.Token);
+            if (!headersFirst) await stream.WriteAsync(header, stop.Token);
+            await stream.WriteAsync(body.AsMemory(headersFirst ? 12 : 0), stop.Token);
+        }
+    }
+
     // Opt-in: uses only a data URL and fresh temporary profiles, never the user's profile or DUT.
     [LiveBrowserFact]
     public async Task ParallelReadsCancellationAndTimeout_LeaveNoOwnedBrowserRunning()
