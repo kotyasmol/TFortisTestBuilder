@@ -474,7 +474,7 @@ Deserializer также принимает часть русских и legacy-�
 | Print Label | `labelTemplate`, `printerName`, `serialVariableName`, `serialShortVariableName`, `macVariableName`, `useManualSerialNumber`, `manualSerialNumber`, `manualMacAddress`, `copies`, `useQtProZplFormat`, `labelModel`, `failOnPrinterError` |
 | Report | `reportVariableName`, `testType`, `endpoint`, `retryCount`, `retryDelayMs`, `saveLocalCopy`, `localReportsDirectory`, `includeAllVariables` |
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body`, `repeatOnSameSlave`, `repeatCount`, `indexVariable`, `untilSuccess`, `repeatDelayMs` |
-| Общие | `customName`, `runOnlyOnFirstRun`, `boardElements` |
+| Общие | `customName`, `operatorName`, `runOnlyOnFirstRun`, `boardElements` |
 | Платы | `serialConsole`, `runProgram`, `parseResponse`, `checkLedColor` |
 | Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
