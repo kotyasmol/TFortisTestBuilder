@@ -105,6 +105,76 @@ public class ProfileActionStateTests
     }
 
     [Fact]
+    public async Task BoundToggle_ReadsEverySourceAtClick_AndDoesNotRunOnMissingFeedback()
+    {
+        var binding = Binding();
+        var input = new RegisterStateCondition { SlaveId = 42, Area = ModbusArea.Input, Address = 123, Value = 8, Mask = 8 };
+        binding.On.Conditions.Add(input);
+        binding.Off.Conditions.Add(input.Copy());
+        var hardware = Hardware();
+        var state = new RegisterState();
+        var bus = new FeedbackBus();
+        var directions = new List<bool>();
+        var vm = new ProfileActionViewModel(new() { Display = ProfileActionDisplay.Toggle, StateBinding = binding },
+            (_, off, _, _) => { directions.Add(off); return Task.FromResult(new ProfileActionResult(true, "OK")); },
+            () => true, () => { }, readDirection: async (action, token) =>
+            {
+                var feedback = await ProfileActionStateEvaluator.ReadAsync(action.StateBinding!, bus, hardware, token);
+                return feedback.IsOn ?? throw new InvalidOperationException(feedback.Reason);
+            });
+
+        void PublishCachedValue(int holding)
+        {
+            state.Update(42, 123, holding);
+            state.Update(42, 123, 24, ModbusArea.Input);
+            vm.RefreshFeedback(state, hardware, true, true);
+        }
+
+        PublishCachedValue(0);
+        Assert.False(vm.IsOn);
+        Assert.Contains("42/Holding/123 = 0", vm.DetailText);
+        Assert.Contains("42/Input/123 = 24", vm.DetailText);
+        bus.Holding = 1;
+        await vm.RunCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { true }, directions);
+        Assert.Equal(new RegisterKey[] { new(42, 123), new(42, 123, ModbusArea.Input) }, bus.Reads);
+
+        PublishCachedValue(1);
+        bus.Holding = 0;
+        await vm.RunCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { true, false }, directions);
+
+        PublishCachedValue(1);
+        bus.MissingInput = true;
+        await vm.RunCommand.ExecuteAsync(null);
+        Assert.Equal(2, directions.Count);
+        Assert.False(vm.IsStateKnown);
+        Assert.Contains("42/Input/123", vm.ErrorMessage);
+    }
+
+    private sealed class FeedbackBus : IModbusService
+    {
+        public ushort Holding { get; set; }
+        public bool MissingInput { get; set; }
+        public List<RegisterKey> Reads { get; } = new();
+
+        public Task<ushort[]> ReadAreaAsync(byte slave, ushort address, ushort count, ModbusArea area, CancellationToken token)
+        {
+            Assert.Equal(1, count);
+            Reads.Add(new(slave, address, area));
+            return Task.FromResult(area == ModbusArea.Holding ? new[] { Holding } :
+                MissingInput ? Array.Empty<ushort>() : new ushort[] { 24 });
+        }
+
+        public Task<ushort[]> ReadRegistersAsync(byte slave, ushort address, ushort count, CancellationToken token) =>
+            throw new NotSupportedException();
+        public Task<bool> WriteRegisterAsync(byte slave, ushort address, ushort value, bool verify, CancellationToken token) =>
+            throw new NotSupportedException();
+        public Task<bool> CheckPortAsync(CancellationToken token) => throw new NotSupportedException();
+        public void SubscribeRegister(byte slave, ushort address, Action<ushort[]> callback) => throw new NotSupportedException();
+    }
+
+    [Fact]
     public async Task Failure_PreservesErrorButFreshFeedbackDeterminesState_AndNextDirection()
     {
         var state = new RegisterState(); var directions = new List<bool>();

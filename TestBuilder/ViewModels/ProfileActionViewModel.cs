@@ -27,10 +27,12 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     private CancellationTokenSource? _cancellation;
     private readonly Action _availabilityChanged;
     private readonly Action? _refreshFeedback;
+    private readonly Func<ProfileActionDefinition, CancellationToken, Task<bool>>? _readDirection;
     private readonly ProfileActionLabels _labels;
     private bool _hasOutcome;
     private long _feedbackNotBefore;
     private string _feedbackReason = "Нет данных";
+    private string _feedbackReadings = "";
     public bool HasStateBinding => Definition.StateBinding != null;
     public string FeedbackText => IsStateKnown ? (IsOn ? _labels.On : _labels.Off) : _labels.Unknown;
     public bool ShowStatusText => _labels.ShowStatus;
@@ -44,8 +46,16 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     [ObservableProperty] private bool isStateKnown;
     [ObservableProperty] private string status = "";
     [ObservableProperty] private string errorMessage = "";
-    public string DetailText => string.IsNullOrEmpty(ErrorMessage) ?
-        HasStateBinding && !IsStateKnown ? _feedbackReason : DisplayStatus : ErrorMessage;
+    public string DetailText
+    {
+        get
+        {
+            var detail = string.IsNullOrEmpty(ErrorMessage)
+                ? HasStateBinding && !IsStateKnown ? _feedbackReason : DisplayStatus
+                : ErrorMessage;
+            return string.Join(Environment.NewLine, new[] { detail, _feedbackReadings }.Where(s => s.Length > 0));
+        }
+    }
     [ObservableProperty] private string currentStep = "";
     [ObservableProperty] private int completedSteps;
     public int? ExpectedSteps { get; private set; }
@@ -64,9 +74,11 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
 
     public ProfileActionViewModel(ProfileActionDefinition definition,
         Func<ProfileActionDefinition, bool, IExecutionObserver, CancellationToken, Task<ProfileActionResult>> run,
-        Func<bool> canRun, Action availabilityChanged, Action? refreshFeedback = null)
+        Func<bool> canRun, Action availabilityChanged, Action? refreshFeedback = null,
+        Func<ProfileActionDefinition, CancellationToken, Task<bool>>? readDirection = null)
     {
         Definition = definition; _labels = definition.GetLabels(); _refreshFeedback = refreshFeedback; _run = run; _canRun = canRun; _availabilityChanged = availabilityChanged;
+        _readDirection = readDirection;
         RunCommand = new AsyncRelayCommand(RunAsync, () => CanRun);
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
     }
@@ -90,14 +102,23 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     {
         _refreshFeedback?.Invoke();
         if (!CanRun) return;
-        // Bound toggles follow feedback; unbound toggles retry an unsuccessful command in the same direction.
-        var turnOff = IsToggle && IsOn;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
-        ExpectedSteps = CountLinearSteps(turnOff ? Definition.OffGraph : Definition.Graph);
+        ExpectedSteps = null;
         IsRunning = true; _hasOutcome = false; Status = ""; ErrorMessage = ""; CurrentStep = Name; CompletedSteps = 0;
         CancelCommand.NotifyCanExecuteChanged(); _availabilityChanged(); NotifyState();
         try
         {
+            var turnOff = IsToggle && IsOn;
+            if (IsToggle && HasStateBinding && _readDirection != null)
+            {
+                CurrentStep = "Чтение регистров";
+                NotifyState();
+                turnOff = await _readDirection(Definition, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+            }
+            ExpectedSteps = CountLinearSteps(turnOff ? Definition.OffGraph : Definition.Graph);
+            CurrentStep = Name;
+            NotifyState();
             var result = await _run(Definition, turnOff, this, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             if (result.Success)
@@ -117,6 +138,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
                 // Completion is not feedback. Require a read started after the command graph finished.
                 _feedbackNotBefore = Stopwatch.GetTimestamp();
                 IsStateKnown = false; _feedbackReason = "Ожидание свежих данных";
+                _feedbackReadings = "";
                 _refreshFeedback?.Invoke();
             }
             _hasOutcome = true;
@@ -147,8 +169,10 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     {
         if (Definition.StateBinding is not { } binding) return;
         var result = ProfileActionStateEvaluator.Evaluate(binding, state, hardware, connected, monitoring, _feedbackNotBefore, now);
-        var changed = IsStateKnown != result.IsOn.HasValue || IsOn != (result.IsOn ?? false) || _feedbackReason != result.Reason;
+        var changed = IsStateKnown != result.IsOn.HasValue || IsOn != (result.IsOn ?? false) ||
+            _feedbackReason != result.Reason || _feedbackReadings != result.Readings;
         IsStateKnown = result.IsOn.HasValue; IsOn = result.IsOn ?? false; _feedbackReason = result.Reason;
+        _feedbackReadings = result.Readings;
         if (changed) { RefreshAvailability(); NotifyState(); }
     }
 
@@ -156,6 +180,7 @@ public partial class ProfileActionViewModel : ObservableObject, IExecutionObserv
     {
         IsStateKnown = false; IsOn = false;
         _feedbackNotBefore = Stopwatch.GetTimestamp(); _feedbackReason = "Нет данных";
+        _feedbackReadings = "";
         RefreshAvailability();
         if (!IsRunning) { _hasOutcome = false; Status = ""; ErrorMessage = ""; }
         NotifyState();

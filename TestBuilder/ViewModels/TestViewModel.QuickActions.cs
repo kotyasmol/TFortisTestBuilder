@@ -46,7 +46,7 @@ public partial class TestViewModel
             definition.Graph.Hardware = RootGraph.Hardware; definition.OffGraph.Hardware = RootGraph.Hardware;
             QuickActions.Add(new ProfileActionViewModel(definition, ExecuteProfileActionAsync,
                 () => !IsActionGraphEditor && !IsTraining && !IsConnecting && !IsStopping && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && _profileLoadError.Length == 0,
-                RefreshStationAvailability, RefreshRegisterIndicatorValues));
+                RefreshStationAvailability, RefreshRegisterIndicatorValues, ReadProfileActionDirectionAsync));
         }
         UpdateRegisterIndicators();
         RefreshStationAvailability();
@@ -98,6 +98,25 @@ public partial class TestViewModel
         var index = graph.QuickActions.IndexOf(definition);
         if (index < 0) return;
         _history.Execute(graph, new ProfileMetadataCommand(() => graph.QuickActions.Remove(definition), () => graph.QuickActions.Insert(index, definition)));
+    }
+
+    private async Task<bool> ReadProfileActionDirectionAsync(ProfileActionDefinition action, CancellationToken token)
+    {
+        try
+        {
+            if (!IsConnected || !IsMonitoringActive)
+                throw new InvalidOperationException("Для переключения нужен активный опрос оборудования.");
+            var feedback = await ProfileActionStateEvaluator.ReadAsync(action.StateBinding!, _modbusService, RootGraph.Hardware, token);
+            token.ThrowIfCancellationRequested();
+            if (!IsConnected || !IsMonitoringActive)
+                throw new InvalidOperationException("Опрос оборудования остановлен.");
+            return feedback.IsOn ?? throw new InvalidOperationException(feedback.Reason);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            new ProfileActionLogger(TestingLogger, action.Name).Error($"Чтение состояния: {ex.Message}");
+            throw;
+        }
     }
 
     internal async Task<ProfileActionResult> ExecuteProfileActionAsync(ProfileActionDefinition action, bool turnOff,

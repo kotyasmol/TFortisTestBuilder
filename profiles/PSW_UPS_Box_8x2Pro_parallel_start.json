@@ -2651,6 +2651,20 @@
       "name": "AC1",
       "color": "#2563EB",
       "display": "Toggle",
+      "stateBinding": {
+        "on": {
+          "match": "All",
+          "conditions": [
+            { "slaveId": 23, "area": "Holding", "address": 1200, "comparison": "Equal", "value": 1 }
+          ]
+        },
+        "off": {
+          "match": "All",
+          "conditions": [
+            { "slaveId": 23, "area": "Holding", "address": 1200, "comparison": "Equal", "value": 0 }
+          ]
+        }
+      },
       "graph": {
         "name": "Включить AC1",
         "productKind": "Switch",
@@ -2835,6 +2849,20 @@
       "name": "UPS / АКБ",
       "color": "#15803D",
       "display": "Toggle",
+      "stateBinding": {
+        "on": {
+          "match": "All",
+          "conditions": [
+            { "slaveId": 17, "area": "Holding", "address": 1706, "comparison": "Equal", "value": 1 }
+          ]
+        },
+        "off": {
+          "match": "All",
+          "conditions": [
+            { "slaveId": 17, "area": "Holding", "address": 1706, "comparison": "Equal", "value": 0 }
+          ]
+        }
+      },
       "graph": {
         "name": "Включить UPS / АКБ",
         "productKind": "Switch",
@@ -3167,7 +3195,7 @@
   "nodes": [
     {
       "id": "0",
-      "type": "Start (ping v1)",
+      "type": "Start (action state v1)",
       "x": 80,
       "y": 120,
       "color": "blue",

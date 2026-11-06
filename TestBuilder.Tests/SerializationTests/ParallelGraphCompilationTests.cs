@@ -457,7 +457,7 @@ public class ParallelGraphCompilationTests
             """));
         Assert.Equal(ConnectionKeys(expectedConnections), ConnectionKeys(parallel["connections"]!.AsArray()));
         Assert.Equal("Start (connections v1)", originalNodes[0]!["type"]!.GetValue<string>());
-        Assert.Equal("Start (actions v1)", parallelNodes[0]!["type"]!.GetValue<string>());
+        Assert.Equal("Start (action state v1)", parallelNodes[0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
@@ -526,7 +526,7 @@ public class ParallelGraphCompilationTests
         if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
-        Assert.Equal(file == ParallelProfile ? "Start (ping v1)" : "Start (connections v1)",
+        Assert.Equal(file == ParallelProfile ? "Start (action state v1)" : "Start (connections v1)",
             JsonNode.Parse(saved)!["nodes"]![0]!["type"]!.GetValue<string>());
         var loadedVm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(saved, loadedVm);
@@ -549,9 +549,17 @@ public class ParallelGraphCompilationTests
                 var action = Assert.Single(loadedVm.RootGraph.QuickActions, a => a.Name == name);
                 Assert.Equal(originalVm.RootGraph.QuickActions.Single(a => a.Name == name).Id, action.Id);
                 Assert.Equal(TestBuilder.Models.ProfileActionDisplay.Toggle, action.Display);
-                foreach (var (graph, value) in new[] { (action.Graph, 1), (action.OffGraph, 0) })
+                var binding = Assert.IsType<TestBuilder.Models.ProfileActionStateBinding>(action.StateBinding);
+                foreach (var (graph, rule, value) in new[] { (action.Graph, binding.On, 1), (action.OffGraph, binding.Off, 0) })
                 {
                     var write = Assert.Single(graph.Nodes.OfType<ModbusWriteNodeViewModel>());
+                    var condition = Assert.Single(rule.Conditions);
+                    Assert.True(condition.IsMapped(loadedVm.RootGraph.Hardware));
+                    Assert.Equal(write.SlaveId, condition.SlaveId);
+                    Assert.Equal(write.Address, condition.Address);
+                    Assert.Equal(write.RegisterArea, condition.Area);
+                    Assert.Equal(TestBuilder.Models.RegisterComparison.Equal, condition.Comparison);
+                    Assert.Equal(value, condition.Value);
                     Assert.Equal(slave, write.SlaveId);
                     Assert.Equal(address, write.Address);
                     Assert.Equal(value, write.Value);
