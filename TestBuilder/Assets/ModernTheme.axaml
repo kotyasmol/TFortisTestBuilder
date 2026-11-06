@@ -255,14 +255,18 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Border.profileLatestBadge">
-    <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+    <Setter Property="Background" Value="#0876B1" />
     <Setter Property="CornerRadius" Value="5" />
-    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Padding" Value="6,0" />
     <Setter Property="Margin" Value="0,0,6,0" />
   </Style>
-  <Style Selector="Border.profileLatestBadge TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+  <Style Selector="TextBlock.profileMetadata">
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.profileLatestBadge TextBlock">
+    <Setter Property="Foreground" Value="White" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Border.panel">

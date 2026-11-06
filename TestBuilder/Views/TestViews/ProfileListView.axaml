@@ -50,10 +50,10 @@
                           <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" FontSize="{StaticResource FontBody}" />
                           <Grid ColumnDefinitions="Auto,*">
                             <Border Classes="profileLatestBadge" IsVisible="{Binding IsLatest}">
-                              <TextBlock Text="Актуальный" />
+                              <TextBlock Classes="profileMetadata" Text="Актуальный" />
                             </Border>
-                            <TextBlock Grid.Column="1" Text="{Binding UpdatedAtText}" IsVisible="{Binding HasUpdatedAt}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
+                            <TextBlock Grid.Column="1" Classes="profileMetadata" Text="{Binding UpdatedAtText}"
+                                       IsVisible="{Binding HasUpdatedAt}" HorizontalAlignment="Right"
                                        Foreground="{DynamicResource TextMutedBrush}" ToolTip.Tip="{Binding UpdatedAtTooltip}" />
                           </Grid>
                         </StackPanel>

@@ -134,10 +134,10 @@
                               <TextBlock Text="{Binding Profile.DisplayName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
                               <Grid ColumnDefinitions="Auto,*">
                                 <Border Classes="profileLatestBadge" IsVisible="{Binding Profile.IsLatest}">
-                                  <TextBlock Text="Актуальный" />
+                                  <TextBlock Classes="profileMetadata" Text="Актуальный" />
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Profile.UpdatedAtText}" IsVisible="{Binding Profile.HasUpdatedAt}"
-                                           HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" Opacity="0.7"
+                                <TextBlock Grid.Column="1" Classes="profileMetadata" Text="{Binding Profile.UpdatedAtText}"
+                                           IsVisible="{Binding Profile.HasUpdatedAt}" HorizontalAlignment="Right" Opacity="0.7"
                                            ToolTip.Tip="{Binding Profile.UpdatedAtTooltip}" />
                               </Grid>
                             </StackPanel>
