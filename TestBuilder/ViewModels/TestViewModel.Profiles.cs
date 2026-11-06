@@ -149,10 +149,12 @@ public partial class TestViewModel
     private void RefreshEngineerProfileGroups()
     {
         var groups = new List<EngineerProfileGroup>();
-        var ordered = Profiles.OrderByDescending(p => p.IsLatest).ThenBy(p => p.DeviceModel == null)
+        var ordered = Profiles.OrderBy(p => p.DeviceModel == null)
             .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), StringComparer.Ordinal)
+            .ThenBy(p => p.ModelGroupKey, StringComparer.Ordinal)
+            .ThenByDescending(p => p.IsLatest)
             .ThenBy(p => EquipmentCatalog.SortKey(p.Name), StringComparer.Ordinal);
-        foreach (var items in ordered.GroupBy(p => p.ModelGroupKey))
+        foreach (var items in ordered.GroupBy(p => p.ModelGroupKey, StringComparer.OrdinalIgnoreCase))
         {
             if (!_engineerGroups.TryGetValue(items.Key, out var group))
                 _engineerGroups.Add(items.Key, group = new EngineerProfileGroup(items.First().ModelGroup, items.Key));

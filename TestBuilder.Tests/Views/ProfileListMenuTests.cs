@@ -19,47 +19,54 @@ namespace TestBuilder.Tests.Views;
 public class ProfileListMenuTests
 {
     [Fact]
-    public async Task NewestProfile_IsVisibleAndSelectableInBothMenus_AndUpdatesAfterRefresh()
+    public async Task NewestProfilePerModel_IsVisibleInBothMenus_AndUpdatesOnlyItsGroup()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
             using var files = new ProfileCopyTests.ProfileFolder();
-            var legacyPath = files.Write("legacy.json", ProfileCopyTests.SimpleJson);
-            File.SetLastWriteTimeUtc(legacyPath, new DateTime(2025, 1, 2, 12, 0, 0, DateTimeKind.Utc));
+            var modelAPath = files.Write("model-a.json", WithDate(ProfileCopyTests.SimpleJson, "2025-01-02"));
             var old = ProfileCopyTests.SimpleJson.Replace("Модель А", "Модель Б").Replace("Проверка", "Архив");
             var oldPath = files.Write("archive.json", WithDate(old, "2025-01-01"));
             var newestPath = files.Write("current.json", WithDate(old.Replace("Архив", "Текущая"), "2025-01-03"));
-            files.Write("broken.json", "{");
+            var legacyPath = files.Write("legacy.json", old.Replace("Архив", "Резерв"));
+            File.SetLastWriteTimeUtc(legacyPath, new DateTime(2025, 1, 2, 12, 0, 0, DateTimeKind.Utc));
+            files.Write("unassigned.json", ProfileCopyTests.SimpleJson.Replace("\"deviceModel\":\"Модель А\",", ""));
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            var latest = Assert.Single(vm.Profiles.Where(p => p.IsLatest));
-            Assert.Equal(newestPath, latest.FilePath);
+            var latest = vm.Profiles.Single(p => p.FilePath == newestPath);
+            var modelA = vm.Profiles.Single(p => p.FilePath == modelAPath);
+            Assert.Equal(2, vm.Profiles.Count(p => p.IsLatest));
             var engineer = new ProfileListView { DataContext = vm };
             var station = new StationDashboardView { DataContext = vm };
             var window = new Window { Width = 1250, Height = 620, Content = engineer };
             try
             {
                 window.Show(); Layout(window);
-                var engineerGroup = vm.EngineerProfileGroups.First();
+                Assert.Equal(modelA.ModelGroupKey, vm.EngineerProfileGroups.First().Key);
+                var engineerGroup = vm.EngineerProfileGroups.Single(g => g.Key == latest.ModelGroupKey);
                 Assert.False(engineerGroup.IsExpanded);
                 Assert.Same(latest, Assert.Single(engineerGroup.VisibleProfiles));
-                Assert.Single(Badges(engineer));
-                var row = Assert.Single(engineer.GetVisualDescendants().OfType<ListBoxItem>());
+                Assert.Equal(2, Badges(engineer).Count());
+                var row = engineer.GetVisualDescendants().OfType<ListBoxItem>()
+                    .Single(item => ReferenceEquals(item.DataContext, latest));
                 Click(window, row);
                 Assert.Same(latest, vm.SelectedProfile);
                 engineerGroup.ToggleExpandedCommand.Execute(null);
                 Layout(window);
-                Assert.Equal(new[] { newestPath, oldPath }, engineer.GetVisualDescendants().OfType<ListBoxItem>()
-                    .Select(item => ((GraphProfile)item.DataContext!).FilePath));
+                Assert.Equal(new[] { newestPath, oldPath, legacyPath }, engineer.GetVisualDescendants().OfType<ListBoxItem>()
+                    .Select(item => (GraphProfile)item.DataContext!)
+                    .Where(profile => profile.ModelGroupKey == latest.ModelGroupKey)
+                    .Select(profile => profile.FilePath));
 
                 vm.IsOperatorView = true;
                 window.Content = station;
                 Layout(window);
-                var stationGroup = vm.StationProfileGroups.First();
+                Assert.Equal(modelA.ModelGroupKey, vm.StationProfileGroups.First().Key);
+                var stationGroup = vm.StationProfileGroups.Single(g => g.Key == latest.ModelGroupKey);
                 Assert.False(stationGroup.IsExpanded);
                 Assert.Same(latest, Assert.Single(stationGroup.VisibleProfiles).Profile);
-                Assert.Single(Badges(station));
+                Assert.Equal(2, Badges(station).Count());
                 vm.StationProfileSearch = "Архив";
                 Layout(window);
                 Assert.Empty(Badges(station));
@@ -70,10 +77,11 @@ public class ProfileListMenuTests
                 vm.RefreshProfiles();
                 Layout(window);
                 Assert.False(latest.IsLatest);
-                Assert.Equal(legacyPath, vm.EngineerProfileGroups.First().Profiles.First().FilePath);
-                Assert.Equal(legacyPath, vm.StationProfileGroups.First().Profiles.First().Profile.FilePath);
-                var badge = Assert.Single(Badges(station));
-                Assert.Equal(legacyPath, Assert.IsType<StationProfileOptionViewModel>(badge.DataContext).Profile.FilePath);
+                Assert.True(modelA.IsLatest);
+                Assert.Equal(legacyPath, engineerGroup.Profiles.First().FilePath);
+                Assert.Equal(legacyPath, stationGroup.Profiles.First().Profile.FilePath);
+                Assert.Equal(2, Badges(station).Count());
+                var badge = Badges(station).Single(b => ((StationProfileOptionViewModel)b.DataContext!).Profile.FilePath == legacyPath);
                 Assert.Same(latest, vm.SelectedProfile);
                 var button = badge.GetVisualAncestors().OfType<Button>().First();
                 Click(window, button);

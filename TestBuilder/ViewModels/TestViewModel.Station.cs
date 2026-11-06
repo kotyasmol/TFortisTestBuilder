@@ -37,9 +37,10 @@ public partial class TestViewModel
             EquipmentCatalog.Matches(p.DisplayName, StationProfileSearch) ||
             EquipmentCatalog.Matches(p.ModelGroup, StationProfileSearch) ||
             EquipmentCatalog.Matches(p.ConfigurationName, StationProfileSearch))
-            .OrderByDescending(p => p.IsLatest)
-            .ThenBy(p => p.DeviceModel == null)
+            .OrderBy(p => p.DeviceModel == null)
             .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), System.StringComparer.Ordinal)
+            .ThenBy(p => p.ModelGroupKey, System.StringComparer.Ordinal)
+            .ThenByDescending(p => p.IsLatest)
             .ThenBy(p => p.ConfigurationName != "Полная проверка")
             .ThenBy(p => p.ConfigurationName, System.StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.FilePath, System.StringComparer.OrdinalIgnoreCase).ToArray();

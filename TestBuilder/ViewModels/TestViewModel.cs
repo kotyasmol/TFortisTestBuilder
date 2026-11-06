@@ -1800,9 +1800,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                         Profiles.Add(profile);
                 }
             }
-            var latest = _profileCatalog.Where(p => p.HasReadableMetadata && p.HasUpdatedAt)
-                .OrderByDescending(p => p.UpdatedAt).ThenBy(p => p.FilePath, StringComparer.Ordinal).FirstOrDefault();
-            foreach (var profile in _profileCatalog) profile.IsLatest = ReferenceEquals(profile, latest);
+            var latestProfiles = _profileCatalog
+                .Where(p => p.HasReadableMetadata && p.HasUpdatedAt && (p.DeviceModel != null || p.DeviceModelId != null))
+                .GroupBy(p => p.ModelGroupKey, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.OrderByDescending(p => p.UpdatedAt)
+                    .ThenBy(p => p.FilePath, StringComparer.Ordinal).First())
+                .ToHashSet();
+            foreach (var profile in _profileCatalog) profile.IsLatest = latestProfiles.Contains(profile);
             RefreshNameSuggestions();
             RefreshStationProfiles();
             RefreshEngineerProfileGroups();
