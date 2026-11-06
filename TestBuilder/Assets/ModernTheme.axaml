@@ -75,6 +75,7 @@
           <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#E8F0FF" />
+          <SolidColorBrush x:Key="StationProfileBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="ProfileSelectedBrush" Color="#CDDEFC" />
           <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#DCE5F0" />
           <SolidColorBrush x:Key="PrimaryTextBrush" Color="#1D4ED8" />
@@ -159,6 +160,7 @@
           <SolidColorBrush x:Key="PrimaryBrush" Color="#3B82F6" />
           <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#60A5FA" />
           <SolidColorBrush x:Key="PrimarySoftBrush" Color="#1E3A5F" />
+          <SolidColorBrush x:Key="StationProfileBrush" Color="#1D232B" />
           <SolidColorBrush x:Key="ProfileSelectedBrush" Color="#254F7F" />
           <SolidColorBrush x:Key="PrimarySoftHoverBrush" Color="#1E3554" />
           <SolidColorBrush x:Key="PrimaryTextBrush" Color="#93C5FD" />

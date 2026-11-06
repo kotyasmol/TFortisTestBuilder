@@ -31,22 +31,26 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.program">
-      <Setter Property="Padding" Value="40,12,16,12" />
+      <Setter Property="Padding" Value="12,10" />
       <Setter Property="MinHeight" Value="50" />
       <Setter Property="FontWeight" Value="Normal" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="3,0,0,0" />
-      <Setter Property="Margin" Value="0,2" />
-      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="{DynamicResource StationProfileBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+      <Setter Property="Margin" Value="28,2,12,2" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
+    <Style Selector="Button.program:not(:disabled):pointerover:not(:pressed) /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    </Style>
+    <Style Selector="Button.program:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource StationProfileBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    </Style>
     <Style Selector="Button.program.selected /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
+      <Setter Property="Background" Value="{DynamicResource ProfileSelectedBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
-      <Setter Property="BorderThickness" Value="3,0,0,0" />
     </Style>
     <Style Selector="Border.stage.active">
       <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}" />
