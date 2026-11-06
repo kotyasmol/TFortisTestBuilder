@@ -6974,29 +6974,6 @@
             "testType": "production"
           },
           {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
-            "reportName": null,
-            "outputVariableName": "",
-            "DisabledPortsText": null
-          },
-          {
             "id": "4",
             "type": "Send Test Report",
             "x": 1920,
@@ -7070,20 +7047,8 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
@@ -7743,29 +7708,6 @@
             "testType": "production"
           },
           {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
-            "reportName": null,
-            "outputVariableName": "",
-            "DisabledPortsText": null
-          },
-          {
             "id": "4",
             "type": "Send Test Report",
             "x": 1920,
@@ -7839,24 +7781,12 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
