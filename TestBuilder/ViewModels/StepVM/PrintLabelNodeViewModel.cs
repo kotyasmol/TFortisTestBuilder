@@ -65,6 +65,7 @@ namespace TestBuilder.ViewModels.StepVM
             }
         }
         [ObservableProperty] private string printerName = "TSC TE310";
+        [ObservableProperty] private bool useDefaultPrinter = true;
         [ObservableProperty] private string serialVariableName = "SerialNumber";
         [ObservableProperty] private string serialShortVariableName = "SerialShort";
         [ObservableProperty] private string macVariableName = "Dut.default_mac";
@@ -100,10 +101,12 @@ namespace TestBuilder.ViewModels.StepVM
 
         public ITestStep CreateStep(ILogger logger) => CreateStep(logger, null);
 
-        internal ITestStep CreateStep(ILogger logger, IRawLabelPrinter? printer) =>
-            new PrintLabelStep(
+        internal ITestStep CreateStep(ILogger logger, IRawLabelPrinter? printer)
+        {
+            var workstationPrinter = UseDefaultPrinter ? AppSettings.Instance.DefaultPrinterName : null;
+            return new PrintLabelStep(
                 logger,
-                PrinterName,
+                string.IsNullOrWhiteSpace(workstationPrinter) ? PrinterName : workstationPrinter,
                 SerialVariableName,
                 SerialShortVariableName,
                 MacVariableName,
@@ -116,6 +119,7 @@ namespace TestBuilder.ViewModels.StepVM
                 printer ?? new WindowsRawLabelPrinter(),
                 30000,
                 LabelModel, LabelTemplate, UseLastTestLabel);
+        }
 
         public bool IsVariableSerialMode => !UseLastTestLabel && !UseManualSerialNumber;
         public bool IsManualQtProMode => IsManualSerialMode && UseQtProZplFormat;
@@ -137,6 +141,7 @@ namespace TestBuilder.ViewModels.StepVM
         public override NodeViewModel Clone() => new PrintLabelNodeViewModel
         {
             PrinterName = PrinterName,
+            UseDefaultPrinter = UseDefaultPrinter,
             SerialVariableName = SerialVariableName,
             SerialShortVariableName = SerialShortVariableName,
             MacVariableName = MacVariableName,

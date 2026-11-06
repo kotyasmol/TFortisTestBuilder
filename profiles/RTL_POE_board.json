@@ -6794,6 +6794,7 @@
           {
             "type": "Print Label",
             "printerName": "TSC TE310",
+            "useDefaultPrinter": true,
             "serialVariableName": "SerialNumber",
             "copies": 1,
             "useQtProZplFormat": false,

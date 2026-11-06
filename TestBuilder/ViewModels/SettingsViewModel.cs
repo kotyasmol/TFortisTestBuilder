@@ -60,6 +60,9 @@ namespace TestBuilder.ViewModels
         private string standId = string.Empty;
 
         [ObservableProperty]
+        private string defaultPrinterName = string.Empty;
+
+        [ObservableProperty]
         private bool enableFileLogging;
 
         [ObservableProperty]
@@ -80,6 +83,7 @@ namespace TestBuilder.ViewModels
             GraphsFolder = AppSettings.Instance.GraphsFolder;
             ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
             StandId = AppSettings.Instance.StandId;
+            defaultPrinterName = AppSettings.Instance.DefaultPrinterName ?? string.Empty;
             EnableFileLogging = AppSettings.Instance.EnableFileLogging;
             LogFolder = AppSettings.Instance.LogFolder;
             IsDarkTheme = AppSettings.Instance.Theme == "Dark";
@@ -165,6 +169,12 @@ namespace TestBuilder.ViewModels
         partial void OnStandIdChanged(string value)
         {
             AppSettings.Instance.StandId = value?.Trim() ?? string.Empty;
+            AppSettings.Instance.Save();
+        }
+
+        partial void OnDefaultPrinterNameChanged(string value)
+        {
+            AppSettings.Instance.DefaultPrinterName = value?.Trim() ?? string.Empty;
             AppSettings.Instance.Save();
         }
 

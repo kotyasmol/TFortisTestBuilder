@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:views="using:TestBuilder.Views"
              x:Name="SettingsRoot" x:Class="TestBuilder.Views.SettingsView" x:DataType="vm:SettingsViewModel">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Center">
     <StackPanel Margin="16" Spacing="16" MaxWidth="800" HorizontalAlignment="Stretch">
@@ -17,6 +18,18 @@
           <TextBlock Text="COM консоли (отдельный USB-UART)" IsVisible="{Binding ShowConsoleSettings}" />
           <TextBox Text="{Binding ConsolePort}" Watermark="COM4" IsVisible="{Binding ShowConsoleSettings}" />
           <TextBlock Text="COM стенда выбирается на этом компьютере. Состав оборудования и параметры консольных устройств задаются в профиле." TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+      <Border Classes="panel">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Принтер по умолчанию" Classes="sectionTitle" />
+          <views:PrinterPicker x:Name="DefaultPrinterPicker" PrinterName="{Binding DefaultPrinterName, Mode=TwoWay}" />
+          <StackPanel x:Name="WindowsPrinterManagement" Spacing="4">
+            <Button Content="Добавить принтер в Windows…" Click="OnOpenWindowsPrinters" />
+            <TextBlock x:Name="WindowsPrinterSettingsError" IsVisible="False" TextWrapping="Wrap"
+                       Text="Не удалось открыть настройки Windows. Откройте «Принтеры и сканеры» через меню «Пуск»." />
+          </StackPanel>
+          <TextBlock Text="Используется нодами с флажком «Принтер из настроек»." Classes="hint" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Border Classes="panel">

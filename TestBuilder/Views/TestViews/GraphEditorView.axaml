@@ -1590,12 +1590,16 @@
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding DisplayTitle}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="12" Spacing="8" Width="350">
                     <StackPanel Spacing="4">
-                      <TextBlock Text="Принтер:" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <CheckBox Content="Принтер из настроек" IsChecked="{Binding UseDefaultPrinter, Mode=TwoWay}"
+                                IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}"
+                                FontSize="{StaticResource FontCaption}"
+                                ToolTip.Tip="Если принтер по умолчанию не задан, используется имя из ноды." />
                       <views:PrinterPicker PrinterName="{Binding PrinterName, Mode=TwoWay}"
+                                           IsVisible="{Binding !UseDefaultPrinter}"
                                            IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}" />
                     </StackPanel>
                     <ComboBox x:Name="LabelDataSource" ItemsSource="{Binding DataSources}" SelectedIndex="{Binding SelectedDataSource}" HorizontalAlignment="Stretch" />
-                    <TextBlock IsVisible="{Binding UseLastTestLabel}" Text="Модель, SN, MAC и шаблон — из последнего полного теста. Пустой принтер — как в том тесте." TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock IsVisible="{Binding UseLastTestLabel}" Text="Модель, SN, MAC и шаблон — из последнего полного теста. Если принтер не выбран, используется очередь из того теста." TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualSerialMode}"><TextBlock Grid.Column="0" Text="Серийник вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <ComboBox IsVisible="{Binding IsNewLabelMode}" ItemsSource="{Binding PrintFormats}" SelectedIndex="{Binding SelectedPrintFormat}" HorizontalAlignment="Stretch"/>

@@ -7,11 +7,16 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Http;
+using TestBuilder.Services.Modbus;
 using TestBuilder.Tests.Support;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.StepVM;
 using TestBuilder.Views;
 
 namespace TestBuilder.Tests.Views;
@@ -19,6 +24,77 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class PrinterPickerTests
 {
+    [Fact]
+    public async Task WorkstationPrinterAppliesToTheNextRunWithoutChangingTheProfile()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var previous = AppSettings.Instance.DefaultPrinterName;
+            var settings = new SettingsViewModel();
+            var view = new SettingsView { DataContext = settings };
+            var window = new Window { Width = 900, Height = 800, Content = view };
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            var printer = new Printer();
+            try
+            {
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                var picker = view.FindControl<PrinterPicker>("DefaultPrinterPicker")!;
+                var input = picker.FindControl<AutoCompleteBox>("PrinterNameInput")!;
+                input.Text = "Workstation A";
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal("Workstation A", AppSettings.Instance.DefaultPrinterName);
+
+                vm.RootGraph.Clear();
+                var start = new StartNodeViewModel();
+                var print = new PrintLabelNodeViewModel { UseManualSerialNumber = true, ManualSerialNumber = "123456", PrinterName = "Profile queue" };
+                var end = new EndNodeViewModel();
+                vm.Nodes.Add(start);
+                vm.Nodes.Add(print);
+                vm.Nodes.Add(end);
+                vm.Connections.Add(new(start.Output[0], print.In));
+                vm.Connections.Add(new(print.TrueOut, end.Input[0]));
+                var profile = GraphSerializer.Serialize(vm, "Printer fixture");
+                Assert.Contains("\"useDefaultPrinter\": true", profile);
+                GraphSerializer.Deserialize(profile, vm);
+
+                await RunProfileAsync();
+                input.Text = "Workstation B";
+                Dispatcher.UIThread.RunJobs();
+                await RunProfileAsync();
+                Assert.Equal(profile, GraphSerializer.Serialize(vm, "Printer fixture"));
+
+                var reopened = vm.Nodes.OfType<PrintLabelNodeViewModel>().Single();
+                reopened.UseDefaultPrinter = false;
+                GraphSerializer.Deserialize(GraphSerializer.Serialize(vm, "Fixed queue"), vm);
+                Assert.False(vm.Nodes.OfType<PrintLabelNodeViewModel>().Single().UseDefaultPrinter);
+                await RunProfileAsync();
+
+                settings.DefaultPrinterName = "";
+                GraphSerializer.Deserialize(profile, vm);
+                await RunProfileAsync();
+                Assert.Equal(new[] { "Workstation A", "Workstation B", "Profile queue", "Profile queue" }, printer.Names);
+            }
+            finally
+            {
+                window.Close();
+                settings.DefaultPrinterName = previous;
+            }
+            return true;
+
+            async Task RunProfileAsync()
+            {
+                using var compiler = new GraphCompiler(bus, new Http(), NullLogger.Instance) { LabelPrinter = printer };
+                var context = new TestContext(new RegisterState());
+                Assert.Equal(ExecutionStatus.Completed,
+                    await new TestExecutor().ExecuteAsync(compiler.Compile(vm.RootGraph).StartNode, context, CancellationToken.None));
+            }
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task Refresh_HandlesEmptyFailureAndRecovery_WithoutDroppingPreviousList()
     {
@@ -94,7 +170,7 @@ public class PrinterPickerTests
                 manual.Focus(); manual.SelectAll(); window.KeyTextInput(@"\\custom\Queue"); Layout();
                 input.IsDropDownOpen = false;
                 Assert.Equal(@"\\custom\Queue", vm.PrinterName);
-                catalog.Names = new[] { "Other queue" };
+                catalog.Names = catalog.Names.Append("Third queue").ToArray();
                 Click(picker.FindControl<Button>("RefreshPrintersButton")!);
                 await picker.State.RefreshCommand.ExecutionTask!; Layout();
                 Assert.Equal(@"\\custom\Queue", input.Text); Assert.Equal(@"\\custom\Queue", vm.PrinterName);
@@ -103,6 +179,9 @@ public class PrinterPickerTests
                 Click(picker.FindControl<Button>("ChoosePrinterButton")!); Layout();
                 Assert.True(input.IsDropDownOpen);
                 window.CaptureRenderedFrame()!.Save($"/private/tmp/tfortis-printer-picker-{dark}.png");
+                Click(popup!.Child!.GetVisualDescendants().OfType<ListBoxItem>().Single(i => (string?)i.DataContext == "Third queue"));
+                await vm.RepeatLastCommand.ExecuteAsync(null);
+                Assert.Equal("Third queue", printer.Names.Last());
                 picker.IsEnabled = false; Layout();
                 Assert.False(picker.FindControl<Button>("ChoosePrinterButton")!.IsEffectivelyEnabled);
                 Assert.False(picker.FindControl<Button>("RefreshPrintersButton")!.IsEffectivelyEnabled);

@@ -14,26 +14,34 @@ public sealed class LabelLookupService(IHttpRequestService http)
 {
     public static string NormalizeMac(string value)
     {
-        var hex = value.Trim().Replace(":", "").Replace("-", "");
-        if (hex.Length != 12 || !hex.All(Uri.IsHexDigit)) throw new InvalidOperationException("Введите MAC из 12 шестнадцатеричных цифр.");
-        return string.Join(":", Enumerable.Range(0, 6).Select(i => hex.Substring(i * 2, 2).ToUpperInvariant()));
+        if (!LabelPrintContent.TryNormalizeMac(value, out var mac))
+            throw new InvalidOperationException("Введите MAC из 12 шестнадцатеричных цифр.");
+        return mac;
     }
 
     public async Task<LabelData> FindAsync(string server, string query, bool byMac, CancellationToken token)
     {
         query = byMac ? NormalizeMac(query) : query.Trim();
-        if (!byMac && (!long.TryParse(query, NumberStyles.None, CultureInfo.InvariantCulture, out var serial) || serial <= 0))
-            throw new InvalidOperationException("Введите полный серийный номер изделия.");
-        var root = ServerBaseUrlResolver.NormalizeForHttp(server).TrimEnd('/');
+        if (!byMac && (!int.TryParse(query, NumberStyles.None, CultureInfo.InvariantCulture, out var serial) || serial <= 0))
+            throw new InvalidOperationException("Введите серийный номер изделия.");
+        var root = ServerBaseUrlResolver.NormalizeForHttp(server);
         if (!Uri.TryCreate(root, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
             throw new InvalidOperationException("Укажите адрес сервера в настройках.");
         var path = uri.AbsolutePath.TrimEnd('/');
-        if (path.EndsWith("/api.svc", StringComparison.OrdinalIgnoreCase)) { }
-        else if (path.EndsWith("/api", StringComparison.OrdinalIgnoreCase)) root += "/api.svc";
-        else root += "/api/api.svc";
-        var result = await http.GetAsync(root + "/getdevicehistorylist?findParam=" + (byMac ? "mac" : "serial") +
-            "&findVal=" + Uri.EscapeDataString(query), TimeSpan.FromSeconds(20), token);
-        if (!result.IsSuccessStatusCode) throw new InvalidOperationException($"Ошибка сервера: HTTP {result.StatusCode}. {result.ErrorMessage}");
+        if (!path.EndsWith("/getdevicehistorylist", StringComparison.OrdinalIgnoreCase))
+        {
+            if (path.EndsWith("/api", StringComparison.OrdinalIgnoreCase)) path += "/api.svc";
+            else if (!path.EndsWith("/api.svc", StringComparison.OrdinalIgnoreCase)) path += "/api/api.svc";
+            path += "/getdevicehistorylist";
+        }
+        var endpoint = new UriBuilder(uri) {
+            Path = path, Query = $"findParam={(byMac ? "mac" : "serial")}&findVal={Uri.EscapeDataString(query)}", Fragment = ""
+        };
+        var result = await http.GetAsync(endpoint.Uri.AbsoluteUri, TimeSpan.FromSeconds(20), token);
+        if (result.StatusCode is 401 or 403)
+            throw new InvalidOperationException("Сервер отклонил авторизацию. Запустите программу через лаунчер.");
+        if (!result.IsSuccessStatusCode)
+            throw new InvalidOperationException(result.StatusCode is { } status ? $"Ошибка сервера этикеток (HTTP {status})." : result.ErrorMessage);
         return Parse(result.Body, query, byMac);
     }
 
@@ -44,25 +52,25 @@ public sealed class LabelLookupService(IHttpRequestService http)
         using var document = JsonDocument.Parse(body);
         if (document.RootElement.ValueKind != JsonValueKind.Array)
             throw new InvalidOperationException("Сервер вернул неизвестный формат истории изделия.");
+        if (document.RootElement.GetArrayLength() == 0)
+            throw new InvalidOperationException("Сервер не нашёл изделие. Проверьте серийный номер или MAC.");
+        var templates = AppSettings.Instance.LabelTemplates;
+        LabelTemplateCatalog.Validate(templates);
+        var match = byMac ? NormalizeMac(query) : query.TrimStart('0');
         var matches = new List<LabelData>();
         foreach (var entry in document.RootElement.EnumerateArray())
         {
             if (entry.ValueKind != JsonValueKind.Object || !entry.TryGetProperty("device", out var device) ||
                 device.ValueKind != JsonValueKind.Object) continue;
             var serial = Field(device, "serial", "serial_num", "serialNumber", "serial_number");
-            var mac = Field(device, "mac", "mac_address", "default_mac", "macAddress");
             if (!int.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) continue;
-            var templates = AppSettings.Instance.LabelTemplates;
-            LabelTemplateCatalog.Validate(templates);
-            var candidates = templates.Select((t, i) => (Template: t, Index: i)).Where(x => x.Template.MatchServerSerial &&
-                number >= x.Template.SerialOffset && (long)number <= (long)x.Template.SerialOffset + x.Template.ShortSerialMax).ToArray();
-            if (candidates.Length > 1) throw new InvalidOperationException("Диапазон серийника совпадает с несколькими шаблонами. Исправьте диапазоны в редакторе этикеток.");
-            if (candidates.Length == 0) continue;
-            var kind = candidates[0].Index;
-            if (string.IsNullOrWhiteSpace(mac) && templates[kind].RequiresMac) continue;
-            if (!string.IsNullOrWhiteSpace(mac)) mac = NormalizeMac(mac);
-            if (byMac ? mac != NormalizeMac(query) : number.ToString(CultureInfo.InvariantCulture) != query.TrimStart('0')) continue;
-            matches.Add(new(kind, number.ToString(CultureInfo.InvariantCulture), mac));
+            var mac = Field(device, "mac", "mac_address", "default_mac", "macAddress");
+            var hasMac = LabelPrintContent.TryNormalizeMac(mac, out var normalizedMac);
+            var fullSerial = number.ToString(CultureInfo.InvariantCulture);
+            if (byMac ? !hasMac || normalizedMac != match : fullSerial != match) continue;
+            var kind = templates.FindIndex(template => template.MatchesServerSerial(number));
+            if (kind < 0 || templates[kind].RequiresMac && !hasMac) continue;
+            matches.Add(new(kind, fullSerial, normalizedMac));
         }
         var distinct = matches.Distinct().ToArray();
         if (distinct.Length != 1)

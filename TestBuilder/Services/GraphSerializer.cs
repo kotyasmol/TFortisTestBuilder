@@ -345,6 +345,7 @@ namespace TestBuilder.Services
                     case PrintLabelNodeViewModel pl:
                         n.UseLastTestLabel = pl.UseLastTestLabel ? true : null;
                         n.PrinterName = pl.PrinterName;
+                        n.UseDefaultPrinter = pl.UseDefaultPrinter ? true : null;
                         n.SerialVariableName = pl.SerialVariableName;
                         n.SerialShortVariableName = pl.SerialShortVariableName;
                         n.MacVariableName = pl.MacVariableName;
@@ -810,6 +811,7 @@ namespace TestBuilder.Services
                         Location = location,
                         UseLastTestLabel = n.UseLastTestLabel ?? (type == "Print Label (last test v1)"),
                         PrinterName = n.PrinterName ?? "TSC TE310",
+                        UseDefaultPrinter = n.UseDefaultPrinter ?? false,
                         SerialVariableName = n.SerialVariableName ?? "SerialNumber",
                         SerialShortVariableName = n.SerialShortVariableName ?? "SerialShort",
                         MacVariableName = n.MacVariableName ?? "Dut.default_mac",

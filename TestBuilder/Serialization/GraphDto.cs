@@ -447,6 +447,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PrinterName { get; set; }
 
+        [JsonPropertyName("useDefaultPrinter")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseDefaultPrinter { get; set; }
+
         [JsonPropertyName("serialVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? SerialVariableName { get; set; }

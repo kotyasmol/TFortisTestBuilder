@@ -31,7 +31,7 @@ public sealed class ProfileEditHistory : IDisposable
         "RunOnFailure", "FailureOrder", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
         "SlaveId", "Step", "StopOnError", "TargetVersion", "TestType", "Text",
         "TimeoutMs", "ToSlaveId", "UdpPort", "Url", "UseCurrentSlaveId", "UseFixedSerialNumber",
-        "UseManualSerialNumber", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",
+        "UseDefaultPrinter", "UseManualSerialNumber", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",
         "RunOnlyOnFirstRun", "VersionVariable", "WarmupMs", "RegisterArea", "BoardElements", "RepeatOnSameSlave", "RepeatCount", "IndexVariable", "UntilSuccess", "RepeatDelayMs"
     };
     private readonly GraphWorkspaceViewModel _root;

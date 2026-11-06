@@ -3036,6 +3036,7 @@
             "customName": "Повтор этикетки последнего теста",
             "useLastTestLabel": true,
             "printerName": "",
+            "useDefaultPrinter": true,
             "copies": 1,
             "failOnPrinterError": true
           },
@@ -6823,6 +6824,7 @@
             "macVariableName": "Dut.default_mac",
             "DisabledPortsText": null,
             "printerName": "TSC TE310",
+            "useDefaultPrinter": true,
             "serialVariableName": "SerialNumber",
             "useManualSerialNumber": false,
             "manualSerialNumber": "",

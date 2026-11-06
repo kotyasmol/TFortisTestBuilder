@@ -204,7 +204,7 @@ public class LabelPreviewTests
         {
             Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             var printer = new Printer(); var http = new Http();
-            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, http, printer);
+            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, http, printer) { PrinterName = "Label printer" };
             var view = new LabelPrintingView { DataContext = vm };
             var window = new Window { Width = 1100, Height = 1000, Content = view };
             void Layout() { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); }
@@ -219,8 +219,12 @@ public class LabelPreviewTests
                 view.FindControl<TextBox>("LabelSerialInput")!.Text = "12345678"; Layout();
                 Assert.Contains(vm.Preview!.Elements, e => e.Text == "12345678");
                 Assert.Empty(printer.Commands); Assert.Equal(0, http.Requests);
-                vm.SerialNumber = "3200428";
-                await vm.FindBySerialCommand.ExecuteAsync(null); Layout();
+                view.FindControl<TextBox>("LabelSerialInput")!.Text = "3200428"; Layout();
+                var find = view.FindControl<Button>("FindLabelBySerialButton")!;
+                var findPoint = find.TranslatePoint(new Point(find.Bounds.Width / 2, find.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(findPoint, MouseButton.Left); window.MouseUp(findPoint, MouseButton.Left);
+                await vm.FindBySerialCommand.ExecutionTask!; Layout();
+                Assert.Equal(1, http.Requests);
                 Assert.Equal(0, vm.SelectedType); Assert.False(vm.Preview!.IsSample);
                 Assert.Contains(vm.Preview.Elements, e => e.Text == "MAC: C0:11:A6:20:01:AC");
                 Assert.Same(vm.Preview, view.FindControl<LabelPreviewControl>("CurrentLabelPreview")!.Preview);

@@ -30,7 +30,7 @@ public class LastTestLabelTests
             new("three", "Third", "New product B"), new("four", "No model") };
         var printer = new Printer();
         using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer,
-            () => "New product A", () => profiles) { SerialNumber = "3200428", MacAddress = "02:00:00:00:00:01" };
+            () => "New product A", () => profiles) { SerialNumber = "3200428", MacAddress = "02:00:00:00:00:01", PrinterName = "Label printer" };
         Assert.Equal(new[] { "New product A", "New product B" }, vm.ProductNames);
         vm.SelectedProductName = "New product B";
         await vm.PrintCommand.ExecuteAsync(null);

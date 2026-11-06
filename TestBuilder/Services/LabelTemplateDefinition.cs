@@ -31,6 +31,9 @@ public sealed class LabelTemplateDefinition
     }
     public override string ToString() => Name;
     public string Barcode(int shortSerial) => BarcodePrefix + shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture);
+    internal bool MatchesServerSerial(int serial) =>
+        MatchServerSerial && serial >= SerialOffset && (long)serial <= (long)SerialOffset + ShortSerialMax;
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||

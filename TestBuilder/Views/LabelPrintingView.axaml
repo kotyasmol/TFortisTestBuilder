@@ -58,8 +58,8 @@
         <StackPanel Spacing="12">
         <TextBlock Text="Серийный номер" />
         <Grid ColumnDefinitions="*,Auto">
-          <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Для поиска — полный серверный номер" MinWidth="320" />
-          <Button Grid.Column="1" Content="Получить по серийнику" Command="{Binding FindBySerialCommand}" Margin="12,0,0,0" />
+          <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Полный номер или короткий для выбранного изделия" MinWidth="320" />
+          <Button x:Name="FindLabelBySerialButton" Grid.Column="1" Content="Получить по серийнику" Command="{Binding FindBySerialCommand}" Margin="12,0,0,0" />
         </Grid>
         <TextBlock Text="MAC-адрес" />
         <Grid ColumnDefinitions="*,Auto">
@@ -69,6 +69,7 @@
         <TextBlock Text="Выбранный шаблон не требует MAC." IsVisible="{Binding !HasMac}" />
         <TextBlock Text="Принтер" />
         <views:PrinterPicker PrinterName="{Binding PrinterName, Mode=TwoWay}" />
+        <TextBlock Text="Если поле пустое, используется принтер из настроек." TextWrapping="Wrap" />
         <Grid ColumnDefinitions="Auto,Auto">
           <TextBlock Text="Количество этикеток" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Value="{Binding Copies}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="120" Margin="12,0,0,0" />
@@ -86,6 +87,8 @@
       </StackPanel>
       <WrapPanel>
         <Button Content="Печатать" Classes="primary" Command="{Binding PrintCommand}" Margin="0,0,12,8" />
+        <Button x:Name="PrintTestLabelButton" Content="Тестовая печать" Command="{Binding PrintTestLabelCommand}" Margin="0,0,12,8"
+                ToolTip.Tip="Напечатать одну этикетку TEST PRINT на выбранном принтере" />
         <Button Content="Повторить последнюю этикетку" Command="{Binding RepeatLastCommand}" Margin="0,0,12,8"
                 ToolTip.Tip="Повторяет данные последней успешной печати этой вкладки. Количество и принтер берутся из текущих полей." />
         <Button Content="Отменить" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" Margin="0,0,0,8" />

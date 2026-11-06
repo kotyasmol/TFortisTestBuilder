@@ -1978,6 +1978,7 @@
             "serialShortVariableName": "SerialShort",
             "macVariableName": "Dut.default_mac",
             "printerName": "TSC TE310",
+            "useDefaultPrinter": true,
             "serialVariableName": "SerialNumber",
             "useManualSerialNumber": false,
             "manualSerialNumber": "",

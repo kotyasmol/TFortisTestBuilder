@@ -6,8 +6,11 @@ namespace TestBuilder.Services.Http;
 public static class LauncherServerClient
 {
     public static HttpRequestService Create(string sessionId, string serverBaseUrl) =>
+        Create(sessionId, () => serverBaseUrl);
+
+    internal static HttpRequestService Create(string sessionId, Func<string> serverBaseUrl) =>
         new(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }), true,
-            request => ApplyHeaders(request, sessionId, serverBaseUrl));
+            request => ApplyHeaders(request, sessionId, serverBaseUrl()));
 
     internal static void ApplyHeaders(HttpRequestMessage request, string sessionId, string serverBaseUrl)
     {

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using TestBuilder.Services;
 using TestBuilder.Services.Http;
 
@@ -83,6 +84,31 @@ public class LauncherOptionsTests
         Assert.True(result.IsSuccessStatusCode);
         Assert.Equal("SGUID=session_id=test-session&login=", handler.Cookie);
         Assert.Equal("ftstand", handler.UserAgent);
+    }
+
+    [Fact]
+    public async Task LabelRequest_UsesCurrentConfiguredOriginAndLauncherSession()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var server = "http://previous.example";
+        using var http = LauncherServerClient.Create("test-session", () => server);
+        server = $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}";
+
+        var request = http.GetAsync(server + "/api/api.svc/getdevicehistorylist?findParam=serial&findVal=3200428",
+            TimeSpan.FromSeconds(5), timeout.Token);
+        using var connection = await listener.AcceptTcpClientAsync(timeout.Token);
+        using var stream = connection.GetStream();
+        using var reader = new StreamReader(stream, leaveOpen: true);
+        var headers = new List<string>();
+        while (await reader.ReadLineAsync(timeout.Token) is { Length: > 0 } line)
+            headers.Add(line);
+        await stream.WriteAsync("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n[]"u8.ToArray(), timeout.Token);
+
+        Assert.Equal("[]", (await request).Body);
+        Assert.Contains(headers, h => h.StartsWith("GET /api/api.svc/getdevicehistorylist?findParam=serial", StringComparison.Ordinal));
+        Assert.Contains(headers, h => h.Equals("Cookie: SGUID=session_id=test-session&login=", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]

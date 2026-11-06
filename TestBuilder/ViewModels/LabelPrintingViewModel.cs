@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Globalization;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -24,6 +25,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private readonly Func<IReadOnlyList<GraphProfile>>? _profiles;
     private readonly Action? _refreshProfiles;
     private bool _refreshingProducts;
+    private string? _lookupProductName;
     public bool HasProducts => ProductNames.Count > 0;
     public bool ShowProductPicker => _profiles != null;
     private LastTestLabelSnapshot? _lastTest;
@@ -45,7 +47,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int selectedType;
     [ObservableProperty] private string serialNumber = "";
     [ObservableProperty] private string macAddress = "";
-    [ObservableProperty] private string printerName = "TSC TE310";
+    [ObservableProperty] private string printerName = "";
     [ObservableProperty] private int copies = 1;
     [ObservableProperty] private string status = "Введите данные этикетки или получите их с сервера.";
     [ObservableProperty] private string lastLabelDescription = "В этой вкладке ещё не печатали этикетки.";
@@ -55,11 +57,21 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private readonly IRawLabelPrinter _printer;
     private readonly Func<bool> _canUse;
     private readonly Func<string?> _deviceModel;
-    public string ProfileDeviceName => _profiles == null ? _deviceModel() ?? "" : SelectedProductName ?? "";
+    public string ProfileDeviceName => SelectedProductName ?? (_profiles == null ? _deviceModel() : null) ?? "";
     private CancellationTokenSource? _operation;
     private LabelData? _last;
     private LabelTemplateDefinition? _lastTemplate;
     private bool _disposed;
+    private static readonly LabelTemplateDefinition TestZpl = new()
+    {
+        Id = "TestPrintZpl", Name = "Тестовая этикетка",
+        Command = "^XA^FO12,12^A0N,30,18^FDTEST PRINT^FS^XZ"
+    };
+    private static readonly LabelTemplateDefinition TestEpl = new()
+    {
+        Id = "TestPrintEpl", Name = "Тестовая этикетка", Language = "EPL",
+        Command = "\r\nN\r\nA12,12,0,3,1,1,N,\"TEST PRINT\"\r\nP1,1\r\n"
+    };
     public bool CanEdit => !IsBusy && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
     public bool HasMac => SelectedTemplate?.RequiresMac == true;
@@ -75,7 +87,8 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 
     public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null,
         Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
-        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, AppSettings.Instance.ServerBaseUrl), new WindowsRawLabelPrinter(), deviceModel, profiles, refreshProfiles) { }
+        : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, () => AppSettings.Instance.ServerBaseUrl),
+            new WindowsRawLabelPrinter(), deviceModel, profiles, refreshProfiles) { }
 
     internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer,
         Func<string?>? deviceModel = null, Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
@@ -85,12 +98,13 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         RefreshProductNames();
     }
 
-    internal void RefreshProductNames()
+    internal void RefreshProductNames(string? preferred = null)
     {
         var names = (_profiles?.Invoke() ?? Array.Empty<GraphProfile>()).Select(p => p.DeviceModel?.Trim())
+            .Append(_lookupProductName)
             .Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!)
             .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => EquipmentCatalog.SortKey(n), StringComparer.Ordinal).ToArray();
-        var selected = SelectedProductName ?? _deviceModel();
+        var selected = preferred ?? SelectedProductName ?? _deviceModel();
         _refreshingProducts = true;
         try
         {
@@ -126,7 +140,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         {
             var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
             var candidates = AppSettings.Instance.LabelTemplates.Where(t => OptionId(t) == id).ToArray();
-            return candidates.FirstOrDefault(t => t.Name == ProfileDeviceName)
+            return candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
                 ?? candidates.FirstOrDefault(t => int.TryParse(SerialNumber, out var serial)
                     && serial >= t.SerialOffset && (long)serial <= (long)t.SerialOffset + t.ShortSerialMax)
                 ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(SerialNumber) ? candidates.FirstOrDefault() : null);
@@ -141,7 +155,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         LabelOptions.Clear();
         foreach (var group in AppSettings.Instance.LabelTemplates.GroupBy(OptionId))
         {
-            var template = group.FirstOrDefault(t => t.Name == ProfileDeviceName) ?? group.First();
+            var template = group.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase)) ?? group.First();
             var name = group.Key == "DeviceZpl" ? "ZPL · Изделие, MAC, SN" :
                 template.Id == "SerialOnlyEpl" ? "EPL · Серийный номер" : template.Name;
             LabelOptions.Add(new(group.Key, name, PreviewFor(template, "", "")));
@@ -171,6 +185,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         PrintLastTestCommand.NotifyCanExecuteChanged(); RefreshProductsCommand.NotifyCanExecuteChanged();
         EditTemplatesCommand.NotifyCanExecuteChanged();
         PrintCommand.NotifyCanExecuteChanged(); RepeatLastCommand.NotifyCanExecuteChanged();
+        PrintTestLabelCommand.NotifyCanExecuteChanged();
         FindBySerialCommand.NotifyCanExecuteChanged(); FindByMacCommand.NotifyCanExecuteChanged();
     }
 
@@ -190,27 +205,47 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private Task FindByMac() => Find(true);
     private Task Find(bool byMac) => Run(async token =>
     {
+        var query = byMac ? MacAddress : ResolveSerialForLookup();
         Status = "Получение данных с сервера…";
-        var data = await new LabelLookupService(_http).FindAsync(AppSettings.Instance.ServerBaseUrl,
-            byMac ? MacAddress : SerialNumber, byMac, token);
+        var data = await new LabelLookupService(_http).FindAsync(AppSettings.Instance.ServerBaseUrl, query, byMac, token);
         var foundTemplate = AppSettings.Instance.LabelTemplates[data.Kind];
-        var product = ProductNames.FirstOrDefault(n => string.Equals(n, foundTemplate.Name, StringComparison.OrdinalIgnoreCase));
-        if (product != null) SelectedProductName = product;
+        if (_profiles == null) SelectedProductName = foundTemplate.Name;
+        else
+        {
+            _lookupProductName = foundTemplate.Name;
+            RefreshProductNames(foundTemplate.Name);
+        }
         var id = OptionId(foundTemplate);
         SelectedType = LabelOptions.ToList().FindIndex(t => t.Id == id);
         SerialNumber = data.Serial; MacAddress = data.Mac;
-        Status = "Данные получены. Проверьте этикетку и нажмите «Печатать».";
+        Status = $"Найдены данные для «{foundTemplate.Name}». Проверьте этикетку и нажмите «Печатать».";
     });
+
+    private string ResolveSerialForLookup()
+    {
+        var query = SerialNumber.Trim();
+        if (!int.TryParse(query, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) return query;
+        var templates = AppSettings.Instance.LabelTemplates;
+        if (templates.Any(template => template.MatchesServerSerial(number))) return query;
+        var selected = SelectedTemplate;
+        if (selected is { MatchServerSerial: true } && number <= selected.ShortSerialMax)
+            return (selected.SerialOffset + number).ToString(CultureInfo.InvariantCulture);
+        if (selected == null && templates.Any(template => template.MatchServerSerial && number <= template.ShortSerialMax))
+            throw new InvalidOperationException("Для поиска по короткому номеру выберите изделие. Можно также ввести полный номер или MAC.");
+        return query;
+    }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private Task Print() => PrintData(new(SelectedType, SerialNumber.Trim(), MacAddress.Trim()));
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private Task PrintTestLabel() => PrintData(new(0, "1", ""), SelectedTemplate?.Language == "EPL" ? TestEpl : TestZpl, testPrint: true);
     [RelayCommand(CanExecute = nameof(CanRepeat))]
     private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last, _lastTemplate);
     [RelayCommand(CanExecute = nameof(CanPrintLastTest))]
     private Task PrintLastTest() => _lastTest?.Label is not { } label ? Task.CompletedTask :
         PrintData(new LabelData(0, label.Serial, label.Mac), label.Template);
 
-    private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null) => Run(async token =>
+    private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null, bool testPrint = false) => Run(async token =>
     {
         if (savedTemplate == null && _profiles != null && SelectedTemplate?.Language == "ZPL" &&
             (SelectedProductName == null || !ProductNames.Contains(SelectedProductName)))
@@ -218,8 +253,10 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         var template = savedTemplate?.Copy() ?? LabelPrintContent.ForDevice(
             SelectedTemplate ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
         template.Validate();
-        if (Copies is < 1 or > 100) throw new InvalidOperationException("Количество этикеток: от 1 до 100.");
-        var printer = PrinterName.Trim(); var count = Copies;
+        var count = testPrint ? 1 : Copies;
+        if (count is < 1 or > 100) throw new InvalidOperationException("Количество этикеток должно быть от 1 до 100.");
+        var printer = string.IsNullOrWhiteSpace(PrinterName) ? AppSettings.Instance.DefaultPrinterName?.Trim() : PrinterName.Trim();
+        if (string.IsNullOrEmpty(printer)) throw new InvalidOperationException("Выберите принтер в разделе «Этикетки» или в настройках программы.");
         Status = "Печать…";
         var context = new TestContext(new RegisterState());
         var step = new PrintLabelStep(_logger, printer, "SerialNumber", "SerialShort", "Mac",
@@ -227,9 +264,12 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             DeviceLabelModel.PswUpsBox8x2Pro, template);
         var result = await step.ExecuteAsync(context, token);
         if (result == StepResult.False) throw new InvalidOperationException(context.GetVariable<string>("PrintLabel.Error"));
-        _last = data; _lastTemplate = template.Copy();
-        LastPreview = LabelPreview.Parse(template, context.GetVariable<string>("PrintLabel.SingleCommand") ?? "");
-        LastLabelDescription = $"{template.Name} · SN {data.Serial}" + (!template.RequiresMac ? "" : $" · MAC {data.Mac}");
+        if (!testPrint)
+        {
+            _last = data; _lastTemplate = template.Copy();
+            LastPreview = LabelPreview.Parse(template, context.GetVariable<string>("PrintLabel.SingleCommand") ?? "");
+            LastLabelDescription = $"{template.Name} · SN {data.Serial}" + (!template.RequiresMac ? "" : $" · MAC {data.Mac}");
+        }
         Status = context.GetVariable<string>("PrintLabel.CompletionStatus") == "SentToPrinter"
             ? $"Передано принтеру: {count} шт. Драйвер не подтверждает физический выход этикетки."
             : $"Печать завершена: {count} шт.";
