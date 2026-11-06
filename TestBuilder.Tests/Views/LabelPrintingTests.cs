@@ -130,9 +130,9 @@ public class LabelPrintingTests
     }
 
     [Theory]
-    [InlineData(0, "^XA", "^XZ")]
-    [InlineData(1, "\r\nN", "P1,1")]
-    public async Task TestPrintUsesPrinterSettingAndOneCopy_AndKeepsProductRepeat(int kind, string start, string end)
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task TestPrintUsesStandardTemplateWithZeros_AndKeepsProductRepeat(int kind)
     {
         var previousDefault = AppSettings.Instance.DefaultPrinterName;
         var http = new Http(); var printer = new Printer();
@@ -143,10 +143,10 @@ public class LabelPrintingTests
             AppSettings.Instance.DefaultPrinterName = "Workstation printer";
 
             await vm.PrintTestLabelCommand.ExecuteAsync(null);
-            var test = Assert.Single(printer.Jobs);
-            Assert.StartsWith(start, test);
-            Assert.Contains("TEST PRINT", test);
-            Assert.Equal(2, test.Split(end, StringSplitOptions.None).Length);
+            var expected = kind == 0
+                ? PrintLabelStep.BuildPswUpsBox8x2ProZpl(0, "00:00:00:00:00:00")
+                : PrintLabelStep.BuildEpl("00000000");
+            Assert.Equal(expected, Assert.Single(printer.Jobs));
             Assert.Equal("Workstation printer", Assert.Single(printer.Names));
             Assert.Empty(http.Url);
             Assert.False(vm.CanRepeat);

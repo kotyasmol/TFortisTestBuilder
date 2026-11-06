@@ -88,7 +88,7 @@
       <WrapPanel>
         <Button Content="Печатать" Classes="primary" Command="{Binding PrintCommand}" Margin="0,0,12,8" />
         <Button x:Name="PrintTestLabelButton" Content="Тестовая печать" Command="{Binding PrintTestLabelCommand}" Margin="0,0,12,8"
-                ToolTip.Tip="Напечатать одну этикетку TEST PRINT на выбранном принтере" />
+                ToolTip.Tip="Напечатать одну этикетку с нулями по выбранному шаблону" />
         <Button Content="Повторить последнюю этикетку" Command="{Binding RepeatLastCommand}" Margin="0,0,12,8"
                 ToolTip.Tip="Повторяет данные последней успешной печати этой вкладки. Количество и принтер берутся из текущих полей." />
         <Button Content="Отменить" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" Margin="0,0,0,8" />

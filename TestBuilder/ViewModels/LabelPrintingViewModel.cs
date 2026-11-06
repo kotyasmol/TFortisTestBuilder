@@ -62,16 +62,6 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private LabelData? _last;
     private LabelTemplateDefinition? _lastTemplate;
     private bool _disposed;
-    private static readonly LabelTemplateDefinition TestZpl = new()
-    {
-        Id = "TestPrintZpl", Name = "Тестовая этикетка",
-        Command = "^XA^FO12,12^A0N,30,18^FDTEST PRINT^FS^XZ"
-    };
-    private static readonly LabelTemplateDefinition TestEpl = new()
-    {
-        Id = "TestPrintEpl", Name = "Тестовая этикетка", Language = "EPL",
-        Command = "\r\nN\r\nA12,12,0,3,1,1,N,\"TEST PRINT\"\r\nP1,1\r\n"
-    };
     public bool CanEdit => !IsBusy && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
     public bool HasMac => SelectedTemplate?.RequiresMac == true;
@@ -134,17 +124,16 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private static bool IsDeviceTemplate(LabelTemplateDefinition t) =>
         t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" && t.Language == "ZPL";
     private static string OptionId(LabelTemplateDefinition t) => IsDeviceTemplate(t) ? "DeviceZpl" : t.Id;
-    private LabelTemplateDefinition? SelectedTemplate
+    private LabelTemplateDefinition? SelectedTemplate => ResolveSelectedTemplate(SerialNumber);
+
+    private LabelTemplateDefinition? ResolveSelectedTemplate(string serialNumber)
     {
-        get
-        {
-            var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-            var candidates = AppSettings.Instance.LabelTemplates.Where(t => OptionId(t) == id).ToArray();
-            return candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
-                ?? candidates.FirstOrDefault(t => int.TryParse(SerialNumber, out var serial)
-                    && serial >= t.SerialOffset && (long)serial <= (long)t.SerialOffset + t.ShortSerialMax)
-                ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(SerialNumber) ? candidates.FirstOrDefault() : null);
-        }
+        var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
+        var candidates = AppSettings.Instance.LabelTemplates.Where(t => OptionId(t) == id).ToArray();
+        return candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
+            ?? candidates.FirstOrDefault(t => int.TryParse(serialNumber, out var serial)
+                && serial >= t.SerialOffset && (long)serial <= (long)t.SerialOffset + t.ShortSerialMax)
+            ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(serialNumber) ? candidates.FirstOrDefault() : null);
     }
 
     internal void RefreshTemplates(string? selectedId = null)
@@ -238,7 +227,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private Task Print() => PrintData(new(SelectedType, SerialNumber.Trim(), MacAddress.Trim()));
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private Task PrintTestLabel() => PrintData(new(0, "1", ""), SelectedTemplate?.Language == "EPL" ? TestEpl : TestZpl, testPrint: true);
+    private Task PrintTestLabel() => PrintData(new(0, "00000000", "00:00:00:00:00:00"), testPrint: true);
     [RelayCommand(CanExecute = nameof(CanRepeat))]
     private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last, _lastTemplate);
     [RelayCommand(CanExecute = nameof(CanPrintLastTest))]
@@ -247,11 +236,12 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 
     private Task PrintData(LabelData data, LabelTemplateDefinition? savedTemplate = null, bool testPrint = false) => Run(async token =>
     {
-        if (savedTemplate == null && _profiles != null && SelectedTemplate?.Language == "ZPL" &&
+        var selected = savedTemplate == null ? ResolveSelectedTemplate(testPrint ? "" : SerialNumber) : null;
+        if (!testPrint && _profiles != null && selected?.Language == "ZPL" &&
             (SelectedProductName == null || !ProductNames.Contains(SelectedProductName)))
             throw new InvalidOperationException("Выберите изделие из профилей. Название изделия задаётся в редакторе профиля.");
         var template = savedTemplate?.Copy() ?? LabelPrintContent.ForDevice(
-            SelectedTemplate ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
+            selected ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
         template.Validate();
         var count = testPrint ? 1 : Copies;
         if (count is < 1 or > 100) throw new InvalidOperationException("Количество этикеток должно быть от 1 до 100.");
