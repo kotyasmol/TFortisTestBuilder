@@ -557,6 +557,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var clone = source.Clone();
         clone.NodeColor = source.NodeColor;
         clone.CustomName = source.CustomName;
+        clone.OperatorName = source.OperatorName;
         clone.BoardElements = source.BoardElements;
         clone.RunOnlyOnFirstRun = source.RunOnlyOnFirstRun;
 

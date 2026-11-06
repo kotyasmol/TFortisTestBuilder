@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Domain.Modbus.Models;
 using TestBuilder.Services;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels.NodifyVM
 {
@@ -46,6 +47,9 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(DisplayTitle))]
         private string customName = string.Empty;
+        [ObservableProperty] private string operatorName = string.Empty;
+        public bool CanSetOperatorName => this is not
+            (StartNodeViewModel or EndNodeViewModel or BodyStartNodeViewModel or BodyEndNodeViewModel or LabelNodeViewModel);
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(DisplayTitle))]
         private string title = string.Empty;

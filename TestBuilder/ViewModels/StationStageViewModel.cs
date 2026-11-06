@@ -59,7 +59,7 @@ public partial class StationStageViewModel : ViewModelBase
         if (source is ICompositeNodeViewModel composite)
         {
             foreach (var node in StationDashboardViewModel.OrderedNodes(composite.BodyGraph))
-                if (!StationDashboardViewModel.IsBoundary(node))
+                if (node.CanSetOperatorName)
                     _stepNumbers.Add(node, _stepNumbers.Count + 1);
         }
         stepProgressText = HasSteps ? $"Шагов: {StepCount}" : string.Empty;
@@ -69,13 +69,33 @@ public partial class StationStageViewModel : ViewModelBase
     {
         if (!IsActive) return;
         // Count the body's own steps. A nested subtest or loop stays one step while its body runs.
-        var steps = activeNodes.Where(_stepNumbers.ContainsKey).Distinct()
+        var active = activeNodes.ToHashSet();
+        var steps = active.Where(_stepNumbers.ContainsKey)
             .OrderBy(node => _stepNumbers[node]).ToArray();
         // Keep the last step between notifications, on pause, and after completion.
         if (steps.Length == 0) return;
         StepProgressText = steps.Length == 1
-            ? $"Шаг {_stepNumbers[steps[0]]} из {StepCount} — {StationDashboardViewModel.DisplayName(steps[0])}"
+            ? $"Шаг {_stepNumbers[steps[0]]} из {StepCount} — {DescribeStep(steps[0], active)}"
             : $"Шаги {string.Join(", ", steps.Select(node => _stepNumbers[node]))} из {StepCount} — " +
-              string.Join(" · ", steps.Select(StationDashboardViewModel.DisplayName));
+              string.Join(" · ", steps.Select(node => DescribeStep(node, active)));
+    }
+
+    private static string DescribeStep(NodeViewModel step, HashSet<NodeViewModel> active)
+    {
+        var name = StationDashboardViewModel.DisplayName(step);
+        var children = string.Join(" · ", NamedActiveChildren(step, active));
+        return children.Length == 0 ? name : $"{name} → {children}";
+    }
+
+    private static IEnumerable<string> NamedActiveChildren(NodeViewModel step, HashSet<NodeViewModel> active)
+    {
+        if (step is not ICompositeNodeViewModel composite) yield break;
+        foreach (var child in composite.BodyGraph.Nodes.Where(active.Contains))
+        {
+            if (child.CanSetOperatorName && !string.IsNullOrWhiteSpace(child.OperatorName))
+                yield return StationDashboardViewModel.DisplayName(child);
+            foreach (var name in NamedActiveChildren(child, active))
+                yield return name;
+        }
     }
 }

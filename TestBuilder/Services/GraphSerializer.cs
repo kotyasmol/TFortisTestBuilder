@@ -150,6 +150,11 @@ namespace TestBuilder.Services
                     Color = node.NodeColor
                 };
 
+                // An explicit empty operator name keeps the editor name from being read as a legacy shared name.
+                var operatorName = node.OperatorName?.Trim() ?? string.Empty;
+                if (n.CustomName != null || operatorName.Length > 0)
+                    n.OperatorName = operatorName;
+
                 switch (node)
                 {
                     case SerialConsoleNodeViewModel opSerialConsole: n.SerialConsole = opSerialConsole.Options; break;
@@ -863,6 +868,7 @@ namespace TestBuilder.Services
                 node.BoardElements = n.BoardElements ?? "";
                 node.NodeColor = n.Color ?? "blue";
                 node.CustomName = n.CustomName ?? string.Empty;
+                node.OperatorName = (n.OperatorName ?? n.CustomName ?? string.Empty).Trim();
                 node.RunOnlyOnFirstRun = n.RunOnlyOnFirstRun || wrappedFirstRun;
                 if (node.RunOnlyOnFirstRun && !node.CanRunOnlyOnFirstRun)
                 {

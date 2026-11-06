@@ -72,9 +72,14 @@
             <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding NodeHeaderTextBrush}" StrokeThickness="1.8"
                   Data="M9 3 L15 3 L15.6 6 L18 7.4 L21 6.5 L24 11.5 L21.6 13.5 L21.6 16.3 L24 18.3 L21 23.3 L18 22.4 L15.6 23.8 L15 27 L9 27 L8.4 23.8 L6 22.4 L3 23.3 L0 18.3 L2.4 16.3 L2.4 13.5 L0 11.5 L3 6.5 L6 7.4 L8.4 6 Z M16 15 A4 4 0 1 1 8 15 A4 4 0 1 1 16 15" />
             <Button.Flyout><Flyout><StackPanel Spacing="8" Width="290" IsEnabled="{Binding #NodeOptionsTrigger.IsEnabled}">
-              <TextBlock Text="Название ноды" />
+              <TextBlock Text="Название в редакторе" />
               <TextBox x:Name="CustomNodeNameInput" Text="{Binding CustomName, Mode=TwoWay}" Watermark="Необязательно"
-                       ToolTip.Tip="Название в редакторе и пульте. Очистите поле, чтобы вернуть стандартное название." />
+                       AutomationProperties.Name="Название в редакторе" ToolTip.Tip="Заголовок ноды на графе." />
+              <StackPanel Spacing="8" IsVisible="{Binding CanSetOperatorName}">
+                <TextBlock Text="Название в пульте" />
+                <TextBox x:Name="OperatorNodeNameInput" Text="{Binding OperatorName, Mode=TwoWay}" Watermark="Необязательно"
+                         AutomationProperties.Name="Название в пульте" ToolTip.Tip="Подпись этапа или выполняемого шага. Пустое поле оставляет стандартную подпись." />
+              </StackPanel>
               <TextBlock Text="Элементы платы через запятую" TextWrapping="Wrap" />
               <TextBox Text="{Binding BoardElements}" Watermark="VCC, K5" />
             </StackPanel></Flyout></Button.Flyout>
@@ -929,7 +934,7 @@
 
                   <StackPanel Margin="12" Spacing="8" Width="240">
                     <Grid ColumnDefinitions="78,*">
-                      <TextBlock Grid.Column="0" Text="Название:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="0" Text="Имя графа" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding Name}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 

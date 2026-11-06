@@ -76,6 +76,13 @@ public class ProfileOpenToggleTests
                 input.Text = "";
                 Layout();
                 Assert.Equal("Задержка", prep.DisplayTitle);
+                var operatorInput = panel.GetLogicalDescendants().OfType<TextBox>()
+                    .Single(t => t.Name == "OperatorNodeNameInput");
+                Assert.True(operatorInput.IsEffectivelyVisible);
+                operatorInput.Text = "Ждём стабилизации питания";
+                Layout();
+                Assert.Equal("Ждём стабилизации питания", prep.OperatorName);
+                Assert.Equal("Задержка", prep.DisplayTitle);
                 flyout.Hide();
 
                 check.Focus();

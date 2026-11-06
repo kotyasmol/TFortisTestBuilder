@@ -92,6 +92,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? CustomName { get; set; }
 
+        [JsonPropertyName("operatorName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? OperatorName { get; set; }
+
         [JsonPropertyName("repeatOnSameSlave")] public bool? RepeatOnSameSlave { get; set; }
         [JsonPropertyName("repeatCount")] public int? RepeatCount { get; set; }
         [JsonPropertyName("indexVariable")] public string? IndexVariable { get; set; }

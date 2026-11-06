@@ -31,6 +31,7 @@ internal static class FirstRunProfileKey
                 node["type"] = "Start";
             node.Remove("x"); node.Remove("y"); node.Remove("color"); node.Remove("boardElements");
             node.Remove("customName");
+            node.Remove("operatorName");
             if (node["body"] is JsonObject body) StripLayout(body);
             if (node["bodyGraph"] is JsonObject bodyGraph) StripLayout(bodyGraph);
         }

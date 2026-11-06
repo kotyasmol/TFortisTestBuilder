@@ -78,7 +78,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         Guidance = "Проверьте подключение изделия. Затем нажмите «Начать проверку».";
         CurrentStage = "Готов к работе";
         foreach (var node in OrderedNodes(graph))
-            if (!IsBoundary(node)) AddStage(node);
+            if (node.CanSetOperatorName) AddStage(node);
         // Unconnected failure cleanup becomes visible only if it actually runs.
         foreach (var cleanup in graph.Nodes.OfType<SubtestNodeViewModel>().Where(n => n.RunOnFailure && n.IsEnabled))
             if (!_stageByNode.ContainsKey(cleanup)) AddStage(cleanup, true);
@@ -367,9 +367,6 @@ public partial class StationDashboardViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRespond))]
     private void DeclineAction() { if (CanRespond) _prompt?.TrySetResult(false); }
 
-    internal static bool IsBoundary(NodeViewModel node) => node is StartNodeViewModel or EndNodeViewModel or
-        BodyStartNodeViewModel or BodyEndNodeViewModel or LabelNodeViewModel;
-
     public void RefreshStageNames()
     {
         foreach (var stage in _stageByNode.Values.Distinct())
@@ -377,10 +374,10 @@ public partial class StationDashboardViewModel : ViewModelBase
         if (_activeNodes.Count > 0) RefreshActiveStages();
     }
 
-    internal static string DisplayName(NodeViewModel node) => !string.IsNullOrWhiteSpace(node.CustomName)
-        ? node.DisplayTitle : node switch
+    internal static string DisplayName(NodeViewModel node) => !string.IsNullOrWhiteSpace(node.OperatorName)
+        ? node.OperatorName.Trim() : node switch
     {
-        SubtestNodeViewModel subtest => subtest.Name,
+        SubtestNodeViewModel subtest when !string.IsNullOrWhiteSpace(subtest.Name) => subtest.Name,
         OperatorActionNodeViewModel => "Действие оператора",
         GetSerialNumberFromServerNodeViewModel => "Получение серийного номера",
         BuildTestReportNodeViewModel => "Подготовка отчёта",
@@ -388,6 +385,6 @@ public partial class StationDashboardViewModel : ViewModelBase
         PrintLabelNodeViewModel => "Печать этикеток",
         RunDataTestNodeViewModel => "Проверка сетевых портов",
         SelfTestCheckNodeViewModel => "Встроенная проверка устройства",
-        _ => node.DisplayTitle
+        _ => TestBuilder.Presentation.RussianUiText.Display(node.Title)
     };
 }
