@@ -127,7 +127,7 @@
 
   <UserControl.Styles>
     <Style Selector="CheckBox.profileOpenToggle" x:DataType="nodifyvm:NodeViewModel">
-      <Setter Property="Content" Value="При открытии профиля" />
+      <Setter Property="Content" Value="При первом запуске" />
       <Setter Property="ContentTemplate">
         <DataTemplate x:DataType="x:String">
           <TextBlock Text="{Binding}" TextWrapping="Wrap" />
@@ -141,7 +141,7 @@
           <Binding Path="!$parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).IsActionGraphEditor" />
         </MultiBinding>
       </Setter>
-      <Setter Property="ToolTip.Tip" Value="Выполнять при каждом открытии профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. При обычных запусках теста пропускать. Подтест и цикл выполняются целиком." />
+      <Setter Property="ToolTip.Tip" Value="Выполнять перед первой проверкой после открытия профиля. Разместите отмеченные ноды подряд после «Старт» основного графа. Подтест и цикл выполняются целиком." />
     </Style>
     <Style Selector="nodify|Node.inactive">
       <Setter Property="Background" Value="{DynamicResource InactiveNodeBackgroundBrush}" />
@@ -224,11 +224,14 @@
                     MinWidth="145" Margin="0,0,12,8" VerticalContentAlignment="Center" AutomationProperties.Name="Тип изделия"
                     ToolTip.Tip="Тип сохраняется в профиле и определяет доступные разделы программы." />
           <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding RunGraphCommand}" Classes="primary" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /><TextBlock Text="Запустить" Foreground="{Binding $parent[Button].Foreground}" /></StackPanel></Button>
-          <Button IsVisible="{Binding ShowRetryProfilePreparation}" Command="{Binding RetryProfilePreparationCommand}" Classes="primary" Content="Повторить настройку" AutomationProperties.Name="Повторить настройку" Padding="9,8" />
+          <Button IsVisible="{Binding ShowRetryProfilePreparation}" Command="{Binding RetryProfilePreparationCommand}"
+                  Content="Повторить настройку" AutomationProperties.Name="Повторить настройку" ToolTip.Tip="Выполнить только настройку стенда" Padding="9,8" />
           <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза" Padding="9,8"><PathIcon Width="18" Height="18" Data="M5 3 H10 V21 H5 Z M14 3 H19 V21 H14 Z" /></Button>
           <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="primary" ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /></Button>
           <Button Command="{Binding StopTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="danger" ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 4 H20 V20 H4 Z" /></Button>
           <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding SaveGraphCommand}"  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M3 3 H18 L21 6 V21 H3 Z M6 4 V10 H17 V4 Z M6 14 V20 H18 V14 Z" /><TextBlock Text="Сохранить" /></StackPanel></Button>
+          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding ReloadProfileCommand}" Content="Обновить профиль"
+                  ToolTip.Tip="Перечитать сохранённый профиль" AutomationProperties.Name="Обновить профиль" Padding="9,8" />
           <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
           <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
           <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />

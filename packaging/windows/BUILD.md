@@ -8,12 +8,14 @@
 Успешный результат записывается в `release-manifest.json/profileUiIntegrityChecks`.
 Это не замена остальным тестам или аппаратной проверке стенда.
 
-## Комплект из четырёх профилей — 2026-11-02
+## Подготовка 1.0.2-beta — четыре профиля
+
+Текущая версия проекта — `1.0.2-beta`. Команда подготовки комплекта:
 
 ```sh
 python3 scripts/package_windows_release.py \
   --browser-bundle artifacts/windows-20261019/TFortisTestBuilder-2026.10.19.16-win-x64 \
-  --version 2026.11.02.1 --output artifacts/windows-20261102 \
+  --version 1.0.2-beta --output artifacts/windows-1.0.2-beta \
   --profile PSW_UPS_Box_8x2Pro_parallel_start.json \
   --profile PSW_2G6F_plus_full_algorithm.json \
   --profile RTL_SW_board.json \
@@ -65,7 +67,7 @@ restore. На целевом Windows-компьютере Python, SDK и отд�
 
    На Windows команда Python обычно называется `python`.
 
-Результат в `artifacts/`: каталог `TFortisTestBuilder-1.0.0-win-x64`, ZIP и
+Результат в каталоге вывода: `TFortisTestBuilder-1.0.2-beta-win-x64`, ZIP и
 SHA-256 ZIP. Уже существующий релиз не перезаписывается: для повторной сборки
 укажите `--output /path/to/new-directory`. Бинарники/архивы исключены из Git.
 

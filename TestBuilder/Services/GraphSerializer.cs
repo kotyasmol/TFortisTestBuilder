@@ -865,7 +865,7 @@ namespace TestBuilder.Services
                 if (node.RunOnlyOnFirstRun && !node.CanRunOnlyOnFirstRun)
                 {
                     node.Dispose();
-                    throw new InvalidOperationException($"Для ноды '{type}' нельзя задать выполнение при открытии профиля.");
+                    throw new InvalidOperationException($"Для ноды '{type}' нельзя задать выполнение при первом запуске.");
                 }
 
                 node.Location = location;

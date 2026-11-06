@@ -1,15 +1,18 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.StepVM;
 using TestBuilder.Views.TestViews;
 
 namespace TestBuilder.Tests.Views;
@@ -17,6 +20,83 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class ProfileSaveViewTests
 {
+    [Fact]
+    public async Task MouseSelectionOfVersionAtLeast_IsSavedAndUsedWithoutRestart()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), "profile-version-edit-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            var path = Path.Combine(folder, "firmware.json");
+            File.WriteAllText(path, """
+                {"name":"Firmware test","nodes":[
+                  {"id":"0","type":"Start"},
+                  {"id":"1","type":"Get Serial Number","useFixedSerialNumber":true,"fixedSerialNumber":1120},
+                  {"id":"2","type":"Subtest","name":"Firmware","bodyGraph":{
+                    "name":"Firmware","nodes":[
+                      {"id":"0","type":"Start","x":0,"y":0},
+                      {"id":"1","type":"Check Variable Equality","variableName":"SerialNumber","expectedValue":"1119","comparisonType":"Version","x":200,"y":0},
+                      {"id":"2","type":"End","x":650,"y":0}],
+                    "connections":[
+                      {"sourceNodeId":"0","sourceConnector":"Выход","targetNodeId":"1","targetConnector":"In"},
+                      {"sourceNodeId":"1","sourceConnector":"True","targetNodeId":"2","targetConnector":"Вход"}]}},
+                  {"id":"3","type":"End"}],
+                  "connections":[
+                    {"sourceNodeId":"0","sourceConnector":"Выход","targetNodeId":"1","targetConnector":"In"},
+                    {"sourceNodeId":"1","sourceConnector":"True","targetNodeId":"2","targetConnector":"In"},
+                    {"sourceNodeId":"2","sourceConnector":"Success","targetNodeId":"3","targetConnector":"Вход"}]}
+                """);
+            var previousFolder = AppSettings.Instance.GraphsFolder;
+            AppSettings.Instance.GraphsFolder = folder;
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 1500, Height = 900, Content = view };
+            try
+            {
+                await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+                Assert.DoesNotContain("Ошибка", vm.StatusMessage);
+                var body = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single();
+                var check = body.BodyGraph.Nodes.OfType<CheckVariableEqualityNodeViewModel>().Single();
+                await vm.RunGraphCommand.ExecuteAsync(null);
+                Assert.True(check.HasExecutionError);
+                vm.OpenCompositeNodeBodyCommand.Execute(body);
+                window.Show(); Layout(window);
+                var selector = view.GetVisualDescendants().OfType<ComboBox>()
+                    .Single(c => ReferenceEquals(c.DataContext, check) && c.Items.Contains(VariableComparisonType.VersionAtLeast));
+                Click(selector);
+                Assert.True(selector.IsDropDownOpen);
+                var popup = selector.GetVisualDescendants().OfType<Popup>().Single();
+                var option = popup.Child!.GetVisualDescendants().OfType<ComboBoxItem>()
+                    .Single(c => Equals(c.DataContext, VariableComparisonType.VersionAtLeast));
+                Click(option);
+                Assert.Equal(VariableComparisonType.VersionAtLeast, check.ComparisonType);
+
+                Click(view.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand)));
+                await vm.SaveGraphCommand.ExecutionTask!;
+                Assert.Contains("\"comparisonType\": \"VersionAtLeast\"", File.ReadAllText(path));
+                Assert.Same(body, vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single());
+                await vm.RunGraphCommand.ExecuteAsync(null);
+                Assert.True(check.HasExecutionSucceeded);
+                Assert.True(vm.Station.IsSuccessful);
+
+                await vm.SelectProfileAsync(vm.SelectedProfile, reload: true);
+                await vm.RunGraphCommand.ExecuteAsync(null);
+                Assert.True(vm.Station.IsSuccessful);
+            }
+            finally { window.Close(); AppSettings.Instance.GraphsFolder = previousFolder; Directory.Delete(folder, true); }
+            return true;
+
+            void Click(Control control)
+            {
+                var top = TopLevel.GetTopLevel(control)!;
+                var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)!.Value;
+                top.MouseDown(point, MouseButton.Left); top.MouseUp(point, MouseButton.Left); Layout(window);
+            }
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -46,7 +46,7 @@ internal sealed class ProfilePreparationPlan
             if (nextNodes.Length > 1)
             {
                 if (nextNodes.Any(node => node!.RunOnlyOnFirstRun))
-                    throw new InvalidOperationException("Ноды подготовки при открытии профиля должны идти последовательно. Поместите параллельные действия внутрь одного отмеченного подтеста.");
+                    throw new InvalidOperationException("Ноды подготовки должны идти последовательно. Поместите параллельные действия внутрь одного отмеченного подтеста.");
                 // Normal testing may fork immediately after the last preparation node.
                 break;
             }
@@ -54,14 +54,14 @@ internal sealed class ProfilePreparationPlan
             var next = nextNodes[0]!;
             if (!next.RunOnlyOnFirstRun) break;
             if (!visited.Add(next))
-                throw new InvalidOperationException("Ноды подготовки при открытии профиля образуют цикл. Соедините их последовательно после ноды «Старт».");
+                throw new InvalidOperationException("Ноды подготовки образуют цикл. Соедините их последовательно после ноды «Старт».");
             ordered.Add(next);
             current = next;
         }
 
         var outsidePrefix = marked.Except(ordered).FirstOrDefault();
         if (outsidePrefix != null)
-            throw new InvalidOperationException($"Нода «{outsidePrefix.DisplayTitle}» отмечена для подготовки при открытии профиля. Разместите все такие ноды подряд после «Старт», перед проверками изделия, и соедините их обычными выходами.");
+            throw new InvalidOperationException($"Нода «{outsidePrefix.DisplayTitle}» отмечена для подготовки при первом запуске. Разместите все такие ноды подряд после «Старт», перед проверками изделия, и соедините их обычными выходами.");
 
         return new ProfilePreparationPlan(ordered);
     }
@@ -78,11 +78,11 @@ internal sealed class ProfilePreparationPlan
                 if (node.RunOnlyOnFirstRun)
                 {
                     if (!node.CanRunOnlyOnFirstRun)
-                        throw new InvalidOperationException($"Нода «{node.DisplayTitle}» не поддерживает подготовку при открытии профиля.");
+                        throw new InvalidOperationException($"Нода «{node.DisplayTitle}» не поддерживает подготовку при первом запуске.");
                     if (node is SubtestNodeViewModel { RunOnFailure: true })
-                        throw new InvalidOperationException($"Подтест «{node.DisplayTitle}» выполняется при аварийном завершении. Снимите с него галочку подготовки при открытии профиля.");
+                        throw new InvalidOperationException($"Подтест «{node.DisplayTitle}» выполняется при аварийном завершении. Снимите с него галочку «При первом запуске».");
                     if (!isRoot && !insidePreparation)
-                        throw new InvalidOperationException($"Нода «{node.DisplayTitle}» находится во вложенном графе. Для подготовки при открытии профиля отметьте весь подтест или цикл в основном графе и разместите его после «Старт».");
+                        throw new InvalidOperationException($"Нода «{node.DisplayTitle}» находится во вложенном графе. Для подготовки отметьте весь подтест или цикл в основном графе и разместите его после «Старт».");
                 }
                 if (node is ICompositeNodeViewModel composite)
                     ValidateFlags(composite.BodyGraph, insidePreparation || node.RunOnlyOnFirstRun,

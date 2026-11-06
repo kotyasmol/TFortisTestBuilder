@@ -33,7 +33,7 @@
           <ToggleButton x:Name="FollowLogsToggle" Content="Следить за логом" IsChecked="True"
                         IsCheckedChanged="OnFollowLogsChanged" Padding="8,0" MinHeight="28" Height="28"
                         VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                        ToolTip.Tip="Показывать новые записи. При прокрутке журнал фиксируется для чтения. Чтобы вернуться к новым записям, включите слежение или нажмите «В конец»." />
+                        ToolTip.Tip="Прокручивать журнал к новым записям. Ручная прокрутка отключает слежение." />
           <Button x:Name="LogToBottomButton" Content="В конец" Click="OnScrollToBottomClick"
                   Padding="8,0" MinHeight="28" Height="28" ToolTip.Tip="Перейти к концу журнала и включить слежение" />
           <Button Click="OnCopyLogs"

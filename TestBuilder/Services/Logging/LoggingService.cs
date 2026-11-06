@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -241,7 +242,11 @@ namespace TestBuilder.Services.Logging
         /// </summary>
         private sealed class Logger : ILogger
         {
+            private const int DisplayLimit = 1000;
             private readonly bool _writeToFile;
+            private readonly Queue<LogEntry> _pendingEntries = new();
+            private bool _publishScheduled;
+
             public Logger(string category, bool writeToFile = true)
             {
                 Category = category ?? string.Empty;
@@ -256,19 +261,35 @@ namespace TestBuilder.Services.Logging
             {
                 var entry = new LogEntry(DateTime.Now, level, Category, message);
 
-                if (_writeToFile) LoggingService.WriteLogEntry(entry);
-
-                Dispatcher.UIThread.Post(() =>
+                lock (_pendingEntries)
                 {
-                    // Добавляем новую запись
-                    Entries.Add(entry);
-
-                    // Ограничиваем размер
-                    if (Entries.Count > 1000)
+                    if (_pendingEntries.Count == DisplayLimit) _pendingEntries.Dequeue();
+                    _pendingEntries.Enqueue(entry);
+                    if (!_publishScheduled)
                     {
-                        Entries.RemoveAt(0);
+                        _publishScheduled = true;
+                        Dispatcher.UIThread.Post(PublishPendingEntries, DispatcherPriority.Normal);
                     }
-                });
+                }
+
+                if (_writeToFile) LoggingService.WriteLogEntry(entry);
+            }
+
+            private void PublishPendingEntries()
+            {
+                LogEntry[] pending;
+                lock (_pendingEntries)
+                {
+                    pending = _pendingEntries.ToArray();
+                    _pendingEntries.Clear();
+                    _publishScheduled = false;
+                }
+
+                foreach (var entry in pending)
+                {
+                    Entries.Add(entry);
+                    if (Entries.Count > DisplayLimit) Entries.RemoveAt(0);
+                }
             }
 
             public void Trace(string message) => Log(LogLevel.Trace, message);
@@ -277,7 +298,11 @@ namespace TestBuilder.Services.Logging
             public void Warning(string message) => Log(LogLevel.Warning, message);
             public void Error(string message) => Log(LogLevel.Error, message);
 
-            public void Clear() => Entries.Clear();
+            public void Clear()
+            {
+                lock (_pendingEntries) _pendingEntries.Clear();
+                Entries.Clear();
+            }
         }
     }
 }

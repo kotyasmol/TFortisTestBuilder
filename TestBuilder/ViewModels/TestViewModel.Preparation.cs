@@ -17,8 +17,10 @@ public partial class TestViewModel
     private bool CanPrepareProfile => !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting &&
         App.StartupOptions.IsValid && _profileLoadError.Length == 0;
     private bool ProfileRequiresHardware => RootGraph.Hardware?.Devices.Count > 0 || GraphConnectionRequirements.RequiresStandConnection(RootGraph);
-    private bool HasPendingPreparation => _preparedProfileKey == null && BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
-    public bool ShowRetryProfilePreparation => !IsActionGraphEditor && HasPendingPreparation;
+    private bool HasProfilePreparation => BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun);
+    private bool HasPendingPreparation => _preparedProfileKey == null && HasProfilePreparation;
+    private bool ShouldPrepareForRun => HasPendingPreparation && (IsOperatorView || !HasPartialRun);
+    public bool ShowRetryProfilePreparation => !IsActionGraphEditor && HasProfilePreparation;
     public bool CanRetryProfilePreparation => ShowRetryProfilePreparation && CanPrepareProfile &&
         !_isPreparingProfile && !IsStopping && !HasRunningQuickActions && (!ProfileRequiresHardware || IsConnected);
 
@@ -46,7 +48,7 @@ public partial class TestViewModel
             }
             finally { IsConnecting = false; }
         }
-        await PrepareOpenedProfileAsync();
+        await PrepareProfileAsync();
     }
 
     private string CurrentPreparationKey() =>
@@ -58,15 +60,30 @@ public partial class TestViewModel
         _profilePreparationVariables.Clear();
     }
 
-    internal async Task<bool> PrepareOpenedProfileAsync()
+    private void InvalidateChangedProfilePreparation()
     {
-        if (!App.StartupOptions.IsValid)
+        if (_preparedProfileKey == null) return;
+        // Check at save/run boundaries, not on every UI property notification.
+        // The key covers nested graphs and excludes layout-only changes.
+        try
         {
-            StatusMessage = App.StartupOptions.Error;
-            TestingLogger.Error($"Подготовка заблокирована: {App.StartupOptions.Error}");
-            RefreshStationAvailability();
-            return false;
+            if (_preparedProfileKey == CurrentPreparationKey()) return;
         }
+        catch
+        {
+            ResetProfilePreparation();
+            RefreshStationAvailability();
+            throw;
+        }
+        ResetProfilePreparation();
+        Station.Prepare(RootGraph);
+        RefreshStationAvailability();
+        if (HasPendingPreparation)
+            StatusMessage = "Профиль изменён. Настройка выполнится при следующем запуске.";
+    }
+
+    private async Task<bool> PrepareProfileAsync()
+    {
         if (!CanPrepareProfile || _isPreparingProfile || HasRunningQuickActions) return false;
         if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
         {
@@ -74,26 +91,12 @@ public partial class TestViewModel
             RefreshStationAvailability();
             return false;
         }
-        // Profiles without preparation retain their existing execution and validation path.
-        if (!BoardNodes(RootGraph).Any(node => node.RunOnlyOnFirstRun))
-        {
-            ResetProfilePreparation();
-            return true;
-        }
         try
         {
             var plan = ProfilePreparationPlan.Create(RootGraph);
             var key = CurrentPreparationKey();
-            if (_preparedProfileKey == key) return true;
             ResetProfilePreparation();
             Station.Prepare(RootGraph);
-            if (plan.Nodes.Any(GraphConnectionRequirements.RequiresStandConnection) && !IsConnected)
-            {
-                Station.Headline = "Ожидается подготовка стенда";
-                Station.Guidance = "Подключите стенд. Подготовка профиля начнётся автоматически.";
-                StatusMessage = Station.Guidance;
-                return false;
-            }
             _isPreparingProfile = true;
             await ExecuteGraphAsync(plan);
             return _preparedProfileKey == key;

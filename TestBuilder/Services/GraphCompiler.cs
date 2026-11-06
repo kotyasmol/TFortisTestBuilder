@@ -124,7 +124,7 @@ namespace TestBuilder.Services
 
             var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
             foreach (var node in nodes.Where(n => n.RunOnlyOnFirstRun && !n.CanRunOnlyOnFirstRun))
-                throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение при открытии профиля.");
+                throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение при первом запуске.");
             var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
             {
                 RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,

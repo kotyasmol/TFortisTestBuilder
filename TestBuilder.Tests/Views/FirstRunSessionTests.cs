@@ -21,7 +21,7 @@ namespace TestBuilder.Tests.Views;
 public class FirstRunSessionTests
 {
     [Fact]
-    public Task OpeningProfile_PreparesBeforeTesting_RepeatRunsSkip_AndExplicitReopenPreparesAgain() => InSession(async () =>
+    public Task OpeningProfile_LeavesGraphEditable_FirstRunPrepares_AndReopenDefersAgain() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -34,10 +34,12 @@ public class FirstRunSessionTests
         await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
         var prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         var test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
-        Assert.True(prep.HasExecutionSucceeded);
+        Assert.True(vm.CanEditGraph);
+        Assert.True(vm.CanStartRun);
+        Assert.False(prep.HasExecutionSucceeded);
         Assert.False(test.HasExecutionSucceeded);
         Assert.False(vm.Station.HasResult);
-        Assert.Equal(before + 1, PreparationStarts(vm));
+        Assert.Equal(before, PreparationStarts(vm));
 
         for (var i = 0; i < 2; i++)
         {
@@ -46,26 +48,229 @@ public class FirstRunSessionTests
             Assert.False(prep.HasExecutionSucceeded);
             Assert.True(test.HasExecutionSucceeded);
             Assert.Contains(vm.Station.Stages, stage => stage.Source == prep && stage.State == StationStageState.Skipped);
+            Assert.Equal(i == 0 ? 1 : 0, PreparationStarts(vm));
         }
-        Assert.Equal(before + 1, PreparationStarts(vm));
 
         // Saving display-only changes does not reopen the document.
         prep.Location = new Point(900, 700); prep.NodeColor = "red";
         await vm.SaveGraphToPathAsync(path);
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(before + 1, PreparationStarts(vm));
+        Assert.Equal(0, PreparationStarts(vm));
 
         await vm.SelectProfileAsync(vm.SelectedProfile, reload: true);
         prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
-        Assert.True(prep.HasExecutionSucceeded);
+        Assert.False(prep.HasExecutionSucceeded);
         Assert.False(test.HasExecutionSucceeded);
         Assert.False(vm.Station.HasResult);
-        Assert.Equal(before + 2, PreparationStarts(vm));
+        Assert.Equal(0, PreparationStarts(vm));
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.Equal(1, PreparationStarts(vm));
+        Assert.True(test.HasExecutionSucceeded);
     });
 
     [Fact]
-    public Task SwitchingProfilesAndReturning_RunsPreparationForEveryOpening() => InSession(async () =>
+    public Task SavedPreparationEdit_PreparesAtNextStartAndUsesNewVariablesWithoutReopening() => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var setup = new SubtestNodeViewModel { RunOnlyOnFirstRun = true };
+        Chain(setup.BodyGraph, FixedValue(42));
+        Chain(vm.RootGraph, setup,
+            new CheckVariableEqualityNodeViewModel { VariableName = "SerialNumber", ExpectedValue = "42" });
+        var path = files.PathFor("edited-preparation");
+        await vm.SaveGraphToPathAsync(path);
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.Station.IsSuccessful);
+
+        setup = vm.Nodes.OfType<SubtestNodeViewModel>().Single();
+        var value = setup.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single();
+        var check = vm.Nodes.OfType<CheckVariableEqualityNodeViewModel>().Single();
+        value.FixedSerialNumber = 43;
+        check.ExpectedValue = "43";
+        var starts = PreparationStarts(vm);
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+
+        Assert.True(vm.CanStartRun);
+        Assert.True(vm.CanRetryProfilePreparation);
+        Assert.Contains("при следующем запуске", vm.StatusMessage);
+        Assert.Equal(starts, PreparationStarts(vm)); // Saving must not operate the stand.
+        Assert.Same(setup, vm.Nodes.OfType<SubtestNodeViewModel>().Single());
+        Assert.True(vm.CanUndo);
+
+        for (var i = 0; i < 2; i++)
+        {
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.True(check.HasExecutionSucceeded);
+            Assert.True(vm.Station.IsSuccessful);
+            Assert.Equal(i == 0 ? 1 : 0, PreparationStarts(vm));
+        }
+    });
+
+    [Fact]
+    public Task UnsavedPreparationEdit_CannotRunWithPreviousVariables() => InSession(async () =>
+    {
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var setup = FixedValue(42); setup.RunOnlyOnFirstRun = true;
+        var check = new CheckVariableEqualityNodeViewModel { VariableName = "SerialNumber", ExpectedValue = "42" };
+        Chain(vm.RootGraph, setup, check);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.Station.IsSuccessful);
+        setup.FixedSerialNumber = 43;
+
+        await vm.RunGraphCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, PreparationStarts(vm));
+        Assert.True(check.HasExecutionError);
+        Assert.True(vm.Station.HasResult);
+        Assert.False(vm.Station.IsSuccessful);
+    });
+
+    [Fact]
+    public Task RemovingPreparation_DropsItsVariablesOnTheNextRun() => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var setup = FixedValue(42); setup.RunOnlyOnFirstRun = true;
+        var check = new CheckVariableEqualityNodeViewModel { VariableName = "SerialNumber", ExpectedValue = "42" };
+        Chain(vm.RootGraph, setup, check);
+        var path = files.PathFor("removed-preparation");
+        await vm.SaveGraphToPathAsync(path);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.Station.IsSuccessful);
+
+        Chain(vm.RootGraph, check);
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.CanStartRun);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+
+        Assert.True(check.HasExecutionError);
+        Assert.False(vm.Station.IsSuccessful);
+    });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task SavedNodeEdit_ChangesTheNextRunInTheSameDocument(bool nested) => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var value = FixedValue(42);
+        var check = new CheckVariableEqualityNodeViewModel { VariableName = "SerialNumber", ExpectedValue = "42" };
+        if (nested)
+        {
+            var body = new SubtestNodeViewModel();
+            Chain(body.BodyGraph, value);
+            Chain(vm.RootGraph, body, check);
+        }
+        else Chain(vm.RootGraph, value, check);
+        await vm.SaveGraphToPathAsync(files.PathFor("edited-node"));
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.Station.IsSuccessful);
+
+        value.FixedSerialNumber = 43;
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(check.HasExecutionError);
+        Assert.False(vm.Station.IsSuccessful);
+
+        check.ExpectedValue = "43";
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(check.HasExecutionSucceeded);
+        Assert.True(vm.Station.IsSuccessful);
+    });
+
+    [Fact]
+    public Task ReloadProfile_CancelKeepsUnsavedEdits_AndSavedEditsNeedNoConfirmation() => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var value = FixedValue(42);
+        Chain(vm.RootGraph, value);
+        var path = files.PathFor("reload-edits");
+        await vm.SaveGraphToPathAsync(path);
+        value.FixedSerialNumber = 43;
+        var confirmations = 0;
+        vm.ConfirmReloadProfileAsync = () => { confirmations++; return Task.FromResult(false); };
+
+        await vm.ReloadProfileCommand.ExecuteAsync(null);
+        Assert.Equal(1, confirmations);
+        Assert.Same(value, vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single());
+        Assert.Equal(43, value.FixedSerialNumber);
+
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.CanUndo); // An undo history is not the same as unsaved edits.
+        await vm.ReloadProfileCommand.ExecuteAsync(null);
+        Assert.Equal(1, confirmations);
+        Assert.NotSame(value, vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single());
+        Assert.Equal(43, vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().FixedSerialNumber);
+
+        vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().FixedSerialNumber = 44;
+        vm.ConfirmReloadProfileAsync = () => { confirmations++; return Task.FromResult(true); };
+        await vm.ReloadProfileCommand.ExecuteAsync(null);
+        Assert.Equal(2, confirmations);
+        Assert.Equal(43, vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().FixedSerialNumber);
+    });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task ReloadButton_ReadsChangedFileAndDefersPreparationUntilStart(bool operatorMode) => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var value = FixedValue(42); value.RunOnlyOnFirstRun = true;
+        Chain(vm.RootGraph, value, new CheckVariableEqualityNodeViewModel { VariableName = "SerialNumber", ExpectedValue = "42" });
+        var path = files.PathFor("reload-file");
+        await vm.SaveGraphToPathAsync(path);
+        await vm.SelectProfileAsync(vm.SelectedProfile, reload: true);
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Assert.True(vm.Station.IsSuccessful);
+        var starts = PreparationStarts(vm);
+        var saved = File.ReadAllText(path);
+        File.WriteAllText(path, saved.Replace("\"fixedSerialNumber\": 42", "\"fixedSerialNumber\": 43")
+            .Replace("\"expectedValue\": \"42\"", "\"expectedValue\": \"43\""));
+        vm.ConfirmReloadProfileAsync = () => throw new InvalidOperationException("No local edits to discard");
+        vm.IsOperatorView = operatorMode;
+        Control screen = operatorMode ? new StationDashboardView { DataContext = vm } : new GraphEditorView { DataContext = vm };
+        var window = new Window { Content = screen, Width = 1500, Height = 950 };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+            var reload = screen.GetVisualDescendants().OfType<Button>()
+                .Single(b => ReferenceEquals(b.Command, vm.ReloadProfileCommand));
+            Assert.True(reload.IsEffectivelyEnabled);
+            var point = reload.TranslatePoint(new Point(reload.Bounds.Width / 2, reload.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left);
+            await vm.ReloadProfileCommand.ExecutionTask!;
+
+            Assert.Equal(starts, PreparationStarts(vm));
+            Assert.Equal(43, vm.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().FixedSerialNumber);
+            Assert.False(vm.Nodes.OfType<CheckVariableEqualityNodeViewModel>().Single().HasExecutionSucceeded);
+            Assert.False(vm.Station.HasResult);
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.True(vm.Station.IsSuccessful);
+            Assert.Equal(1, PreparationStarts(vm));
+
+            vm.IsTestRunning = true;
+            Assert.False(vm.ReloadProfileCommand.CanExecute(null));
+            await vm.ReloadProfileCommand.ExecuteAsync(null);
+            Assert.Equal(1, PreparationStarts(vm));
+            vm.IsTestRunning = false;
+        }
+        finally { window.Close(); (screen as IDisposable)?.Dispose(); }
+    });
+
+    [Fact]
+    public Task SwitchingProfilesAndReturning_PreparesOnFirstStartOfEachProfile() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -74,18 +279,21 @@ public class FirstRunSessionTests
         var firstPath = files.PathFor("first"); var secondPath = files.PathFor("second");
         await vm.SaveGraphToPathAsync(firstPath);
         await vm.SaveGraphToPathAsync(secondPath);
-        var before = PreparationStarts(vm);
         foreach (var path in new[] { firstPath, secondPath, firstPath })
         {
+            var before = PreparationStarts(vm);
             await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
-            Assert.True(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
+            Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
             Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().Last().HasExecutionSucceeded);
+            Assert.Equal(before, PreparationStarts(vm));
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.Equal(1, PreparationStarts(vm));
+            Assert.True(vm.Station.IsSuccessful);
         }
-        Assert.Equal(before + 3, PreparationStarts(vm));
     });
 
     [Fact]
-    public Task FailedDeviceRuns_DoNotRepeatSuccessfulOpeningPreparation() => InSession(async () =>
+    public Task FailedDeviceRuns_DoNotRepeatSuccessfulPreparation() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -94,7 +302,6 @@ public class FirstRunSessionTests
         var path = files.PathFor("failed-device");
         await vm.SaveGraphToPathAsync(path);
         await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
-        var starts = PreparationStarts(vm);
         var prep = vm.Nodes.OfType<DelayNodeViewModel>().Single();
         for (var i = 0; i < 2; i++)
         {
@@ -102,12 +309,12 @@ public class FirstRunSessionTests
             Assert.False(vm.Station.IsSuccessful);
             Assert.False(prep.HasExecutionSucceeded);
             Assert.False(vm.NeedsStandInspection);
+            Assert.Equal(i == 0 ? 1 : 0, PreparationStarts(vm));
         }
-        Assert.Equal(starts, PreparationStarts(vm));
     });
 
     [Fact]
-    public Task FailedPreparation_BlocksManualStartUntilPreparationSucceeds() => InSession(async () =>
+    public Task FailedPreparation_BlocksDeviceChecksAndNextStartTriesAgain() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -119,26 +326,22 @@ public class FirstRunSessionTests
         await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
         failedPrep = vm.Nodes.OfType<CheckVariableEqualityNodeViewModel>().Single();
         var test = vm.Nodes.OfType<DelayNodeViewModel>().Single();
-        var starts = PreparationStarts(vm);
-        Assert.True(failedPrep.HasExecutionError);
+        Assert.False(failedPrep.HasExecutionError);
         Assert.False(test.HasExecutionSucceeded);
         Assert.False(vm.Station.HasResult);
 
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(starts, PreparationStarts(vm));
-        Assert.False(vm.CanStartRun);
+        Assert.Equal(1, PreparationStarts(vm));
+        Assert.True(failedPrep.HasExecutionError);
+        Assert.True(vm.CanStartRun);
         Assert.False(test.HasExecutionSucceeded);
         Assert.False(vm.Station.HasResult);
 
         failedPrep.VariableName = "OperatorName";
         failedPrep.ExpectedValue = App.StartupUserName;
         failedPrep.ComparisonType = VariableComparisonType.String;
-        Assert.True(vm.RetryProfilePreparationCommand.CanExecute(null));
-        await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
-        Assert.False(vm.ShowRetryProfilePreparation);
-        Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(starts + 1, PreparationStarts(vm));
+        Assert.Equal(1, PreparationStarts(vm));
         Assert.True(test.HasExecutionSucceeded);
         Assert.True(vm.Station.IsSuccessful);
     });
@@ -155,10 +358,11 @@ public class FirstRunSessionTests
         Chain(vm.RootGraph, prep, new DelayNodeViewModel { Milliseconds = 0 });
         var path = files.PathFor("cancelled-preparation");
         await vm.SaveGraphToPathAsync(path);
-        var opening = vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        var running = vm.RunGraphCommand.ExecuteAsync(null);
         Assert.True(vm.IsTestRunning);
         vm.StopTestCommand.Execute(null);
-        await opening;
+        await running;
         vm.IsOperatorView = operatorMode;
         prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         var test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
@@ -167,7 +371,7 @@ public class FirstRunSessionTests
         Assert.False(vm.Station.HasResult);
         prep.Milliseconds = 0;
         var starts = PreparationStarts(vm);
-        Assert.False(vm.CanStartRun);
+        Assert.True(vm.CanStartRun);
         Assert.True(vm.CanRetryProfilePreparation);
         vm.NeedsStandInspection = true;
         Assert.False(vm.RetryProfilePreparationCommand.CanExecute(null));
@@ -193,7 +397,13 @@ public class FirstRunSessionTests
             Assert.NotNull(vm.RetryProfilePreparationCommand.ExecutionTask);
             await vm.RetryProfilePreparationCommand.ExecutionTask!;
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
-            Assert.False(retry.IsEffectivelyVisible);
+            Assert.True(retry.IsEffectivelyVisible); Assert.True(retry.IsEffectivelyEnabled);
+            Assert.True(prep.HasExecutionSucceeded);
+
+            window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left);
+            await vm.RetryProfilePreparationCommand.ExecutionTask!;
+            Assert.Equal(starts + 2, PreparationStarts(vm));
+            Assert.False(test.HasExecutionSucceeded);
         }
         finally { window.Close(); (screen as IDisposable)?.Dispose(); }
         Assert.Same(source, vm.RootGraph);
@@ -202,7 +412,7 @@ public class FirstRunSessionTests
         Assert.True(vm.CanStartRun);
         Assert.False(test.HasExecutionSucceeded);
         await vm.RunGraphCommand.ExecuteAsync(null);
-        Assert.Equal(starts + 1, PreparationStarts(vm));
+        Assert.Equal(0, PreparationStarts(vm));
         Assert.True(test.HasExecutionSucceeded);
         Assert.True(vm.Station.IsSuccessful);
     });
@@ -221,7 +431,8 @@ public class FirstRunSessionTests
         Assert.False(test.HasExecutionSucceeded);
         Assert.Equal(starts, PreparationStarts(vm));
 
-        Assert.True(await vm.PrepareOpenedProfileAsync());
+        await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+        Assert.True(prep.HasExecutionSucceeded);
         Assert.Equal(starts + 1, PreparationStarts(vm));
         vm.ConfigureNodeRun(prep, true);
         await vm.RunGraphCommand.ExecuteAsync(null);
@@ -229,7 +440,7 @@ public class FirstRunSessionTests
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.False(prep.HasExecutionSucceeded);
         Assert.True(test.HasExecutionSucceeded);
-        Assert.Equal(starts + 1, PreparationStarts(vm));
+        Assert.Equal(0, PreparationStarts(vm));
     });
 
     [Fact]
@@ -256,7 +467,6 @@ public class FirstRunSessionTests
             var path = files.PathFor("preparation-variables");
             await vm.SaveGraphToPathAsync(path);
             await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
-            var starts = PreparationStarts(vm);
             check = vm.Nodes.OfType<CheckVariableEqualityNodeViewModel>().Single();
             noSetupReport = vm.Nodes.OfType<ParseResponseNodeViewModel>().Single();
             for (var i = 0; i < 2; i++)
@@ -264,8 +474,8 @@ public class FirstRunSessionTests
                 await vm.RunGraphCommand.ExecuteAsync(null);
                 Assert.True(check.HasExecutionSucceeded); // The preceding run changed SerialNumber to 43.
                 Assert.True(noSetupReport.HasExecutionSucceeded);
+                Assert.Equal(i == 0 ? 1 : 0, PreparationStarts(vm));
             }
-            Assert.Equal(starts, PreparationStarts(vm));
         }
         finally { AppSettings.Instance.StandId = previousStandId; }
     });
@@ -282,8 +492,8 @@ public class FirstRunSessionTests
         Assert.True(vm.Station.IsSuccessful);
         misplaced.RunOnlyOnFirstRun = true;
 
-        Assert.False(vm.CanStartRun);
-        await vm.PrepareOpenedProfileAsync();
+        Assert.True(vm.CanStartRun);
+        await vm.RunGraphCommand.ExecuteAsync(null);
 
         Assert.False(vm.Station.HasResult);
         Assert.False(vm.Station.IsSuccessful);
@@ -344,11 +554,12 @@ public class FirstRunSessionTests
         Assert.True(devices.Reads > 0);
         var prep = vm.Nodes.OfType<DelayNodeViewModel>().First();
         var test = vm.Nodes.OfType<DelayNodeViewModel>().Last();
-        Assert.Equal(matches, prep.HasExecutionSucceeded);
+        Assert.False(prep.HasExecutionSucceeded);
         Assert.False(test.HasExecutionSucceeded);
         Assert.Equal(matches, vm.CanStartRun);
         await vm.RunGraphCommand.ExecuteAsync(null);
         Assert.Equal(matches, test.HasExecutionSucceeded);
+        Assert.Equal(matches ? 1 : 0, PreparationStarts(vm));
         if (!matches)
         {
             Assert.True(vm.CanRetryProfilePreparation);
@@ -371,7 +582,7 @@ public class FirstRunSessionTests
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(false, true)]
-    public Task ProfileSearch_SkipsOpenPortWithWrongEquipment_AndPreparesMatchingStand(bool connectFirst, bool manual) => InSession(async () =>
+    public Task ProfileSearch_FindsMatchingStandWithoutStartingPreparation(bool connectFirst, bool manual) => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var port = new FakePort();
@@ -393,8 +604,9 @@ public class FirstRunSessionTests
             if (!connectFirst) await vm.ToggleConnectionCommand.ExecuteAsync(null);
             Assert.Equal(manual ? "COM2" : "COM3", vm.SelectedPort);
             Assert.Equal(!manual, vm.IsMonitoringActive);
-            Assert.Equal(!manual, vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
+            Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
             Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().Last().HasExecutionSucceeded);
+            Assert.Equal(0, PreparationStarts(vm));
             Assert.Equal(!manual, vm.CanStartRun);
             if (manual) Assert.DoesNotContain("COM3", port.Opened);
             else Assert.Equal(connectFirst ? new[] { "COM1", "COM2", "COM1", "COM3" } : new[] { "COM1", "COM2", "COM3" }, port.Opened);
@@ -403,7 +615,7 @@ public class FirstRunSessionTests
     });
 
     [Fact]
-    public Task CorporateLauncherArguments_AllowAutomaticPreparation_WithoutStartingTest() => InSession(async () =>
+    public Task CorporateLauncherArguments_AllowPreparationAndTestAtFirstStart() => InSession(async () =>
     {
         using var files = new ProfileFiles();
         using var bus = new ModbusService();
@@ -415,11 +627,17 @@ public class FirstRunSessionTests
             var path = files.PathFor("corporate-launcher");
             await vm.SaveGraphToPathAsync(path);
             await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
-            Assert.True(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
+            Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().First().HasExecutionSucceeded);
             Assert.False(vm.Nodes.OfType<DelayNodeViewModel>().Last().HasExecutionSucceeded);
             Assert.True(vm.CanStartRun);
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.Equal(1, PreparationStarts(vm));
+            Assert.True(vm.Station.IsSuccessful);
             App.ConfigureStartupArguments(new[] { "--unknown" });
-            Assert.False(await vm.PrepareOpenedProfileAsync());
+            await vm.SelectProfileAsync(vm.SelectedProfile, reload: true);
+            Assert.False(vm.RunGraphCommand.CanExecute(null));
+            Assert.False(vm.RetryProfilePreparationCommand.CanExecute(null));
+            Assert.Equal(App.StartupOptions.Error, vm.StationReadiness);
             Assert.Equal(App.StartupOptions.Error, vm.StatusMessage);
         }
         finally { App.ConfigureStartupArguments(Array.Empty<string>()); }
@@ -455,7 +673,7 @@ public class FirstRunSessionTests
     private static TestViewModel CreateViewModel(ModbusService bus) => new(bus, new SlaveManager(bus)) { IsOperatorView = false };
     private static DelayNodeViewModel PreparationDelay() => new() { Milliseconds = 1, RunOnlyOnFirstRun = true };
     private static GetSerialNumberFromServerNodeViewModel FixedValue(int value) => new() { UseFixedSerialNumber = true, FixedSerialNumber = value };
-    private static int PreparationStarts(TestViewModel vm) => vm.TestingLogger.Entries.Count(entry => entry.Message.StartsWith("Подготовка стенда при открытии профиля:", StringComparison.Ordinal));
+    private static int PreparationStarts(TestViewModel vm) => vm.TestingLogger.Entries.Count(entry => entry.Message.StartsWith("Подготовка стенда:", StringComparison.Ordinal));
 
     private static async Task InSession(Func<Task> test)
     {

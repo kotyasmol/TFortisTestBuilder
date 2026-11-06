@@ -10,6 +10,39 @@ namespace TestBuilder.ViewModels;
 
 public partial class TestViewModel
 {
+    private string? _savedProfileSnapshot;
+    public bool CanReloadProfile => CanChooseProfile && !IsActionGraphEditor && !IsNetworkSetupBusy &&
+        !IsLabelToolBusy && !SaveGraphCommand.IsRunning && _currentProfilePath != null;
+
+    internal Func<Task<bool>> ConfirmReloadProfileAsync { get; set; } = async () =>
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
+            return await new Views.ReloadProfileDialog().ShowDialog<bool>(owner);
+        return false;
+    };
+
+    [RelayCommand(CanExecute = nameof(CanReloadProfile))]
+    private async Task ReloadProfileAsync()
+    {
+        if (!CanReloadProfile) return;
+        var path = _currentProfilePath!;
+        try
+        {
+            if (_savedProfileSnapshot != GraphSerializer.Serialize(this, CurrentProfileName) &&
+                !await ConfirmReloadProfileAsync()) return;
+            if (!CanReloadProfile || _currentProfilePath != path) return;
+            await SelectProfileAsync(GraphSerializer.ReadProfile(path), reload: true);
+            RefreshProfiles();
+            if (_currentProfilePath == path) SelectProfileByPath(path);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Не удалось обновить профиль: {ex.Message}";
+            LogUiException("Обновление профиля", ex);
+        }
+    }
+
     private bool CanManageProfile(GraphProfile? profile) => profile != null && CanEditGraph && CanChooseProfile &&
         !IsActionGraphEditor && !IsTraining && !IsNetworkSetupBusy && !IsLabelToolBusy;
 

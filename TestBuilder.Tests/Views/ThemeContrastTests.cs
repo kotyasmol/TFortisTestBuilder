@@ -187,7 +187,7 @@ public class ThemeContrastTests
                 new AutoCompleteBox { Text = "Устройство", IsEnabled = false },
                 new ComboBox { ItemsSource = new[] { "Коммутатор", "Плата" }, SelectedIndex = 0, IsEnabled = false },
                 new NumericUpDown { Value = 123, IsEnabled = false },
-                new CheckBox { Content = "При открытии профиля", IsChecked = true, IsEnabled = false }
+                new CheckBox { Content = "При первом запуске", IsChecked = true, IsEnabled = false }
             } };
             var window = new Window { Width = 500, Height = 440, Content = controls };
             using var vm = new MainWindowViewModel();

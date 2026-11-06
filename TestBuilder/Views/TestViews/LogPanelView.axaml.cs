@@ -6,8 +6,6 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
 using System.Collections.Specialized;
-using System.Collections.ObjectModel;
-using TestBuilder.Services.Logging;
 using System.Linq;
 using TestBuilder.ViewModels;
 
@@ -15,11 +13,9 @@ namespace TestBuilder.Views.TestViews;
 
 public partial class LogPanelView : UserControl, IDisposable
 {
-    private readonly ObservableCollection<LogEntry> _historySnapshot = new();
     private TestViewModel? _currentVm;
     private bool _scrollPending;
     private bool _disposed;
-    private bool _scrollBarInteraction;
     private bool Following => FollowLogsToggle?.IsChecked == true;
     private ScrollViewer? Viewer => LogList.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
 
@@ -31,7 +27,6 @@ public partial class LogPanelView : UserControl, IDisposable
         LogList.AddHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged, RoutingStrategies.Bubble);
         LogList.AddHandler(PointerWheelChangedEvent, OnLogWheel, RoutingStrategies.Tunnel);
         LogList.AddHandler(PointerPressedEvent, OnLogPointerPressed, RoutingStrategies.Tunnel);
-        LogList.AddHandler(PointerReleasedEvent, OnLogPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
         LogList.AddHandler(KeyDownEvent, OnLogKeyDown, RoutingStrategies.Tunnel);
     }
 
@@ -55,37 +50,11 @@ public partial class LogPanelView : UserControl, IDisposable
         => await LogSelection.CopyAsync(LogList);
 
     private void OnScrollToBottomClick(object? sender, RoutedEventArgs e) => ResumeFollowing();
-    private void OnFollowLogsChanged(object? sender, RoutedEventArgs e)
-    {
-        if (Following)
-        {
-            ShowLiveEntries();
-            RequestScrollToBottom();
-        }
-        else
-        {
-            // Freeze only when the operator explicitly pauses or navigates history.
-            // The live collection may trim old rows while this snapshot stays stable.
-            var offset = Viewer?.Offset;
-            var selection = LogList?.SelectedItems?.Cast<object>().ToArray();
-            SynchronizeEntries();
-            if (LogList != null)
-            {
-                LogList.ItemsSource = _historySnapshot;
-                if (selection != null)
-                    foreach (var item in selection) LogList.SelectedItems?.Add(item);
-                // Complete the source switch before the wheel/scrollbar processes
-                // the same pointer event, so pausing does not jump to the first row.
-                LogList.UpdateLayout();
-                if (offset.HasValue && Viewer is { } viewer) viewer.Offset = offset.Value;
-            }
-        }
-    }
+    private void OnFollowLogsChanged(object? sender, RoutedEventArgs e) => RequestScrollToBottom();
 
     private void ResumeFollowing()
     {
         FollowLogsToggle.IsChecked = true;
-        ShowLiveEntries();
         RequestScrollToBottom();
     }
 
@@ -97,15 +66,8 @@ public partial class LogPanelView : UserControl, IDisposable
         _currentVm = DataContext as TestViewModel;
         if (_currentVm != null)
             _currentVm.TestingLogger.Entries.CollectionChanged += OnLogEntriesChanged;
-        SynchronizeEntries();
+        ShowLiveEntries();
         if (FollowLogsToggle != null) ResumeFollowing();
-    }
-
-    private void SynchronizeEntries()
-    {
-        _historySnapshot.Clear();
-        if (_currentVm != null)
-            foreach (var entry in _currentVm.TestingLogger.Entries) _historySnapshot.Add(entry);
     }
 
     private void ShowLiveEntries()
@@ -113,12 +75,13 @@ public partial class LogPanelView : UserControl, IDisposable
         if (LogList == null) return;
         // Let Avalonia observe the logger directly. A second mutable mirror can
         // become stale across initialization, hidden views and profile preparation.
-        LogList.ItemsSource = _currentVm?.TestingLogger.Entries ?? _historySnapshot;
+        LogList.ItemsSource = _currentVm?.TestingLogger.Entries;
     }
 
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (Following) RequestScrollToBottom();
+        if (e.Action == NotifyCollectionChangedAction.Reset) ResumeFollowing();
+        else RequestScrollToBottom();
     }
 
     private void OnLogScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -131,23 +94,14 @@ public partial class LogPanelView : UserControl, IDisposable
 
     private void OnLogWheel(object? sender, PointerWheelEventArgs e)
     {
-        if (e.Delta.Y == 0) return;
+        if (e.Delta.Y == 0 || Viewer is not { } viewer || viewer.Extent.Height <= viewer.Viewport.Height) return;
         FollowLogsToggle.IsChecked = false;
-
     }
 
     private void OnLogPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if ((e.Source as Avalonia.Visual)?.GetSelfAndVisualAncestors().OfType<ScrollBar>().Any() != true) return;
-        _scrollBarInteraction = true;
         FollowLogsToggle.IsChecked = false;
-    }
-
-    private void OnLogPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_scrollBarInteraction) return;
-        _scrollBarInteraction = false;
-
     }
 
     private void OnLogKeyDown(object? sender, KeyEventArgs e)
@@ -182,7 +136,6 @@ public partial class LogPanelView : UserControl, IDisposable
         LogList.RemoveHandler(ScrollViewer.ScrollChangedEvent, OnLogScrollChanged);
         LogList.RemoveHandler(PointerWheelChangedEvent, OnLogWheel);
         LogList.RemoveHandler(PointerPressedEvent, OnLogPointerPressed);
-        LogList.RemoveHandler(PointerReleasedEvent, OnLogPointerReleased);
         LogList.RemoveHandler(KeyDownEvent, OnLogKeyDown);
         if (_currentVm != null)
             _currentVm.TestingLogger.Entries.CollectionChanged -= OnLogEntriesChanged;

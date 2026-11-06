@@ -271,6 +271,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                         await EnsureConnectedProfileAsync();
                     else StatusMessage = GraphConnectionRequirements.RequiresStandConnection(RootGraph)
                         ? "Профиль выбран. Подключите стенд." : "Профиль выбран.";
+                    if (!App.StartupOptions.IsValid)
+                    {
+                        StatusMessage = App.StartupOptions.Error;
+                        TestingLogger.Error($"Запуск заблокирован: {App.StartupOptions.Error}");
+                    }
                 }
             }
         }
@@ -280,8 +285,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             LogUiException("Переключение профиля", ex);
         }
         finally { IsConnecting = false; }
-        if (profile != null && _profileLoadError.Length == 0)
-            await PrepareOpenedProfileAsync();
     }
 
     private ConnectionViewModel? _selectedConnection;
@@ -342,6 +345,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         GoBackGraphCommand = new RelayCommand(GoBackGraph);
         NewProfileCommand = new RelayCommand(CreateNewProfile, () => CanEditGraph && CanChooseProfile && !IsConnected);
         SaveGraphCommand = new AsyncRelayCommand(SaveGraphAsync, () => CanEditGraph && !IsActionGraphEditor);
+        SaveGraphCommand.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SaveGraphCommand.IsRunning))
+                ReloadProfileCommand.NotifyCanExecuteChanged();
+        };
         LoadProfileCommand = new AsyncRelayCommand(async () => RefreshProfiles());
         ImportProfilesCommand = new AsyncRelayCommand(ImportProfilesAsync, () => CanEditGraph);
         TogglePaletteCommand = new RelayCommand(() => IsPaletteCollapsed = !IsPaletteCollapsed);
@@ -806,6 +814,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         _currentProfilePath = null;
         _savedProfileName = null;
+        _savedProfileSnapshot = null;
         RootGraph.UpdatedAt = null;
         OnPropertyChanged(nameof(CurrentProfileName));
         SetSelectedProfileWithoutLoading(null);
@@ -894,7 +903,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             LogUiException("Подключение/отключение стенда", ex);
         }
         finally { IsConnecting = false; }
-        if (IsConnected) await PrepareOpenedProfileAsync();
     }
 
     internal static string[] GetStandPortCandidates(HardwareConfiguration? hardware, IEnumerable<string> availablePorts, string? requestedPort = null)
@@ -1121,10 +1129,24 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private async Task RunGraphAsync()
     {
         if (!CanStartRun) return;
-        await ExecuteGraphAsync();
+        try { InvalidateChangedProfilePreparation(); }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Не удалось проверить изменения профиля: {ex.Message}";
+            LogUiException("Проверка изменений профиля перед запуском", ex);
+            return;
+        }
+        if (!CanStartRun) return;
+        var prepare = ShouldPrepareForRun;
+        if (prepare)
+        {
+            TestingLogger.Clear();
+            if (!await PrepareProfileAsync()) return;
+        }
+        await ExecuteGraphAsync(clearLogs: !prepare);
     }
 
-    private async Task ExecuteGraphAsync(ProfilePreparationPlan? preparation = null)
+    private async Task ExecuteGraphAsync(ProfilePreparationPlan? preparation = null, bool clearLogs = true)
     {
         if (preparation == null ? !CanStartRun : !CanPrepareProfile) return;
         var preparing = preparation != null;
@@ -1158,7 +1180,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             StatusMessage = "Адрес устройства должен быть целым числом от 1 до 247 или оставаться пустым.";
             return;
         }
-        var requiresStandConnection = preparing ? preparation!.Nodes.Any(GraphConnectionRequirements.RequiresStandConnection) :
+        var requiresStandConnection = preparing ? preparation!.RequiresStandConnection :
             partialRun ? PartialRunRequiresStand() : GraphConnectionRequirements.RequiresStandConnection(RootGraph);
         if (!IsConnected && requiresStandConnection)
         {
@@ -1166,12 +1188,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
+        if (!preparing && clearLogs) TestingLogger.Clear();
         var profileName = CurrentProfileName;
         // Monotonic elapsed time includes pauses, operator actions and failure cleanup.
         var runTimer = System.Diagnostics.Stopwatch.StartNew();
         var logFilePath = IsTraining ? null : LoggingService.Instance.StartFileLogForRun(profileName);
 
-        TestingLogger.Info(preparing ? $"Подготовка стенда при открытии профиля: {profileName}" : $"Запуск теста: {profileName}");
+        TestingLogger.Info(preparing ? $"Подготовка стенда: {profileName}" : $"Запуск теста: {profileName}");
         if (partialRun) TestingLogger.Info($"Частичный запуск: {runCaption}. Новый контекст; cleanup при ошибке сохранён.");
         if (!string.IsNullOrWhiteSpace(logFilePath))
             TestingLogger.Info($"Логи записываются в файл: {logFilePath}");
@@ -1612,7 +1635,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     public async Task NodeSkippedAsync(TestNode node, TestContext context, CancellationToken cancellationToken)
     {
-        TestingLogger.Info($"[ПРОПУСК] {node.DisplayName}: выполнено при открытии профиля.");
+        TestingLogger.Info($"[ПРОПУСК] {node.DisplayName}: выполнено при подготовке стенда.");
         if (node.Source is NodeViewModel source)
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -1818,6 +1841,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             RefreshSelectedEquipmentModel();
             OnPropertyChanged(nameof(CurrentProfileName));
 
+            _savedProfileSnapshot = GraphSerializer.Serialize(this, CurrentProfileName);
             Station.Prepare(RootGraph);
             StatusMessage = string.Empty;
             CurrentGraphOpened?.Invoke();
@@ -1997,6 +2021,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (createNew) { _profileSearch = string.Empty; OnPropertyChanged(nameof(ProfileSearch)); }
             RefreshProfiles();
             SelectProfileByPath(filePath);
+            _savedProfileSnapshot = json;
+            InvalidateChangedProfilePreparation();
         }
         catch (Exception ex)
         {

@@ -40,7 +40,7 @@ public class ProfileOpenToggleTests
                 Layout();
                 var check = view.GetVisualDescendants().OfType<CheckBox>()
                     .Single(c => c.Name == "ProfileOpenToggle" && c.DataContext == prep);
-                Assert.Equal("При открытии профиля", check.Content);
+                Assert.Equal("При первом запуске", check.Content);
                 Assert.True(check.IsEffectivelyVisible);
                 Assert.True(check.IsEffectivelyEnabled);
                 Assert.True(check.Bounds.Width > 0 && check.Bounds.Height > 0);

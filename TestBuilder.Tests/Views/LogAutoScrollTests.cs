@@ -6,9 +6,11 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.StepVM;
 using TestBuilder.Views.TestViews;
 
 namespace TestBuilder.Tests.Views;
@@ -43,20 +45,25 @@ public class LogAutoScrollTests
                 File.WriteAllText(path, TestBuilder.Services.GraphSerializer.Serialize(vm, "Log preparation"));
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 var list = view.FindControl<ListBox>("LogList")!;
-                var opening = vm.SelectProfileAsync(TestBuilder.Services.GraphSerializer.ReadProfile(path));
+                await vm.SelectProfileAsync(TestBuilder.Services.GraphSerializer.ReadProfile(path));
+                Assert.DoesNotContain(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Подготовка стенда:"));
+                vm.TestingLogger.Info("PREVIOUS RUN");
+                var running = vm.RunGraphCommand.ExecuteAsync(null);
                 await Task.Delay(30);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Подготовка стенда при открытии профиля:"));
+                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Подготовка стенда:"));
                 Assert.Same(vm.TestingLogger.Entries, list.ItemsSource);
-                await opening;
+                await running;
                 await Task.Run(() => vm.TestingLogger.Info("BACKGROUND LOG WITHOUT CLICK"));
                 Dispatcher.UIThread.RunJobs();
                 view.IsVisible = true;
                 for (var i = 0; i < 6; i++) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); }
                 Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message == "BACKGROUND LOG WITHOUT CLICK");
                 Assert.Equal(vm.TestingLogger.Entries.ToArray(), list.Items.Cast<LogEntry>().ToArray());
-                Assert.True(vm.Nodes.OfType<TestBuilder.ViewModels.StepVM.DelayNodeViewModel>().First().HasExecutionSucceeded);
-                Assert.False(vm.Nodes.OfType<TestBuilder.ViewModels.StepVM.DelayNodeViewModel>().Last().HasExecutionSucceeded);
+                Assert.DoesNotContain(list.Items.Cast<LogEntry>(), e => e.Message == "PREVIOUS RUN");
+                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Подготовка стенда:"));
+                Assert.Contains(list.Items.Cast<LogEntry>(), e => e.Message.StartsWith("Запуск теста:"));
+                Assert.True(vm.Nodes.OfType<TestBuilder.ViewModels.StepVM.DelayNodeViewModel>().Last().HasExecutionSucceeded);
                 Assert.Contains(list.GetVisualDescendants().OfType<SelectableTextBlock>(),
                     t => t.Text?.Contains("BACKGROUND LOG WITHOUT CLICK") == true);
             }
@@ -100,7 +107,7 @@ public class LogAutoScrollTests
                 Assert.Equal(before, viewer.Offset.Y, 1);
                 Assert.True(viewer.Offset.Y < viewer.Extent.Height - viewer.Viewport.Height - 4);
 
-                var frozen = list.Items.Cast<LogEntry>().ToArray();
+                Assert.Equal("New row while reading history", list.Items.Cast<LogEntry>().Last().Message);
                 // A running subtest produces enough output to trim the live buffer.
                 for (var i = 0; i < 1100; i++)
                 {
@@ -108,13 +115,12 @@ public class LogAutoScrollTests
                     vm.TestingLogger.Entries.RemoveAt(0);
                 }
                 Layout();
-                Assert.Equal(frozen, list.Items.Cast<LogEntry>().ToArray());
-                Assert.Equal(before, viewer.Offset.Y, 1);
-                // Clearing the source for another run must not discard the reading snapshot.
-                vm.TestingLogger.Entries.Clear(); Add("Next run"); Layout();
-                Assert.Equal(frozen, list.Items.Cast<LogEntry>().ToArray());
-                window.MouseWheel(center, new Vector(0, -1)); Layout();
                 Assert.False(toggle.IsChecked);
+                Assert.Equal(vm.TestingLogger.Entries.ToArray(), list.Items.Cast<LogEntry>().ToArray());
+                // Clearing the source starts a fresh live view even while reading older rows.
+                vm.TestingLogger.Entries.Clear(); Add("Next run"); Layout();
+                Assert.True(toggle.IsChecked);
+                Assert.Equal("Next run", Assert.Single(list.Items.Cast<LogEntry>()).Message);
 
                 Click(view.FindControl<Button>("LogToBottomButton")!);
                 Assert.True(toggle.IsChecked);
@@ -128,6 +134,7 @@ public class LogAutoScrollTests
                 Assert.False(toggle.IsChecked);
                 Add("Paused explicitly"); Layout();
                 Assert.False(toggle.IsChecked);
+                Assert.Equal("Paused explicitly", list.Items.Cast<LogEntry>().Last().Message);
                 Click(toggle); AtBottom();
                 window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-log-scroll.png");
 
@@ -150,6 +157,76 @@ public class LogAutoScrollTests
                 var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
                 window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout();
             }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task NewRunClearsDisplayedAndQueuedEntriesWhileKeepingThePreviousFile()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            var settings = AppSettings.Instance;
+            var oldEnabled = settings.EnableFileLogging;
+            var oldFolder = settings.LogFolder;
+            var folder = Path.Combine(Path.GetTempPath(), "log-new-run-" + Guid.NewGuid().ToString("N"));
+            settings.EnableFileLogging = true;
+            settings.LogFolder = folder;
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            using var view = new LogPanelView { DataContext = vm };
+            var window = new Window { Width = 900, Height = 500, Content = view };
+            try
+            {
+                var start = new StartNodeViewModel();
+                var delay = new DelayNodeViewModel { Milliseconds = 500 };
+                var end = new EndNodeViewModel();
+                vm.RootGraph.Clear();
+                vm.Nodes.Add(start);
+                vm.Nodes.Add(delay);
+                vm.Nodes.Add(end);
+                vm.Connections.Add(new(start.Output[0], delay.Input[0]));
+                vm.Connections.Add(new(delay.Output[0], end.Input[0]));
+                window.Show();
+                var list = view.FindControl<ListBox>("LogList")!;
+                var toggle = view.FindControl<ToggleButton>("FollowLogsToggle")!;
+                var previousFile = LoggingService.Instance.StartFileLogForRun("Предыдущая проверка")!;
+                vm.TestingLogger.Info("Previous displayed line");
+                Dispatcher.UIThread.RunJobs();
+                Assert.Contains(list.Items.Cast<LogEntry>(), entry => entry.Message == "Previous displayed line");
+                toggle.IsChecked = false;
+                vm.TestingLogger.Info("Previous queued line");
+                LoggingService.Instance.StopFileLogForRun();
+                var previousContents = File.ReadAllText(previousFile);
+                Assert.Contains("Previous queued line", previousContents);
+
+                var run = vm.RunGraphCommand.ExecuteAsync(null);
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                var startWasVisibleDuringRun = vm.IsTestRunning && list.GetVisualDescendants()
+                    .OfType<SelectableTextBlock>().Any(text => text.Text?.Contains("Запуск теста:") == true);
+                await run;
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+
+                Assert.True(startWasVisibleDuringRun);
+                Assert.True(toggle.IsChecked);
+                var entries = list.Items.Cast<LogEntry>().ToArray();
+                Assert.StartsWith("Запуск теста:", entries.First().Message);
+                Assert.DoesNotContain(entries, entry => entry.Message.StartsWith("Previous "));
+                Assert.Contains(entries, entry => entry.Message.Contains("[OK] Тест завершён."));
+                Assert.Equal(previousContents, File.ReadAllText(previousFile));
+            }
+            finally
+            {
+                view.DataContext = null;
+                window.Close();
+                LoggingService.Instance.StopFileLogForRun();
+                settings.EnableFileLogging = oldEnabled;
+                settings.LogFolder = oldFolder;
+                if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            }
+            return true;
         }, CancellationToken.None);
     }
 }
