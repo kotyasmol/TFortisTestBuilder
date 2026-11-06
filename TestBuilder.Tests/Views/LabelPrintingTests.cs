@@ -194,7 +194,7 @@ public class LabelPrintingTests
                 Assert.False(view.FindControl<Button>("PrintTestLabelButton")!.IsEffectivelyEnabled);
                 allowed = true; vm.RefreshAvailability(); Dispatcher.UIThread.RunJobs();
                 window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-label-printing.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-label-printing.png"));
             }
             finally { window.Close(); }
         }, CancellationToken.None);
@@ -236,7 +236,7 @@ public class LabelPrintingTests
                 try {
                     window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                     AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                    window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-" + window.GetType().Name + ".png");
+                    window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-{window.GetType().Name}.png"));
                     Assert.True(window.Bounds.Width > 0);
                 } finally { window.Close(); }
             }

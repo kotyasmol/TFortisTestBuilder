@@ -178,7 +178,7 @@ public class PrinterPickerTests
                 // New names remain selectable with the mouse even though the old text has no match.
                 Click(picker.FindControl<Button>("ChoosePrinterButton")!); Layout();
                 Assert.True(input.IsDropDownOpen);
-                window.CaptureRenderedFrame()!.Save($"/private/tmp/tfortis-printer-picker-{dark}.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-printer-picker-{dark}.png"));
                 Click(popup!.Child!.GetVisualDescendants().OfType<ListBoxItem>().Single(i => (string?)i.DataContext == "Third queue"));
                 await vm.RepeatLastCommand.ExecuteAsync(null);
                 Assert.Equal("Third queue", printer.Names.Last());

@@ -114,7 +114,7 @@ public class MouseGraphEditingTests
                 ClickNode(a);
                 Assert.Same(a, Assert.Single(vm.SelectedNodes));
                 ClickNode(b);
-                window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-mouse-editor.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-mouse-editor.png"));
                 Assert.Equal(2, vm.SelectedNodes.Count);
                 ClickNode(a);
                 Assert.Same(b, Assert.Single(vm.SelectedNodes));
@@ -177,7 +177,7 @@ public class MouseGraphEditingTests
                 ClickMenu("Удалить");
                 Assert.Equal(count, vm.Nodes.Count);
                 vm.IsTestRunning = false; Layout();
-                window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-mouse-editor.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-mouse-editor.png"));
             }
             finally { window.Close(); }
 

@@ -136,7 +136,7 @@ public class LogAutoScrollTests
                 Assert.False(toggle.IsChecked);
                 Assert.Equal("Paused explicitly", list.Items.Cast<LogEntry>().Last().Message);
                 Click(toggle); AtBottom();
-                window.CaptureRenderedFrame()!.Save("/private/tmp/tfortis-log-scroll.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-log-scroll.png"));
 
                 void AtBottom() => Assert.True(viewer.Extent.Height - viewer.Viewport.Height - viewer.Offset.Y <= 4,
                     $"Offset {viewer.Offset.Y}, extent {viewer.Extent.Height}, viewport {viewer.Viewport.Height}");

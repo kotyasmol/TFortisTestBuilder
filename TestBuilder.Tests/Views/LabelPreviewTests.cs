@@ -238,10 +238,10 @@ public class LabelPreviewTests
                 Assert.Equal(printed, printer.Commands.Last());
                 Assert.Equal(last.Elements, vm.LastPreview!.Elements);
                 vm.SelectedType = 0; vm.SerialNumber = "3200428"; Layout();
-                window.CaptureRenderedFrame()!.Save($"/private/tmp/tfortis-label-preview-{dark}.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-label-preview-{dark}.png"));
                 window.Width = 800; Layout();
                 Assert.True(picker.GetVisualDescendants().OfType<ListBoxItem>().All(i => i.Bounds.Width < picker.Bounds.Width));
-                window.CaptureRenderedFrame()!.Save($"/private/tmp/tfortis-label-preview-narrow-{dark}.png");
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-label-preview-narrow-{dark}.png"));
             }
             finally { window.Close(); Application.Current!.RequestedThemeVariant = ThemeVariant.Default; }
             return true;
