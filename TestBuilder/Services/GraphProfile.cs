@@ -16,6 +16,13 @@ namespace TestBuilder.Services
         public string? DeviceModel { get; }
         public string? DeviceModelId { get; }
         public string ConfigurationName { get; }
+        internal bool HasReadableMetadata { get; init; } = true;
+        private bool _isLatest;
+        public bool IsLatest
+        {
+            get => _isLatest;
+            internal set => SetProperty(ref _isLatest, value);
+        }
         private DateTimeOffset? _updatedAt;
         public DateTimeOffset? UpdatedAt => _updatedAt;
         public bool HasUpdatedAt => UpdatedAt.HasValue;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Services;
 
 namespace TestBuilder.ViewModels;
@@ -148,12 +149,16 @@ public partial class TestViewModel
     private void RefreshEngineerProfileGroups()
     {
         var groups = new List<EngineerProfileGroup>();
-        foreach (var items in Profiles.OrderBy(p => p.DeviceModel == null).ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), StringComparer.Ordinal).ThenBy(p => EquipmentCatalog.SortKey(p.Name), StringComparer.Ordinal).GroupBy(p => p.ModelGroupKey))
+        var ordered = Profiles.OrderByDescending(p => p.IsLatest).ThenBy(p => p.DeviceModel == null)
+            .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), StringComparer.Ordinal)
+            .ThenBy(p => EquipmentCatalog.SortKey(p.Name), StringComparer.Ordinal);
+        foreach (var items in ordered.GroupBy(p => p.ModelGroupKey))
         {
             if (!_engineerGroups.TryGetValue(items.Key, out var group))
                 _engineerGroups.Add(items.Key, group = new EngineerProfileGroup(items.First().ModelGroup, items.Key));
             SynchronizeStationItems(group.Profiles, items.ToArray());
             if (!string.IsNullOrWhiteSpace(ProfileSearch)) group.IsExpanded = true;
+            group.RefreshVisibleProfiles();
             groups.Add(group);
         }
         SynchronizeStationItems(EngineerProfileGroups, groups);
@@ -165,8 +170,12 @@ public partial class EngineerProfileGroup : ViewModelBase
     public string Name { get; }
     public string Key { get; }
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool isExpanded;
+    public IEnumerable<GraphProfile> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.IsLatest);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleProfiles))]
+    private bool isExpanded;
     public EngineerProfileGroup(string name, string? key = null) { Name = name; Key = key ?? name; }
+    internal void RefreshVisibleProfiles() => OnPropertyChanged(nameof(VisibleProfiles));
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private void ToggleExpanded() => IsExpanded = !IsExpanded;
 }

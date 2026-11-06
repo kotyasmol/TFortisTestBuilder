@@ -1783,9 +1783,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 {
                     var info = GraphSerializer.ReadProfile(file);
                     var model = _equipmentCatalog.Resolve(info.DeviceModelId, info.DeviceModel, info.Name + " " + Path.GetFileNameWithoutExtension(file));
-                    if (model != null) info = new GraphProfile(info.FilePath, info.Name, model.Name, info.ConfigurationName, model.Id, info.ProductKind, info.UpdatedAt);
+                    if (model != null) info = new GraphProfile(info.FilePath, info.Name, model.Name, info.ConfigurationName, model.Id, info.ProductKind, info.UpdatedAt)
+                        { HasReadableMetadata = info.HasReadableMetadata };
                     var profile = previous.TryGetValue(file, out var old) && old.Name == info.Name &&
-                        old.DeviceModelId == info.DeviceModelId && old.DeviceModel == info.DeviceModel && old.ConfigurationName == info.ConfigurationName && old.ProductKind == info.ProductKind
+                        old.DeviceModelId == info.DeviceModelId && old.DeviceModel == info.DeviceModel &&
+                        old.ConfigurationName == info.ConfigurationName && old.ProductKind == info.ProductKind &&
+                        old.HasReadableMetadata == info.HasReadableMetadata
                         ? old : info;
                     profile.RefreshUpdatedAt(info.UpdatedAt);
                     _profileCatalog.Add(profile);
@@ -1796,6 +1799,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                         Profiles.Add(profile);
                 }
             }
+            var latest = _profileCatalog.Where(p => p.HasReadableMetadata && p.HasUpdatedAt)
+                .OrderByDescending(p => p.UpdatedAt).ThenBy(p => p.FilePath, StringComparer.Ordinal).FirstOrDefault();
+            foreach (var profile in _profileCatalog) profile.IsLatest = ReferenceEquals(profile, latest);
             RefreshNameSuggestions();
             RefreshStationProfiles();
             RefreshEngineerProfileGroups();

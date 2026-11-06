@@ -42,15 +42,20 @@
                       <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0" />
                     </Grid>
                   </Button>
-                  <ListBox ItemContainerTheme="{StaticResource ProfileItemTheme}" IsVisible="{Binding IsExpanded}" ItemsSource="{Binding Profiles}" SelectionChanged="OnGroupSelectionChanged"
+                  <ListBox ItemContainerTheme="{StaticResource ProfileItemTheme}" ItemsSource="{Binding VisibleProfiles}" SelectionChanged="OnGroupSelectionChanged"
                            Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="services:GraphProfile">
                         <StackPanel Spacing="5" ToolTip.Tip="{Binding FilePath}">
                           <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" FontSize="{StaticResource FontBody}" />
-                          <TextBlock Text="{Binding UpdatedAtText}" IsVisible="{Binding HasUpdatedAt}"
-                                     HorizontalAlignment="Right" FontSize="11"
-                                     Foreground="{DynamicResource TextMutedBrush}" ToolTip.Tip="{Binding UpdatedAtTooltip}" />
+                          <Grid ColumnDefinitions="Auto,*">
+                            <Border Classes="profileLatestBadge" IsVisible="{Binding IsLatest}">
+                              <TextBlock Text="Актуальный" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding UpdatedAtText}" IsVisible="{Binding HasUpdatedAt}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}" ToolTip.Tip="{Binding UpdatedAtTooltip}" />
+                          </Grid>
                         </StackPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>

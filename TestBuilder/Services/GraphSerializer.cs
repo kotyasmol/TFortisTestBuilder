@@ -1189,12 +1189,14 @@ namespace TestBuilder.Services
             {
                 var dto = JsonSerializer.Deserialize<GraphDto>(File.ReadAllText(filePath), JsonOptions);
                 return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
-                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt);
+                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt)
+                    { HasReadableMetadata = dto != null };
             }
             catch
             {
                 // Keep unreadable profiles visible so loading can show its existing error state.
-                return new GraphProfile(filePath, Path.GetFileNameWithoutExtension(filePath), updatedAt: fileModifiedAt);
+                return new GraphProfile(filePath, Path.GetFileNameWithoutExtension(filePath), updatedAt: fileModifiedAt)
+                    { HasReadableMetadata = false };
             }
         }
 

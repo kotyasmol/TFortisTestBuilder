@@ -37,7 +37,8 @@ public partial class TestViewModel
             EquipmentCatalog.Matches(p.DisplayName, StationProfileSearch) ||
             EquipmentCatalog.Matches(p.ModelGroup, StationProfileSearch) ||
             EquipmentCatalog.Matches(p.ConfigurationName, StationProfileSearch))
-            .OrderBy(p => p.DeviceModel == null)
+            .OrderByDescending(p => p.IsLatest)
+            .ThenBy(p => p.DeviceModel == null)
             .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), System.StringComparer.Ordinal)
             .ThenBy(p => p.ConfigurationName != "Полная проверка")
             .ThenBy(p => p.ConfigurationName, System.StringComparer.OrdinalIgnoreCase)
@@ -53,6 +54,7 @@ public partial class TestViewModel
                 ?? new StationProfileOptionViewModel(p, selected => SelectedProfile = selected)).ToArray();
             SynchronizeStationItems(group.Profiles, options);
             if (!string.IsNullOrWhiteSpace(StationProfileSearch)) group.IsExpanded = true;
+            group.RefreshVisibleProfiles();
             groups.Add(group);
         }
         SynchronizeStationItems(StationProfileGroups, groups);

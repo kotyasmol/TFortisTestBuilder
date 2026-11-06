@@ -20,7 +20,9 @@ public class StationDashboardTests
         Assert.All(vm.StationProfileGroups, g => Assert.False(g.IsExpanded));
         Assert.All(vm.EngineerProfileGroups, g => Assert.False(g.IsExpanded));
         group.ToggleExpandedCommand.Execute(null);
-        Assert.Equal("Полная проверка", group.Profiles[0].Profile.ConfigurationName);
+        var expectedFirst = group.Profiles.SingleOrDefault(p => p.Profile.IsLatest)
+            ?? group.Profiles.Single(p => p.Profile.ConfigurationName == "Полная проверка");
+        Assert.Same(expectedFirst, group.Profiles[0]);
         Assert.All(group.Profiles, p => Assert.Equal(group.ModelName, p.Profile.DeviceModel));
         var configurationCount = group.Profiles.Count;
         var printing = group.Profiles.Single(p => p.Profile.ConfigurationName == "Полная проверка · параллельный старт и нагрузки");
@@ -28,7 +30,7 @@ public class StationDashboardTests
         var rootNode = vm.RootGraph.Nodes.First();
         Assert.Same(printing.Profile, vm.SelectedProfile);
         Assert.True(printing.IsSelected);
-        Assert.Equal("PSW+UPS-Box 8x2Pro", vm.StationProfileName);
+        Assert.Equal(printing.Profile.DisplayName, vm.StationProfileName);
         Assert.Contains("Полная проверка · параллельный старт и нагрузки", vm.StationConfigurationCaption);
         group.ToggleExpandedCommand.Execute(null);
         vm.RefreshProfiles();
@@ -57,7 +59,8 @@ public class StationDashboardTests
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus)) { IsOperatorView = true };
         var group = vm.StationProfileGroups.Single(g => g.ModelName == "PSW+UPS-Box 8x2Pro");
-        group.Profiles[0].SelectCommand.Execute(null);
+        var fullCheck = group.Profiles.Single(p => p.Profile.ConfigurationName == "Полная проверка");
+        fullCheck.SelectCommand.Execute(null);
         var profile = vm.SelectedProfile;
         var rootNode = vm.RootGraph.Nodes.First();
         vm.IsTestRunning = true;
@@ -65,7 +68,7 @@ public class StationDashboardTests
         printing.SelectCommand.Execute(null);
         Assert.Same(profile, vm.SelectedProfile);
         Assert.Same(rootNode, vm.RootGraph.Nodes.First());
-        Assert.True(group.Profiles[0].IsSelected);
+        Assert.True(fullCheck.IsSelected);
         Assert.False(printing.IsSelected);
     }
 
