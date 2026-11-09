@@ -74,6 +74,27 @@ public class ExecutionFailureTests
     }
 
     [Fact]
+    public async Task PreparationStopsBeforeFalsePath_ButEmergencyCleanupCanFollowIt()
+    {
+        var failure = Node("Проверка", (_, _) => Task.FromResult(StepResult.False));
+        var recoveryRuns = 0;
+        failure.OnFalse = Node("Отключение", (_, _) =>
+        {
+            recoveryRuns++;
+            return Task.FromResult(StepResult.Next);
+        });
+        var context = new TestContext(new RegisterState()) { IsPreparation = true };
+
+        Assert.Equal(ExecutionStatus.Failed, await Execute(failure, context));
+        Assert.Equal("Проверка", context.Failure?.StepName);
+        Assert.Equal(0, recoveryRuns);
+
+        context.IsCleanup = true;
+        Assert.Equal(ExecutionStatus.Completed, await Execute(failure, context));
+        Assert.Equal(1, recoveryRuns);
+    }
+
+    [Fact]
     public async Task ParallelFailure_IsIsolatedFromSiblingLogsAndCancellation()
     {
         var logger = new StepDiagnosticLogger(NullLogger.Instance);

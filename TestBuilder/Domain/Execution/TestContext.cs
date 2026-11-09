@@ -31,6 +31,8 @@ namespace TestBuilder.Domain.Execution
         public bool IsConnected { get; set; }
         // Scoped to a full profile run. Manual runs and emergency cleanup never skip preparation.
         public bool SkipFirstRunNodes { get; set; }
+        internal bool IsPreparation { get; init; }
+        internal bool StopOnPreparationError => IsPreparation && !IsCleanup;
         public bool IsCleanup { get; set; }
         public bool HasExecutionException { get; set; }
 
@@ -74,6 +76,7 @@ namespace TestBuilder.Domain.Execution
                 CancellationToken = cancellationToken,
                 IsConnected = IsConnected,
                 SkipFirstRunNodes = SkipFirstRunNodes,
+                IsPreparation = IsPreparation,
                 IsCleanup = IsCleanup,
                 HasExecutionException = HasExecutionException,
                 ProfileName = ProfileName,

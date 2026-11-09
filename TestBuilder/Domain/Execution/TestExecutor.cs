@@ -32,7 +32,8 @@ namespace TestBuilder.Domain.Execution
                     context.Failure = failure;
                     return ExecutionStatus.Failed;
                 }
-                if (context.IsParallelBranch && context.HasCriticalError)
+                if ((context.StopOnPreparationError && result == StepResult.False) ||
+                    (context.IsParallelBranch && context.HasCriticalError))
                 {
                     context.Failure = failure;
                     return ExecutionStatus.Failed;
@@ -97,8 +98,15 @@ namespace TestBuilder.Domain.Execution
                     result = await node.Step.ExecuteAsync(context, cancellationToken);
                 // Routing may continue after an optional failure, while the UI must still
                 // show the actual failed check (especially an unsuccessful power-off).
-                var observedResult = context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess)
+                var failedCheck = context.ReportEntries.Skip(reportStart).FirstOrDefault(entry => !entry.IsSuccess);
+                var observedResult = failedCheck != null || (context.StopOnPreparationError && context.HasCriticalError)
                     ? StepResult.False : result;
+                if (context.StopOnPreparationError && observedResult == StepResult.False)
+                {
+                    result = StepResult.False;
+                    if (failedCheck != null)
+                        context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId);
+                }
                 if (context.ExecutionObserver != null)
                     await context.ExecutionObserver.NodeCompletedAsync(node, observedResult, context, CancellationToken.None);
                 if (observedResult == StepResult.False)

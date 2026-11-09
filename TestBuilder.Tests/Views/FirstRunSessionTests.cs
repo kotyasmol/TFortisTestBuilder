@@ -349,6 +349,53 @@ public class FirstRunSessionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public Task FailedArpDuringPreparation_DoesNotStartFollowingNodes(bool retryOnly) => InSession(async () =>
+    {
+        using var files = new ProfileFiles();
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        const string reason = "ARP access denied in test";
+        var setup = new SubtestNodeViewModel { RunOnlyOnFirstRun = true, StopOnError = false };
+        var arp = new ClearArpCacheNodeViewModel
+        {
+            RunArpdBat = false,
+            Command = OperatingSystem.IsWindows() ? Path.Combine(Environment.SystemDirectory, "cmd.exe") : "/bin/sh",
+            Arguments = OperatingSystem.IsWindows()
+                ? $"/d /c \"echo {reason} 1>&2 & exit /b 0\""
+                : $"-c \"echo {reason} >&2\"",
+            FailOnError = false
+        };
+        Chain(setup.BodyGraph, arp, new DelayNodeViewModel { Milliseconds = 0 });
+        Chain(vm.RootGraph, setup, PreparationDelay(), new DelayNodeViewModel { Milliseconds = 0 });
+        var path = files.PathFor("failed-arp-preparation");
+        await vm.SaveGraphToPathAsync(path);
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        vm.IsOperatorView = retryOnly;
+
+        if (retryOnly)
+        {
+            Assert.True(vm.CanRetryProfilePreparation);
+            await vm.RetryProfilePreparationCommand.ExecuteAsync(null);
+        }
+        else await vm.RunGraphCommand.ExecuteAsync(null);
+
+        setup = Assert.Single(vm.Nodes.OfType<SubtestNodeViewModel>());
+        Assert.True(setup.HasExecutionError);
+        Assert.True(Assert.Single(setup.BodyGraph.Nodes.OfType<ClearArpCacheNodeViewModel>()).HasExecutionError);
+        Assert.False(Assert.Single(setup.BodyGraph.Nodes.OfType<DelayNodeViewModel>()).HasExecutionSucceeded);
+        Assert.All(vm.Nodes.OfType<DelayNodeViewModel>(), node => Assert.False(node.HasExecutionSucceeded));
+        Assert.Equal(1, PreparationStarts(vm));
+        Assert.True(vm.Station.NeedsAttention);
+        Assert.False(vm.Station.HasResult);
+        Assert.True(vm.CanStartRun);
+        Assert.Contains(vm.TestingLogger.Entries, entry =>
+            entry.Message.Contains("Тест завершён:", StringComparison.Ordinal) &&
+            entry.Message.Contains(reason, StringComparison.Ordinal));
+    });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public Task CancelledPreparation_BlocksDeviceChecksAndCanBeRetriedFromUi(bool operatorMode) => InSession(async () =>
     {
         using var files = new ProfileFiles();

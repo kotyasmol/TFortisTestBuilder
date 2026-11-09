@@ -1,6 +1,7 @@
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
+using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.Tests.Support;
@@ -58,6 +59,52 @@ public class FirstRunNodeTests
     }
 
     [Fact]
+    public async Task PreparationFailureCancelsSiblingBranchBeforeTheJoin()
+    {
+        var siblingStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var siblingCancelled = false;
+        var joined = false;
+        var join = new TestNode(new ActionStep(() => { joined = true; return StepResult.Next; }));
+        var failed = new TestNode(new AsyncStep(async (context, token) =>
+        {
+            await siblingStarted.Task.WaitAsync(token);
+            context.AddReportEntry("ARP", false, "Недостаточно прав");
+            return StepResult.True;
+        })) { OnTrue = join };
+        var sibling = new TestNode(new AsyncStep(async (_, token) =>
+        {
+            siblingStarted.SetResult();
+            try { await Task.Delay(Timeout.Infinite, token); }
+            finally { siblingCancelled = token.IsCancellationRequested; }
+            return StepResult.Next;
+        })) { Next = join };
+        var start = new TestNode(null);
+        start.ParallelTransitions[StepResult.Next] = new ParallelFork(new[] { failed, sibling }, join);
+        var context = new TestContext(new RegisterState()) { IsPreparation = true };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(ExecutionStatus.Failed, await new TestExecutor().ExecuteAsync(start, context, timeout.Token));
+        Assert.True(siblingCancelled);
+        Assert.False(joined);
+        Assert.Equal("Недостаточно прав", context.Failure?.Reason);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreparationStopsLoopAtFirstFailure(bool repeatOnSameSlave)
+    {
+        var iterations = 0;
+        var step = new TestNode(new ActionStep(() => { iterations++; return StepResult.False; }));
+        var loop = new ForEachSlaveStep(1, 3, 1, stopOnError: false, new CompiledGraph(step),
+            NullLogger.Instance, repeatOnSameSlave, repeatCount: 3, untilSuccess: true);
+        var context = new TestContext(new RegisterState()) { IsPreparation = true };
+
+        Assert.Equal(StepResult.False, await loop.ExecuteAsync(context, default));
+        Assert.Equal(1, iterations);
+    }
+
+    [Fact]
     public void FirstRunFlag_RoundTripsNestedNodes_RejectsOlderRuntimes_AndCopiesWithUndo()
     {
         using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
@@ -106,6 +153,10 @@ public class FirstRunNodeTests
     private sealed class ActionStep(Func<StepResult> action) : ITestStep
     {
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken) => Task.FromResult(action());
+    }
+    private sealed class AsyncStep(Func<TestContext, CancellationToken, Task<StepResult>> action) : ITestStep
+    {
+        public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken) => action(context, cancellationToken);
     }
     private sealed class Observer : IExecutionObserver
     {

@@ -50,6 +50,7 @@ namespace TestBuilder.Domain.Steps
             var failureState = ExecutionFailureState.Capture(context);
             var reportStart = context.ReportEntries.Count;
             context.IsCleanup |= _runOnFailure;
+            var stopOnError = _stopOnError || context.StopOnPreparationError;
             try
             {
                 status = await executor.ExecuteAsync(
@@ -64,16 +65,16 @@ namespace TestBuilder.Domain.Steps
             }
             catch (Exception ex) when (!ExecutionCleanupException.Contains(ex))
             {
-                context.HasExecutionException |= _stopOnError;
+                context.HasExecutionException |= stopOnError;
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
                 _logger.Warning(message);
                 context.AddReportEntry(_name, false, ex.Message);
                 if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
-                if (_stopOnError)
+                if (stopOnError)
                     context.HasCriticalError = true;
                 else failureState.Restore(context);
-                return _stopOnError ? StepResult.False : StepResult.True;
+                return stopOnError ? StepResult.False : StepResult.True;
             }
             finally { context.IsCleanup = previousCleanup; }
 
@@ -91,10 +92,10 @@ namespace TestBuilder.Domain.Steps
             context.AddReportEntry(_name, false, status.ToString());
             if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
-            if (_stopOnError)
+            if (stopOnError)
                 context.HasCriticalError = true;
             else failureState.Restore(context);
-            return _stopOnError ? StepResult.False : StepResult.True;
+            return stopOnError ? StepResult.False : StepResult.True;
         }
     }
 }

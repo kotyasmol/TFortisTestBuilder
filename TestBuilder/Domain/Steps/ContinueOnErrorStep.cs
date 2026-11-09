@@ -12,6 +12,8 @@ internal sealed class ContinueOnErrorStep(ITestStep inner, string name, ILogger 
 {
     public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken token)
     {
+        if (context.StopOnPreparationError) return await inner.ExecuteAsync(context, token);
+
         var state = ExecutionFailureState.Capture(context);
         var reportStart = context.ReportEntries.Count;
         using var diagnostics = new StepLogScope();

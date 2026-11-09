@@ -1249,6 +1249,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             context = new TestContext(_registerState)
             {
+                IsPreparation = preparing,
                 SkipFirstRunNodes = !preparing && !partialRun,
                 RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),
