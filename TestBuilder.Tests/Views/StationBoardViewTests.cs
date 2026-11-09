@@ -183,6 +183,7 @@ public class StationBoardViewTests
                 vm.RootGraph.Board = new BoardDesign(); vm.NotifyProfileMetadataChanged();
                 window.Content = preview; Layout(window);
                 Assert.False(canvas.IsVisible); Assert.True(preview.FindControl<TextBlock>("EmptyMessage")!.IsVisible);
+                vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
                 vm.SelectedProfile = Profile("RTL_SW_board.json"); Layout(window);
                 Assert.True(canvas.IsVisible); Assert.False(preview.FindControl<TextBlock>("EmptyMessage")!.IsVisible); Assert.Equal(1, canvas.Zoom);
                 Capture(window, "reattached-board");

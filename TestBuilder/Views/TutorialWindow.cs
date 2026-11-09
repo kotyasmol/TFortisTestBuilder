@@ -217,7 +217,9 @@ public sealed class TutorialWindow : Window
     private Control? FindTarget() => Step switch
     {
         TutorialStep.Model => ButtonIn(_station, "Учебное устройство"),
-        TutorialStep.Profile => ButtonIn(_station, "Знакомство с программой"),
+        TutorialStep.Profile => _station.GetVisualDescendants().OfType<Button>().FirstOrDefault(b =>
+            b.IsEffectivelyVisible && b.DataContext is StationProfileOptionViewModel option &&
+            option.Profile.FilePath == _session.OriginalPath),
         TutorialStep.Start => ButtonIn(_station, "Начать"),
         TutorialStep.Confirm => Model.Station.IsAwaitingAction ? ButtonIn(_station, "Готово · продолжить") : null,
         TutorialStep.Result => null, // result and the workspace button remain readable and clickable

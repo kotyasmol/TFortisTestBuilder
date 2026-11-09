@@ -21,4 +21,11 @@ public partial class TestViewModel
     private bool IsSafeTrainingGraph() => RootGraph.Hardware == null && RootGraph.Nodes.All(n =>
         n is StartNodeViewModel or EndNodeViewModel or DelayNodeViewModel ||
         n is OperatorActionNodeViewModel { InputVariable.Length: 0 });
+
+    private bool CanRunTrainingGraph()
+    {
+        if (!IsTraining || IsSafeTrainingGraph()) return true;
+        StatusMessage = "В обучении доступны только старт, конец, задержка и подтверждение оператора.";
+        return false;
+    }
 }

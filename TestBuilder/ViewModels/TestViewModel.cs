@@ -1150,7 +1150,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task RunGraphAsync()
     {
-        if (!CanStartRun) return;
+        if (!CanRunTrainingGraph() || !CanStartRun) return;
         try { InvalidateChangedProfilePreparation(); }
         catch (Exception ex)
         {
@@ -1181,11 +1181,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         if (preparation == null ? !CanStartRun : !CanPrepareProfile) return;
         var preparing = preparation != null;
-        if (IsTraining && !IsSafeTrainingGraph())
-        {
-            StatusMessage = "В обучении доступны только старт, конец, задержка и подтверждение оператора.";
-            return;
-        }
+        if (!CanRunTrainingGraph()) return;
         if (IsTestRunning)
         {
             StatusMessage = "Тест уже выполняется.";
