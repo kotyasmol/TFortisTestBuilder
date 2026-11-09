@@ -8,10 +8,31 @@ namespace TestBuilder.Services
         private const string SolutionFileName = "TestBuilder.slnx";
         private const string ProfilesFolderName = "profiles";
 
-        public static string Resolve()
+        internal static string Resolve(string installation, string? configuredFolder)
         {
-            return FindProjectProfilesDirectory(AppContext.BaseDirectory)
-                ?? ResolvePortableDirectory(AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(configuredFolder))
+                return FindProjectProfilesDirectory(installation) ?? ResolvePortableDirectory(installation);
+
+            // Earlier releases could save the portable default as an explicit path.
+            if (IsPortableProfilesFolder(installation, configuredFolder))
+                return ResolvePortableDirectory(installation);
+
+            return configuredFolder;
+        }
+
+        private static bool IsPortableProfilesFolder(string installation, string configuredFolder)
+        {
+            try
+            {
+                var portableFolder = Path.GetFullPath(Path.Combine(installation, ProfilesFolderName));
+                var savedFolder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredFolder));
+                return string.Equals(portableFolder, savedFolder,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
         }
 
         internal static string ResolvePortableDirectory(string installation)

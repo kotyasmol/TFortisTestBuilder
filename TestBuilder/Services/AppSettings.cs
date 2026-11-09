@@ -33,12 +33,23 @@ namespace TestBuilder.Services
 
         [JsonPropertyName("standPort")] public string StandPort { get; set; } = "";
         [JsonPropertyName("consolePort")] public string ConsolePort { get; set; } = "";
+        private string _graphsFolder = string.Empty;
+        private string? _resolvedGraphsFolder;
+
         [JsonPropertyName("graphsFolder")]
-        public string GraphsFolder { get; set; } = string.Empty;
-        private string? _defaultGraphsFolder;
-        internal string ResolvedGraphsFolder => string.IsNullOrWhiteSpace(GraphsFolder)
-            ? _defaultGraphsFolder ??= ProfileDirectoryLocator.Resolve()
-            : GraphsFolder;
+        public string GraphsFolder
+        {
+            get => _graphsFolder;
+            set
+            {
+                if (_graphsFolder == value) return;
+                _graphsFolder = value;
+                _resolvedGraphsFolder = null;
+            }
+        }
+
+        internal string ResolvedGraphsFolder => _resolvedGraphsFolder ??=
+            ProfileDirectoryLocator.Resolve(Path.GetDirectoryName(Path.GetFullPath(_settingsPath))!, GraphsFolder);
 
         [JsonPropertyName("serverBaseUrl")]
         public string ServerBaseUrl { get; set; } = DefaultServerBaseUrl;

@@ -72,6 +72,40 @@ public class ProfileDirectoryLocatorTests
     }
 
     [Fact]
+    public void SettingsWithLegacyPortablePathSeedMissingProfilesAndPreserveEdits()
+    {
+        var root = Directory.CreateTempSubdirectory("testbuilder-profiles-");
+        try
+        {
+            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profile-templates"));
+            var working = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles"));
+            var custom = Directory.CreateDirectory(Path.Combine(root.FullName, "custom-profiles"));
+            var edited = Path.Combine(working.FullName, "existing.json");
+            File.WriteAllText(edited, "edited locally");
+            File.WriteAllText(Path.Combine(templates.FullName, "existing.json"), "bundled");
+            File.WriteAllText(Path.Combine(templates.FullName, "new.json"), "new bundled file");
+
+            var file = Path.Combine(root.FullName, "testbuilder.settings");
+            var legacyPath = Path.Combine(root.FullName, ".", "profiles") + Path.DirectorySeparatorChar;
+            File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(new { graphsFolder = legacyPath }));
+
+            var settings = AppSettings.Load(file);
+            Assert.Equal(legacyPath, settings.GraphsFolder);
+            settings.GraphsFolder = custom.FullName;
+            Assert.Equal(custom.FullName, settings.ResolvedGraphsFolder);
+            Assert.Empty(custom.GetFiles());
+            var added = Path.Combine(working.FullName, "new.json");
+            Assert.False(File.Exists(added));
+
+            settings.GraphsFolder = legacyPath;
+            Assert.Equal(working.FullName, settings.ResolvedGraphsFolder);
+            Assert.Equal("edited locally", File.ReadAllText(edited));
+            Assert.Equal("new bundled file", File.ReadAllText(added));
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
+    [Fact]
     public void UnavailableConfiguredFolderAndCorruptSettingsArePreserved()
     {
         var root = Directory.CreateTempSubdirectory("testbuilder-settings-");
