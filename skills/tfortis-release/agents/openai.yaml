@@ -1,0 +1,4 @@
+interface:
+  display_name: "Сборка и публикация TFortis"
+  short_description: "Windows-сборка TFortis и обновление beta-сервера"
+  default_prompt: "Используй $tfortis-release: собери свежий Windows-комплект TFortisTestBuilder и дай ZIP с результатами проверки."
