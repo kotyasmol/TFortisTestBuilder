@@ -1407,7 +1407,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 _pauseCompletion.TrySetResult(true);
                 try
                 {
-                    if (GraphConnectionRequirements.RequiresStandConnection(RootGraph) || FailureCleanupOrder.GetNodes(RootGraph).Count != 0)
+                    var cleanupRequiresStand = partialRun ? requiresStandConnection : GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+                    if (cleanupRequiresStand || FailureCleanupOrder.GetNodes(RootGraph).Count != 0)
                         RequireStandInspection();
                     try
                     {
@@ -1420,7 +1421,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                         TestingLogger.Warning("Мониторинг завершился с ошибкой. Выполняется отключение выходов стенда.");
                     }
                     IsMonitoringActive = false;
-                    if (await RunFailureCleanupAsync(context))
+                    if (await RunFailureCleanupAsync(context, cleanupRequiresStand))
                     {
                         if (NeedsStandInspection && !ClearStandInspection())
                             context.SetVariable("Cleanup.Succeeded", false);
@@ -1511,13 +1512,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    internal async Task<bool> RunFailureCleanupAsync(TestContext context)
+    internal async Task<bool> RunFailureCleanupAsync(TestContext context, bool? requiresStand = null)
     {
         var cleanupNodes = FailureCleanupOrder.GetNodes(RootGraph);
 
         if (cleanupNodes.Count == 0)
         {
-            var noHardware = !GraphConnectionRequirements.RequiresStandConnection(RootGraph);
+            var noHardware = !(requiresStand ?? GraphConnectionRequirements.RequiresStandConnection(RootGraph));
             context.SetVariable("Cleanup.Succeeded", noHardware);
             return noHardware;
         }

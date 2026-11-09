@@ -52,6 +52,8 @@ public partial class TestViewModel
     {
         OnPropertyChanged(nameof(HasPartialRun));
         OnPropertyChanged(nameof(PartialRunCaption));
+        OnPropertyChanged(nameof(CanStartRun));
+        RunGraphCommand.NotifyCanExecuteChanged();
     }
 
     private bool IsRunEntryAttached()

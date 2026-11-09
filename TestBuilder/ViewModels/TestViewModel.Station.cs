@@ -201,7 +201,7 @@ public partial class TestViewModel
     partial void OnIsNetworkSetupBusyChanged(bool value) => RefreshStationAvailability();
     public bool CanStartRun => !IsActionGraphEditor && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 && (!ShouldPrepareForRun || !HasRunningQuickActions) &&
-        (!ProfileRequiresHardware || (IsConnected && IsMonitoringActive)) &&
+        (!(HasPartialRun ? PartialRunRequiresStand() : ProfileRequiresHardware) || (IsConnected && IsMonitoringActive)) &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
             (!GraphConnectionRequirements.RequiresStandConnection(RootGraph) || (IsConnected && IsMonitoringActive))));
     public string StationReadiness => !App.StartupOptions.IsValid ? App.StartupOptions.Error :

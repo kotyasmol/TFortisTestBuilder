@@ -27,7 +27,8 @@ namespace TestBuilder.Services
         private static readonly ConditionalWeakTable<object, Dictionary<string, JsonElement>> ExtensionData = new();
         private static readonly ConditionalWeakTable<NodeViewModel, OriginalNodeData> OriginalNodes = new();
 
-        private sealed record OriginalNodeData(string Id, List<DataTestPortDto>? Ports, string? PortsText);
+        private sealed record OriginalNodeData(string Id, List<DataTestPortDto>? Ports, string? PortsText,
+            Dictionary<string, JsonElement>? OptionExtensions);
 
         internal static void ClearProfileExtensions(GraphWorkspaceViewModel graph) => ExtensionData.Remove(graph);
 
@@ -161,6 +162,7 @@ namespace TestBuilder.Services
 
             foreach (var node in graph.Nodes)
             {
+                OriginalNodes.TryGetValue(node, out var original);
                 var n = new NodeDto
                 {
                     Id = nodeIds[node],
@@ -185,10 +187,18 @@ namespace TestBuilder.Services
 
                 switch (node)
                 {
-                    case SerialConsoleNodeViewModel opSerialConsole: n.SerialConsole = opSerialConsole.Options; break;
-                    case RunProgramNodeViewModel opRunProgram: n.RunProgram = opRunProgram.Options; break;
-                    case ParseResponseNodeViewModel opParseResponse: n.ParseResponse = opParseResponse.Options; break;
-                    case CheckLedColorNodeViewModel opCheckLedColor: n.CheckLedColor = opCheckLedColor.Options; break;
+                    case SerialConsoleNodeViewModel opSerialConsole:
+                        n.SerialConsole = opSerialConsole.Options with { ExtensionData = original?.OptionExtensions };
+                        break;
+                    case RunProgramNodeViewModel opRunProgram:
+                        n.RunProgram = opRunProgram.Options with { ExtensionData = original?.OptionExtensions };
+                        break;
+                    case ParseResponseNodeViewModel opParseResponse:
+                        n.ParseResponse = opParseResponse.Options with { ExtensionData = original?.OptionExtensions };
+                        break;
+                    case CheckLedColorNodeViewModel opCheckLedColor:
+                        n.CheckLedColor = opCheckLedColor.Options with { ExtensionData = original?.OptionExtensions };
+                        break;
                     case DelayNodeViewModel d:
                         n.Milliseconds = d.Milliseconds;
                         break;
@@ -327,7 +337,7 @@ namespace TestBuilder.Services
                         n.AllowedTxDeficitPercent = d.AllowedTxDeficitPercent;
                         n.Bidirectional = d.Bidirectional;
                         n.PortsText = NormalizeDataTestPortsText(d.PortsText, d.AllowGigabit);
-                        if (OriginalNodes.TryGetValue(node, out var original) && original.PortsText == n.PortsText)
+                        if (original != null && original.PortsText == n.PortsText)
                             n.Ports = original.Ports;
                         n.DisabledPortsText = d.DisabledPortsText;
                         n.OutputVariableName = d.OutputVariableName;
@@ -933,7 +943,15 @@ namespace TestBuilder.Services
                     node.Dispose();
                     throw new InvalidOperationException($"Граф '{dto.Name}': повторный ID ноды '{n.Id}'.");
                 }
-                OriginalNodes.Add(node, new OriginalNodeData(n.Id, n.Ports, (node as RunDataTestNodeViewModel)?.PortsText));
+                var optionExtensions = node switch
+                {
+                    SerialConsoleNodeViewModel => n.SerialConsole?.ExtensionData,
+                    RunProgramNodeViewModel => n.RunProgram?.ExtensionData,
+                    ParseResponseNodeViewModel => n.ParseResponse?.ExtensionData,
+                    CheckLedColorNodeViewModel => n.CheckLedColor?.ExtensionData,
+                    _ => null
+                };
+                OriginalNodes.Add(node, new OriginalNodeData(n.Id, n.Ports, (node as RunDataTestNodeViewModel)?.PortsText, optionExtensions));
                 SetExtensions(node, n.ExtensionData);
                 graph.Nodes.Add(node);
             }
