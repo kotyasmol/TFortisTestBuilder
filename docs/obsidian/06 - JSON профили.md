@@ -699,10 +699,9 @@ JSON-deserializer проигнорирует их как неизвестные 
 перезапуска `Dut.default_mac`. Отсутствующие или несогласованные данные ведут в
 `False`; Print Label не рассчитывает MAC и не использует `SetMac.Timestamp`.
 
-Перед штатным и аварийным `Send Test Report` рабочий профиль содержит
-`Operator Action` с шаблонами `{SerialNumber}`, `{Dut.default_mac}` и
-`{Dut.NewMac}`. Ветка `Отмена` пропускает HTTP POST. Аварийный отчёт дополнительно
-защищён `Check Variable Range` для `SerialNumber = 3200000..3299999`.
+Во всех трёх профилях 8x2Pro успешный выход штатной и аварийной нод
+`Build Test Report` соединён напрямую с `Send Test Report`.
+Аварийная ветка перед сборкой проверяет `SerialNumber` в диапазоне 3200000..3299999.
 
 `Wait Variable Until` без полей опроса получает универсальные дефолты:
 `HttpGet`, `/api/getUpsStatus`, `Integer`. Endpoint должен существовать на DUT.

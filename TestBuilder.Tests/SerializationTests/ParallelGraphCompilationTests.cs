@@ -444,10 +444,6 @@ public class ParallelGraphCompilationTests
             var actual = copiedNode.DeepClone().AsObject();
             expected.Remove("id");
             actual.Remove("id");
-            if (key is "17. Отчёт о проверке" or "Отчёт при ошибке")
-            {
-                RemoveReportConfirmation(expected["bodyGraph"]!);
-            }
             var timeoutNodeType = key switch
             {
                 BootStage => "Read Selftest Field (v1)",
@@ -831,23 +827,6 @@ public class ParallelGraphCompilationTests
                 $"{byId[c["sourceNodeId"]!.GetValue<string>()]}|{c["sourceConnector"]}|" +
                 $"{byId[c["targetNodeId"]!.GetValue<string>()]}|{c["targetConnector"]}");
         }
-    }
-
-    private static void RemoveReportConfirmation(JsonNode graph)
-    {
-        var nodes = graph["nodes"]!.AsArray();
-        var connections = graph["connections"]!.AsArray();
-        var confirmation = nodes.Single(n => n!["type"]!.GetValue<string>() == "Operator Action")!;
-        var confirmationId = confirmation["id"]!.GetValue<string>();
-        var send = nodes.Single(n => n!["type"]!.GetValue<string>() == "Send Test Report")!;
-        var incoming = connections.Single(c => c!["targetNodeId"]!.GetValue<string>() == confirmationId)!;
-        incoming["targetNodeId"] = send["id"]!.DeepClone();
-        incoming["targetConnector"] = "In";
-        foreach (var connection in connections.Where(c => c!["sourceNodeId"]!.GetValue<string>() == confirmationId).ToArray())
-            connections.Remove(connection);
-        nodes.Remove(confirmation);
-
-        NormalizeGraphNodeIds(nodes, connections);
     }
 
     private static void NormalizeGraphNodeIds(JsonArray nodes, JsonArray connections)

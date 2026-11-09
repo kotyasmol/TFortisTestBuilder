@@ -644,10 +644,12 @@ public class ProductionStepTests
     }
 
     [Theory]
-    [InlineData(null, false)]
-    [InlineData(3300000, false)]
-    [InlineData(3200123, true)]
-    public async Task ProFailureReportRequiresAValidSerial(int? serial, bool sendsReport)
+    [InlineData("parallel_start", null, false)]
+    [InlineData("parallel_start", 3300000, false)]
+    [InlineData("parallel_start", 3200123, true)]
+    [InlineData("full_algorithm_polling", 3200123, true)]
+    [InlineData("parallel_el60", 3200123, true)]
+    public async Task ProFailureReportRequiresAValidSerial(string variant, int? serial, bool sendsReport)
     {
         var settings = AppSettings.Instance;
         var previousStandId = settings.StandId;
@@ -660,7 +662,7 @@ public class ProductionStepTests
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
             var path = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "profiles", "PSW_UPS_Box_8x2Pro_parallel_start.json");
+                "profiles", $"PSW_UPS_Box_8x2Pro_{variant}.json");
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
                 .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());

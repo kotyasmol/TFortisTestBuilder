@@ -2908,15 +2908,6 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
-            "runOnlyOnFirstRun": false
-          },
-          {
             "id": "4",
             "type": "Send Test Report",
             "x": 1920,
@@ -2952,20 +2943,8 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
@@ -3380,15 +3359,6 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
-            "runOnlyOnFirstRun": false
-          },
-          {
             "id": "4",
             "type": "Send Test Report",
             "x": 1920,
@@ -3436,24 +3406,12 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
@@ -5782,5 +5740,5 @@
       }
     ]
   },
-  "updatedAt": "2026-11-09T11:21:41.822594+00:00"
+  "updatedAt": "2026-11-09T11:29:49.353144+00:00"
 }
