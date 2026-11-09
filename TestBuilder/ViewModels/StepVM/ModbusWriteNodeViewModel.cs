@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -195,9 +196,9 @@ namespace TestBuilder.ViewModels.StepVM
             RefreshRegisters();
         }
 
-        public ITestStep CreateStep(IModbusService modbusService, ILogger logger)
+        public ITestStep CreateStep(IModbusService modbusService, ILogger logger, IReadOnlySet<byte>? readOnlySlaves = null)
         {
-            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId, VerifyWrite, RegisterArea);
+            return new ModbusWriteStep(modbusService, logger, SlaveId, Address, Value, UseCurrentSlaveId, VerifyWrite, RegisterArea, readOnlySlaves);
         }
 
         public override NodeViewModel Clone() => new ModbusWriteNodeViewModel

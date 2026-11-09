@@ -29,9 +29,11 @@ public class FirstRunNodeTests
         };
         operation.RunOnlyOnFirstRun = true;
         var start = new StartNodeViewModel(); var next = new DelayNodeViewModel { Milliseconds = 0 };
-        vm.Nodes.Add(start); vm.Nodes.Add(operation); vm.Nodes.Add(next);
+        var end = new EndNodeViewModel();
+        vm.Nodes.Add(start); vm.Nodes.Add(operation); vm.Nodes.Add(next); vm.Nodes.Add(end);
         vm.Connections.Add(new(start.Output[0], operation.Input[0]));
         vm.Connections.Add(new(operation.Output[0], next.Input[0]));
+        vm.Connections.Add(new(next.Output[0], end.Input[0]));
         using var compiler = new GraphCompiler(bus, NullLogger.Instance);
         var graph = compiler.Compile(vm.RootGraph);
         var observer = new Observer();

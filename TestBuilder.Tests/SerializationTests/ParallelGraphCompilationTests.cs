@@ -307,6 +307,16 @@ public class ParallelGraphCompilationTests
     }
 
     [Fact]
+    public void SameRegisterAddressOnAnotherDevice_DoesNotInheritHeaterSafety()
+    {
+        var power = new ModbusWriteNodeViewModel { SlaveId = 23, Address = 1215, Value = 1 };
+        var graph = TwoBranchGraph(new SelfTestCheckNodeViewModel(), power);
+        graph.Hardware!.Devices.Single(d => d.SlaveId == 23).IdentificationValue = 7;
+
+        Assert.Throws<InvalidOperationException>(() => Compile(graph));
+    }
+
+    [Fact]
     public void OperatorPromptInsideParallelBranch_IsRejected()
     {
         Assert.Throws<InvalidOperationException>(() => Compile(TwoBranchGraph(
@@ -411,7 +421,7 @@ public class ParallelGraphCompilationTests
     }
 
     [Fact]
-    public void ParallelProfile_OnlyRewiresStartupAndKeepsOriginalHardwareSettings()
+    public void WorkingParallelProfile_KeepsHardwareSettingsAndDocumentedStageDifferences()
     {
         // Compare effective settings: editor saves may add defaults, renumber IDs
         // and move/recolor nested nodes without changing the hardware sequence.
@@ -421,73 +431,58 @@ public class ParallelGraphCompilationTests
         Assert.NotEqual(original["name"]!.GetValue<string>(), parallel["name"]!.GetValue<string>());
         Assert.Contains("параллельный старт", parallel["configurationName"]!.GetValue<string>());
 
-        var originalNodes = original["nodes"]!.AsArray();
-        var parallelNodes = parallel["nodes"]!.AsArray();
-        Assert.Equal(originalNodes.Count, parallelNodes.Count);
-        foreach (var node in originalNodes)
+        Assert.True(JsonNode.DeepEquals(original["hardware"], parallel["hardware"]));
+        var originalNodes = Stages(original);
+        var parallelNodes = Stages(parallel);
+        Assert.Equal(originalNodes.Keys.Order(), parallelNodes.Keys.Order());
+        foreach (var (key, node) in originalNodes)
         {
-            var id = node!["id"]!.GetValue<string>();
-            if (id == "9") continue; // Stand-specific copper/SFP coverage is tested separately.
-            var copiedNode = parallelNodes.Single(n => n!["id"]!.GetValue<string>() == id)!;
+            if (key is "10. DataTest" or "09a. Проверка Sensor1 и Sensor2") continue; // Covered in dedicated DataTest and IO-2 tests.
+            var copiedNode = parallelNodes[key];
             var expected = node.DeepClone().AsObject();
             var actual = copiedNode.DeepClone().AsObject();
-            foreach (var ignored in new[] { "x", "y" })
+            expected.Remove("id");
+            actual.Remove("id");
+            if (key is "17. Финальная статистика и отчет" or "Отчёт при ошибке")
             {
-                expected.Remove(ignored);
-                actual.Remove(ignored);
+                RemoveReportConfirmation(expected["bodyGraph"]!);
             }
-            if (id == "0")
+            var timeoutNode = key switch
             {
-                expected["type"] = "Start";
-                actual["type"] = "Start";
-            }
-            if (id == "17")
-                foreach (var labelField in new[] { "text", "labelWidth", "labelHeight" })
-                {
-                    expected.Remove(labelField);
-                    actual.Remove(labelField);
-                }
-            Assert.True(JsonNode.DeepEquals(expected, actual), $"Changed original settings for node {id}.");
+                "06. Ожидание загрузки DUT и selftest" => 3,
+                "07. Проверка selftest DUT" => 1,
+                "15. Получение серийника и запись MAC" => 12,
+                _ => -1
+            };
+            if (timeoutNode >= 0) expected["bodyGraph"]!["nodes"]![timeoutNode]!["timeoutMs"] = 250000;
+            Assert.True(JsonNode.DeepEquals(expected, actual), $"Changed original settings for stage {key}.");
         }
 
-        var expectedConnections = original["connections"]!.AsArray().DeepClone().AsArray();
-        expectedConnections.Single(c => c!["sourceNodeId"]!.GetValue<string>() == "6")!["targetNodeId"] = "22";
-        expectedConnections.Add(JsonNode.Parse("""
-            { "sourceNodeId": "4", "sourceConnector": "Success", "targetNodeId": "7", "targetConnector": "In" }
-            """));
-        Assert.Equal(ConnectionKeys(expectedConnections), ConnectionKeys(parallel["connections"]!.AsArray()));
-        Assert.Equal("Start (connections v1)", originalNodes[0]!["type"]!.GetValue<string>());
-        Assert.Equal("Start (action state v1)", parallelNodes[0]!["type"]!.GetValue<string>());
+        AssertProTopology(original, parallel);
+        Assert.Equal("Start (connections v1)", original["nodes"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal("Start (action state v1)", parallel["nodes"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
     public void OptimizedProfile_KeepsHardwareSequencesAndOtherStages()
     {
-        var original = JsonNode.Parse(ReadProfile(ParallelProfile))!;
-        var optimized = JsonNode.Parse(ReadProfile(OptimizedProfile))!;
+        var original = NormalizeProfile(SourceProfile);
+        var optimized = NormalizeProfile(OptimizedProfile);
         Assert.Equal(original["deviceModel"]!.GetValue<string>(), optimized["deviceModel"]!.GetValue<string>());
         Assert.NotEqual(original["name"]!.GetValue<string>(), optimized["name"]!.GetValue<string>());
         Assert.NotEqual(original["configurationName"]!.GetValue<string>(), optimized["configurationName"]!.GetValue<string>());
-        Assert.True(JsonNode.DeepEquals(original["connections"], optimized["connections"]));
+        Assert.True(JsonNode.DeepEquals(original["hardware"], optimized["hardware"]));
+        AssertProTopology(original, optimized);
 
-        var originalNodes = original["nodes"]!.AsArray();
-        var optimizedNodes = optimized["nodes"]!.AsArray();
-        Assert.Equal(originalNodes.Count, optimizedNodes.Count);
-        foreach (var node in originalNodes)
+        var originalNodes = Stages(original);
+        var optimizedNodes = Stages(optimized);
+        Assert.Equal(originalNodes.Keys.Order(), optimizedNodes.Keys.Order());
+        foreach (var (key, node) in originalNodes)
         {
-            var id = node!["id"]!.GetValue<string>();
-            var copy = optimizedNodes.Single(n => n!["id"]!.GetValue<string>() == id)!;
-            if (id == "9") continue; // This stand has no SFP cables; the optimized template retains its full test.
-            if (id == "0")
+            var copy = optimizedNodes[key];
+            if (key is not ("02. Сброс PoE-нагрузок EL60v5" or "04. Настройка PoE-нагрузок EL60v5"))
             {
-                var normalizedStart = node.DeepClone();
-                normalizedStart["type"] = copy["type"]!.DeepClone();
-                Assert.True(JsonNode.DeepEquals(normalizedStart, copy));
-                continue;
-            }
-            if (id is not ("2" or "3"))
-            {
-                Assert.True(JsonNode.DeepEquals(node, copy), $"Changed unrelated stage {id}.");
+                Assert.True(JsonNode.DeepEquals(node, copy), $"Changed unrelated stage {key}.");
                 continue;
             }
 
@@ -500,11 +495,11 @@ public class ParallelGraphCompilationTests
             foreach (var loop in loops)
             {
                 var normalized = loop!.DeepClone();
-                foreach (var field in new[] { "id", "x", "y", "fromSlaveId", "toSlaveId" })
+                foreach (var field in new[] { "id", "fromSlaveId", "toSlaveId" })
                     normalized[field] = originalLoop[field]!.DeepClone();
                 normalized["body"]!["name"] = originalLoop["body"]!["name"]!.DeepClone();
                 Assert.True(JsonNode.DeepEquals(originalLoop, normalized),
-                    $"Changed per-device writes, verification, delays or transitions in stage {id}.");
+                    $"Changed per-device writes, verification, delays or transitions in stage {key}.");
             }
 
             var normalizedStage = copy.DeepClone();
@@ -665,7 +660,7 @@ public class ParallelGraphCompilationTests
         foreach (var prefix in new[] { "02.", "04." })
         {
             var stage = root.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.Name.StartsWith(prefix));
-            var fork = Compile(stage.BodyGraph).StartNode.ParallelTransitions[StepResult.Next];
+            var fork = Compile(stage.BodyGraph, root.Hardware).StartNode.ParallelTransitions[StepResult.Next];
             Assert.IsType<EndNodeViewModel>(fork.JoinNode.Source);
             var loops = fork.Branches.Select(n => Assert.IsType<ForEachSlaveNodeViewModel>(n.Source)).ToArray();
             Assert.Equal(new[] { (1, 5), (7, 11), (13, 15) },
@@ -721,11 +716,23 @@ public class ParallelGraphCompilationTests
         var start = new StartNodeViewModel();
         var end = new EndNodeViewModel();
         var graph = Graph(start, left, right, end);
+        graph.Hardware = new HardwareConfiguration
+        {
+            Devices = new() { Device(23, 8, 1215, 1220), Device(1, 4, 1412, 1413, 1414, 1415, 1420, 1421, 1430),
+                Device(3, 4, 1414), Device(5, 4, 1414) }
+        };
         Connect(graph, start, left);
         Connect(graph, start, right);
         Connect(graph, left, end);
         Connect(graph, right, end);
         return graph;
+
+        static DeviceDefinition Device(byte slave, ushort identification, params int[] addresses) => new()
+        {
+            SlaveId = slave,
+            IdentificationValue = identification,
+            Registers = addresses.Select(a => new RegisterDefinition { Address = a, Writable = true }).ToList()
+        };
     }
 
     private static SubtestNodeViewModel SubtestWithBodyCycle()
@@ -755,11 +762,11 @@ public class ParallelGraphCompilationTests
         ConnectorViewModel? output = null) => graph.Connections.Add(new ConnectionViewModel(
             output ?? source.Output[0], target.Input[0]));
 
-    private static CompiledGraph Compile(GraphWorkspaceViewModel graph)
+    private static CompiledGraph Compile(GraphWorkspaceViewModel graph, HardwareConfiguration? profileHardware = null)
     {
         using var modbus = new ModbusService();
         using var http = new HttpRequestService();
-        using var compiler = new GraphCompiler(modbus, http, NullLogger.Instance);
+        using var compiler = new GraphCompiler(modbus, http, NullLogger.Instance) { ProfileHardware = profileHardware };
         return compiler.Compile(graph);
     }
 
@@ -780,6 +787,8 @@ public class ParallelGraphCompilationTests
             if (node is JsonObject obj)
             {
                 foreach (var field in new[] { "x", "y", "color" }) obj.Remove(field);
+                if (obj["nodes"] is JsonArray nodes && obj["connections"] is JsonArray connections)
+                    NormalizeGraphNodeIds(nodes, connections);
                 foreach (var property in obj) RemoveLayout(property.Value);
             }
             else if (node is JsonArray array)
@@ -787,7 +796,64 @@ public class ParallelGraphCompilationTests
         }
     }
 
-    private static string[] ConnectionKeys(JsonArray connections) => connections.Select(c =>
-        string.Join("|", new[] { "sourceNodeId", "sourceConnector", "targetNodeId", "targetConnector" }
-            .Select(key => c![key]!.GetValue<string>()))).OrderBy(key => key, StringComparer.Ordinal).ToArray();
+    private static Dictionary<string, JsonNode> Stages(JsonNode profile) => profile["nodes"]!.AsArray()
+        .OfType<JsonObject>().Where(node => node["name"] != null).ToDictionary(StageKey, node => (JsonNode)node);
+
+    private static string StageKey(JsonNode node)
+    {
+        var name = node["name"]?.GetValue<string>();
+        if (name == null) return node["type"]!.GetValue<string>().Split(' ')[0];
+        return name.StartsWith("10. DataTest", StringComparison.Ordinal) ? "10. DataTest" : name;
+    }
+
+    private static void AssertProTopology(JsonNode original, JsonNode parallel)
+    {
+        var expected = Links(original).ToList();
+        const string selfTest = "07. Проверка selftest DUT";
+        const string heater = "08. Проверка нагревателя 1";
+        Assert.True(expected.Remove($"{selfTest}|Success|{heater}|In"));
+        expected.Add($"{selfTest}|Success|09a. Проверка Sensor1 и Sensor2|In");
+        expected.Add($"05. Подача питания DUT|Success|{heater}|In");
+        Assert.Equal(expected.Order(StringComparer.Ordinal), Links(parallel).Order(StringComparer.Ordinal));
+
+        static IEnumerable<string> Links(JsonNode profile)
+        {
+            var byId = profile["nodes"]!.AsArray().OfType<JsonObject>()
+                .ToDictionary(node => node["id"]!.GetValue<string>(), StageKey);
+            return profile["connections"]!.AsArray().OfType<JsonObject>().Select(c =>
+                $"{byId[c["sourceNodeId"]!.GetValue<string>()]}|{c["sourceConnector"]}|" +
+                $"{byId[c["targetNodeId"]!.GetValue<string>()]}|{c["targetConnector"]}");
+        }
+    }
+
+    private static void RemoveReportConfirmation(JsonNode graph)
+    {
+        var nodes = graph["nodes"]!.AsArray();
+        var connections = graph["connections"]!.AsArray();
+        var confirmation = nodes.Single(n => n!["type"]!.GetValue<string>() == "Operator Action")!;
+        var confirmationId = confirmation["id"]!.GetValue<string>();
+        var send = nodes.Single(n => n!["type"]!.GetValue<string>() == "Send Test Report")!;
+        var incoming = connections.Single(c => c!["targetNodeId"]!.GetValue<string>() == confirmationId)!;
+        incoming["targetNodeId"] = send["id"]!.DeepClone();
+        incoming["targetConnector"] = "In";
+        foreach (var connection in connections.Where(c => c!["sourceNodeId"]!.GetValue<string>() == confirmationId).ToArray())
+            connections.Remove(connection);
+        nodes.Remove(confirmation);
+
+        NormalizeGraphNodeIds(nodes, connections);
+    }
+
+    private static void NormalizeGraphNodeIds(JsonArray nodes, JsonArray connections)
+    {
+        // These comparisons cover behavior and transitions across profile variants.
+        // ID preservation during save is checked by the round-trip tests.
+        var ids = nodes.Select((node, index) => (Old: node!["id"]!.GetValue<string>(), New: index.ToString()))
+            .ToDictionary(id => id.Old, id => id.New);
+        foreach (var node in nodes) node!["id"] = ids[node["id"]!.GetValue<string>()];
+        foreach (var connection in connections)
+        {
+            connection!["sourceNodeId"] = ids[connection["sourceNodeId"]!.GetValue<string>()];
+            connection["targetNodeId"] = ids[connection["targetNodeId"]!.GetValue<string>()];
+        }
+    }
 }

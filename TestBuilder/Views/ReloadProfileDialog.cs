@@ -8,16 +8,16 @@ namespace TestBuilder.Views;
 
 public sealed class ReloadProfileDialog : Window
 {
-    public ReloadProfileDialog()
+    public ReloadProfileDialog(string title = "Обновить профиль?", string? action = null, string? question = null)
     {
-        Title = "Обновить профиль?";
+        Title = title;
         Width = 440;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var cancel = new Button { Content = "Отмена", MinWidth = 100 };
-        var reload = new Button { Content = "Загрузить с диска", MinWidth = 150 };
+        var reload = new Button { Content = action ?? "Загрузить с диска", MinWidth = 150 };
         cancel.Click += (_, _) => Close(false);
         reload.Click += (_, _) => Close(true);
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; Close(false); } };
@@ -29,7 +29,7 @@ public sealed class ReloadProfileDialog : Window
             {
                 new TextBlock
                 {
-                    Text = "В профиле есть несохранённые изменения. Загрузить сохранённую версию и отменить эти изменения?",
+                    Text = question ?? "В профиле есть несохранённые изменения. Загрузить сохранённую версию и отменить эти изменения?",
                     TextWrapping = TextWrapping.Wrap
                 },
                 new StackPanel

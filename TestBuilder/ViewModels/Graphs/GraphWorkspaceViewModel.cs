@@ -69,6 +69,16 @@ namespace TestBuilder.ViewModels.Graphs
 
         public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new();
 
+        internal void DisposeNodes()
+        {
+            foreach (var action in QuickActions)
+            {
+                action.Graph.DisposeNodes();
+                action.OffGraph.DisposeNodes();
+            }
+            foreach (var node in Nodes) node.Dispose();
+        }
+
         public void Clear()
         {
             foreach (var node in Nodes)

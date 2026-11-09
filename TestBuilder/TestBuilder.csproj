@@ -23,7 +23,7 @@
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />
 		<Content Include="..\profiles\**\*.json"
-		         Link="profiles\%(RecursiveDir)%(Filename)%(Extension)"
+		         Link="profile-templates\%(RecursiveDir)%(Filename)%(Extension)"
 		         CopyToOutputDirectory="PreserveNewest"
 		         CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>

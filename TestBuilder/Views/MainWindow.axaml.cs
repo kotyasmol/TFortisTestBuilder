@@ -69,6 +69,7 @@ namespace TestBuilder.Views
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
+            if (DataContext is MainWindowViewModel { NetworkSetupVM.IsBusy: true }) e.Cancel = true;
             if (DataContext is MainWindowViewModel vm && (vm.TestVM.IsTestRunning || vm.TestVM.HasRunningQuickActions))
             {
                 e.Cancel = true;

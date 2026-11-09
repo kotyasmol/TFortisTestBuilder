@@ -11,7 +11,7 @@ public partial class TestViewModel
     private readonly string? _trainingDirectory;
     public bool IsTraining => _trainingDirectory != null;
     internal Func<Avalonia.Controls.Window?>? TrainingDialogOwner { get; set; }
-    private string ProfilesFolder => _trainingDirectory ?? AppSettings.Instance.GraphsFolder;
+    private string ProfilesFolder => _trainingDirectory ?? AppSettings.Instance.ResolvedGraphsFolder;
 
     private bool IsAllowedProfilePath(string path) => !IsTraining ||
         string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(_trainingDirectory!), StringComparison.Ordinal);

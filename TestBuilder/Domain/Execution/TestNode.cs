@@ -21,6 +21,7 @@ namespace TestBuilder.Domain.Execution
 
         public bool RunOnlyOnFirstRun { get; init; }
         public StepResult SkippedResult { get; init; } = StepResult.Next;
+        public bool RequiresSuccessTransition { get; init; }
 
         public string DisplayName { get; init; } = string.Empty;
 

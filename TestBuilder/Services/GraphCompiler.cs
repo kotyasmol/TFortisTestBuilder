@@ -54,6 +54,10 @@ namespace TestBuilder.Services
             foreach (var node in nodes)
             {
                 if (node is SubtestNodeViewModel { IsEnabled: false }) continue;
+                if (node is ModbusWriteNodeViewModel write &&
+                    (write.RegisterArea is not (ModbusArea.Holding or ModbusArea.Coil) ||
+                    (!write.UseCurrentSlaveId && ReadOnlySlaves(hardware, write)?.Contains(write.SlaveId) == true)))
+                    throw new InvalidOperationException($"Нода '{write.DisplayTitle}': регистр {write.Address} доступен только для чтения.");
                 if (node is SerialConsoleNodeViewModel console && !string.IsNullOrEmpty(console.DeviceId))
                 {
                     var device = hardware?.ConsoleDevices.SingleOrDefault(d => d.Id == console.DeviceId)
@@ -102,13 +106,18 @@ namespace TestBuilder.Services
             _ownsClients = false;
         }
 
-        public CompiledGraph Compile(GraphWorkspaceViewModel graph, NodeViewModel? entry = null, bool singleNode = false)
+        public CompiledGraph Compile(GraphWorkspaceViewModel graph, NodeViewModel? entry = null, bool singleNode = false,
+            byte? currentSlaveId = null) => CompileGraph(graph, entry, singleNode,
+                currentSlaveId is { } slave ? new[] { slave } : null);
+
+        private CompiledGraph CompileGraph(GraphWorkspaceViewModel graph, NodeViewModel? entry, bool singleNode,
+            IReadOnlyCollection<byte>? currentSlaves)
         {
             if (_compiling.Count == 0) _activeHardware = ProfileHardware ?? graph.Hardware;
             if (!_compiling.Add(graph))
                 throw new InvalidOperationException($"Граф '{graph.Title}' содержит рекурсивное вложение.");
             _graphNames.Add(graph.Title);
-            try { return CompileCore(graph, entry, singleNode); }
+            try { return CompileCore(graph, entry, singleNode, currentSlaves); }
             finally
             {
                 _graphNames.RemoveAt(_graphNames.Count - 1);
@@ -116,7 +125,8 @@ namespace TestBuilder.Services
             }
         }
 
-        private CompiledGraph CompileCore(GraphWorkspaceViewModel graph, NodeViewModel? entry, bool singleNode)
+        private CompiledGraph CompileCore(GraphWorkspaceViewModel graph, NodeViewModel? entry, bool singleNode,
+            IReadOnlyCollection<byte>? currentSlaves)
         {
             var starts = graph.Nodes.Where(n => n is StartNodeViewModel or BodyStartNodeViewModel).ToList();
             if (entry == null && starts.Count != 1)
@@ -125,9 +135,10 @@ namespace TestBuilder.Services
             var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
             foreach (var node in nodes.Where(n => n.RunOnlyOnFirstRun && !n.CanRunOnlyOnFirstRun))
                 throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение при первом запуске.");
-            var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node), node)
+            var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node, currentSlaves), node)
             {
                 RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
+                RequiresSuccessTransition = entry == null && node is not EndNodeViewModel and not BodyEndNodeViewModel,
                 SkippedResult = node.RunOnlyOnFirstRun
                     ? node.Output.Select(port => ResolveTransition(node, port)).First(result => result != StepResult.False)
                     : StepResult.Next,
@@ -165,7 +176,7 @@ namespace TestBuilder.Services
                     }
                 }
             }
-            ParallelGraphPlanner.Plan(transitions);
+            ParallelGraphPlanner.Plan(transitions, _activeHardware, currentSlaves);
             return new CompiledGraph(map[entry ?? starts[0]]);
         }
 
@@ -185,9 +196,9 @@ namespace TestBuilder.Services
             return nodes;
         }
 
-        private ITestStep CreateStep(NodeViewModel node)
+        private ITestStep CreateStep(NodeViewModel node, IReadOnlyCollection<byte>? currentSlaves)
         {
-            var step = CreateStepCore(node);
+            var step = CreateStepCore(node, currentSlaves);
             var continueOnError = node switch
             {
                 SelfTestCheckNodeViewModel n => !n.FailOnError,
@@ -206,7 +217,7 @@ namespace TestBuilder.Services
             return continueOnError ? new ContinueOnErrorStep(step, node.DisplayTitle, _logger) : step;
         }
 
-        private ITestStep CreateStepCore(NodeViewModel node)
+        private ITestStep CreateStepCore(NodeViewModel node, IReadOnlyCollection<byte>? currentSlaves)
         {
             return node switch
             {
@@ -220,7 +231,7 @@ namespace TestBuilder.Services
                 BodyEndNodeViewModel => new BodyEndStep(_logger),
                 DelayNodeViewModel delay => delay.CreateStep(_logger),
                 LabelNodeViewModel label => label.CreateStep(_logger),
-                ModbusWriteNodeViewModel write => write.CreateStep(_modbusService, _logger),
+                ModbusWriteNodeViewModel write => write.CreateStep(_modbusService, _logger, ReadOnlySlaves(_activeHardware, write)),
                 CheckRegisterRangeNodeViewModel check => check.CreateStep(_modbusService, _logger),
                 WaitUntilNodeViewModel waitUntil => waitUntil.CreateStep(_modbusService, _logger),
                 OperatorActionNodeViewModel operatorAction => operatorAction.CreateStep(_logger),
@@ -240,11 +251,15 @@ namespace TestBuilder.Services
                 BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger, LabelPrinter),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger, ReportClientFactory),
-                SubtestNodeViewModel subtest => CreateSubtestStep(subtest),
-                ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave),
+                SubtestNodeViewModel subtest => CreateSubtestStep(subtest, currentSlaves),
+                ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave, currentSlaves),
                 _ => new PassThroughStep()
             };
         }
+
+        private static IReadOnlySet<byte>? ReadOnlySlaves(HardwareConfiguration? hardware, ModbusWriteNodeViewModel write) =>
+            hardware?.Devices.Where(d => d.Registers.Any(r => r.Address == write.Address && r.Area == write.RegisterArea && !r.Writable))
+                .Select(d => d.SlaveId).ToHashSet();
 
         private ConsoleDeviceDefinition? ResolveConsole(SerialConsoleNodeViewModel node)
         {
@@ -255,9 +270,9 @@ namespace TestBuilder.Services
             return device with { }; // Running steps keep the compiled profile's connection settings.
         }
 
-        private ITestStep CreateSubtestStep(SubtestNodeViewModel node)
+        private ITestStep CreateSubtestStep(SubtestNodeViewModel node, IReadOnlyCollection<byte>? currentSlaves)
         {
-            var bodyGraph = Compile(node.BodyGraph);
+            var bodyGraph = CompileGraph(node.BodyGraph, null, false, currentSlaves);
 
             return new SubtestStep(
                 node.Name,
@@ -267,9 +282,9 @@ namespace TestBuilder.Services
                 _logger, node.RunOnFailure);
         }
 
-        private ITestStep CreateForEachSlaveStep(ForEachSlaveNodeViewModel node)
+        private ITestStep CreateForEachSlaveStep(ForEachSlaveNodeViewModel node, IReadOnlyCollection<byte>? currentSlaves)
         {
-            var bodyGraph = Compile(node.BodyGraph);
+            var bodyGraph = CompileGraph(node.BodyGraph, null, false, ParallelResourceValidator.GetLoopSlaves(node, currentSlaves));
 
             return new ForEachSlaveStep(
                 node.FromSlaveId,

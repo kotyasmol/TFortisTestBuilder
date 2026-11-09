@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Domain.Modbus;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
 
@@ -14,7 +15,8 @@ namespace TestBuilder.Services.Graph;
 /// </summary>
 internal static class ParallelGraphPlanner
 {
-    public static void Plan(Dictionary<TestNode, Dictionary<StepResult, List<TestNode>>> edges)
+    public static void Plan(Dictionary<TestNode, Dictionary<StepResult, List<TestNode>>> edges,
+        HardwareConfiguration? hardware, IReadOnlyCollection<byte>? currentSlaves)
     {
         foreach (var (source, outgoing) in edges)
         foreach (var (result, branches) in outgoing.Where(pair => pair.Value.Count > 1))
@@ -55,7 +57,7 @@ internal static class ParallelGraphPlanner
                 throw new InvalidOperationException($"Параллельные ветви '{Name(source)}' ({result}): " +
                     (reason ?? "нет общего объединения для всех путей. Соедините ветви общей следующей нодой; циклы и выход из ветви до объединения недопустимы."));
 
-            ParallelResourceValidator.Validate(source, regions);
+            ParallelResourceValidator.Validate(source, regions, hardware, currentSlaves);
             source.ParallelTransitions[result] = new ParallelFork(branches.ToArray(), join);
         }
     }

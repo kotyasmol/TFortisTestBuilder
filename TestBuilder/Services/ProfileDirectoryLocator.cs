@@ -11,8 +11,37 @@ namespace TestBuilder.Services
         public static string Resolve()
         {
             return FindProjectProfilesDirectory(AppContext.BaseDirectory)
-                ?? FindProjectProfilesDirectory(Environment.CurrentDirectory)
-                ?? Path.Combine(AppContext.BaseDirectory, ProfilesFolderName);
+                ?? ResolvePortableDirectory(AppContext.BaseDirectory);
+        }
+
+        internal static string ResolvePortableDirectory(string installation)
+        {
+            var workingFolder = Path.Combine(installation, ProfilesFolderName);
+            var templates = Path.Combine(installation, "profile-templates");
+            try
+            {
+                if (!Directory.Exists(templates)) return workingFolder;
+                foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.AllDirectories))
+                {
+                    var destination = Path.Combine(workingFolder, Path.GetRelativePath(templates, source));
+                    if (File.Exists(destination)) continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    try
+                    {
+                        File.Copy(source, temporary);
+                        File.SetLastWriteTimeUtc(temporary, File.GetLastWriteTimeUtc(source));
+                        File.Move(temporary, destination, overwrite: false);
+                    }
+                    catch (IOException) when (File.Exists(destination)) { }
+                    finally { File.Delete(temporary); }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Logging.DiagnosticLog.WriteException("Подготовка папки профилей", ex);
+            }
+            return workingFolder;
         }
 
         internal static string? FindProjectProfilesDirectory(string startPath)

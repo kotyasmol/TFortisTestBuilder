@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System;
 using System.Net;
 using System.Text.Json.Serialization;
@@ -6,6 +8,9 @@ namespace TestBuilder.Models;
 
 public sealed class PingMonitorSettings
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
     [JsonPropertyName("host")] public string Host { get; set; } = "";
     [JsonPropertyName("intervalMs")] public int IntervalMs { get; set; } = 1000;

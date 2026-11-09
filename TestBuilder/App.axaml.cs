@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using TestBuilder.Views;
 using TestBuilder.Services;
+using TestBuilder.ViewModels;
 
 namespace TestBuilder;
 
@@ -28,6 +29,8 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var window = new MainWindow();
+            if (window.DataContext is MainWindowViewModel vm)
+                vm.TestVM.EnableStandInspectionPersistence(StandInspectionStore.Local);
             window.EnableWorkspacePersistence(AppSettings.Instance);
             desktop.MainWindow = window;
             desktop.MainWindow.Opened += async (_, _) => await TutorialLauncher.OfferOnFirstLaunchAsync(desktop.MainWindow);

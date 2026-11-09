@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -11,6 +12,26 @@ namespace TestBuilder.Services;
 
 internal static class ProfileFileStorage
 {
+    private static readonly object PublishLock = new();
+    public static (string Json, string Revision) Read(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        using var reader = new StreamReader(new MemoryStream(bytes));
+        return (reader.ReadToEnd(), Convert.ToHexString(SHA256.HashData(bytes)));
+    }
+
+    public static void CheckRevision(string path, string expectedRevision)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            if (Convert.ToHexString(SHA256.HashData(stream)) == expectedRevision) return;
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
+        throw new IOException("Файл изменился на диске. Обновите профиль или сохраните правки в копию.");
+    }
+
     public static string WithName(string json, GraphProfile source, string description)
     {
         if (string.IsNullOrWhiteSpace(description) || description.Any(char.IsControl))
@@ -45,15 +66,39 @@ internal static class ProfileFileStorage
         return Path.Combine(folder, candidate);
     }
 
-    public static async Task WriteAsync(string path, string json, bool createNew)
+    public static async Task<string> WriteAsync(string path, string json, bool createNew, string? expectedRevision = null)
+    {
+        var bytes = Encoding.UTF8.GetBytes(json);
+        await PublishAsync(path, createNew, temporaryPath => File.WriteAllBytesAsync(temporaryPath, bytes), expectedRevision);
+        return Convert.ToHexString(SHA256.HashData(bytes));
+    }
+
+    public static Task ImportAsync(Stream source, string folder, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.IndexOfAny(new[] { '/', '\\' }) >= 0 ||
+            !string.Equals(Path.GetExtension(name), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Выберите файл профиля .json.");
+        return PublishAsync(Path.Combine(folder, name), createNew: true, async temporaryPath =>
+        {
+            await using (var destination = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write))
+                await source.CopyToAsync(destination);
+            GraphSerializer.ValidateProfile(await File.ReadAllTextAsync(temporaryPath));
+        });
+    }
+
+    private static async Task PublishAsync(string path, bool createNew, Func<string, Task> prepare, string? expectedRevision = null)
     {
         var fullPath = Path.GetFullPath(path);
         var temporaryPath = Path.Combine(Path.GetDirectoryName(fullPath)!, $".profile-{Guid.NewGuid():N}.tmp");
         try
         {
-            await File.WriteAllTextAsync(temporaryPath, json, new UTF8Encoding(false));
+            await prepare(temporaryPath);
             // Publish only a complete file. A collision must never replace another profile.
-            File.Move(temporaryPath, fullPath, overwrite: !createNew);
+            lock (PublishLock)
+            {
+                if (expectedRevision != null) CheckRevision(fullPath, expectedRevision);
+                File.Move(temporaryPath, fullPath, overwrite: !createNew);
+            }
         }
         finally
         {

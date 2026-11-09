@@ -1,4 +1,5 @@
 using TestBuilder.Services;
+using static TestBuilder.Services.DataTestNetworkConfigurator;
 
 namespace TestBuilder.Tests.Services;
 
@@ -99,5 +100,51 @@ public class DataTestNetworkConfiguratorTests
 
         Assert.Contains("вне сети стенда", DataTestNetworkConfigurator.ValidateAssignments(
             ValidAssignments(), adapters));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FailedSwap_RestoresBothAddressesIncludingTheirMasks(bool failSavingBindings)
+    {
+        var a = new BenchAdapter("a", "a", "", "Up", "192.168.0.2");
+        var b = new BenchAdapter("b", "b", "", "Up", "192.168.0.3");
+        var originalA = new AdapterAddress(a.Ipv4, "255.255.255.0");
+        var originalB = new AdapterAddress(b.Ipv4, "255.255.0.0");
+        var changes = new[] { new AdapterAddressChange(a, b.Ipv4, "192.0.2.3", false, [originalA]),
+            new AdapterAddressChange(b, a.Ipv4, "192.0.2.2", false, [originalB]) };
+        var addresses = new Dictionary<string, AdapterAddress> { ["a"] = originalA, ["b"] = originalB };
+        var saveCalled = false;
+        var failureInjected = false;
+
+        var error = await ApplyAddressChangesAsync(changes, "255.255.255.0", [a.Ipv4, b.Ipv4], () =>
+            {
+                saveCalled = true;
+                throw new IOException("settings write failed");
+            }, new Progress<string>(), RunAsync,
+            (id, address, dhcp, _) => Task.FromResult(!dhcp && addresses[id] == address), CancellationToken.None);
+
+        Assert.Equal(failSavingBindings, saveCalled);
+        Assert.Contains("Прежние настройки IPv4 восстановлены", error);
+        Assert.Equal(originalA, addresses["a"]);
+        Assert.Equal(originalB, addresses["b"]);
+
+        Task<string?> RunAsync(string[] arguments, CancellationToken _)
+        {
+            Assert.Contains("store=persistent", arguments);
+            Assert.Equal("set", arguments[2]);
+            var id = arguments.Single(a => a.StartsWith("name="))[5..];
+            var address = arguments.Single(a => a.StartsWith("address="))[8..];
+            var mask = arguments.Single(a => a.StartsWith("mask="))[5..];
+            if (!failSavingBindings && !failureInjected && id == "b" && address == originalA.Ip)
+            {
+                failureInjected = true;
+                return Task.FromResult<string?>("address command failed");
+            }
+            if (addresses.Any(a => a.Key != id && a.Value.Ip == address))
+                return Task.FromResult<string?>("duplicate address");
+            addresses[id] = new(address, mask);
+            return Task.FromResult<string?>(null);
+        }
     }
 }

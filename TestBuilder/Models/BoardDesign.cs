@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,6 +7,9 @@ using System.Linq;
 namespace TestBuilder.Models;
 public sealed class BoardRegion
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string Id { get; set; } = "element";
     public string Name { get; set; } = "Элемент";
     public double X { get; set; }
@@ -15,6 +20,9 @@ public sealed class BoardRegion
 }
 public sealed class BoardDesign
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string ImageBase64 { get; set; } = "";
     public List<BoardRegion> Regions { get; set; } = new();
     public void Validate()

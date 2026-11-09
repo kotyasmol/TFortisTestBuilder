@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,9 @@ public enum RegisterComparison { Equal, NotEqual, Greater, GreaterOrEqual, Less,
 
 public sealed class RegisterStateCondition
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("slaveId")] public byte SlaveId { get; set; } = 1;
     [JsonPropertyName("area")] public ModbusArea Area { get; set; }
     [JsonPropertyName("address")] public int Address { get; set; }
@@ -42,9 +46,15 @@ public sealed class RegisterStateCondition
 
 public sealed class RegisterStateRule
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("match")] public StateRuleMatch Match { get; set; }
     [JsonPropertyName("conditions")] public List<RegisterStateCondition> Conditions { get; set; } = new();
-    public RegisterStateRule Copy() => new() { Match = Match, Conditions = Conditions.Select(c => c.Copy()).ToList() };
+    public RegisterStateRule Copy() => new()
+    {
+        Match = Match, Conditions = Conditions.Select(c => c.Copy()).ToList(), ExtensionData = ExtensionData
+    };
     public void Validate()
     {
         if (!Enum.IsDefined(Match) || Conditions == null || Conditions.Count is < 1 or > 64 || Conditions.Any(c => c == null))
@@ -55,11 +65,17 @@ public sealed class RegisterStateRule
 
 public sealed class ProfileActionStateBinding
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("onText")] public string OnText { get; set; } = "Включено";
     [JsonPropertyName("offText")] public string OffText { get; set; } = "Выключено";
     [JsonPropertyName("on")] public RegisterStateRule On { get; set; } = new();
     [JsonPropertyName("off")] public RegisterStateRule Off { get; set; } = new();
-    public ProfileActionStateBinding Copy() => new() { On = On.Copy(), Off = Off.Copy(), OnText = OnText, OffText = OffText };
+    public ProfileActionStateBinding Copy() => new()
+    {
+        On = On.Copy(), Off = Off.Copy(), OnText = OnText, OffText = OffText, ExtensionData = ExtensionData
+    };
     public void Validate()
     {
         if (new[] { OnText, OffText }.Any(t => t == null || t.Length > 120 || t.Any(char.IsControl)))

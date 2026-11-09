@@ -15,24 +15,26 @@ public sealed class ModbusRegisterCatalog
 {
     public static ModbusRegisterCatalog Empty { get; } = new(Array.Empty<SlaveModelBase>());
 
-    private readonly FrozenDictionary<RegisterKey, string> _names;
+    private readonly FrozenDictionary<RegisterKey, (string Name, bool IsReadOnly)> _registers;
 
     public ModbusRegisterCatalog(IEnumerable<SlaveModelBase> slaves)
     {
-        var names = new Dictionary<RegisterKey, string>();
+        var registers = new Dictionary<RegisterKey, (string Name, bool IsReadOnly)>();
         foreach (var slave in slaves)
         foreach (var register in slave.RegisterItems)
-            if (!string.IsNullOrWhiteSpace(register.Name))
-                names[new RegisterKey(slave.SlaveId, register.Address, register.Area)] = register.Name;
-        _names = names.ToFrozenDictionary();
+            registers[new RegisterKey(slave.SlaveId, register.Address, register.Area)] = (register.Name, register.IsReadOnly);
+        _registers = registers.ToFrozenDictionary();
     }
 
-    public IEnumerable<byte> SlaveIds => _names.Keys.Select(k => k.SlaveId).Distinct();
+    public IEnumerable<byte> SlaveIds => _registers.Keys.Select(k => k.SlaveId).Distinct();
+
+    public bool IsReadOnly(byte slaveId, int address, ModbusArea area) =>
+        _registers.TryGetValue(new RegisterKey(slaveId, address, area), out var register) && register.IsReadOnly;
 
     public string FormatAddress(byte? slaveId, int address, ModbusArea area = ModbusArea.Holding)
     {
-        var name = slaveId.HasValue && _names.TryGetValue(new RegisterKey(slaveId.Value, address, area), out var found)
-            ? found : "описание неизвестно";
+        var name = slaveId.HasValue && _registers.TryGetValue(new RegisterKey(slaveId.Value, address, area), out var found)
+            && !string.IsNullOrWhiteSpace(found.Name) ? found.Name : "описание неизвестно";
         return $"{address} ({name})";
     }
 }

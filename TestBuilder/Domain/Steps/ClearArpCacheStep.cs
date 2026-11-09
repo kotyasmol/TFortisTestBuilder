@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,17 +49,21 @@ namespace TestBuilder.Domain.Steps
             _logger.Info("[ШАГ] Очистка ARP-таблицы.");
 
             ProcessRunResult? bat = null;
+            context.SetVariable("ArpClear.BatSkippedDuplicate", false);
             if (_runArpdBat)
             {
-                bat = await RunProcessAsync(ResolveConfiguredPath(_arpdBatPath), string.Empty, cancellationToken);
-                var batMessage = $"arpd.bat: exit {bat.ExitCode}, stdout: {bat.StdOut}, stderr: {bat.StdErr}";
-                if (IsSuccessfulProcess(bat.ExitCode, bat.StdErr))
+                var batch = ResolveConfiguredPath(_arpdBatPath);
+                if (IsDuplicateBatch(batch, _command, _arguments))
                 {
-                    _logger.Info(batMessage);
+                    context.SetVariable("ArpClear.BatSkippedDuplicate", true);
+                    _logger.Info("Штатный arpd.bat выполняет ту же команду. Очистка будет выполнена один раз.");
                 }
                 else
                 {
-                    _logger.Warning($"[ОШИБКА] {batMessage}");
+                    bat = await RunProcessAsync(batch, string.Empty, cancellationToken);
+                    var batMessage = $"arpd.bat: exit {bat.ExitCode}, stdout: {bat.StdOut}, stderr: {bat.StdErr}";
+                    if (IsSuccessfulProcess(bat.ExitCode, bat.StdErr)) _logger.Info(batMessage);
+                    else _logger.Warning($"[ОШИБКА] {batMessage}");
                 }
             }
 
@@ -92,6 +97,22 @@ namespace TestBuilder.Domain.Steps
         internal static bool IsSuccessfulProcess(int exitCode, string? stdErr)
         {
             return exitCode == 0 && string.IsNullOrWhiteSpace(stdErr);
+        }
+
+        internal static bool IsDuplicateBatch(string path, string command, string arguments)
+        {
+            if (!(string.Equals(command, "arp", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(command, "arp.exe", StringComparison.OrdinalIgnoreCase)) ||
+                !string.Equals(arguments, "-d *", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            try
+            {
+                var commands = File.ReadLines(path).Select(line => line.Trim()).Where(line => line.Length > 0);
+                return commands.SequenceEqual(new[] { "@echo off", "arp -d *", "exit /b %ERRORLEVEL%" }, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
 
         private async Task<ProcessRunResult> RunProcessAsync(string fileName, string arguments, CancellationToken cancellationToken)

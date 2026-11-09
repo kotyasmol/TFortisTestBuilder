@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Services;
@@ -129,14 +130,58 @@ public partial class TestViewModel
     }
     private void LoadEquipmentCatalog(string folder)
     {
-        try { _equipmentCatalog = EquipmentCatalog.Load(folder); CatalogStatus = ""; }
-        catch (Exception ex) { CatalogStatus = "Каталог изделий недоступен: " + ex.Message; }
+        try
+        {
+            _equipmentCatalog = EquipmentCatalog.Load(folder);
+            SetCatalogStatus(Directory.Exists(folder) ? "" : $"Папка профилей недоступна: {folder}");
+        }
+        catch (Exception ex) { SetCatalogStatus("Каталог изделий недоступен: " + ex.Message); }
         EquipmentModels.Clear();
         EquipmentModels.Add(new EquipmentModel("", "Без модели"));
         foreach (var model in _equipmentCatalog.Models.OrderBy(m => m.Name)) EquipmentModels.Add(model);
         RefreshSelectedEquipmentModel();
+    }
+
+    private void SetCatalogStatus(string status)
+    {
+        if (CatalogStatus == status) return;
+        CatalogStatus = status;
         OnPropertyChanged(nameof(CatalogStatus));
         OnPropertyChanged(nameof(HasCatalogStatus));
+    }
+
+    private static readonly object CatalogCacheLock = new();
+    private static readonly Dictionary<string, (long Length, DateTime LastWriteUtc, GraphProfile Profile)> CatalogProfileCache = new();
+
+    private string[] ReadProfileCatalogFiles(string folder)
+    {
+        try { return Directory.GetFiles(folder, "*.json").OrderBy(path => path, StringComparer.Ordinal).ToArray(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SetCatalogStatus("Папка профилей недоступна: " + ex.Message);
+            return Array.Empty<string>();
+        }
+    }
+
+    private GraphProfile ReadCatalogProfile(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            var length = file.Length;
+            var written = file.LastWriteTimeUtc;
+            lock (CatalogCacheLock)
+            {
+                if (CatalogProfileCache.TryGetValue(path, out var cached) && cached.Length == length && cached.LastWriteUtc == written)
+                    return cached.Profile;
+                var profile = GraphSerializer.ReadProfile(path, validateContents: true);
+                if (CatalogProfileCache.Count >= 128) CatalogProfileCache.Clear();
+                CatalogProfileCache[path] = (length, written, profile);
+                return profile;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { return GraphSerializer.ReadProfile(path, validateContents: true); }
     }
     private void RefreshSelectedEquipmentModel()
     {

@@ -46,6 +46,7 @@ public class PrintLabelStepTests
             .ExecuteAsync(context, CancellationToken.None));
         Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.False(Assert.Single(context.ReportEntries).IsSuccess);
+        Assert.Equal("Unknown", context.GetVariable<string>("PrintLabel.CompletionStatus"));
     }
 
     [Fact]
@@ -59,6 +60,49 @@ public class PrintLabelStepTests
         stop.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
         Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    [Fact]
+    public async Task RetryCannotSubmitToQueueWhileTimedOutDriverIsStillRunning()
+    {
+        using var printer = new BlockedPrinter();
+        var first = new TestContext(new RegisterState());
+        var pending = CreateStep(printer, 1, 50, manualSerial: "612447").ExecuteAsync(first, default);
+        try
+        {
+            await printer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(StepResult.False, await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.Equal("Unknown", first.GetVariable<string>("PrintLabel.CompletionStatus"));
+
+            var retry = new TestContext(new RegisterState());
+            Assert.Equal(StepResult.False, await CreateStep(printer, 1, manualSerial: "612447").ExecuteAsync(retry, default));
+            Assert.Equal("Pending", retry.GetVariable<string>("PrintLabel.CompletionStatus"));
+            Assert.Equal(1, printer.Calls);
+        }
+        finally
+        {
+            printer.Release.Set();
+            await printer.Exited.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    private sealed class BlockedPrinter : IRawLabelPrinter, IDisposable
+    {
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Exited { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public ManualResetEventSlim Release { get; } = new();
+        public int Calls { get; private set; }
+
+        public RawLabelPrintResult Print(string name, byte[] bytes, CancellationToken token)
+        {
+            Calls++;
+            Entered.SetResult(true);
+            try { Release.Wait(); }
+            finally { Exited.SetResult(true); }
+            return RawLabelPrintResult.Ok();
+        }
+
+        public void Dispose() => Release.Dispose();
     }
 
     private sealed class CancellablePrinter : IRawLabelPrinter

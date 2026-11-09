@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using TestBuilder.Serialization;
 using TestBuilder.Models;
@@ -23,6 +24,21 @@ namespace TestBuilder.Services
             PropertyNameCaseInsensitive = true,
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
+        private static readonly ConditionalWeakTable<object, Dictionary<string, JsonElement>> ExtensionData = new();
+        private static readonly ConditionalWeakTable<NodeViewModel, OriginalNodeData> OriginalNodes = new();
+
+        private sealed record OriginalNodeData(string Id, List<DataTestPortDto>? Ports, string? PortsText);
+
+        internal static void ClearProfileExtensions(GraphWorkspaceViewModel graph) => ExtensionData.Remove(graph);
+
+        private static Dictionary<string, JsonElement>? GetExtensions(object item) =>
+            ExtensionData.TryGetValue(item, out var fields) ? fields : null;
+
+        private static void SetExtensions(object item, Dictionary<string, JsonElement>? fields)
+        {
+            ExtensionData.Remove(item);
+            if (fields != null) ExtensionData.Add(item, fields);
+        }
 
         private const string FirstRunPrefix = "First Run (v1): ";
         private const string ProfileOpenPrefix = "Profile Open (v2): ";
@@ -48,6 +64,7 @@ namespace TestBuilder.Services
             CheckRegisterRangeNodeViewModel => "Check Register Range",
             WaitUntilNodeViewModel => "Wait Until",
             OperatorActionNodeViewModel o => string.IsNullOrWhiteSpace(o.InputVariable) ? "Operator Action" : "Operator Input (v1)",
+            SelfTestCheckNodeViewModel { RequiresTimingVersion: true } => "Selftest Check (timing v1)",
             SelfTestCheckNodeViewModel => "Selftest Check",
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
@@ -89,6 +106,7 @@ namespace TestBuilder.Services
             {
                 ValidateActions(vm.RootGraph);
                 dto.QuickActions = vm.RootGraph.QuickActions.Select(a => new ProfileActionDto {
+                    ExtensionData = GetExtensions(a),
                     Id = a.Id, Name = a.Name, Color = a.Color, Display = a.Display.ToString(),
                     Labels = a.Labels?.Copy(), StateBinding = a.StateBinding?.Copy(), Graph = ExportActionGraph(a.Graph), OffGraph = ExportActionGraph(a.OffGraph)
                 }).ToList();
@@ -125,18 +143,28 @@ namespace TestBuilder.Services
 
         private static GraphDto SerializeGraph(GraphWorkspaceViewModel graph, string name)
         {
-            var dto = new GraphDto { Name = name };
+            var dto = new GraphDto { Name = name, ExtensionData = GetExtensions(graph) };
             var nodeIds = new Dictionary<NodeViewModel, string>();
             var requiresParallelRuntime = ContainsParallelConnections(graph, new HashSet<GraphWorkspaceViewModel>());
+            var usedIds = new HashSet<string>(StringComparer.Ordinal);
 
-            for (var i = 0; i < graph.Nodes.Count; i++)
-                nodeIds[graph.Nodes[i]] = i.ToString();
+            foreach (var node in graph.Nodes)
+                if (OriginalNodes.TryGetValue(node, out var original) && usedIds.Add(original.Id))
+                    nodeIds.Add(node, original.Id);
+            var nextId = 0;
+            foreach (var node in graph.Nodes.Where(n => !nodeIds.ContainsKey(n)))
+            {
+                string id;
+                do { id = (nextId++).ToString(CultureInfo.InvariantCulture); } while (!usedIds.Add(id));
+                nodeIds.Add(node, id);
+            }
 
             foreach (var node in graph.Nodes)
             {
                 var n = new NodeDto
                 {
                     Id = nodeIds[node],
+                    ExtensionData = GetExtensions(node),
                     // Older executables reject this alias instead of silently dropping
                     // all but the last branch. It still renders as the ordinary Start.
                     Type = node.RunOnlyOnFirstRun ? ProfileOpenPrefix + GetNodeType(node) : requiresParallelRuntime && node is StartNodeViewModel ? "Start (parallel v1)"
@@ -211,6 +239,9 @@ namespace TestBuilder.Services
                     case SelfTestCheckNodeViewModel s:
                         n.Url = s.Url;
                         n.TimeoutMs = s.TimeoutMs;
+                        n.SelfTestUseLegacyTimeout = s.UseLegacyTimeout ? null : false;
+                        n.SelfTestBrowserSettleDelayMs = s.BrowserSettleDelayMs == SelfTestCheckStep.DefaultBrowserSettleDelayMs
+                            ? null : s.BrowserSettleDelayMs;
                         n.PollIntervalMs = s.PollIntervalMs;
                         n.OutputPrefix = s.OutputPrefix;
                         n.ValidationRules = s.ValidationRules;
@@ -296,6 +327,8 @@ namespace TestBuilder.Services
                         n.AllowedTxDeficitPercent = d.AllowedTxDeficitPercent;
                         n.Bidirectional = d.Bidirectional;
                         n.PortsText = NormalizeDataTestPortsText(d.PortsText, d.AllowGigabit);
+                        if (OriginalNodes.TryGetValue(node, out var original) && original.PortsText == n.PortsText)
+                            n.Ports = original.Ports;
                         n.DisabledPortsText = d.DisabledPortsText;
                         n.OutputVariableName = d.OutputVariableName;
                         n.FailOnError = d.FailOnError;
@@ -418,6 +451,7 @@ namespace TestBuilder.Services
 
                 dto.Connections.Add(new ConnectionDto
                 {
+                    ExtensionData = GetExtensions(conn),
                     SourceNodeId = nodeIds[src],
                     SourceConnector = conn.Source.Title,
                     TargetNodeId = nodeIds[tgt],
@@ -431,49 +465,12 @@ namespace TestBuilder.Services
         public static string Deserialize(string json, TestViewModel vm)
         {
             if (vm.HasRunningQuickActions) throw new InvalidOperationException("Дождитесь завершения кнопок перед открытием профиля.");
-            var dto = JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
-                      ?? throw new InvalidOperationException("Не удалось прочитать JSON");
-
-            dto.Hardware?.Validate();
-            dto.Board?.Validate();
-            dto.PingMonitor?.Validate();
-            if (dto.ProductKind is not ("Switch" or "Board")) throw new InvalidOperationException("Неизвестный вид изделия.");
-            RejectRemovedNodes(dto);
-            // Parse the entire document before replacing the user's open graph.
-            // Malformed links and unsupported runtime versions must not erase it.
-            var loaded = new GraphWorkspaceViewModel();
-            try
-            {
-                DeserializeGraph(dto, loaded, isBodyGraph: false);
-                loaded.Hardware = dto.Hardware;
-                foreach (var indicator in dto.RegisterIndicators ?? new())
-                {
-                    if (indicator == null) throw new InvalidOperationException("Некорректный индикатор регистра.");
-                    loaded.RegisterIndicators.Add(indicator.Copy());
-                }
-                ValidateRegisterIndicators(loaded);
-                foreach (var action in dto.QuickActions ?? new())
-                {
-                    if (action == null || !Enum.TryParse<ProfileActionDisplay>(action.Display, out var display) || !Enum.IsDefined(display))
-                        throw new InvalidOperationException("Неизвестный вид кнопки профиля.");
-                    var definition = new ProfileActionDefinition { Id = action.Id, Name = action.Name, Color = action.Color, Display = display, StateBinding = action.StateBinding, Labels = action.Labels };
-                    loaded.QuickActions.Add(definition);
-                    definition.Graph = ImportActionGraph(action.Graph, dto.Hardware);
-                    definition.OffGraph = ImportActionGraph(action.OffGraph, dto.Hardware);
-                }
-                ValidateActions(loaded);
-                GraphCompiler.ValidateConnections(loaded, dto.Hardware);
-            }
-            catch
-            {
-                DisposeLoadedNodes(loaded);
-                throw;
-            }
+            var dto = ReadProfileDto(json);
+            var loaded = LoadProfileGraph(dto);
             vm.ResetPingMonitor();
             vm.ResetToRootGraph();
-            vm.RootGraph.Clear();
-            vm.RootGraph.QuickActions.Clear();
-            vm.RootGraph.RegisterIndicators.Clear();
+            vm.DiscardRootGraphContents();
+            SetExtensions(vm.RootGraph, dto.ExtensionData);
             vm.RootGraph.PingMonitor = dto.PingMonitor?.Copy();
             vm.RootGraph.Title = loaded.Title;
             vm.RootGraph.UpdatedAt = dto.UpdatedAt;
@@ -499,6 +496,62 @@ namespace TestBuilder.Services
             return dto.Name;
         }
 
+        private static GraphDto ReadProfileDto(string json) =>
+            JsonSerializer.Deserialize<GraphDto>(json, JsonOptions)
+            ?? throw new InvalidOperationException("Не удалось прочитать JSON профиля.");
+
+        internal static void ValidateProfile(string json) => LoadProfileGraph(ReadProfileDto(json)).DisposeNodes();
+
+        internal static string UpdateSnapshotIdentity(string snapshot, GraphProfile profile)
+        {
+            var dto = ReadProfileDto(snapshot);
+            dto.Name = profile.Name;
+            dto.ConfigurationName = profile.ConfigurationName;
+            dto.UpdatedAt = profile.UpdatedAt;
+            return JsonSerializer.Serialize(dto, JsonOptions);
+        }
+
+        private static GraphWorkspaceViewModel LoadProfileGraph(GraphDto dto)
+        {
+            dto.Hardware?.Validate();
+            dto.Board?.Validate();
+            dto.PingMonitor?.Validate();
+            if (dto.ProductKind is not ("Switch" or "Board")) throw new InvalidOperationException("Неизвестный вид изделия.");
+            RejectRemovedNodes(dto);
+            // Parse the entire document before replacing the user's open graph.
+            // Malformed links and unsupported runtime versions must not erase it.
+            var loaded = new GraphWorkspaceViewModel();
+            try
+            {
+                DeserializeGraph(dto, loaded, isBodyGraph: false);
+                loaded.Hardware = dto.Hardware;
+                foreach (var indicator in dto.RegisterIndicators ?? new())
+                {
+                    if (indicator == null) throw new InvalidOperationException("Некорректный индикатор регистра.");
+                    loaded.RegisterIndicators.Add(indicator.Copy());
+                }
+                ValidateRegisterIndicators(loaded);
+                foreach (var action in dto.QuickActions ?? new())
+                {
+                    if (action == null || !Enum.TryParse<ProfileActionDisplay>(action.Display, out var display) || !Enum.IsDefined(display))
+                        throw new InvalidOperationException("Неизвестный вид кнопки профиля.");
+                    var definition = new ProfileActionDefinition { Id = action.Id, Name = action.Name, Color = action.Color, Display = display, StateBinding = action.StateBinding, Labels = action.Labels };
+                    SetExtensions(definition, action.ExtensionData);
+                    loaded.QuickActions.Add(definition);
+                    definition.Graph = ImportActionGraph(action.Graph, dto.Hardware);
+                    definition.OffGraph = ImportActionGraph(action.OffGraph, dto.Hardware);
+                }
+                ValidateActions(loaded);
+                GraphCompiler.ValidateConnections(loaded, dto.Hardware);
+            }
+            catch
+            {
+                loaded.DisposeNodes();
+                throw;
+            }
+            return loaded;
+        }
+
         internal static GraphDto ExportActionGraph(GraphWorkspaceViewModel graph)
         {
             if (graph.QuickActions.Count != 0 || graph.RegisterIndicators.Count != 0 || graph.PingMonitor != null) throw new InvalidOperationException("Кнопки, индикаторы и пинг разрешены только в корневом профиле.");
@@ -511,7 +564,7 @@ namespace TestBuilder.Services
             RejectRemovedNodes(dto);
             var graph = new GraphWorkspaceViewModel();
             try { DeserializeGraph(dto, graph, false); graph.Hardware = hardware; GraphCompiler.ValidateConnections(graph, hardware); return graph; }
-            catch { DisposeLoadedNodes(graph); throw; }
+            catch { graph.DisposeNodes(); throw; }
         }
         private static void ValidateActions(GraphWorkspaceViewModel graph)
         {
@@ -553,20 +606,13 @@ namespace TestBuilder.Services
             return found;
         }
 
-        private static void DisposeLoadedNodes(GraphWorkspaceViewModel graph)
-        {
-            foreach (var action in graph.QuickActions) { DisposeLoadedNodes(action.Graph); DisposeLoadedNodes(action.OffGraph); }
-            foreach (var node in graph.Nodes)
-            {
-                if (node is ICompositeNodeViewModel composite) DisposeLoadedNodes(composite.BodyGraph);
-                node.Dispose();
-            }
-        }
-
         private static void RejectRemovedNodes(GraphDto dto)
         {
+            if (dto.Nodes == null || dto.Connections == null)
+                throw new InvalidOperationException("В профиле нужны массивы нод и связей.");
             foreach (var node in dto.Nodes)
             {
+                if (node == null) throw new InvalidOperationException("Пустая нода в профиле.");
                 var type = UnwrapNodeType(string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type);
                 if (type is "Check IO-2 Sensors and Relay" or "CHECK_IO2_SENSORS_AND_RELAY" or "Проверка Sensor1, Sensor2 и реле")
                     throw new InvalidOperationException("Отдельная нода проверки IO-2 удалена. Импортируйте обновлённый профиль: проверка выполняется обычными Write Register и Wait Variable Until.");
@@ -595,7 +641,9 @@ namespace TestBuilder.Services
 
         private static void DeserializeGraph(GraphDto dto, GraphWorkspaceViewModel graph, bool isBodyGraph)
         {
+            graph.DisposeNodes();
             graph.Clear();
+            SetExtensions(graph, dto.ExtensionData);
             graph.Title = dto.Name;
             graph.IsBodyGraph = isBodyGraph;
 
@@ -638,11 +686,13 @@ namespace TestBuilder.Services
 
                     "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
-                    "Selftest Check" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
+                    "Selftest Check" or "Selftest Check (timing v1)" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
                     {
                         Location = location,
                         Url = n.Url ?? SelfTestCheckStep.DefaultUrl,
                         TimeoutMs = n.TimeoutMs ?? SelfTestCheckStep.DefaultTimeoutMs,
+                        UseLegacyTimeout = n.SelfTestUseLegacyTimeout ?? true,
+                        BrowserSettleDelayMs = n.SelfTestBrowserSettleDelayMs ?? SelfTestCheckStep.DefaultBrowserSettleDelayMs,
                         PollIntervalMs = n.PollIntervalMs ?? SelfTestCheckStep.DefaultPollIntervalMs,
                         OutputPrefix = n.OutputPrefix ?? SelfTestCheckStep.DefaultOutputPrefix,
                         ValidationRules = n.ValidationRules ?? SelfTestCheckStep.DefaultValidationRules,
@@ -883,11 +933,14 @@ namespace TestBuilder.Services
                     node.Dispose();
                     throw new InvalidOperationException($"Граф '{dto.Name}': повторный ID ноды '{n.Id}'.");
                 }
+                OriginalNodes.Add(node, new OriginalNodeData(n.Id, n.Ports, (node as RunDataTestNodeViewModel)?.PortsText));
+                SetExtensions(node, n.ExtensionData);
                 graph.Nodes.Add(node);
             }
 
             foreach (var c in dto.Connections)
             {
+                if (c == null) throw new InvalidOperationException("Пустая связь в профиле.");
                 if (!nodeMap.TryGetValue(c.SourceNodeId, out var srcNode))
                     throw new InvalidOperationException($"Граф '{dto.Name}': связь ссылается на отсутствующую ноду '{c.SourceNodeId}'.");
 
@@ -907,7 +960,9 @@ namespace TestBuilder.Services
                 if (srcConn == null || tgtConn == null)
                     throw new InvalidOperationException($"Граф '{dto.Name}': неизвестный выход '{c.SourceConnector}' или вход '{c.TargetConnector}'.");
 
-                graph.Connections.Add(new ConnectionViewModel(srcConn, tgtConn));
+                var connection = new ConnectionViewModel(srcConn, tgtConn);
+                SetExtensions(connection, c.ExtensionData);
+                graph.Connections.Add(connection);
             }
         }
 
@@ -1185,7 +1240,7 @@ namespace TestBuilder.Services
                 }));
         }
 
-        public static GraphProfile ReadProfile(string filePath)
+        public static GraphProfile ReadProfile(string filePath, bool validateContents = false)
         {
             DateTimeOffset? fileModifiedAt = null;
             try { if (File.Exists(filePath)) fileModifiedAt = new DateTimeOffset(File.GetLastWriteTimeUtc(filePath)); }
@@ -1194,9 +1249,16 @@ namespace TestBuilder.Services
             try
             {
                 var dto = JsonSerializer.Deserialize<GraphDto>(File.ReadAllText(filePath), JsonOptions);
+                var loadable = dto != null;
+                if (dto != null && validateContents)
+                {
+                    try { LoadProfileGraph(dto).DisposeNodes(); }
+                    catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or FormatException or OverflowException)
+                    { loadable = false; }
+                }
                 return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
                     dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt)
-                    { HasReadableMetadata = dto != null };
+                    { HasReadableMetadata = loadable };
             }
             catch
             {

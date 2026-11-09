@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -8,6 +9,9 @@ using System.Text.RegularExpressions;
 namespace TestBuilder.Services;
 public sealed class LabelTemplateDefinition
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = "Новая этикетка";
     public string Language { get; set; } = "ZPL";

@@ -175,6 +175,8 @@ public class SelfTestCheckStepTests
         Assert.Equal(1, browserCalls);
         Assert.Equal(3, context.GetVariable<int>("SelfTest.ProbeAttempts"));
         Assert.Equal(1, context.GetVariable<int>("SelfTest.Attempts"));
+        Assert.Equal(2000, context.GetVariable<int>("SelfTest.TimeoutMs"));
+        Assert.Equal(10000, context.GetVariable<int>("SelfTest.BrowserSettleDelayMs"));
     }
 
     [Fact]

@@ -17,6 +17,25 @@ namespace TestBuilder.Tests.StepTests;
 public class ExecutionFailureTests
 {
     [Fact]
+    public async Task CompiledGraph_FailsOnMissingSuccessConnection_ButSingleNodeCanFinish()
+    {
+        var graph = new GraphWorkspaceViewModel();
+        var start = new StartNodeViewModel();
+        var delay = new DelayNodeViewModel { Milliseconds = 0 };
+        graph.Nodes.Add(start);
+        graph.Nodes.Add(delay);
+        graph.Nodes.Add(new EndNodeViewModel());
+        graph.Connections.Add(new(start.Output[0], delay.Input[0]));
+        using var bus = new ModbusService();
+        using var compiler = new GraphCompiler(bus, NullLogger.Instance);
+        var context = Context();
+
+        Assert.Equal(ExecutionStatus.Failed, await Execute(compiler.Compile(graph).StartNode, context));
+        Assert.Contains("Нет перехода", context.Failure!.Reason);
+        Assert.Equal(ExecutionStatus.Completed, await Execute(compiler.Compile(graph, delay, singleNode: true).StartNode, Context()));
+    }
+
+    [Fact]
     public async Task CompiledNestedLoop_PreservesLeafReasonRegisterNameAndActualSlave()
     {
         using var modbus = new ModbusService();

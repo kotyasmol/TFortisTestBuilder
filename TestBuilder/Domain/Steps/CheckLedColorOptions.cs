@@ -1,7 +1,12 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace TestBuilder.Domain.Steps;
 public sealed record CheckLedColorOptions
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("slaveId")] public byte SlaveId { get; init; } = 1;
     [JsonPropertyName("useCurrentSlaveId")] public bool UseCurrentSlaveId { get; init; } = false;
     [JsonPropertyName("redAddress")] public ushort RedAddress { get; init; } = 2437;

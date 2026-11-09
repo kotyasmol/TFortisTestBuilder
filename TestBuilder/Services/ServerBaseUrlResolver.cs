@@ -25,6 +25,12 @@ namespace TestBuilder.Services
                 : "http://" + trimmed;
         }
 
+        internal static bool IsSameHttpOrigin(Uri target, string serverBaseUrl) =>
+            Uri.TryCreate(NormalizeForHttp(serverBaseUrl), UriKind.Absolute, out var server) &&
+            server.Scheme is "http" or "https" &&
+            target.Scheme == server.Scheme && target.Port == server.Port &&
+            string.Equals(target.IdnHost, server.IdnHost, StringComparison.OrdinalIgnoreCase);
+
         public static bool IsPlaceholder(string serverBaseUrl)
         {
             var token = ExtractHostToken(serverBaseUrl);

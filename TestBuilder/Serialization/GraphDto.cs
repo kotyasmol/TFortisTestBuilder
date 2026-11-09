@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using TestBuilder.Domain.Steps;
 
@@ -6,6 +7,8 @@ namespace TestBuilder.Serialization
 {
     public class GraphDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
 
@@ -43,7 +46,7 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
 
-        [JsonPropertyName("nodes")]
+        [JsonRequired, JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 
         [JsonPropertyName("connections")]
@@ -52,6 +55,8 @@ namespace TestBuilder.Serialization
 
     public sealed class ProfileActionDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("labels")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Models.ProfileActionLabels? Labels { get; set; }
@@ -68,6 +73,8 @@ namespace TestBuilder.Serialization
 
     public class NodeDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("id")]
         public string Id { get; set; } = "";
 
@@ -229,6 +236,14 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("pollIntervalMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? PollIntervalMs { get; set; }
+
+        [JsonPropertyName("selfTestUseLegacyTimeout")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? SelfTestUseLegacyTimeout { get; set; }
+
+        [JsonPropertyName("selfTestBrowserSettleDelayMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SelfTestBrowserSettleDelayMs { get; set; }
 
         [JsonPropertyName("outputVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -553,6 +568,8 @@ namespace TestBuilder.Serialization
 
     public class DataTestPortDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = "";
 
@@ -569,6 +586,8 @@ namespace TestBuilder.Serialization
 
     public class ConnectionDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("sourceNodeId")]
         public string SourceNodeId { get; set; } = "";
 

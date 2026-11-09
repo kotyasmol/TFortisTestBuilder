@@ -42,17 +42,19 @@ class ReleaseProfilesTests(unittest.TestCase):
             root = Path(directory) / "source"
             bundle = Path(directory) / "bundle"
             (root / "profiles").mkdir(parents=True)
-            (bundle / "profiles/catalog").mkdir(parents=True)
+            templates = bundle / release.PROFILE_TEMPLATES
+            (templates / "catalog").mkdir(parents=True)
             for name in ["keep.json", "exclude.json"]:
                 (root / "profiles" / name).write_text(json.dumps({"name": name}))
-                (bundle / "profiles" / name).write_text("old")
-            catalog = bundle / "profiles/catalog/equipment.json"
+                (templates / name).write_text("old")
+            catalog = templates / "catalog/equipment.json"
             catalog.write_text("catalog")
             with patch.object(release, "ROOT", root):
                 selected = release.select_profiles(["keep.json"])
                 release.stage_profiles(bundle, selected)
-            self.assertEqual(["keep.json"], [p.name for p in (bundle / "profiles").glob("*.json")])
-            self.assertEqual((root / "profiles/keep.json").read_bytes(), (bundle / "profiles/keep.json").read_bytes())
+            self.assertEqual(["keep.json"], [p.name for p in templates.glob("*.json")])
+            self.assertEqual((root / "profiles/keep.json").read_bytes(), (templates / "keep.json").read_bytes())
+            self.assertFalse((bundle / "profiles").exists())
             self.assertTrue((root / "profiles/exclude.json").exists())
             self.assertEqual("catalog", catalog.read_text())
 

@@ -58,6 +58,7 @@ public class PartialRunViewTests
                 Assert.False(node.IsRunStart);
                 vm.RedoCommand.Execute(null);
                 vm.ConfigureNodeRun(node, false);
+                vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
                 vm.NewProfileCommand.Execute(null);
                 Assert.False(vm.HasPartialRun);
             }

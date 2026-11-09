@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
@@ -11,6 +12,9 @@ public enum ModbusArea { Holding, Input, Coil, Discrete }
 
 public sealed class RegisterDefinition
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public int Address { get; set; }
     public string Name { get; set; } = "Регистр";
     public ModbusArea Area { get; set; }
@@ -20,6 +24,9 @@ public sealed class RegisterDefinition
 }
 public sealed class DeviceDefinition
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string Name { get; set; } = "Новое устройство";
     public byte SlaveId { get; set; } = 1;
     public ushort? IdentificationValue { get; set; }
@@ -54,6 +61,9 @@ public sealed class DeviceDefinition
 }
 public sealed class HardwareConfiguration
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StandName { get; set; }
     // Retained for JSON compatibility. Stand discovery uses device identities, not this port name.

@@ -78,7 +78,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null,
         Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
         : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, () => AppSettings.Instance.ServerBaseUrl),
-            new WindowsRawLabelPrinter(), deviceModel, profiles, refreshProfiles) { }
+            WindowsRawLabelPrinter.Shared, deviceModel, profiles, refreshProfiles) { }
 
     internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer,
         Func<string?>? deviceModel = null, Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
@@ -271,6 +271,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         using var operation = new CancellationTokenSource();
         _operation = operation; IsBusy = true;
         try { await action(operation.Token); }
+        catch (PrintCancellationException ex) { Status = ex.Message; }
         catch (OperationCanceledException) { Status = "Операция отменена."; }
         catch (JsonException) { Status = "Сервер вернул ответ, который не удалось прочитать как историю изделия."; }
         catch (Exception ex) { Status = ex.Message; _logger.Warning("Проверка печати: " + ex.Message); }

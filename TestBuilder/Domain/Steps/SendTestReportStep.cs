@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -12,6 +13,9 @@ namespace TestBuilder.Domain.Steps
 {
     public sealed class SendTestReportStep : ITestStep
     {
+        private const string DefaultEndpoint = "/api/Api.svc/result.json";
+        private static readonly Regex SessionLine = new(@"^session=[^\r\n]*",
+            RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(200));
         private readonly ILogger _logger;
         private readonly string _serverBaseUrl;
         private readonly string _reportVariableName;
@@ -23,6 +27,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _localReportsDirectory;
         private readonly bool _failOnError;
         private readonly Func<HttpClient> _httpClientFactory;
+        private readonly string? _trustedServerBaseUrl;
 
         public SendTestReportStep(
             ILogger logger,
@@ -61,12 +66,13 @@ namespace TestBuilder.Domain.Steps
             bool saveLocalCopy,
             string localReportsDirectory,
             bool failOnError,
-            Func<HttpClient> httpClientFactory)
+            Func<HttpClient> httpClientFactory,
+            string? trustedServerBaseUrl = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serverBaseUrl = serverBaseUrl?.Trim() ?? string.Empty;
             _reportVariableName = string.IsNullOrWhiteSpace(reportVariableName) ? "TestReportText" : reportVariableName.Trim();
-            _endpoint = string.IsNullOrWhiteSpace(endpoint) ? "/api/Api.svc/result.json" : endpoint.Trim();
+            _endpoint = string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint : endpoint.Trim();
             _timeoutMs = Math.Max(1, timeoutMs);
             _retryCount = Math.Max(0, retryCount);
             _retryDelayMs = Math.Max(0, retryDelayMs);
@@ -74,6 +80,7 @@ namespace TestBuilder.Domain.Steps
             _localReportsDirectory = string.IsNullOrWhiteSpace(localReportsDirectory) ? "reports" : localReportsDirectory.Trim();
             _failOnError = failOnError;
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+            _trustedServerBaseUrl = trustedServerBaseUrl;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -85,6 +92,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SendReport.Attempts", 0);
             context.SetVariable("SendReport.Url", string.Empty);
             context.SetVariable("SendReport.LocalPath", string.Empty);
+            context.SetVariable("SendReport.LocalCopyError", string.Empty);
             context.SetVariable("SendReport.StatusCode", 0);
             context.SetVariable("SendReport.Format", "QTstand legacy multipart");
             context.SetVariable("SendReport.Error", string.Empty);
@@ -97,15 +105,31 @@ namespace TestBuilder.Domain.Steps
             }
 
             var report = reportValue.ToString() ?? string.Empty;
-            string url;
             var localPath = string.Empty;
+            if (_saveLocalCopy)
+            {
+                try
+                {
+                    localPath = await SaveLocalCopyAsync(report, cancellationToken);
+                    context.SetVariable("SendReport.LocalPath", localPath);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    context.SetVariable("SendReport.LocalCopyError", ex.Message);
+                    _logger.Warning($"Локальная копия отчёта не сохранена: {ex.Message}");
+                }
+            }
+
+            Uri url;
             try
             {
-                // Keep the report even when the server address is invalid.
-                if (_saveLocalCopy)
-                    localPath = await SaveLocalCopyAsync(report, cancellationToken);
-                context.SetVariable("SendReport.LocalPath", localPath);
                 url = BuildUrl();
+                if (!ServerBaseUrlResolver.IsSameHttpOrigin(url, _trustedServerBaseUrl ?? AppSettings.Instance.ServerBaseUrl) &&
+                    ContainsLauncherSession(report))
+                {
+                    return Fail(context, "Отчёт с сессией лаунчера можно отправить только на сервер из настроек приложения.",
+                        string.Empty, 0, localPath);
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -129,11 +153,13 @@ namespace TestBuilder.Domain.Steps
                     if (response.IsSuccessStatusCode && raw.StartsWith("Ok", StringComparison.Ordinal))
                     {
                         context.SetVariable("ReportDelivery.Status", "Sent");
-                        context.SetVariable("ReportDelivery.Message", "Отчёт принят сервером.");
+                        context.SetVariable("ReportDelivery.Message", _saveLocalCopy && localPath.Length == 0
+                            ? "Отчёт принят сервером. Локальная копия не сохранена."
+                            : "Отчёт принят сервером.");
                         context.SetVariable("SendReport.Success", true);
                         context.SetVariable("SendReport.RawResponse", raw);
                         context.SetVariable("SendReport.Attempts", attempt);
-                        context.SetVariable("SendReport.Url", url);
+                        context.SetVariable("SendReport.Url", url.AbsoluteUri);
                         context.SetVariable("SendReport.LocalPath", localPath);
                         context.SetVariable("SendReport.StatusCode", (int)response.StatusCode);
                         context.SetVariable("SendReport.Format", "QTstand legacy multipart");
@@ -193,11 +219,15 @@ namespace TestBuilder.Domain.Steps
             return Path.GetFullPath(path);
         }
 
+        private static bool ContainsLauncherSession(string report) => SessionLine.IsMatch(report) ||
+            (App.StartupSessionId.Length > 0 && report.Contains(App.StartupSessionId, StringComparison.Ordinal));
+
         internal static string RedactLocalReport(string report)
         {
-            // The launcher session is a credential. Preserve the wire format only in memory.
-            return System.Text.RegularExpressions.Regex.Replace(report, @"(?im)^session=[^\r\n]*", "session=true=<redacted>",
-                System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(200));
+            var redacted = SessionLine.Replace(report, "session=true=<redacted>");
+            return App.StartupSessionId.Length > 0
+                ? redacted.Replace(App.StartupSessionId, "<redacted>", StringComparison.Ordinal)
+                : redacted;
         }
 
         private static HttpContent CreateLegacyMultipart(string report)
@@ -228,23 +258,34 @@ namespace TestBuilder.Domain.Steps
             return content;
         }
 
-        private string BuildUrl()
+        private Uri BuildUrl()
         {
-            var serverBaseUrl = ServerBaseUrlResolver.NormalizeForHttp(_serverBaseUrl);
-            if (string.IsNullOrWhiteSpace(serverBaseUrl))
+            if (!Uri.TryCreate(ServerBaseUrlResolver.NormalizeForHttp(_serverBaseUrl), UriKind.Absolute, out var server) ||
+                server.Scheme is not ("http" or "https") || server.UserInfo.Length != 0)
             {
                 throw new InvalidOperationException(
-                    "ServerBaseUrl не задан. Укажи адрес сервера отчетов в ноде или во вкладке Настройки.");
+                    "Укажите корректный HTTP(S)-адрес сервера отчётов в ноде или в настройках.");
             }
 
-            return serverBaseUrl.TrimEnd('/') + "/" + _endpoint.TrimStart('/');
+            var path = server.GetLeftPart(UriPartial.Path).TrimEnd('/');
+            var endpoint = _endpoint;
+            if (string.Equals(endpoint.TrimStart('/'), DefaultEndpoint.TrimStart('/'), StringComparison.OrdinalIgnoreCase))
+            {
+                var basePath = server.AbsolutePath.TrimEnd('/');
+                if (basePath.EndsWith("/api.svc", StringComparison.OrdinalIgnoreCase))
+                    endpoint = "result.json";
+                else if (basePath.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+                    endpoint = "Api.svc/result.json";
+            }
+
+            return new Uri(path + "/" + endpoint.TrimStart('/'));
         }
 
         private string SafeBuildUrl()
         {
             try
             {
-                return BuildUrl();
+                return BuildUrl().AbsoluteUri;
             }
             catch
             {

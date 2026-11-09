@@ -490,6 +490,16 @@
                       <TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" />
                     </Grid>
 
+                    <TextBlock Text="{Binding EffectiveTimeoutText}" FontSize="{StaticResource FontCaption}" />
+                    <CheckBox IsChecked="{Binding UseLegacyTimeout}" FontSize="{StaticResource FontCaption}">
+                      <TextBlock Text="Таймаут старого профиля" TextWrapping="Wrap" />
+                    </CheckBox>
+
+                    <Grid ColumnDefinitions="88,*">
+                      <TextBlock Grid.Column="0" Text="Пауза DOM, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding BrowserSettleDelayMs}" FontSize="{StaticResource FontCaption}" ToolTip.Tip="Пауза после загрузки страницы перед чтением selftest. 0 — прочитать сразу." />
+                    </Grid>
+
                     <Grid ColumnDefinitions="88,*">
                       <TextBlock Grid.Column="0" Text="Период опроса, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding PollIntervalMs}" FontSize="{StaticResource FontCaption}" />

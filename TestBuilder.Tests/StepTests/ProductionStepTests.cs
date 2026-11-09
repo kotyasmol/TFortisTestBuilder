@@ -498,7 +498,8 @@ public class ProductionStepTests
             const string report = "session=true=fixture-session-secret\r\nserial_num=true=612447\r\n";
             context.SetVariable("TestReportText", report);
             var step = new SendTestReportStep(NullLogger.Instance,"http://report-server.local","TestReportText",
-                "/api/Api.svc/result.json",1000,0,0,true,directory,true,()=>new HttpClient(handler,false));
+                "/api/Api.svc/result.json",1000,0,0,true,directory,true,()=>new HttpClient(handler,false),
+                trustedServerBaseUrl: "http://report-server.local");
             Assert.Equal(StepResult.True,await step.ExecuteAsync(context,default));
             var saved = await File.ReadAllTextAsync(context.GetVariable<string>("SendReport.LocalPath")!);
             Assert.DoesNotContain("fixture-session-secret",saved);Assert.Contains("serial_num=true=612447",saved);
@@ -508,7 +509,7 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public async Task ReportLocalWriteFailureIsReportedWithoutPostingOrThrowing()
+    public async Task ReportLocalWriteFailureDoesNotPreventDelivery()
     {
         var path = Path.GetTempFileName();
         try
@@ -519,13 +520,51 @@ public class ProductionStepTests
             var step = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "TestReportText",
                 "/api/Api.svc/result.json", 1000, 0, 0, true, path, true,
                 () => new HttpClient(handler, disposeHandler: false));
-            Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
-            Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
-            Assert.Equal(0, context.GetVariable<int>("SendReport.Attempts"));
+            Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+            Assert.Equal(HttpMethod.Post, handler.Method);
+            Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
+            Assert.Equal(1, context.GetVariable<int>("SendReport.Attempts"));
             Assert.False(context.HasCriticalError);
             Assert.Contains("не сохранена", context.GetVariable<string>("ReportDelivery.Message"));
+            Assert.NotEmpty(context.GetVariable<string>("SendReport.LocalCopyError")!);
         }
         finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("https://other.local")]
+    [InlineData("http://report-server.local")]
+    [InlineData("https://report-server.local:8443")]
+    public async Task ReportWithLauncherSessionCannotLeaveConfiguredOrigin(string target)
+    {
+        var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "serial_num=true=612447\r\nsession=true=fixture-session-secret\r\n");
+        var step = new SendTestReportStep(NullLogger.Instance, target, "TestReportText", "", 1000, 0, 0,
+            false, "reports", true, () => new HttpClient(handler, false),
+            trustedServerBaseUrl: "https://report-server.local/api");
+
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
+        Assert.Equal(0, context.GetVariable<int>("SendReport.Attempts"));
+        Assert.Empty(handler.Body);
+    }
+
+    [Theory]
+    [InlineData("https://report-server.local/api/", "https://report-server.local/api/Api.svc/result.json")]
+    [InlineData("https://report-server.local/bench/api/Api.svc", "https://report-server.local/bench/api/Api.svc/result.json")]
+    public async Task ReportAcceptsConfiguredApiBasePath(string address, string expected)
+    {
+        var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "serial_num=true=612447\r\nsession=true=fixture-session-secret\r\n");
+        var step = new SendTestReportStep(NullLogger.Instance, address, "TestReportText", "/api/Api.svc/result.json",
+            1000, 0, 0, false, "reports", true, () => new HttpClient(handler, false),
+            trustedServerBaseUrl: "https://report-server.local");
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, default));
+        Assert.Equal(expected, handler.Url);
+        Assert.Contains("fixture-session-secret", handler.Body);
     }
 
     [Theory]

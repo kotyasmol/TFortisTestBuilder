@@ -18,7 +18,7 @@ public sealed class ProfileEditHistory : IDisposable
         "Arguments", "BaudRate", "BlueAddress", "ColorMargin", "Command", "ExpectedColor", "ExpectedExitCode", "GreenAddress", "MinIntensity", "OutputPrefix", "OutputVariableName", "ParseMode", "PortName", "ProgramPath", "QuietMs", "RedAddress", "ResponseTerminator", "Selector", "SlaveId", "SourceVariableName", "TimeoutMs", "UseCurrentSlaveId", "ValueType", "WhiteAddress", "WorkingDirectory",
         "Address", "AllowGigabit", "AllowedLossPercent", "AllowedTxDeficitPercent", "Arguments", "ArpdBatPath",
         "BaseUrl", "BatchPath", "Bidirectional", "BoardVersion", "Command", "ComparisonType",
-        "Copies", "CpuIdVariableName", "CustomName", "Description", "DestinationIp", "DeviceType", "DurationMs",
+        "ConnectOnly", "Copies", "CpuIdVariableName", "CustomName", "DataSourceFlags", "Description", "DestinationIp", "DeviceId", "DeviceType", "DurationMs",
         "Endpoint", "ExpectedPackets", "ExpectedValue", "FailMessage", "FailOnError", "FailOnPrinterError",
         "FailOnTimeout", "FirmwarePath", "FixedSerialNumber", "ForceUpdate", "FromSlaveId", "IncludeAllVariables",
         "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel", "LabelTemplate",
@@ -31,7 +31,7 @@ public sealed class ProfileEditHistory : IDisposable
         "RunOnFailure", "FailureOrder", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
         "SlaveId", "Step", "StopOnError", "TargetVersion", "TestType", "Text",
         "TimeoutMs", "ToSlaveId", "UdpPort", "Url", "UseCurrentSlaveId", "UseFixedSerialNumber",
-        "UseDefaultPrinter", "UseManualSerialNumber", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",
+        "UseDefaultPrinter", "UseQtProZplFormat", "ValidationRules", "Value", "VariableName", "VerifyWrite",
         "RunOnlyOnFirstRun", "VersionVariable", "WarmupMs", "RegisterArea", "BoardElements", "RepeatOnSameSlave", "RepeatCount", "IndexVariable", "UntilSuccess", "RepeatDelayMs"
     };
     private readonly GraphWorkspaceViewModel _root;

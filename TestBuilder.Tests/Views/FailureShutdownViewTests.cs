@@ -1,5 +1,6 @@
 using Avalonia.Headless;
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.NodifyVM;
@@ -16,10 +17,12 @@ public class FailureShutdownViewTests
     [InlineData(false, true)]
     public async Task PreparationFailureOrHandledCriticalFailure_StillRunsCleanup(bool malformedMain, bool cleanupFails)
     {
+        var marker = new StandInspectionStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".inspection"));
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch<bool>(async () =>
+        try { await session.Dispatch<bool>(async () =>
         {
-            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus), true, null, marker);
             vm.NewProfileCommand.Execute(null);
             var cleanup = MakeSubtest("Завершение", cleanupFails);
             cleanup.RunOnFailure = true;
@@ -38,14 +41,19 @@ public class FailureShutdownViewTests
             Assert.Equal(cleanupFails, vm.NeedsStandInspection);
             if (cleanupFails)
             {
+                using var restarted = new TestViewModel(bus, new SlaveManager(bus), true, null, marker);
+                Assert.True(restarted.NeedsStandInspection);
+                Assert.False(restarted.CanStartRun);
                 Assert.False(vm.CanStartRun);
                 Assert.Equal("Проверьте состояние стенда", vm.Station.Headline);
                 vm.IsOperatorView = true; vm.ConfirmStandInspectionCommand.Execute(null); Assert.True(vm.NeedsStandInspection);
                 vm.IsOperatorView = false; vm.IsConnected = true; vm.ConfirmStandInspectionCommand.Execute(null); Assert.True(vm.NeedsStandInspection);
                 vm.IsConnected = false; vm.ConfirmStandInspectionCommand.Execute(null); Assert.False(vm.NeedsStandInspection);
+                Assert.False(marker.IsRequired());
             }
             return true;
-        }, CancellationToken.None);
+        }, CancellationToken.None); }
+        finally { marker.Clear(); }
     }
 
     private static SubtestNodeViewModel MakeSubtest(string name, bool fail)

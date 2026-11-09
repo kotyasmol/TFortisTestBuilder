@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging" / "windows"
+PROFILE_TEMPLATES = "profile-templates"
 PROFILE_UI_TEST_FILTER = (
     "FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
     "FullyQualifiedName~DataTestModeTests"
@@ -118,11 +119,11 @@ def select_profiles(names=None):
 def stage_profiles(bundle, profiles):
     # Only filter the fresh publish output. Repository profiles and catalog stay intact.
     selected = {p.name for p in profiles}
-    for path in (bundle / "profiles").glob("*.json"):
+    for path in (bundle / PROFILE_TEMPLATES).glob("*.json"):
         if path.name not in selected:
             path.unlink()
     for source in profiles:
-        shutil.copy2(source, bundle / "profiles" / source.name)
+        shutil.copy2(source, bundle / PROFILE_TEMPLATES / source.name)
 
 
 def validate_bundle(bundle, profiles):
@@ -137,11 +138,13 @@ def validate_bundle(bundle, profiles):
     config = json.loads((bundle / "TestBuilder.runtimeconfig.json").read_text())["runtimeOptions"]
     if "framework" in config or "frameworks" in config or not config.get("includedFrameworks"):
         raise RuntimeError("The publish output is not self-contained")
-    actual = sorted(p.name for p in (bundle / "profiles").glob("*.json"))
+    if (bundle / "profiles").exists() or (bundle / "testbuilder.settings").exists():
+        raise RuntimeError("A release must not include working profiles or settings")
+    actual = sorted(p.name for p in (bundle / PROFILE_TEMPLATES).glob("*.json"))
     if actual != sorted(p.name for p in profiles):
         raise RuntimeError("Profile inventory does not match the selected release profiles")
     for profile in profiles:
-        if sha256(profile) != sha256(bundle / "profiles" / profile.name):
+        if sha256(profile) != sha256(bundle / PROFILE_TEMPLATES / profile.name):
             raise RuntimeError(f"Profile content changed: {profile.name}")
         data = json.loads(profile.read_text(encoding="utf-8-sig"))
         if data.get("productKind") == "Board":
@@ -236,7 +239,7 @@ def main():
                 destination = bundle / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
-        write_json(bundle / "testbuilder.settings", {
+        write_json(bundle / "testbuilder.defaults.json", {
             "graphsFolder": "", "serverBaseUrl": "https://iccid.fort-telecom.ru", "standId": "тест",
             "theme": "Light", "engineerMode": False, "enableFileLogging": True,
             "logFolder": "", "dataTestAdapterIds": {}})

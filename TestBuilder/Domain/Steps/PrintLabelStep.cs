@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -25,9 +26,13 @@ namespace TestBuilder.Domain.Steps
         RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken cancellationToken);
     }
 
+    internal sealed class PrintCancellationException(string message, CancellationToken token)
+        : OperationCanceledException(message, token);
+
     public sealed class PrintLabelStep : ITestStep
     {
         private const int DefaultPrinterTimeoutMs = 30000;
+        private static readonly ConcurrentDictionary<(IRawLabelPrinter Driver, string Queue), byte> ActiveQueues = new();
         private readonly ILogger _logger;
         private readonly string _printerName;
         private readonly string _serialVariableName;
@@ -74,7 +79,7 @@ namespace TestBuilder.Domain.Steps
                 copies,
                 useQtProZplFormat,
                 failOnPrinterError,
-                new WindowsRawLabelPrinter(),
+                WindowsRawLabelPrinter.Shared,
                 DefaultPrinterTimeoutMs,
                 labelModel, template, useLastTestLabel)
         {
@@ -309,40 +314,57 @@ namespace TestBuilder.Domain.Steps
             if (string.IsNullOrWhiteSpace(_printerName))
                 return Fail(context, 3, "Имя принтера не задано.");
 
-            _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
-
-            using var printCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var printTask = Task.Run(
-                () => _printer.Print(_printerName, bytes, printCts.Token),
-                CancellationToken.None);
-            var timeoutTask = Task.Delay(_printerTimeoutMs, cancellationToken);
-            var completed = await Task.WhenAny(printTask, timeoutTask).ConfigureAwait(false);
-
-            if (completed != printTask)
+            var queue = (_printer, _printerName.ToUpperInvariant());
+            if (!ActiveQueues.TryAdd(queue, 0))
             {
-                printCts.Cancel();
-                ObserveLatePrintTask(printTask);
-                cancellationToken.ThrowIfCancellationRequested();
-                context.SetVariable("PrintLabel.TimedOut", true);
-                return Fail(context, 5, $"Задание печати не завершено за {_printerTimeoutMs} мс; запрошена отмена задания.");
+                context.SetVariable("PrintLabel.CompletionStatus", "Pending");
+                return Fail(context, 7, $"Предыдущее задание на «{_printerName}» ещё выполняется или отменяется. Новое задание не добавлено.");
             }
 
+            _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
+            var printCts = new CancellationTokenSource();
+            var printTask = Task.Run(() =>
+            {
+                try { return _printer.Print(_printerName, bytes, printCts.Token); }
+                finally { ActiveQueues.TryRemove(queue, out _); }
+            });
+
             RawLabelPrintResult printResult;
+            var waitEndedEarly = false;
             try
             {
-                printResult = await printTask.ConfigureAwait(false);
+                printResult = await printTask.WaitAsync(TimeSpan.FromMilliseconds(_printerTimeoutMs), cancellationToken).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                waitEndedEarly = true;
+                printCts.Cancel();
+                context.SetVariable("PrintLabel.TimedOut", true);
+                context.SetVariable("PrintLabel.CompletionStatus", "Unknown");
+                return Fail(context, 5, $"За {_printerTimeoutMs} мс статус печати не подтвердился. Запрошена отмена. Перед повтором проверьте очередь и этикетку.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                throw;
+                waitEndedEarly = true;
+                printCts.Cancel();
+                context.SetVariable("PrintLabel.CompletionStatus", "Unknown");
+                const string message = "Запрошена отмена печати. Перед повтором проверьте очередь и этикетку.";
+                _logger.Warning(message);
+                throw new PrintCancellationException(message, cancellationToken);
             }
             catch (Exception ex)
             {
                 return Fail(context, 3, ex.Message);
             }
+            finally
+            {
+                if (waitEndedEarly) _ = ObserveLatePrintTaskAsync(printTask, printCts);
+                else printCts.Dispose();
+            }
 
             context.SetVariable("PrintLabel.JobId", printResult.JobId);
-            context.SetVariable("PrintLabel.CompletionStatus", printResult.Success ? printResult.CompletionStatus : string.Empty);
+            if (printResult.Success || printResult.CompletionStatus == "Unknown")
+                context.SetVariable("PrintLabel.CompletionStatus", printResult.CompletionStatus);
             if (!printResult.Success)
             {
                 return Fail(context, printResult.ErrorCode, printResult.Error);
@@ -456,13 +478,11 @@ namespace TestBuilder.Domain.Steps
             return Encoding.GetEncoding(1251);
         }
 
-        private static void ObserveLatePrintTask(Task<RawLabelPrintResult> task)
+        private static async Task ObserveLatePrintTaskAsync(Task<RawLabelPrintResult> task, CancellationTokenSource printCts)
         {
-            _ = task.ContinueWith(
-                completed => _ = completed.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            try { await task.ConfigureAwait(false); }
+            catch { /* The caller has already reported uncertainty; do not log into a later run. */ }
+            finally { printCts.Dispose(); }
         }
     }
 

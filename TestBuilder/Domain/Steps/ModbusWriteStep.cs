@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -24,6 +25,7 @@ namespace TestBuilder.Domain.Steps
         private readonly ushort _value;
         private readonly bool _useCurrentSlaveId;
         private readonly bool _verifyWrite;
+        private readonly IReadOnlySet<byte>? _readOnlySlaves;
         private readonly ILogger _logger;
 
         public ModbusWriteStep(
@@ -33,7 +35,8 @@ namespace TestBuilder.Domain.Steps
             ushort address,
             ushort value,
             bool useCurrentSlaveId = false,
-            bool verifyWrite = false, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding)
+            bool verifyWrite = false, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding,
+            IReadOnlySet<byte>? readOnlySlaves = null)
         {
             _modbusService = modbusService;
             _logger = logger;
@@ -43,6 +46,7 @@ namespace TestBuilder.Domain.Steps
             _value = value;
             _useCurrentSlaveId = useCurrentSlaveId;
             _verifyWrite = verifyWrite;
+            _readOnlySlaves = readOnlySlaves;
         }
 
         public async Task<StepResult> ExecuteAsync(
@@ -76,6 +80,14 @@ namespace TestBuilder.Domain.Steps
                 _logger.Warning(
                     $"[ШАГ] Запись регистра → устройство не задано, адрес {registerAddress}, значение {_value}.");
 
+                return StepResult.False;
+            }
+
+            if (_area is not (TestBuilder.Domain.Modbus.ModbusArea.Holding or TestBuilder.Domain.Modbus.ModbusArea.Coil) ||
+                _readOnlySlaves?.Contains(actualSlaveId.Value) == true ||
+                context.ModbusRegisters.IsReadOnly(actualSlaveId.Value, _address, _area))
+            {
+                _logger.Error($"[ОШИБКА] Устройство {actualSlaveId}, адрес {registerAddress}: регистр доступен только для чтения.");
                 return StepResult.False;
             }
 

@@ -170,7 +170,7 @@ public class SubtestSerializationTests
     }
 
     [Fact]
-    public void SerializeAndDeserialize_PreservesSelftestPollInterval()
+    public void SerializeAndDeserialize_PreservesExplicitAndLegacySelftestTiming()
     {
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -178,8 +178,9 @@ public class SubtestSerializationTests
 
         var selftest = new SelfTestCheckNodeViewModel
         {
-            TimeoutMs = 180000,
-            PollIntervalMs = 7000
+            TimeoutMs = 10000,
+            PollIntervalMs = 7000,
+            BrowserSettleDelayMs = 0
         };
 
         vm.RootGraph.Nodes.Add(new StartNodeViewModel());
@@ -188,7 +189,7 @@ public class SubtestSerializationTests
 
         var json = GraphSerializer.Serialize(vm, "Profile");
 
-        Assert.Contains("\"type\": \"Selftest Check\"", json);
+        Assert.Contains("\"type\": \"Selftest Check (timing v1)\"", json);
         Assert.Contains("\"pollIntervalMs\": 7000", json);
 
         using var loadedModbus = new ModbusService();
@@ -198,8 +199,24 @@ public class SubtestSerializationTests
 
         var loadedSelftest = loadedVm.RootGraph.Nodes.OfType<SelfTestCheckNodeViewModel>().Single();
 
-        Assert.Equal(180000, loadedSelftest.TimeoutMs);
+        Assert.Equal(10000, loadedSelftest.TimeoutMs);
         Assert.Equal(7000, loadedSelftest.PollIntervalMs);
+        Assert.Equal(0, loadedSelftest.BrowserSettleDelayMs);
+        Assert.False(loadedSelftest.UseLegacyTimeout);
+        Assert.Contains("10000", loadedSelftest.EffectiveTimeoutText);
+
+        selftest.UseLegacyTimeout = true;
+        selftest.BrowserSettleDelayMs = SelfTestCheckStep.DefaultBrowserSettleDelayMs;
+        var legacyJson = GraphSerializer.Serialize(vm, "Legacy profile");
+        Assert.Contains("\"type\": \"Selftest Check\"", legacyJson);
+        Assert.DoesNotContain("selfTestUseLegacyTimeout", legacyJson);
+        Assert.DoesNotContain("selfTestBrowserSettleDelayMs", legacyJson);
+        GraphSerializer.Deserialize(legacyJson, loadedVm);
+        loadedSelftest = Assert.Single(loadedVm.RootGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
+        Assert.True(loadedSelftest.UseLegacyTimeout);
+        Assert.Equal(10000, loadedSelftest.TimeoutMs);
+        Assert.Equal(10000, loadedSelftest.BrowserSettleDelayMs);
+        Assert.Contains("180000", loadedSelftest.EffectiveTimeoutText);
     }
 
     [Fact]

@@ -155,14 +155,22 @@ public partial class NetworkSetupViewModel : ViewModelBase
     private void SaveBindings()
     {
         if (!CanApply) return;
-        var previous = AppSettings.Instance.DataTestAdapterIds;
+        var settings = AppSettings.Instance;
+        var previous = settings.DataTestAdapterIds;
+        var previousApplied = settings.AppliedDataTestAdapterIds;
         try
         {
-            AppSettings.Instance.DataTestAdapterIds = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter!.Id);
-            AppSettings.Instance.SaveChecked();
+            settings.AppliedDataTestAdapterIds ??= previous;
+            settings.DataTestAdapterIds = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter!.Id);
+            settings.SaveChecked();
             Status = "Привязки сохранены. Для изменения IP используйте «Применить адреса».";
         }
-        catch (Exception ex) { AppSettings.Instance.DataTestAdapterIds = previous; Status = ex.Message; }
+        catch (Exception ex)
+        {
+            settings.DataTestAdapterIds = previous;
+            settings.AppliedDataTestAdapterIds = previousApplied;
+            Status = ex.Message;
+        }
     }
 
     private async Task RenameAdapter(NetworkSetupRowViewModel row)
@@ -255,17 +263,28 @@ public partial class NetworkSetupViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            // Save the physical adapter mapping before changing IPs, so it survives a partial failure.
-            AppSettings.Instance.DataTestAdapterIds = assignments.ToDictionary(
-                assignment => assignment.Ip, assignment => assignment.AdapterId);
-            AppSettings.Instance.SaveChecked();
-
+            var settings = AppSettings.Instance;
+            var previous = settings.DataTestAdapterIds;
+            var previousApplied = settings.AppliedDataTestAdapterIds;
             var progress = new Progress<string>(message => { Status = message; Journal.Add(message); });
-            error = await DataTestNetworkConfigurator.ApplyAsync(assignments, progress);
+            error = await DataTestNetworkConfigurator.ApplyAsync(assignments, previousApplied ?? previous, SaveAppliedBindings, progress);
             IsBusy = false;
             Refresh();
             Status = error ?? "Адреса настроены.";
             Journal.Add(Status);
+
+            void SaveAppliedBindings()
+            {
+                settings.DataTestAdapterIds = assignments.ToDictionary(a => a.Ip, a => a.AdapterId);
+                settings.AppliedDataTestAdapterIds = settings.DataTestAdapterIds;
+                try { settings.SaveChecked(); }
+                catch
+                {
+                    settings.DataTestAdapterIds = previous;
+                    settings.AppliedDataTestAdapterIds = previousApplied;
+                    throw;
+                }
+            }
         }
         catch (Exception ex)
         {

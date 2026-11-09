@@ -98,7 +98,8 @@ public class EditorDocumentTests
             Assert.Equal(title, vm.CurrentProfileName);
             vm.RedoCommand.Execute(null);
             Assert.Equal("Новое название", vm.CurrentProfileName);
-            vm.NewProfileCommand.Execute(null);
+            vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
+            await vm.NewProfileCommand.ExecuteAsync(null);
             Assert.False(vm.CanUndo); Assert.False(vm.CanRedo);
         }
         finally { Directory.Delete(folder, true); }

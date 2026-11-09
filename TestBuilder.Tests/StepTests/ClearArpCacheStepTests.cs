@@ -39,4 +39,19 @@ public class ClearArpCacheStepTests
         Assert.True(ClearArpCacheStep.IsSuccessfulProcess(0, string.Empty));
         Assert.False(ClearArpCacheStep.IsSuccessfulProcess(1, string.Empty));
     }
+
+    [Fact]
+    public void OnlyBatchEquivalentToTheDirectArpCommandIsSkipped()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "@echo off\r\narp -d *\r\nexit /b %ERRORLEVEL%\r\n");
+            Assert.True(ClearArpCacheStep.IsDuplicateBatch(path, "arp.exe", "-d *"));
+            Assert.False(ClearArpCacheStep.IsDuplicateBatch(path, "arp", "-d 192.168.0.1"));
+            File.WriteAllText(path, "@echo off\r\narp -d *\r\narp -a\r\nexit /b %ERRORLEVEL%\r\n");
+            Assert.False(ClearArpCacheStep.IsDuplicateBatch(path, "arp", "-d *"));
+        }
+        finally { File.Delete(path); }
+    }
 }

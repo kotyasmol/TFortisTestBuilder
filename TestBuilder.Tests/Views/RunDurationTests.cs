@@ -16,6 +16,53 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class RunDurationTests
 {
+    [Fact]
+    public async Task MissingLogFile_ReportsFailureOnce_WithoutRecreatingArchive()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var settings = AppSettings.Instance;
+            var oldEnabled = settings.EnableFileLogging;
+            var oldFolder = settings.LogFolder;
+            var folder = Path.Combine(Path.GetTempPath(), "log-failure-" + Guid.NewGuid().ToString("N"));
+            settings.EnableFileLogging = true;
+            settings.LogFolder = folder;
+            var logger = LoggingService.Instance.CreateLogger("Testing");
+            try
+            {
+                var path = LoggingService.Instance.StartFileLogForRun("Граф", logger.Warning);
+                Assert.NotNull(path);
+                File.Delete(path);
+                logger.Info("Первая строка");
+                logger.Info("Вторая строка");
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.Null(LoggingService.Instance.CurrentLogFilePath);
+                Assert.False(File.Exists(path));
+                Assert.Single(logger.Entries.Where(entry => entry.Level == LogLevel.Warning &&
+                    entry.Message.Contains("Запись в файл журнала", StringComparison.Ordinal)));
+
+                var unavailable = Path.Combine(folder, "not-a-directory");
+                File.WriteAllText(unavailable, "x");
+                settings.LogFolder = unavailable;
+                Assert.Null(LoggingService.Instance.StartFileLogForRun("Граф", logger.Warning));
+                Dispatcher.UIThread.RunJobs();
+                Assert.Null(LoggingService.Instance.CurrentLogFilePath);
+                Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning &&
+                    entry.Message.Contains("Не удалось создать файл журнала", StringComparison.Ordinal));
+            }
+            finally
+            {
+                LoggingService.Instance.StopFileLogForRun();
+                settings.EnableFileLogging = oldEnabled;
+                settings.LogFolder = oldFolder;
+                if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData(0.1, "меньше 1 с")]
     [InlineData(59, "59 с")]
