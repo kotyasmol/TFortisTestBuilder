@@ -75,7 +75,11 @@ try {
         }
     }
 
-    $settings = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'testbuilder.settings') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $settingsPath = Join-Path $PSScriptRoot 'testbuilder.settings'
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        $settingsPath = Join-Path $PSScriptRoot 'testbuilder.defaults.json'
+    }
+    $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($settings.standId -in @('123', 'тест') -or [string]::IsNullOrWhiteSpace($settings.standId)) {
         Result 'WARN' 'Stand ID оставлен исходным. Перед отправкой производственных отчётов укажите фактический номер стенда.'
     }
