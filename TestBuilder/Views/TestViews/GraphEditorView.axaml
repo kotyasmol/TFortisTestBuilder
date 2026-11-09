@@ -511,6 +511,12 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="88,*">
+                      <TextBlock Text="Только поле:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding ReadField}" FontSize="{StaticResource FontCaption}"
+                               ToolTip.Tip="Дождаться значения этого поля без проверки допусков. Оставьте пустым для самопроверки." />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="88,*" IsVisible="{Binding !IsReadingField}">
                       <TextBlock Grid.Column="0" Text="Допуски:" VerticalAlignment="Top" Margin="0,5,0,0" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" />
                       <TextBox Grid.Column="1"
                                Text="{Binding ValidationRules}"
@@ -521,6 +527,7 @@
                     </Grid>
 
                     <CheckBox
+                              IsVisible="{Binding !IsReadingField}"
                               ToolTip.Tip="Дополнительные проверки аппаратуры PSW-2G6F+. Адрес test.shtml задаётся отдельно в URL."
                               IsChecked="{Binding Psw2G6FHardwareChecks}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять питание, SFP и PoE PSW-2G6F+" TextWrapping="Wrap" /></CheckBox>
@@ -1574,6 +1581,7 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Таймаут запроса, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RequestTimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Таймаут, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Интервал, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Строка отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportName}" Watermark="Название измерения" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox  IsChecked="{Binding FailOnTimeout}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Таймаут ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>

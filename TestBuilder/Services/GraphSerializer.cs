@@ -43,6 +43,7 @@ namespace TestBuilder.Services
 
         private const string FirstRunPrefix = "First Run (v1): ";
         private const string ProfileOpenPrefix = "Profile Open (v2): ";
+        private const string ReadSelftestFieldType = "Read Selftest Field (v1)";
         private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
             ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
                 ? type[FirstRunPrefix.Length..] : type ?? "";
@@ -65,6 +66,7 @@ namespace TestBuilder.Services
             CheckRegisterRangeNodeViewModel => "Check Register Range",
             WaitUntilNodeViewModel => "Wait Until",
             OperatorActionNodeViewModel o => string.IsNullOrWhiteSpace(o.InputVariable) ? "Operator Action" : "Operator Input (v1)",
+            SelfTestCheckNodeViewModel { IsReadingField: true } => ReadSelftestFieldType,
             SelfTestCheckNodeViewModel { RequiresTimingVersion: true } => "Selftest Check (timing v1)",
             SelfTestCheckNodeViewModel => "Selftest Check",
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
@@ -78,6 +80,7 @@ namespace TestBuilder.Services
             ReadHttpVariableNodeViewModel => "Read HTTP Variable",
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
             CompareVariablesNodeViewModel => "Compare Variables",
+            WaitVariableUntilNodeViewModel wait when !string.IsNullOrWhiteSpace(wait.ReportName) => "Wait Variable Until (report v1)",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel p => p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
@@ -254,6 +257,7 @@ namespace TestBuilder.Services
                             ? null : s.BrowserSettleDelayMs;
                         n.PollIntervalMs = s.PollIntervalMs;
                         n.OutputPrefix = s.OutputPrefix;
+                        n.ReadField = s.IsReadingField ? s.ReadField.Trim() : null;
                         n.ValidationRules = s.ValidationRules;
                         n.Psw2G6FHardwareChecks = s.Psw2G6FHardwareChecks;
                         n.FailOnError = s.FailOnError;
@@ -381,6 +385,7 @@ namespace TestBuilder.Services
                         n.TimeoutMs = wait.TimeoutMs;
                         n.IntervalMs = wait.IntervalMs;
                         n.FailOnTimeout = wait.FailOnTimeout;
+                        n.ReportName = string.IsNullOrWhiteSpace(wait.ReportName) ? null : wait.ReportName.Trim();
                         break;
 
                     case BuildTestReportNodeViewModel br:
@@ -637,7 +642,7 @@ namespace TestBuilder.Services
                 };
                 if (replacement != null)
                     throw new InvalidOperationException($"Нода '{type}' удалена. Обновите профиль: используйте {replacement}.");
-                if ((type is "Wait Variable Until" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
+                if ((type is "Wait Variable Until" or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
                     node.PollAction?.Trim().ToLowerInvariant() is "getupsstatus" or "getupsvoltage" or "getirpstatus")
                     throw new InvalidOperationException($"Режим опроса '{node.PollAction}' удалён. Обновите Wait Variable Until: используйте HttpGet с явно заданными endpoint и типом ответа.");
                 if (node.BodyGraph?.QuickActions?.Count > 0 || node.Body?.QuickActions?.Count > 0 ||
@@ -696,7 +701,7 @@ namespace TestBuilder.Services
 
                     "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
-                    "Selftest Check" or "Selftest Check (timing v1)" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
+                    ReadSelftestFieldType or "Selftest Check" or "Selftest Check (timing v1)" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
                     {
                         Location = location,
                         Url = n.Url ?? SelfTestCheckStep.DefaultUrl,
@@ -705,6 +710,10 @@ namespace TestBuilder.Services
                         BrowserSettleDelayMs = n.SelfTestBrowserSettleDelayMs ?? SelfTestCheckStep.DefaultBrowserSettleDelayMs,
                         PollIntervalMs = n.PollIntervalMs ?? SelfTestCheckStep.DefaultPollIntervalMs,
                         OutputPrefix = n.OutputPrefix ?? SelfTestCheckStep.DefaultOutputPrefix,
+                        ReadField = type == ReadSelftestFieldType
+                            ? !string.IsNullOrWhiteSpace(n.ReadField) ? n.ReadField
+                                : throw new InvalidOperationException("Для чтения поля selftest укажите его имя.")
+                            : string.Empty,
                         ValidationRules = n.ValidationRules ?? SelfTestCheckStep.DefaultValidationRules,
                         Psw2G6FHardwareChecks = n.Psw2G6FHardwareChecks ?? false,
                         FailOnError = n.FailOnError ?? true
@@ -841,7 +850,7 @@ namespace TestBuilder.Services
                         FailMessage = n.FailMessage ?? string.Empty
                     },
 
-                    "Wait Variable Until" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной" => new WaitVariableUntilNodeViewModel
+                    "Wait Variable Until" or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной" => new WaitVariableUntilNodeViewModel
                     {
                         Location = location,
                         VariableName = n.VariableName ?? "Dut.ups_rez",
@@ -854,7 +863,8 @@ namespace TestBuilder.Services
                         RequestTimeoutMs = n.RequestTimeoutMs ?? 5000,
                         TimeoutMs = n.TimeoutMs ?? 160000,
                         IntervalMs = n.IntervalMs ?? 5000,
-                        FailOnTimeout = n.FailOnTimeout ?? true
+                        FailOnTimeout = n.FailOnTimeout ?? true,
+                        ReportName = n.ReportName ?? string.Empty
                     },
 
                     "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel

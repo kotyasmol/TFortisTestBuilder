@@ -17,6 +17,7 @@ public class ParallelGraphCompilationTests
     private const string SourceProfile = "PSW_UPS_Box_8x2Pro_full_algorithm_polling.json";
     private const string ParallelProfile = "PSW_UPS_Box_8x2Pro_parallel_start.json";
     private const string OptimizedProfile = "PSW_UPS_Box_8x2Pro_parallel_el60.json";
+    private const string BootStage = "06. Загрузка DUT и получение серийника";
 
     [Fact]
     public void SameOutputFanout_CompilesBothBranchesAndNearestJoin()
@@ -443,18 +444,22 @@ public class ParallelGraphCompilationTests
             var actual = copiedNode.DeepClone().AsObject();
             expected.Remove("id");
             actual.Remove("id");
-            if (key is "17. Финальная статистика и отчет" or "Отчёт при ошибке")
+            if (key is "17. Отчёт о проверке" or "Отчёт при ошибке")
             {
                 RemoveReportConfirmation(expected["bodyGraph"]!);
             }
-            var timeoutNode = key switch
+            var timeoutNodeType = key switch
             {
-                "06. Ожидание загрузки DUT и selftest" => 3,
-                "07. Проверка selftest DUT" => 1,
-                "15. Получение серийника и запись MAC" => 12,
-                _ => -1
+                BootStage => "Read Selftest Field (v1)",
+                "07. Проверка selftest DUT" or "15. Запись и проверка MAC" => "Selftest Check",
+                _ => null
             };
-            if (timeoutNode >= 0) expected["bodyGraph"]!["nodes"]![timeoutNode]!["timeoutMs"] = 250000;
+            if (timeoutNodeType != null)
+            {
+                var timeoutNode = expected["bodyGraph"]!["nodes"]!.AsArray()
+                    .Single(n => n!["type"]!.GetValue<string>() == timeoutNodeType)!;
+                timeoutNode["timeoutMs"] = 250000;
+            }
             Assert.True(JsonNode.DeepEquals(expected, actual), $"Changed original settings for stage {key}.");
         }
 
@@ -681,13 +686,15 @@ public class ParallelGraphCompilationTests
     private static void AssertProFork(CompiledGraph graph)
     {
         var power = FindNode(graph.StartNode, n => n.Source is SubtestNodeViewModel s && s.Name.StartsWith("05."));
-        var fork = power.ParallelTransitions[StepResult.True];
-        Assert.Equal(new[] { "06. Ожидание загрузки DUT и selftest", "08. Проверка нагревателя 1" },
+        Assert.Empty(power.ParallelTransitions);
+        var boot = Assert.IsType<TestNode>(power.OnTrue);
+        Assert.Equal(BootStage, Assert.IsType<SubtestNodeViewModel>(boot.Source).Name);
+        var fork = boot.ParallelTransitions[StepResult.True];
+        Assert.Equal(new[] { "07. Проверка selftest DUT", "08. Проверка нагревателя 1" },
             fork.Branches.Select(n => ((SubtestNodeViewModel)n.Source!).Name));
         Assert.Equal("09a. Проверка Sensor1 и Sensor2", ((SubtestNodeViewModel)fork.JoinNode.Source!).Name);
-        Assert.Equal("07. Проверка selftest DUT", ((SubtestNodeViewModel)fork.Branches[0].OnTrue!.Source!).Name);
         Assert.Equal("09. Проверка нагревателя 2", ((SubtestNodeViewModel)fork.Branches[1].OnTrue!.Source!).Name);
-        Assert.Same(fork.JoinNode, fork.Branches[0].OnTrue!.OnTrue);
+        Assert.Same(fork.JoinNode, fork.Branches[0].OnTrue);
         Assert.Same(fork.JoinNode, fork.Branches[1].OnTrue!.OnTrue);
     }
 
@@ -813,7 +820,7 @@ public class ParallelGraphCompilationTests
         const string heater = "08. Проверка нагревателя 1";
         Assert.True(expected.Remove($"{selfTest}|Success|{heater}|In"));
         expected.Add($"{selfTest}|Success|09a. Проверка Sensor1 и Sensor2|In");
-        expected.Add($"05. Подача питания DUT|Success|{heater}|In");
+        expected.Add($"{BootStage}|Success|{heater}|In");
         Assert.Equal(expected.Order(StringComparer.Ordinal), Links(parallel).Order(StringComparer.Ordinal));
 
         static IEnumerable<string> Links(JsonNode profile)

@@ -483,7 +483,7 @@ Deserializer также принимает часть русских и legacy-�
 | Label | `text`, `labelWidth`, `labelHeight` |
 | Subtest | `name`, `description`, `isEnabled`, `stopOnError`, `runOnFailure`, `bodyGraph` |
 | Modbus | `slaveId`, `useCurrentSlaveId`, `address`, `value`, `verifyWrite`, `min`, `max`, `expectedValue`, `durationMs`, `liveRead` |
-| Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
+| Selftest/HTTP | `url`, `timeoutMs`, `outputPrefix`, `readField`, `validationRules`, `baseUrl`, `endpoint`, `responseType`, `outputVariableName`, `failOnError` |
 | Variables | `variableName`, `leftVariableName`, `rightVariableName`, `comparisonType`, `failMessage`, `inclusive` |
 | Serial/MAC | `serverBaseUrl`, `deviceType`, `cpuIdVariableName`, `useFixedSerialNumber`, `fixedSerialNumber`, `serialVariableName`, `serialOffset`, `macPrefix`, `serialShortVariableName`, `macVariableName`, `batchPath`, `boardVersion` |
 | Set PSW MAC (UDP) | `destinationIp`, `localIp`, `localPort`, `udpPort`, `macVariableName`, `timeoutMs`, `failOnError` |
@@ -494,7 +494,7 @@ Deserializer также принимает часть русских и legacy-�
 | For Slaves | `fromSlaveId`, `toSlaveId`, `step`, `stopOnError`, `body`, `repeatOnSameSlave`, `repeatCount`, `indexVariable`, `untilSuccess`, `repeatDelayMs` |
 | Общие | `customName`, `operatorName`, `runOnlyOnFirstRun`, `boardElements` |
 | Платы | `serialConsole`, `runProgram`, `parseResponse`, `checkLedColor` |
-| Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout` |
+| Wait Variable | `pollAction`, `baseUrl`, `endpoint`, `responseType`, `requestTimeoutMs`, `timeoutMs`, `intervalMs`, `failOnTimeout`, `reportName` |
 | Clear ARP | `runArpdBat`, `arpdBatPath`, `command`, `arguments` |
 
 Для браузерного исполнения `Selftest Check` дополнительные JSON-поля не нужны:
@@ -504,7 +504,13 @@ Deserializer также принимает часть русских и legacy-�
 — 30000 мс или меньше при близком общем deadline. В стартовом подтесте рабочего
 профиля используются `timeoutMs: 300000` и `pollIntervalMs: 5000`. Сверка
 Pro-профиля 2026-10-01: в этапе 07 также `300000`; проверки после записи MAC
-и перед отчётом сохраняют `180000`. Во всех четырёх нодах интервал `5000`.
+и перед отчётом на тот момент имели `180000`.
+
+С 2026-11-09 стартовый этап Pro использует `Read Selftest Field (v1)` с
+`readField: "cpu_id"`, затем запрашивает серийник. Этот тип читает одно поле
+без оценки selftest. `Wait Variable Until (report v1)` сохраняет измерение
+под заданным `reportName`. Старые версии приложения отклоняют новые типы
+нод, чтобы не исполнить профиль с другими условиями.
 
 Датчики собираются обычными нодами, без специализированного типа:
 `Write Register` (`slaveId: 21`, `useCurrentSlaveId: false`, `verifyWrite: true`)

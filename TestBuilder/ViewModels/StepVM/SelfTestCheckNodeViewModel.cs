@@ -16,6 +16,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int browserSettleDelayMs = SelfTestCheckStep.DefaultBrowserSettleDelayMs;
         [ObservableProperty] private int pollIntervalMs = SelfTestCheckStep.DefaultPollIntervalMs;
         [ObservableProperty] private string outputPrefix = SelfTestCheckStep.DefaultOutputPrefix;
+        [ObservableProperty, NotifyPropertyChangedFor(nameof(IsReadingField))] private string readField = string.Empty;
         [ObservableProperty] private string validationRules = SelfTestCheckStep.DefaultValidationRules;
         [ObservableProperty] private bool failOnError = true;
         [ObservableProperty] private bool psw2G6FHardwareChecks;
@@ -25,6 +26,7 @@ namespace TestBuilder.ViewModels.StepVM
         public ConnectorViewModel FalseOut { get; }
 
         public string EffectiveTimeoutText => $"Фактический таймаут {SelfTestCheckStep.EffectiveTimeout(Url, TimeoutMs, UseLegacyTimeout)} мс";
+        public bool IsReadingField => !string.IsNullOrWhiteSpace(ReadField);
         internal bool RequiresTimingVersion => Math.Max(0, BrowserSettleDelayMs) != SelfTestCheckStep.DefaultBrowserSettleDelayMs ||
             (!UseLegacyTimeout && SelfTestCheckStep.EffectiveTimeout(Url, TimeoutMs, false) != SelfTestCheckStep.EffectiveTimeout(Url, TimeoutMs, true));
 
@@ -54,7 +56,8 @@ namespace TestBuilder.ViewModels.StepVM
                 pollIntervalMs: PollIntervalMs,
                 enforceMinimumDeviceReadyTimeout: UseLegacyTimeout,
                 psw2G6FHardwareChecks: Psw2G6FHardwareChecks,
-                browserSettleDelayMs: BrowserSettleDelayMs);
+                browserSettleDelayMs: BrowserSettleDelayMs,
+                readField: ReadField);
         }
 
         public override NodeViewModel Clone() => new SelfTestCheckNodeViewModel
@@ -65,6 +68,7 @@ namespace TestBuilder.ViewModels.StepVM
             BrowserSettleDelayMs = BrowserSettleDelayMs,
             PollIntervalMs = PollIntervalMs,
             OutputPrefix = OutputPrefix,
+            ReadField = ReadField,
             ValidationRules = ValidationRules,
             FailOnError = FailOnError,
             Psw2G6FHardwareChecks = Psw2G6FHardwareChecks

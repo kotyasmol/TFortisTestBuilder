@@ -643,6 +643,58 @@ public class ProductionStepTests
         Assert.Equal(200, context.GetVariable<int>("HttpRead.StatusCode"));
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData(3300000, false)]
+    [InlineData(3200123, true)]
+    public async Task ProFailureReportRequiresAValidSerial(int? serial, bool sendsReport)
+    {
+        var settings = AppSettings.Instance;
+        var previousStandId = settings.StandId;
+        var previousServer = settings.ServerBaseUrl;
+        var directory = Directory.CreateTempSubdirectory("tfortis-pro-report-");
+        try
+        {
+            settings.StandId = "TEST-STAND";
+            settings.ServerBaseUrl = AppSettings.DefaultServerBaseUrl;
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            var path = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+                "profiles", "PSW_UPS_Box_8x2Pro_parallel_start.json");
+            GraphSerializer.Deserialize(File.ReadAllText(path), vm);
+            var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+                .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
+            recovery.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single().LocalReportsDirectory = directory.FullName;
+            using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+            using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
+            {
+                ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
+            };
+            var graph = compiler.Compile(recovery.BodyGraph);
+            var context = new TestContext(new RegisterState()) { HasCriticalError = true, IsCleanup = true };
+            context.SetVariable("Dut.cpu_id", "CPU-test");
+            if (serial.HasValue) context.SetVariable("SerialNumber", serial.Value);
+            context.AddReportEntry("Самопроверка", false, "Проверка не пройдена");
+
+            Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(graph.StartNode, context, default));
+            Assert.Equal(sendsReport, handler.Method == HttpMethod.Post);
+            Assert.Equal(sendsReport, context.GetVariable<bool>("BuildReport.Success"));
+            if (sendsReport)
+            {
+                Assert.Contains("test_result=true=0", handler.Body);
+                Assert.Contains("serial_num=true=3200123", handler.Body);
+                Assert.Single(directory.GetFiles());
+            }
+            else Assert.Empty(directory.GetFiles());
+        }
+        finally
+        {
+            settings.StandId = previousStandId;
+            settings.ServerBaseUrl = previousServer;
+            directory.Delete(recursive: true);
+        }
+    }
+
     [Fact]
     public async Task ReadHttpVariableStep_RemovesStaleValueOnParseFailure()
     {
@@ -927,7 +979,7 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public async Task WaitVariableUntilStep_SelftestSnapshotWaitsUntilNumberEntersRange()
+    public async Task WaitVariableUntilStep_ReportsVoltageFromMatchingSnapshotAfterLaterReads()
     {
         static string Snapshot(string batteryVoltage) => $"""
             <selftest>
@@ -936,13 +988,15 @@ public class ProductionStepTests
               <dev_type>0</dev_type>
               <firmvare_vers>1119</firmvare_vers>
               <boot_vers>0</boot_vers>
+              <ups_det>1</ups_det>
               <akb_voltage>{batteryVoltage}</akb_voltage>
             </selftest>
             """;
 
         var service = new QueueHttpService(
             HttpRequestResult.Success(200, Snapshot("19.9"), TimeSpan.FromMilliseconds(1)),
-            HttpRequestResult.Success(200, Snapshot("24.5"), TimeSpan.FromMilliseconds(1)));
+            HttpRequestResult.Success(200, Snapshot("24.5"), TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, Snapshot("0.0"), TimeSpan.FromMilliseconds(1)));
         var context = new TestContext(new RegisterState());
         var step = new WaitVariableUntilStep(
             service,
@@ -958,7 +1012,8 @@ public class ProductionStepTests
             1000,
             1,
             true,
-            useBrowserForSelftest: false);
+            useBrowserForSelftest: false,
+            reportName: "напряжение АКБ");
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
@@ -967,6 +1022,19 @@ public class ProductionStepTests
         Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
         Assert.Equal("24.5", context.GetVariable<string>("Dut.akb_voltage"));
         Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
+
+        var laterSnapshot = new SelfTestCheckStep(service, NullLogger.Instance, SelfTestCheckStep.DefaultUrl,
+            1000, "DutAfterMac", "init_ok=1..1", failOnError: true, useBrowser: false);
+        Assert.Equal(StepResult.True, await laterSnapshot.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal("0.0", context.GetVariable<string>("DutAfterMac.akb_voltage"));
+
+        context.SetVariable("SerialNumber", 3200123);
+        var reportStep = new BuildTestReportStep(NullLogger.Instance, "TestReportText", "APK03-01", "SerialNumber",
+            string.Empty, "production", includeAllVariables: false);
+        Assert.Equal(StepResult.True, await reportStep.ExecuteAsync(context, CancellationToken.None));
+        var batteryRow = Assert.Single(context.GetVariable<string>("TestReportText")!
+            .Split("\r\n").Where(line => line.StartsWith("напряжение АКБ=", StringComparison.Ordinal)));
+        Assert.Equal("напряжение АКБ=true=24.5", batteryRow);
     }
 
     [Fact]

@@ -26,7 +26,7 @@ public sealed class ProfileEditHistory : IDisposable
         "Location", "MacPrefix", "MacVariableName", "ManualMacAddress", "ManualSerialNumber", "Max",
         "MaxPortTestTimeMs", "Message", "InputVariable", "Milliseconds", "Min", "Mode", "Name",
         "NodeColor", "NormalizeBandwidth", "OperatorName", "OutputPrefix", "OutputVariableName", "PacketSizeBytes", "PollAction",
-        "PollIntervalMs", "PrinterName", "Psw2G6FHardwareChecks", "ReadAttempts", "ReadIntervalMs", "ReportName", "ReportVariableName",
+        "PollIntervalMs", "PrinterName", "Psw2G6FHardwareChecks", "ReadAttempts", "ReadField", "ReadIntervalMs", "ReportName", "ReportVariableName",
         "RequestTimeoutMs", "ResponseType", "RetryCount", "RetryDelayMs", "RightVariableName", "RunArpdBat",
         "RunOnFailure", "FailureOrder", "SaveLocalCopy", "SerialOffset", "SerialShortVariableName", "SerialVariableName", "ServerBaseUrl",
         "SlaveId", "Step", "StopOnError", "TargetVersion", "TestType", "Text",

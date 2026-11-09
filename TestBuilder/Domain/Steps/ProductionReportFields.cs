@@ -44,7 +44,8 @@ internal static class ProductionReportFields
         if (fields.TryGetValue("init_ok", out var init))
             yield return new TestReportEntry("самотестирование", init == "1", init);
         if (fields.TryGetValue("ups_det", out var ups) && ups == "1" &&
-            fields.TryGetValue("akb_voltage", out var voltage))
+            fields.TryGetValue("akb_voltage", out var voltage) &&
+            !context.ReportEntries.Any(entry => string.Equals(entry.Name, "напряжение АКБ", StringComparison.OrdinalIgnoreCase)))
             yield return new TestReportEntry("напряжение АКБ", true, voltage);
 
         // Canonical aliases use zero-based port indexes, while the XML names

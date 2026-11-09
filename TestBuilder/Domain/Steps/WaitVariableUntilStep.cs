@@ -29,6 +29,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _intervalMs;
         private readonly bool _failOnTimeout;
         private readonly bool _useBrowserForSelftest;
+        private readonly string _reportName;
 
         public WaitVariableUntilStep(
             IHttpRequestService httpRequestService,
@@ -44,7 +45,8 @@ namespace TestBuilder.Domain.Steps
             int timeoutMs,
             int intervalMs,
             bool failOnTimeout,
-            bool useBrowserForSelftest = true)
+            bool useBrowserForSelftest = true,
+            string reportName = "")
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -60,6 +62,7 @@ namespace TestBuilder.Domain.Steps
             _intervalMs = Math.Max(1, intervalMs);
             _failOnTimeout = failOnTimeout;
             _useBrowserForSelftest = useBrowserForSelftest;
+            _reportName = reportName?.Trim() ?? string.Empty;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -100,6 +103,8 @@ namespace TestBuilder.Domain.Steps
                         if (Compare(actual, _expectedValue, _comparisonType))
                         {
                             SaveState(context, true, attempt, lastActual, string.Empty);
+                            if (_reportName.Length != 0)
+                                context.AddReportEntry(_reportName, true, lastActual);
                             _logger.Info($"[OK] Переменная {_variableName} достигла значения {_expectedValue} за {attempt} попыток.");
                             return StepResult.True;
                         }
@@ -126,7 +131,8 @@ namespace TestBuilder.Domain.Steps
 
             var error = $"Таймаут ожидания {_variableName} == {_expectedValue}. Последнее значение: '{lastActual}'. {lastError}".Trim();
             SaveState(context, false, attempt, lastActual, error);
-            context.AddReportEntry($"Ожидание значения: {_variableName}", false, error);
+            var reportName = _reportName.Length != 0 ? _reportName : $"Ожидание значения: {_variableName}";
+            context.AddReportEntry(reportName, false, error);
             _logger.Warning($"[ОШИБКА] {error}");
             return _failOnTimeout ? StepResult.False : StepResult.True;
         }

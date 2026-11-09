@@ -281,7 +281,7 @@ namespace TestBuilder.Domain.Steps
             {
                 throw new InvalidOperationException(
                     $"CPU ID не найден в переменной '{_cpuIdVariableName}'. " +
-                    "Сначала выполни Selftest Check или очисти поле CPU var, если сервер допускает запрос без CPU ID.");
+                    "Проверьте, что предыдущий шаг прочитал идентификатор процессора устройства.");
             }
 
             return cpuId;

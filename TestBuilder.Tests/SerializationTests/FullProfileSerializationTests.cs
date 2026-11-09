@@ -98,10 +98,11 @@ public class FullProfileSerializationTests
         Assert.Equal("SFP,192.168.0.8,192.168.0.9,1000", gigabit.PortsText);
         Assert.True(gigabit.Bidirectional);
         Assert.True(gigabit.FailOnError);
-        var waits = AllNodes(profile.RootElement).Where(n => n.GetProperty("type").GetString() == "Selftest Check")
-            .Select(n => n.GetProperty("timeoutMs").GetInt32()).ToArray();
-        Assert.Equal(3, waits.Count(t => t == 250000));
-        Assert.DoesNotContain(300000, waits);
+        var waits = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+            .SelectMany(n => n.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>()).ToArray();
+        Assert.Equal(3, waits.Length);
+        Assert.All(waits, wait => Assert.Equal(250000, wait.TimeoutMs));
+        Assert.Equal("cpu_id", Assert.Single(waits, wait => wait.IsReadingField).ReadField);
         Assert.Contains(subtest.BodyGraph.Connections, c => ReferenceEquals(c.Source.Parent, copper) && ReferenceEquals(c.Target.Parent, sfp));
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
     }
@@ -199,7 +200,7 @@ public class FullProfileSerializationTests
         Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
         var startupSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "06. Ожидание загрузки DUT и selftest");
+            .Single(node => node.Name == "06. Загрузка DUT и получение серийника");
         var dataTestSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "10. DataTest портов 0..9");
@@ -211,7 +212,7 @@ public class FullProfileSerializationTests
             .Single(node => node.Name == "проверка акб (упс)");
         var reportSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "17. Финальная статистика и отчет");
+            .Single(node => node.Name == "17. Отчёт о проверке");
         var emergencyShutdownSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "Аварийное выключение стенда");
@@ -220,7 +221,7 @@ public class FullProfileSerializationTests
             .Single(node => node.Name == "Отчёт при ошибке");
         var serialSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "15. Получение серийника и запись MAC");
+            .Single(node => node.Name == "15. Запись и проверка MAC");
         var printSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "16. Печать этикеток");
@@ -253,10 +254,10 @@ public class FullProfileSerializationTests
             connection => ReferenceEquals(connection.Source.Parent, reportConfirmation) &&
                           connection.Source.Title == "Продолжить" &&
                           ReferenceEquals(connection.Target.Parent, sendReport));
+        Assert.Empty(reportSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
         Assert.Contains(
             reportSubtest.BodyGraph.Connections,
-            connection => connection.Source.Parent is SelfTestCheckNodeViewModel &&
-                          connection.Source.Title == "False" &&
+            connection => connection.Source.Parent is StartNodeViewModel &&
                           ReferenceEquals(connection.Target.Parent, buildReport));
 
         Assert.Empty(failureReportSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
@@ -291,12 +292,15 @@ public class FullProfileSerializationTests
             connection => ReferenceEquals(connection.Source.Parent, failureReportConfirmation) &&
                           connection.Source.Title == "Продолжить" &&
                           ReferenceEquals(connection.Target.Parent, failureSendReport));
-        var serialNode = serialSubtest.BodyGraph.Nodes
+        var serialNode = startupSubtest.BodyGraph.Nodes
             .OfType<GetSerialNumberFromServerNodeViewModel>()
             .Single();
         Assert.Equal("https://iccid.fort-telecom.ru", serialNode.ServerBaseUrl);
+        Assert.Equal("Dut.cpu_id", serialNode.CpuIdVariableName);
         Assert.False(serialNode.UseFixedSerialNumber);
         Assert.DoesNotContain("\"fixedSerialNumber\"", json);
+        Assert.Empty(serialSubtest.BodyGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>());
+        Assert.Single(serialSubtest.BodyGraph.Nodes.OfType<SelfTestCheckNodeViewModel>());
         var setMacNode = serialSubtest.BodyGraph.Nodes
             .OfType<SetProMacNodeViewModel>()
             .Single();
@@ -329,6 +333,14 @@ public class FullProfileSerializationTests
         Assert.Equal(5000, startupDelay.Milliseconds);
         Assert.Equal(300000, startupSelftest.TimeoutMs);
         Assert.Equal(5000, startupSelftest.PollIntervalMs);
+        Assert.Equal("cpu_id", startupSelftest.ReadField);
+        Assert.Contains(startupSubtest.BodyGraph.Connections, connection =>
+            ReferenceEquals(connection.Source, startupSelftest.TrueOut) &&
+            ReferenceEquals(connection.Target.Parent, serialNode));
+        var serialRange = Assert.Single(startupSubtest.BodyGraph.Nodes.OfType<CheckVariableRangeNodeViewModel>());
+        Assert.Equal("SerialNumber", serialRange.VariableName);
+        Assert.Contains(startupSubtest.BodyGraph.Connections, connection =>
+            ReferenceEquals(connection.Source.Parent, serialNode) && ReferenceEquals(connection.Target.Parent, serialRange));
 
         Assert.All(inOutSubtest.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>(), n => Assert.Equal(21, n.SlaveId));
         Assert.Equal(2, inOutSubtest.BodyGraph.Nodes.OfType<WaitVariableUntilNodeViewModel>().Count());
@@ -377,6 +389,8 @@ public class FullProfileSerializationTests
             .OfType<WaitVariableUntilNodeViewModel>()
             .ToArray();
         Assert.Equal(3, waits.Length);
+        Assert.Equal("напряжение АКБ", waits[1].ReportName);
+        Assert.All(new[] { waits[0], waits[2] }, wait => Assert.Empty(wait.ReportName));
         foreach (var wait in waits)
         {
             Assert.Equal("20..27", wait.ExpectedValue);
@@ -431,6 +445,6 @@ public class FullProfileSerializationTests
             viewModel.RootGraph.Connections,
             connection => ReferenceEquals(connection.Source.Parent, batterySubtest) &&
                           connection.Target.Parent is SubtestNodeViewModel target &&
-                          target.Name == "15. Получение серийника и запись MAC");
+                          target.Name == "15. Запись и проверка MAC");
     }
 }

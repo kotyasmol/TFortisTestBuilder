@@ -57,6 +57,7 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _useBrowser;
         private readonly int _pollIntervalMs;
         private readonly int _browserSettleDelayMs;
+        private readonly string _readField;
         private readonly Func<string, TimeSpan, CancellationToken, Task<bool>> _endpointProbe;
         private readonly Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>> _browserPageLoader;
 
@@ -72,7 +73,8 @@ namespace TestBuilder.Domain.Steps
             int pollIntervalMs = DefaultPollIntervalMs,
             bool enforceMinimumDeviceReadyTimeout = true,
             bool psw2G6FHardwareChecks = false,
-            int browserSettleDelayMs = DefaultBrowserSettleDelayMs)
+            int browserSettleDelayMs = DefaultBrowserSettleDelayMs,
+            string? readField = null)
             : this(
                 httpRequestService,
                 logger,
@@ -87,7 +89,8 @@ namespace TestBuilder.Domain.Steps
                 ProbeWebEndpointAsync,
                 browserPageLoader: null,
                 psw2G6FHardwareChecks: psw2G6FHardwareChecks,
-                browserSettleDelayMs: browserSettleDelayMs)
+                browserSettleDelayMs: browserSettleDelayMs,
+                readField: readField)
         {
         }
 
@@ -105,7 +108,8 @@ namespace TestBuilder.Domain.Steps
             Func<string, TimeSpan, CancellationToken, Task<bool>> endpointProbe,
             Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>>? browserPageLoader,
             bool psw2G6FHardwareChecks = false,
-            int browserSettleDelayMs = DefaultBrowserSettleDelayMs)
+            int browserSettleDelayMs = DefaultBrowserSettleDelayMs,
+            string? readField = null)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -122,6 +126,7 @@ namespace TestBuilder.Domain.Steps
             _useBrowser = useBrowser;
             _pollIntervalMs = NormalizePollInterval(pollIntervalMs);
             _browserSettleDelayMs = Math.Max(0, browserSettleDelayMs);
+            _readField = readField?.Trim() ?? string.Empty;
             _endpointProbe = endpointProbe ?? throw new ArgumentNullException(nameof(endpointProbe));
             _browserPageLoader = browserPageLoader ?? LoadPageWithBrowserAsync;
         }
@@ -154,6 +159,9 @@ namespace TestBuilder.Domain.Steps
             {
                 throw new ArgumentNullException(nameof(context));
             }
+
+            if (_readField.Length > 0)
+                return await ReadFieldAsync(context, cancellationToken);
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
             context.SetVariable("SelfTest.OutputPrefix", _outputPrefix);
@@ -251,6 +259,26 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.Error", string.Empty);
             _logger.Info($"[OK] Selftest passed: {values.Count} fields, {checks.Count} rules.");
             return StepResult.True;
+        }
+
+        private async Task<StepResult> ReadFieldAsync(TestContext context, CancellationToken cancellationToken)
+        {
+            var variable = BuildContextName(_readField);
+            context.Variables.Remove(variable);
+            _logger.Info($"[ШАГ] Чтение поля {_readField} со страницы устройства, таймаут {_timeoutMs} мс.");
+            var fetch = await WaitForSelfTestXmlAsync(_url, TimeSpan.FromMilliseconds(_timeoutMs), cancellationToken);
+            if (fetch.FieldValue is { } value)
+            {
+                context.SetVariable(variable, value);
+                _logger.Info($"[OK] Получено поле {variable}.");
+                return StepResult.True;
+            }
+
+            var name = $"Чтение поля {variable}";
+            context.AddReportEntry(name, false, fetch.ErrorMessage);
+            if (_failOnError) context.HasCriticalError = true;
+            _logger.Warning($"[ОШИБКА] {name}: {fetch.ErrorMessage}");
+            return _failOnError ? StepResult.False : StepResult.True;
         }
 
         private StepResult Fail(TestContext context, string error)
@@ -618,11 +646,7 @@ namespace TestBuilder.Domain.Steps
                 {
                     lastError = "Response does not contain <selftest>...</selftest> or <settings>...</settings>.";
                 }
-                else if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
-                {
-                    lastError = "Selftest XML does not contain default_mac.";
-                }
-                else
+                else if (IsSnapshotReady(raw, out var fieldValue, out lastError))
                 {
                     _logger.Info($"[INFO] Selftest XML found: {raw.Length} characters; parsing fields.");
                     return new SelfTestFetchResult(
@@ -631,7 +655,8 @@ namespace TestBuilder.Domain.Steps
                         attempts,
                         probeAttempts,
                         stopwatch.Elapsed,
-                        string.Empty);
+                        string.Empty,
+                        fieldValue);
                 }
 
                 _logger.Warning(
@@ -655,6 +680,26 @@ namespace TestBuilder.Domain.Steps
                 stopwatch.Elapsed,
                 $"{lastError} Browser attempts: {attempts}, availability probes: {probeAttempts}, " +
                 $"elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.");
+        }
+
+        private bool IsSnapshotReady(string raw, out string? fieldValue, out string error)
+        {
+            fieldValue = null;
+            if (_readField.Length == 0)
+            {
+                var ready = raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase);
+                error = ready ? string.Empty : "Selftest XML does not contain default_mac.";
+                return ready;
+            }
+
+            if (!TryParseSelfTest(raw, out var document, out error)) return false;
+            if (ExtractValues(document).TryGetValue(_readField, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                fieldValue = value;
+                return true;
+            }
+            error = $"Поле '{_readField}' ещё не появилось на странице устройства.";
+            return false;
         }
 
         private static bool IsDeviceSelfTestUrl(string url)
@@ -1509,7 +1554,8 @@ namespace TestBuilder.Domain.Steps
             int Attempts,
             int ProbeAttempts,
             TimeSpan Elapsed,
-            string ErrorMessage);
+            string ErrorMessage,
+            string? FieldValue = null);
 
         private sealed record ValidationRule(string FieldName, double Min, double Max)
         {

@@ -245,6 +245,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? SelfTestBrowserSettleDelayMs { get; set; }
 
+        [JsonPropertyName("readField")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ReadField { get; set; }
+
         [JsonPropertyName("outputVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? OutputVariableName { get; set; }
