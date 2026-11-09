@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -77,7 +78,8 @@ public class ClearArpProcessCancellationTests
                   (wait ? "Start-Sleep -Seconds 30\n" : "[Console]::Out.Write(('x' * 262144)); [Console]::Error.Write(('y' * 262144))\n")
                 : $"printf '%s' \"$$\" > '{_pidFile.Replace("'", "'\\''")}'\n" +
                   (wait ? "exec sleep 30\n" : "awk 'BEGIN {for(i=0;i<262144;i++) printf \"x\"}'; awk 'BEGIN {for(i=0;i<262144;i++) printf \"y\"}' >&2\n");
-            File.WriteAllText(_script, body);
+            // Windows PowerShell needs a BOM to read non-ASCII paths in a UTF-8 script.
+            File.WriteAllText(_script, body, new UTF8Encoding(encoderShouldEmitUTF8Identifier: OperatingSystem.IsWindows()));
         }
 
         public ClearArpCacheStep Step(int timeoutMs) => new(NullLogger.Instance, false, string.Empty,
