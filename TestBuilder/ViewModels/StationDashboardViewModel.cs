@@ -45,7 +45,17 @@ public partial class StationDashboardViewModel : ViewModelBase
     public bool CanRespond => IsAwaitingAction && !IsPaused;
     public bool HasSerialNumber => long.TryParse(SerialNumber, out var number) && number > 0;
     public bool HasReportStatus => ReportStatus is not ("Отчёт не предусмотрен программой" or "Отчёт ещё не сформирован");
-    [ObservableProperty] private bool hasResult;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultOrError))]
+    private bool hasResult;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultOrError))]
+    [NotifyPropertyChangedFor(nameof(HasErrorCode))]
+    [NotifyPropertyChangedFor(nameof(ErrorCodeText))]
+    private TestErrorCode? errorCode;
+    public bool HasErrorCode => ErrorCode.HasValue;
+    public bool HasResultOrError => HasResult || HasErrorCode;
+    public string? ErrorCodeText => ErrorCode?.Format();
     [ObservableProperty] private bool isSuccessful;
     [ObservableProperty] private bool needsAttention;
     [ObservableProperty]
@@ -71,6 +81,7 @@ public partial class StationDashboardViewModel : ViewModelBase
         _activeNodes.Clear();
         Stages.Clear();
         HasResult = IsSuccessful = NeedsAttention = false;
+        ErrorCode = null;
         Elapsed = null;
         SerialNumber = "Будет получен во время проверки";
         ReportStatus = "Отчёт ещё не сформирован";
@@ -145,13 +156,14 @@ public partial class StationDashboardViewModel : ViewModelBase
         Guidance = preparing ? "Дождитесь завершения подготовки профиля." : "Дождитесь результата. Если потребуется ваше действие, инструкция появится здесь.";
     }
 
-    public void CompletePreparation(bool succeeded, bool needsInspection)
+    public void CompletePreparation(bool succeeded, bool needsInspection, TestErrorCode? code = null)
     {
         _activeNodes.Clear();
         _stopping = _cleanup = false;
         _preparing = false;
         HasResult = IsSuccessful = false;
         NeedsAttention = !succeeded;
+        ErrorCode = succeeded ? null : code;
         Elapsed = null;
         Headline = succeeded ? "Стенд настроен" : "Подготовка стенда не завершена";
         Guidance = needsInspection ? "Проверьте состояние стенда. Обратитесь к инженеру." :
@@ -262,7 +274,8 @@ public partial class StationDashboardViewModel : ViewModelBase
         foreach (var stage in Stages) stage.IsPaused = paused && stage.IsActive;
     }
 
-    public void CompleteRun(ExecutionStatus status, TestContext? context, bool partialRun = false, TimeSpan? elapsed = null)
+    public void CompleteRun(ExecutionStatus status, TestContext? context, bool partialRun = false, TimeSpan? elapsed = null,
+        ExecutionFailure? failure = null)
     {
         Elapsed = elapsed;
         if (context != null) UpdateContext(context);
@@ -286,6 +299,9 @@ public partial class StationDashboardViewModel : ViewModelBase
         var reportPending = delivery != null && delivery != "Sent";
         IsSuccessful = !partialRun && status == ExecutionStatus.Completed && checksPassed && !reportPending && !cleanupFailed;
         NeedsAttention = !IsSuccessful;
+        ErrorCode = failure?.Code;
+        if (!HasErrorCode && cleanupFailed) ErrorCode = TestErrorCode.Cleanup;
+        if (!HasErrorCode && status != ExecutionStatus.Cancelled && reportPending) ErrorCode = TestErrorCode.ReportSend;
         if (cleanupFailed)
         {
             Headline = "Проверьте состояние стенда";

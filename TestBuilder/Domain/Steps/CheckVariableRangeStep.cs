@@ -63,7 +63,7 @@ namespace TestBuilder.Domain.Steps
                     : $"Переменная '{_variableName}' должна содержать полный целочисленный серийный номер.";
                 SaveLastCheck(context, actualText, expected, error == null);
                 if (error != null)
-                    _logger.Warning($"[ОШИБКА] {error}");
+                    _logger.Warning($"[ОШИБКА] {error}", TestErrorCode.SerialRange);
                 else
                     _logger.Info($"[OK] Серийный номер {serial} входит в диапазон изделия {expected}.");
                 return Task.FromResult(error == null ? StepResult.True : StepResult.False);
@@ -76,7 +76,7 @@ namespace TestBuilder.Domain.Steps
             }
             catch (FormatException ex)
             {
-                return Task.FromResult(Fail(context, actualText, ex.Message));
+                return Task.FromResult(Fail(context, actualText, ex.Message, TestErrorCode.VariableFormat));
             }
 
             var passed = _inclusive
@@ -132,10 +132,11 @@ namespace TestBuilder.Domain.Steps
         private StepResult Fail(
             TestContext context,
             string actual,
-            string error)
+            string error,
+            TestErrorCode code = TestErrorCode.VariableMissing)
         {
             SaveLastCheck(context, actual, $"{_min.ToString(CultureInfo.InvariantCulture)}..{_max.ToString(CultureInfo.InvariantCulture)}", false);
-            _logger.Warning($"[ОШИБКА] {error}");
+            _logger.Warning($"[ОШИБКА] {error}", code);
             return StepResult.False;
         }
 

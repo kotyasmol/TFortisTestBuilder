@@ -135,7 +135,7 @@ namespace TestBuilder.Domain.Steps
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     context.SetVariable("SendReport.LocalCopyError", ex.Message);
-                    _logger.Warning($"Локальная копия отчёта не сохранена: {ex.Message}");
+                    _logger.Warning($"Локальная копия отчёта не сохранена: {ex.Message}", TestErrorCode.ReportStorage);
                 }
             }
 
@@ -203,7 +203,7 @@ namespace TestBuilder.Domain.Steps
                                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                                 {
                                     context.SetVariable("SendReport.LocalCopyError", ex.Message);
-                                    _logger.Warning($"В локальную копию не записан номер: {ex.Message}");
+                                    _logger.Warning($"В локальную копию не записан номер: {ex.Message}", TestErrorCode.ReportStorage);
                                 }
                             }
                         }
@@ -237,7 +237,7 @@ namespace TestBuilder.Domain.Steps
 
                 if (attempt < attempts && _retryDelayMs > 0)
                 {
-                    _logger.Warning($"Отчёт не отправлен: {lastError}. Повтор через {_retryDelayMs} мс.");
+                    _logger.Warning($"Отчёт не отправлен: {lastError}. Повтор через {_retryDelayMs} мс.", TestErrorCode.ReportSend);
                     await Task.Delay(_retryDelayMs, cancellationToken);
                 }
             }

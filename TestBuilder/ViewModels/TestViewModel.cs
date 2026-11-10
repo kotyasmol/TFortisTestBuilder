@@ -279,7 +279,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     if (!App.StartupOptions.IsValid)
                     {
                         StatusMessage = App.StartupOptions.Error;
-                        TestingLogger.Error($"Запуск заблокирован: {App.StartupOptions.Error}");
+                        TestingLogger.Error($"Запуск заблокирован: {App.StartupOptions.Error}", TestErrorCode.Startup);
                     }
                 }
             }
@@ -287,7 +287,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         catch (Exception ex)
         {
             StatusMessage = "Не удалось переключить профиль. Подробности в журнале.";
-            LogUiException("Переключение профиля", ex);
+            LogUiException("Переключение профиля", ex, TestErrorCode.ProfileLoad);
         }
         finally { IsConnecting = false; }
     }
@@ -930,7 +930,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         catch (Exception ex)
         {
             StatusMessage = "Не удалось подключить стенд. Проверьте кабель и питание.";
-            LogUiException("Подключение/отключение стенда", ex);
+            LogUiException("Подключение/отключение стенда", ex, TestErrorCode.StandConnection);
         }
         finally { IsConnecting = false; }
     }
@@ -978,7 +978,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             await DisconnectAsync();
         }
         StatusMessage = validateProfile ? "Стенд для выбранного профиля не найден на доступных COM-портах." : "Нет доступного COM-порта.";
-        TestingLogger.Error(StatusMessage);
+        TestingLogger.Error(StatusMessage, TestErrorCode.StandConnection);
     }
 
     private async Task<bool> EnsureConnectedProfileAsync()
@@ -1017,7 +1017,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             IsMonitoringActive = false;
             StatusMessage = "Оборудование не соответствует профилю. Подробности в журнале.";
             if (automaticSearch) ReportPortSearchFailure(SelectedPort, ex, true);
-            else TestingLogger.Error($"Проверка оборудования на {SelectedPort}: {ex.Message}");
+            else TestingLogger.Error($"Проверка оборудования на {SelectedPort}: {ex.Message}", TestErrorCode.StandEquipment);
             return false;
         }
     }
@@ -1030,7 +1030,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (count == 0)
         {
             StatusMessage = "Слейвы не найдены.";
-            TestingLogger.Warning("Устройства не найдены. Проверьте подключение.");
+            TestingLogger.Warning("Устройства не найдены. Проверьте подключение.", TestErrorCode.StandEquipment);
             return false;
         }
 
@@ -1061,7 +1061,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             IsMonitoringActive = false;
             StopRunForConnectionFailure();
             StatusMessage = "Связь Modbus потеряна. Выполняется автоматическое восстановление.";
-            TestingLogger.Warning("[MODBUS] Мониторинг обнаружил потерю связи. Автоматическое восстановление выполнится при следующей Modbus-операции.");
+            TestingLogger.Warning("[MODBUS] Мониторинг обнаружил потерю связи. Автоматическое восстановление выполнится при следующей Modbus-операции.",
+                TestErrorCode.StandDisconnected);
         });
     }
 
@@ -1092,7 +1093,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             else if (message.Contains("60 секунд", StringComparison.OrdinalIgnoreCase))
             {
                 IsConnected = false;
-                TestingLogger.Error(message);
+                TestingLogger.Error(message, TestErrorCode.StandDisconnected);
                 ShowReconnectDialog(message, canClose: true);
             }
             else
@@ -1107,7 +1108,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         if (!IsTestRunning || IsStopping) return;
         _runConnectionFailure = "Потеряна связь со стендом. Проверка остановлена для снятия питания.";
-        TestingLogger.Error(_runConnectionFailure);
+        TestingLogger.Error(_runConnectionFailure, TestErrorCode.StandDisconnected);
         StopTestCommand.Execute(null);
     }
 
@@ -1163,7 +1164,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         catch (Exception ex)
         {
             StatusMessage = $"Не удалось проверить изменения профиля: {ex.Message}";
-            LogUiException("Проверка изменений профиля перед запуском", ex);
+            LogUiException("Проверка изменений профиля перед запуском", ex, TestErrorCode.Preparation);
             return;
         }
         if (!CanStartRun) return;
@@ -1177,7 +1178,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task WithRunFileLogAsync(Func<Task> run)
     {
-        var logPath = IsTraining ? null : LoggingService.Instance.StartFileLogForRun(CurrentProfileName, TestingLogger.Warning);
+        var logPath = IsTraining ? null : LoggingService.Instance.StartFileLogForRun(CurrentProfileName,
+            message => TestingLogger.Warning(message, TestErrorCode.RunLog));
         try { await run(); }
         finally
         {
@@ -1352,7 +1354,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             executionStatus = result;
             runFailure = context.CriticalFailure ?? context.Failure;
             if (runFailure == null && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
-                runFailure = new ExecutionFailure(failedCheck.Name, failedCheck.Value);
+                runFailure = new ExecutionFailure(failedCheck.Name, failedCheck.Value)
+                {
+                    Code = failedCheck.ErrorCode ?? TestErrorCode.Unexpected
+                };
 
             if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess))
             {
@@ -1365,7 +1370,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context.SetVariable("Execution.Status", executionStatus.ToString());
                 runFailure ??= new ExecutionFailure("Выполнение графа", $"Граф завершён с результатом {result}.");
                 context.SetVariable("Execution.Error", runFailure.Summary);
-                TestingLogger.Error($"[ОШИБКА] Тест завершён: {runFailure.Summary}");
+                TestingLogger.Error($"[ОШИБКА] Тест завершён: {runFailure.Summary}", runFailure.Code);
             }
             else
             {
@@ -1387,17 +1392,21 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (_runConnectionFailure != null)
             {
                 executionStatus = ExecutionStatus.Failed;
-                runFailure = new ExecutionFailure("Связь со стендом", _runConnectionFailure);
+                runFailure = new ExecutionFailure("Связь со стендом", _runConnectionFailure) { Code = TestErrorCode.StandDisconnected };
                 context?.SetVariable("Execution.Status", executionStatus.ToString());
             }
-            TestingLogger.Warning(_runConnectionFailure ?? "[ОСТАНОВ] Выполнение теста остановлено пользователем.");
+            if (_runConnectionFailure is { } connectionError) TestingLogger.Warning(connectionError, TestErrorCode.StandDisconnected);
+            else TestingLogger.Warning("[ОСТАНОВ] Выполнение теста остановлено пользователем.");
             StatusMessage = "Выполнение теста остановлено.";
         }
         catch (Exception ex)
         {
             runCleanup = true;
             runFailure = context?.CriticalFailure ?? context?.Failure ??
-                new ExecutionFailure(context == null ? "Подготовка графа" : "Выполнение графа", ex.Message);
+                new ExecutionFailure(context == null ? "Подготовка графа" : "Выполнение графа", ex.Message)
+                {
+                    Code = TestErrorCodes.Resolve(ex, context == null ? TestErrorCode.GraphInvalid : TestErrorCode.Unexpected)
+                };
             if (context != null)
             {
                 context.HasCriticalError = true;
@@ -1406,7 +1415,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
 
             DiagnosticLog.WriteException("Выполнение теста", ex);
-            TestingLogger.Error($"[ОШИБКА] {runFailure.Summary}");
+            TestingLogger.Error($"[ОШИБКА] {runFailure.Summary}", runFailure.Code);
         }
         finally
         {
@@ -1442,7 +1451,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     catch (Exception ex)
                     {
                         DiagnosticLog.WriteException("Остановка мониторинга перед завершением", ex);
-                        TestingLogger.Warning("Мониторинг завершился с ошибкой. Выполняется отключение выходов стенда.");
+                        TestingLogger.Warning("Мониторинг завершился с ошибкой. Выполняется отключение выходов стенда.", TestErrorCode.StandDisconnected);
                     }
                     IsMonitoringActive = false;
                     if (await RunFailureCleanupAsync(context, cleanupRequiresStand))
@@ -1457,7 +1466,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     RequireStandInspection();
                     context.SetVariable("Cleanup.Succeeded", false);
                     DiagnosticLog.WriteException("Аварийное завершение стенда", ex);
-                    TestingLogger.Error("Завершение стенда не подтверждено. Отключите питание стенда и обратитесь к инженеру.");
+                    TestingLogger.Error("Завершение стенда не подтверждено. Отключите питание стенда и обратитесь к инженеру.", TestErrorCode.Cleanup);
                 }
                 finally
                 {
@@ -1469,7 +1478,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                         {
                             DiagnosticLog.WriteException("Возобновление мониторинга", ex);
                             IsMonitoringActive = false;
-                            TestingLogger.Warning("Мониторинг не возобновлён. Переподключитесь к стенду перед запуском.");
+                            TestingLogger.Warning("Мониторинг не возобновлён. Переподключитесь к стенду перед запуском.", TestErrorCode.StandDisconnected);
                         }
                     }
                 }
@@ -1487,9 +1496,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     _profilePreparationVariables = preparedVariables!;
                 }
                 else ResetProfilePreparation();
-                Station.CompletePreparation(succeeded, NeedsStandInspection);
+                var preparationCode = runFailure?.Code ?? (NeedsStandInspection ? TestErrorCode.Cleanup :
+                    executionStatus == ExecutionStatus.Failed ? TestErrorCode.Preparation : (TestErrorCode?)null);
+                Station.CompletePreparation(succeeded, NeedsStandInspection, preparationCode);
             }
-            else Station.CompleteRun(executionStatus, context, partialRun, runTimer.Elapsed);
+            else Station.CompleteRun(executionStatus, context, partialRun, runTimer.Elapsed, runFailure);
             StatusMessage = Station.Headline + ".";
             IsTestRunning = false;
             IsStopping = false;
@@ -1526,7 +1537,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             TestingLogger.Info(durationText);
             // Cleanup uses the same context and may fail itself; keep the main run's original cause last.
             if (runFailure != null)
-                TestingLogger.Error(runFailure.LogMessage);
+                TestingLogger.Error(runFailure.LogMessage, runFailure.Code);
             if (!preparing && !partialRun && !IsTraining)
             {
                 var snapshot = new LastTestLabelSnapshot(DateTimeOffset.Now, profileName,
@@ -1596,18 +1607,18 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     }
                     else
                     {
-                        TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' завершился с результатом {result}.");
+                        TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' завершился с результатом {result}.", TestErrorCode.Cleanup);
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' прерван по таймауту.");
+                    TestingLogger.Warning($"[ОШИБКА] Cleanup '{cleanupNode.Name}' прерван по таймауту.", TestErrorCode.Cleanup);
                     continue;
                 }
                 catch (Exception ex)
                 {
                     DiagnosticLog.WriteException($"Завершение: {cleanupNode.Name}", ex);
-                    TestingLogger.Error($"Не удалось выполнить «{cleanupNode.Name}». Проверьте состояние стенда.");
+                    TestingLogger.Error($"Не удалось выполнить «{cleanupNode.Name}». Проверьте состояние стенда.", TestErrorCode.Cleanup);
                 }
                 finally { allSucceeded &= cleanupSucceeded; Station.FinishCleanup(cleanupNode, cleanupSucceeded); }
             }
@@ -1929,7 +1940,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
         catch (Exception ex)
         {
-            LogUiException($"Загрузка профиля '{filePath}'", ex);
+            LogUiException($"Загрузка профиля '{filePath}'", ex, TestErrorCode.ProfileLoad);
             _profileLoadError = ex.Message;
             if (!string.Equals(_currentProfilePath, filePath, StringComparison.Ordinal))
             {
@@ -1948,10 +1959,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RefreshStationAvailability();
     }
 
-    private void LogUiException(string operation, Exception exception)
+    private void LogUiException(string operation, Exception exception, TestErrorCode code = TestErrorCode.Unexpected)
     {
         var logPath = DiagnosticLog.WriteException(operation, exception);
-        TestingLogger.Error($"{operation}: не удалось выполнить операцию.");
+        TestingLogger.Error($"{operation}: не удалось выполнить операцию.", TestErrorCodes.Resolve(exception, code));
         if (logPath != null)
             TestingLogger.Info($"Подробности ошибки сохранены: {logPath}");
     }
@@ -1962,7 +1973,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (automatic)
             TestingLogger.Info($"На порту {port} стенд не обнаружен. Поиск продолжается.");
         else
-            TestingLogger.Warning($"Не удалось открыть или проверить порт {port}. Проверьте подключение стенда и доступность порта.");
+            TestingLogger.Warning($"Не удалось открыть или проверить порт {port}. Проверьте подключение стенда и доступность порта.",
+                TestErrorCode.StandConnection);
     }
 
     private async Task ImportProfilesAsync()

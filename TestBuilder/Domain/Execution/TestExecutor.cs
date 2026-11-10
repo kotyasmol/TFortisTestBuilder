@@ -41,7 +41,8 @@ namespace TestBuilder.Domain.Execution
                 if (result == StepResult.Stop)
                 {
                     if (stopBefore != null)
-                        throw new InvalidOperationException("Параллельная ветвь завершилась до точки объединения.");
+                        throw new InvalidOperationException("Параллельная ветвь завершилась до точки объединения.")
+                            .WithCode(TestErrorCode.ParallelGraph);
                     return ExecutionStatus.Completed;
                 }
 
@@ -64,7 +65,7 @@ namespace TestBuilder.Domain.Execution
                     {
                         context.Failure = failure ?? new ExecutionFailure(current.DisplayName,
                             "Нет перехода после успешного выполнения. Соедините выход ноды со следующим шагом или нодой «Конец».",
-                            context.CurrentSlaveId);
+                            context.CurrentSlaveId) { Code = TestErrorCode.MissingTransition };
                         return ExecutionStatus.Failed;
                     }
                     current = next;
@@ -72,7 +73,8 @@ namespace TestBuilder.Domain.Execution
             }
             cancellationToken.ThrowIfCancellationRequested();
             if (stopBefore != null && current == null)
-                throw new InvalidOperationException("Параллельная ветвь не достигла точки объединения.");
+                throw new InvalidOperationException("Параллельная ветвь не достигла точки объединения.")
+                    .WithCode(TestErrorCode.ParallelGraph);
             return ExecutionStatus.Completed;
         }
 
@@ -85,7 +87,7 @@ namespace TestBuilder.Domain.Execution
                     await context.ExecutionObserver.NodeSkippedAsync(node, context, cancellationToken);
                 return (node.SkippedResult, null);
             }
-            using var diagnostics = new StepLogScope();
+            using var diagnostics = new StepLogScope(TestErrorCodes.ForStep(node.Step));
             context.Failure = null;
             var stepName = string.IsNullOrWhiteSpace(node.DisplayName)
                 ? node.Step?.GetType().Name ?? "Неизвестный шаг" : node.DisplayName;
@@ -108,7 +110,10 @@ namespace TestBuilder.Domain.Execution
                 {
                     result = StepResult.False;
                     if (failedCheck != null)
-                        context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId);
+                        context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId)
+                        {
+                            Code = failedCheck.ErrorCode ?? diagnostics.Code
+                        };
                 }
                 if (context.ExecutionObserver != null)
                     await context.ExecutionObserver.NodeCompletedAsync(node, observedResult, context, CancellationToken.None);
@@ -147,11 +152,17 @@ namespace TestBuilder.Domain.Execution
             if (failure != null)
             {
                 if (failure is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-                    context.Failure ??= new ExecutionFailure(stepName, failure.Message, context.CurrentSlaveId);
+                    context.Failure ??= new ExecutionFailure(stepName, failure.Message, context.CurrentSlaveId)
+                    {
+                        Code = TestErrorCodes.Resolve(failure, diagnostics.Code)
+                    };
                 ExceptionDispatchInfo.Capture(failure).Throw();
             }
             var detail = result == StepResult.False || (context.IsParallelBranch && context.HasCriticalError)
                 ? context.Failure ?? new ExecutionFailure(stepName, diagnostics.Reason, context.CurrentSlaveId)
+                {
+                    Code = diagnostics.Code
+                }
                 : null;
             if (context.HasCriticalError && detail != null)
                 context.CriticalFailure ??= detail;

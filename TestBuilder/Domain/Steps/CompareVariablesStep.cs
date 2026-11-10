@@ -65,7 +65,7 @@ namespace TestBuilder.Domain.Steps
             }
             catch (FormatException ex)
             {
-                return Task.FromResult(Fail(context, resultName, leftText, rightText, ex.Message));
+                return Task.FromResult(Fail(context, resultName, leftText, rightText, ex.Message, TestErrorCode.VariableFormat));
             }
 
             context.SetVariable("LastCheck.VariableName", _leftVariableName);
@@ -90,14 +90,15 @@ namespace TestBuilder.Domain.Steps
             return Task.FromResult(StepResult.True);
         }
 
-        private StepResult Fail(TestContext context, string resultName, string? left, string right, string error)
+        private StepResult Fail(TestContext context, string resultName, string? left, string right, string error,
+            TestErrorCode code = TestErrorCode.VariableMissing)
         {
             context.SetVariable("LastCheck.VariableName", _leftVariableName);
             context.SetVariable("LastCheck.ActualValue", left ?? string.Empty);
             context.SetVariable("LastCheck.ExpectedValue", right);
             context.SetVariable("LastCheck.Passed", false);
             CheckResultCapture.Save(context, resultName, false, left);
-            _logger.Warning($"[ОШИБКА] {error}");
+            _logger.Warning($"[ОШИБКА] {error}", code);
             return StepResult.False;
         }
 

@@ -51,7 +51,8 @@ internal static class ParallelResourceValidator
                     $"ветви {i + 1} и {j + 1} используют общий ресурс " +
                     (modbusConflict ? "Modbus slave. Разделите устройства или выполняйте проверки последовательно."
                         : loadConflict ? "питания PoE и сетевых измерений DUT. Настройте нагрузки до сетевых проверок."
-                        : "сети DUT/selftest/DataTest. Сетевые операции разных ветвей должны выполняться последовательно."));
+                        : "сети DUT/selftest/DataTest. Сетевые операции разных ветвей должны выполняться последовательно."))
+                    .WithCode(TestErrorCode.ParallelGraph);
         }
     }
 
@@ -164,5 +165,6 @@ internal static class ParallelResourceValidator
 
     [DoesNotReturn]
     private static void Reject(NodeViewModel node, string reason) =>
-        throw new InvalidOperationException($"Нода '{node.DisplayTitle}' внутри параллельной ветви: {reason}.");
+        throw new InvalidOperationException($"Нода '{node.DisplayTitle}' внутри параллельной ветви: {reason}.")
+            .WithCode(TestErrorCode.ParallelGraph);
 }

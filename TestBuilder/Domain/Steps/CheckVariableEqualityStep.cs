@@ -71,6 +71,7 @@ namespace TestBuilder.Domain.Steps
             var actualText = ToInvariantString(actual);
             string error;
             bool passed;
+            var code = TestErrorCode.VariableCheck;
 
             try
             {
@@ -83,6 +84,7 @@ namespace TestBuilder.Domain.Steps
             {
                 passed = false;
                 error = ex.Message;
+                code = TestErrorCode.VariableFormat;
             }
 
             SaveLastCheck(context, actualText, _expectedValue, passed);
@@ -93,7 +95,7 @@ namespace TestBuilder.Domain.Steps
 
             if (!passed)
             {
-                _logger.Warning($"[ОШИБКА] {error}");
+                _logger.Warning($"[ОШИБКА] {error}", code);
                 return Task.FromResult(StepResult.False);
             }
 
@@ -130,7 +132,7 @@ namespace TestBuilder.Domain.Steps
         {
             SaveLastCheck(context, string.Empty, _expectedValue, false);
             CheckResultCapture.Save(context, resultName, false, null);
-            _logger.Warning($"[ОШИБКА] {error}");
+            _logger.Warning($"[ОШИБКА] {error}", TestErrorCode.VariableMissing);
             return StepResult.False;
         }
 

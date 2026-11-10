@@ -65,7 +65,7 @@ namespace TestBuilder.Domain.Steps
             {
                 DiagnosticLog.WriteException("Аварийная запись регистра", ex);
                 _logger.Warning($"Не подтверждено отключение: устройство {ResolveSlaveId(context)}, регистр {_address}. " +
-                    (attempt.IsCancellationRequested ? "Истекло время попытки." : "Ошибка обмена со стендом."));
+                    (attempt.IsCancellationRequested ? "Истекло время попытки." : "Ошибка обмена со стендом."), TestErrorCode.Cleanup);
                 return StepResult.False;
             }
         }
@@ -78,7 +78,7 @@ namespace TestBuilder.Domain.Steps
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Запись регистра → устройство не задано, адрес {registerAddress}, значение {_value}.");
+                    $"[ШАГ] Запись регистра → устройство не задано, адрес {registerAddress}, значение {_value}.", TestErrorCode.ModbusWrite);
 
                 return StepResult.False;
             }
@@ -143,7 +143,8 @@ namespace TestBuilder.Domain.Steps
                 {
                     lastVerificationError = $"Ошибка чтения: {ex.Message}";
                     _logger.Warning(
-                        $"[ОШИБКА] Ошибка чтения регистра для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}: {ex.Message}");
+                        $"[ОШИБКА] Ошибка чтения регистра для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}: {ex.Message}",
+                        TestErrorCode.ModbusReadBack);
 
                     continue;
                 }
@@ -152,7 +153,8 @@ namespace TestBuilder.Domain.Steps
                 {
                     lastVerificationError = "Регистр не прочитан: получен пустой ответ.";
                     _logger.Warning(
-                        $"[ОШИБКА] Не удалось прочитать регистр для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}.");
+                        $"[ОШИБКА] Не удалось прочитать регистр для проверки. Попытка {attempt}/{VerifyAttempts}. Устройство {actualSlaveId}, адрес {registerAddress}.",
+                        TestErrorCode.ModbusReadBack);
 
                     continue;
                 }
@@ -171,11 +173,13 @@ namespace TestBuilder.Domain.Steps
 
                 lastVerificationError = $"Ожидалось {_value}, прочитано {actualValue}.";
                 _logger.Warning(
-                    $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.");
+                    $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.",
+                    TestErrorCode.ModbusReadBack);
             }
 
             _logger.Warning(
-                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. {lastVerificationError}");
+                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. {lastVerificationError}",
+                TestErrorCode.ModbusReadBack);
 
             return StepResult.False;
         }

@@ -85,7 +85,8 @@ namespace TestBuilder.Domain.Steps
                     if (result != ExecutionStatus.Completed)
                     {
                         _logger.Warning(
-                            $"[ОШИБКА] Итерация устройство {slaveId} — ошибка. Стоп при ошибке: {(stopOnError ? "да" : "нет")}.");
+                            $"[ОШИБКА] Итерация устройство {slaveId} — ошибка. Стоп при ошибке: {(stopOnError ? "да" : "нет")}.",
+                            (context.CriticalFailure ?? context.Failure)?.Code ?? TestErrorCode.Loop);
 
                         if (stopOnError)
                             return StepResult.False;
@@ -170,13 +171,14 @@ namespace TestBuilder.Domain.Steps
             try { result = await executor.ExecuteAsync(_bodyGraph.StartNode, context, token); }
             catch (Exception error) when (tolerateException && !token.IsCancellationRequested && !ExecutionCleanupException.Contains(error))
             {
-                _logger.Warning($"[ОШИБКА] {name}: {error.Message}.");
-                context.AddReportEntry(name, false, error.Message);
+                var code = context.Failure?.Code ?? TestErrorCodes.Resolve(error, TestErrorCode.Loop);
+                _logger.Warning($"[ОШИБКА] {name}: {error.Message}.", code);
+                context.AddReportEntry(name, false, error.Message, code);
                 result = ExecutionStatus.Failed;
             }
             token.ThrowIfCancellationRequested();
             if (result != ExecutionStatus.Completed && !context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))
-                context.AddReportEntry(name, false, context.Failure?.Summary ?? "Проверка не пройдена.");
+                context.AddReportEntry(name, false, context.Failure?.Summary ?? "Проверка не пройдена.", context.Failure?.Code ?? TestErrorCode.Loop);
             return result;
         }
     }

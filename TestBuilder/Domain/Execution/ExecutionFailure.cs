@@ -7,6 +7,7 @@ public sealed record ExecutionFailure(string StepName, string Reason, byte? Slav
 {
     private static long _nextSequence;
     internal long Sequence { get; } = Interlocked.Increment(ref _nextSequence);
+    public TestErrorCode Code { get; init; } = TestErrorCode.Unexpected;
 
     public string Summary => $"Шаг «{StepName}»{(SlaveId.HasValue ? $", устройство {SlaveId}" : string.Empty)}: {Reason}";
 

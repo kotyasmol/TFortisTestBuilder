@@ -34,16 +34,24 @@ namespace TestBuilder.Domain.Steps
             if (!string.IsNullOrWhiteSpace(_outputVariable))
             {
                 context.Variables.Remove(_outputVariable);
-                if (context.OperatorInput == null) return StepResult.False;
+                if (context.OperatorInput == null)
+                {
+                    _logger.Warning("Действие оператора: окно ввода недоступно.", TestErrorCode.OperatorAction);
+                    return StepResult.False;
+                }
                 var value = await context.OperatorInput(ResolveMessage(context), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (string.IsNullOrWhiteSpace(value)) return StepResult.False;
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _logger.Warning("Действие оператора: обязательное значение не введено.", TestErrorCode.OperatorAction);
+                    return StepResult.False;
+                }
                 context.SetVariable(_outputVariable, value.Trim());
                 return StepResult.True;
             }
             if (context.OperatorPrompt == null)
             {
-                _logger.Warning("[ШАГ] Действие оператора → обработчик диалога не задан.");
+                _logger.Warning("[ШАГ] Действие оператора → обработчик диалога не задан.", TestErrorCode.OperatorAction);
                 return StepResult.False;
             }
 
@@ -53,7 +61,8 @@ namespace TestBuilder.Domain.Steps
 
             var confirmed = await context.OperatorPrompt(resolvedMessage);
 
-            _logger.Info($"[ШАГ] Оператор выбрал: {(confirmed ? "Продолжить" : "Отмена")}");
+            _logger.Log(LogLevel.Info, $"[ШАГ] Оператор выбрал: {(confirmed ? "Продолжить" : "Отмена")}",
+                confirmed ? null : TestErrorCode.OperatorAction);
 
             return confirmed ? StepResult.True : StepResult.False;
         }

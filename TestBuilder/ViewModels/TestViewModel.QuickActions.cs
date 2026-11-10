@@ -122,7 +122,7 @@ public partial class TestViewModel
     internal async Task<ProfileActionResult> ExecuteProfileActionAsync(ProfileActionDefinition action, bool turnOff,
         IExecutionObserver observer, CancellationToken token)
     {
-        var logger = new ProfileActionLogger(TestingLogger, action.Name);
+        ILogger logger = new ProfileActionLogger(TestingLogger, action.Name);
         try
         {
             token.ThrowIfCancellationRequested();
@@ -157,11 +157,12 @@ public partial class TestViewModel
             var success = result == ExecutionStatus.Completed && !context.HasCriticalError && !context.HasExecutionException && failedCheck == null;
             var message = success ? "Выполнено" : (context.CriticalFailure ?? context.Failure)?.Summary ??
                 (failedCheck != null ? $"{failedCheck.Name}: {failedCheck.Value}" : "Граф завершился с ошибкой.");
-            if (success) logger.Info(message); else logger.Error(message);
+            if (success) logger.Info(message);
+            else logger.Error(message, (context.CriticalFailure ?? context.Failure)?.Code ?? failedCheck?.ErrorCode ?? TestErrorCode.ProfileAction);
             return new(success, message);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { logger.Warning("Действие остановлено."); throw; }
-        catch (Exception e) { logger.Error(e.Message); throw; }
+        catch (Exception e) { logger.Error(e.Message, TestErrorCodes.Resolve(e, TestErrorCode.ProfileAction)); throw; }
     }
     private async Task<string?> PromptActionAsync(string message, bool input, CancellationToken token)
     {

@@ -55,7 +55,8 @@ internal static class ParallelGraphPlanner
 
             if (join == null || regions == null)
                 throw new InvalidOperationException($"Параллельные ветви '{Name(source)}' ({result}): " +
-                    (reason ?? "нет общего объединения для всех путей. Соедините ветви общей следующей нодой; циклы и выход из ветви до объединения недопустимы."));
+                    (reason ?? "нет общего объединения для всех путей. Соедините ветви общей следующей нодой; циклы и выход из ветви до объединения недопустимы."))
+                    .WithCode(TestErrorCode.ParallelGraph);
 
             ParallelResourceValidator.Validate(source, regions, hardware, currentSlaves);
             source.ParallelTransitions[result] = new ParallelFork(branches.ToArray(), join);

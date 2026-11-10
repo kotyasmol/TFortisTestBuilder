@@ -292,9 +292,11 @@
         </StackPanel>
       </Border>
       <Border Grid.Row="4" Classes="result" Classes.success="{Binding Station.IsSuccessful}"
-              Classes.attention="{Binding Station.NeedsAttention}" IsVisible="{Binding Station.HasResult}" Padding="16,12" Margin="0,12,0,0">
+              Classes.attention="{Binding Station.NeedsAttention}" IsVisible="{Binding Station.HasResultOrError}" Padding="16,12" Margin="0,12,0,0">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding Station.Headline}" FontSize="{StaticResource FontHeading}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <Button Content="{Binding Station.ErrorCodeText}" IsVisible="{Binding Station.HasErrorCode}" Click="OpenErrorHelp"
+                  ToolTip.Tip="Открыть справку по ошибке" />
           <TextBlock Text="{Binding Station.DurationText}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.HasDuration}" />
           <TextBlock Text="{Binding Station.Guidance}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.NeedsAttention}" />
           <TextBlock Text="{Binding Station.ReportStatus}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap" IsVisible="{Binding Station.HasReportStatus}" />

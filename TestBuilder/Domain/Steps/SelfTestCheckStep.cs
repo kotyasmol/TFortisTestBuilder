@@ -202,7 +202,7 @@ namespace TestBuilder.Domain.Steps
             {
                 context.SetVariable(DefaultOutputVariableName, string.Empty);
                 context.SelfTestPageState?.SetError(_url, _outputPrefix, fetch.ErrorMessage);
-                return Fail(context, fetch.ErrorMessage);
+                return Fail(context, fetch.ErrorMessage, TestErrorCode.SelftestConnection);
             }
 
             var raw = fetch.RawXml;
@@ -212,7 +212,7 @@ namespace TestBuilder.Domain.Steps
             if (!TryParseSelfTest(raw, out var document, out var parseError))
             {
                 context.SelfTestPageState?.SetError(_url, _outputPrefix, parseError);
-                return Fail(context, parseError);
+                return Fail(context, parseError, TestErrorCode.SelftestResponse);
             }
 
             var values = ExtractValues(document);
@@ -275,23 +275,23 @@ namespace TestBuilder.Domain.Steps
             }
 
             var name = $"Чтение поля {variable}";
-            context.AddReportEntry(name, false, fetch.ErrorMessage);
+            context.AddReportEntry(name, false, fetch.ErrorMessage, TestErrorCode.SelftestConnection);
             if (_failOnError) context.HasCriticalError = true;
-            _logger.Warning($"[ОШИБКА] {name}: {fetch.ErrorMessage}");
+            _logger.Warning($"[ОШИБКА] {name}: {fetch.ErrorMessage}", TestErrorCode.SelftestConnection);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
-        private StepResult Fail(TestContext context, string error)
+        private StepResult Fail(TestContext context, string error, TestErrorCode code = TestErrorCode.SelftestCheck)
         {
             SetError(context, error);
-            context.AddReportEntry($"Selftest: {_outputPrefix}", false, error);
+            context.AddReportEntry($"Selftest: {_outputPrefix}", false, error, code);
 
             if (_failOnError)
             {
                 context.HasCriticalError = true;
             }
 
-            _logger.Warning($"[ERROR] Selftest failed: {error}");
+            _logger.Warning($"[ERROR] Selftest failed: {error}", code);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 

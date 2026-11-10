@@ -78,7 +78,7 @@ namespace TestBuilder.Domain.Steps
                 if (model != null)
                     return Fail(context, "Отключите фиксированный отладочный номер в профиле со справочником.", string.Empty, string.Empty);
                 if (legacyModel?.SerialSeries?.Check(_fixedSerialNumber.Value) is { } fixedError)
-                    return Fail(context, fixedError, string.Empty, string.Empty);
+                    return Fail(context, fixedError, string.Empty, string.Empty, TestErrorCode.SerialRange);
                 return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
             }
 
@@ -127,7 +127,7 @@ namespace TestBuilder.Domain.Steps
                     var seriesError = series == null ? SerialNumberPrefix.Check(serial, _expectedSerialPrefix) : series.Check(serial);
                     seriesError ??= legacyModel?.SerialSeries?.Check(serial);
                     if (seriesError != null)
-                        return Fail(context, seriesError, raw, url);
+                        return Fail(context, seriesError, raw, url, TestErrorCode.SerialRange);
 
                     SaveSerial(context, serial, raw, url);
                     if (model != null)
@@ -142,12 +142,12 @@ namespace TestBuilder.Domain.Steps
                 {
                     _logger.Warning(
                         $"Серийный номер не получен (попытка {attempt}/{attempts}): {lastError}. " +
-                        $"Повтор через {_retryDelayMs} мс.");
+                        $"Повтор через {_retryDelayMs} мс.", TestErrorCode.SerialRequest);
                     await Task.Delay(_retryDelayMs, cancellationToken);
                 }
             }
 
-            return Fail(context, lastError, raw, url);
+            return Fail(context, lastError, raw, url, TestErrorCode.SerialRequest);
         }
 
         private StepResult UseFixedSerialNumber(TestContext context, int serial)
@@ -168,7 +168,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberCpuId", cpuId);
             context.SetVariable("SerialNumberSource", "FixedDebug");
             if (SerialNumberPrefix.Check(serial, _expectedSerialPrefix) is { } seriesError)
-                return Fail(context, seriesError, raw, string.Empty);
+                return Fail(context, seriesError, raw, string.Empty, TestErrorCode.SerialRange);
 
             SaveSerial(context, serial, raw, string.Empty);
 
@@ -195,15 +195,15 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberError", string.Empty);
         }
 
-        private StepResult Fail(TestContext context, string error, string raw, string url)
+        private StepResult Fail(TestContext context, string error, string raw, string url, TestErrorCode code = TestErrorCode.SerialConfig)
         {
             context.SetVariable("SerialNumberReceived", false);
             context.SetVariable("SerialNumberRawResponse", raw);
             context.SetVariable("SerialNumberRequestUrl", url);
             context.SetVariable("SerialNumberError", error);
-            context.AddReportEntry("Получение серийного номера", false, error);
+            context.AddReportEntry("Получение серийного номера", false, error, code);
 
-            _logger.Warning($"[ОШИБКА] Серийный номер не получен: {error}");
+            _logger.Warning($"[ОШИБКА] Серийный номер не получен: {error}", code);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 

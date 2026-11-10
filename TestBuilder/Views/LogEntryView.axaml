@@ -20,7 +20,12 @@
     </Style>
   </UserControl.Styles>
   <Border Classes.failure="{Binding IsFailureSummary}" Margin="2">
-    <SelectableTextBlock Text="{Binding}" IsHitTestVisible="False"
+    <Grid ColumnDefinitions="Auto,*">
+      <Button Content="{Binding CodeText}" IsVisible="{Binding HasCode}" Click="OnOpenErrorHelp"
+              ToolTip.Tip="Открыть справку по ошибке" Foreground="{DynamicResource PrimaryTextBrush}"
+              Background="Transparent" BorderThickness="0" Padding="4,0" MinHeight="0" Margin="0,0,6,0"
+              FontFamily="Consolas" FontSize="14" VerticalAlignment="Top" />
+      <SelectableTextBlock Grid.Column="1" Text="{Binding DisplayText}" IsHitTestVisible="False"
                          Classes.error="{Binding IsError}" Classes.success="{Binding IsSuccess}"
                          Classes.step="{Binding IsStep}" Classes.warning="{Binding IsWarning}"
                          Classes.failure="{Binding IsFailureSummary}"
@@ -30,6 +35,7 @@
           <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
       </SelectableTextBlock.Styles>
-    </SelectableTextBlock>
+      </SelectableTextBlock>
+    </Grid>
   </Border>
 </UserControl>

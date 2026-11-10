@@ -451,11 +451,12 @@ namespace TestBuilder.Domain.Steps
 
         private StepResult Fail(TestContext context, int errorCode, string error)
         {
+            var code = errorCode == 6 ? TestErrorCode.LabelData : TestErrorCode.Printer;
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.ErrorCode", errorCode);
             context.SetVariable("PrintLabel.Error", error);
-            context.AddReportEntry("Печать этикеток", false, error);
-            _logger.Warning($"[ОШИБКА] Печать этикеток не подтверждена: {error}");
+            context.AddReportEntry("Печать этикеток", false, error, code);
+            _logger.Warning($"[ОШИБКА] Печать этикеток не подтверждена: {error}", code);
             return _failOnPrinterError ? StepResult.False : StepResult.True;
         }
 

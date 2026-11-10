@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 
@@ -43,7 +44,7 @@ public partial class TestViewModel
             catch (Exception ex)
             {
                 StatusMessage = "Не удалось проверить оборудование. Подробности в журнале.";
-                LogUiException("Повторная подготовка профиля", ex);
+                LogUiException("Повторная подготовка профиля", ex, TestErrorCode.Preparation);
                 return;
             }
             finally { IsConnecting = false; }
@@ -105,11 +106,12 @@ public partial class TestViewModel
         {
             ResetProfilePreparation();
             Station.Prepare(RootGraph);
-            Station.CompletePreparation(succeeded: false, NeedsStandInspection);
+            var code = TestErrorCodes.Resolve(ex, TestErrorCode.Preparation);
+            Station.CompletePreparation(succeeded: false, NeedsStandInspection, code);
             Station.Headline = "Не удалось подготовить профиль";
             Station.Guidance = ex.Message;
             StatusMessage = ex.Message;
-            TestingLogger.Error($"Подготовка профиля: {ex.Message}");
+            TestingLogger.Error($"Подготовка профиля: {ex.Message}", code);
             return false;
         }
         finally

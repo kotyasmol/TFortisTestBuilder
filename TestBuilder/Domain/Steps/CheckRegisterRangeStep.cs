@@ -67,7 +67,8 @@ namespace TestBuilder.Domain.Steps
             {
                 CheckResultCapture.Save(context, resultName, false, null);
                 _logger.Warning(
-                    $"[ШАГ] Проверка диапазона → устройство не задано, адрес {registerAddress}, диапазон [{_min}..{_max}].");
+                    $"[ШАГ] Проверка диапазона → устройство не задано, адрес {registerAddress}, диапазон [{_min}..{_max}].",
+                    TestErrorCode.ModbusRead);
 
                 return StepResult.False;
             }
@@ -115,8 +116,9 @@ namespace TestBuilder.Domain.Steps
                 {
                     CheckResultCapture.Save(context, resultName, false, lastMeasuredValue);
                     SavePoeMeasurement(context, actualSlaveId.Value, false, "Регистр не прочитан: " + read.Error);
-                    if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, false, read.Error);
-                    _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {registerAddress}: {read.Error}");
+                    if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, false, read.Error, TestErrorCode.ModbusRead);
+                    _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {registerAddress}: {read.Error}",
+                        TestErrorCode.ModbusRead);
                 }
             }
 

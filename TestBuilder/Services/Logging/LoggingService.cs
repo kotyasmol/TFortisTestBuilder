@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using TestBuilder.Domain.Execution;
 
 namespace TestBuilder.Services.Logging
 {
@@ -27,7 +28,7 @@ namespace TestBuilder.Services.Logging
     /// </summary>
     public sealed class LogEntry
     {
-        public LogEntry(DateTime timestamp, LogLevel level, string category, string message)
+        public LogEntry(DateTime timestamp, LogLevel level, string category, string message, TestErrorCode? code = null)
         {
             Timestamp = timestamp;
             Level = level;
@@ -35,7 +36,7 @@ namespace TestBuilder.Services.Logging
             Message = message ?? string.Empty;
 
             // Error severity wins even when an exception quotes an earlier [OK] message.
-            if (IsFailureSummary || level == LogLevel.Error || Message.Contains("[ОШИБКА]") || Message.Contains("[ERROR]"))
+            if (IsErrorMessage(level, Message))
                 Highlight = LogHighlight.Error;
             else if (Message.Contains("[OK]"))
                 Highlight = LogHighlight.Success;
@@ -43,12 +44,18 @@ namespace TestBuilder.Services.Logging
                 Highlight = LogHighlight.Step;
             else if (level == LogLevel.Warning || Message.Contains("[ОСТАНОВ]"))
                 Highlight = LogHighlight.Warning;
+            Code = code ?? (IsError ? TestErrorCode.Unexpected : null);
         }
 
         public DateTime Timestamp { get; }
         public LogLevel Level { get; }
         public string Category { get; }
         public string Message { get; }
+        public TestErrorCode? Code { get; }
+        public string? CodeText => Code?.Format();
+        public bool HasCode => Code.HasValue;
+        public string DisplayText => $"[{Timestamp:HH:mm:ss}] {Message}";
+        internal string DiagnosticText => CodeText is { } code ? $"{Message} [{code}]" : Message;
 
         public LogHighlight Highlight { get; }
         public bool IsError => Highlight == LogHighlight.Error;
@@ -57,8 +64,11 @@ namespace TestBuilder.Services.Logging
         public bool IsWarning => Highlight == LogHighlight.Warning;
         public bool IsFailureSummary => Message.StartsWith("[ПРИЧИНА СБОЯ]", StringComparison.Ordinal);
 
-        public override string ToString()
-            => $"[{Timestamp:HH:mm:ss}] {Message}";
+        internal static bool IsErrorMessage(LogLevel level, string message) =>
+            level == LogLevel.Error || message.Contains("[ОШИБКА]") || message.Contains("[ERROR]") ||
+            message.StartsWith("[ПРИЧИНА СБОЯ]", StringComparison.Ordinal);
+
+        public override string ToString() => $"[{Timestamp:HH:mm:ss}] {DiagnosticText}";
     }
 
     /// <summary>
@@ -74,12 +84,15 @@ namespace TestBuilder.Services.Logging
         ObservableCollection<LogEntry> Entries { get; }
 
         void Log(LogLevel level, string message);
+        void Log(LogLevel level, string message, TestErrorCode? code) => Log(level, message);
 
         void Trace(string message);
         void Debug(string message);
         void Info(string message);
         void Warning(string message);
         void Error(string message);
+        void Warning(string message, TestErrorCode code) => Log(LogLevel.Warning, message, code);
+        void Error(string message, TestErrorCode code) => Log(LogLevel.Error, message, code);
 
         void Clear();
     }
@@ -192,7 +205,7 @@ namespace TestBuilder.Services.Logging
             => $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [INFO] [System] Запуск теста: {profileName ?? "Без имени профиля"}";
 
         private static string BuildLogLine(LogEntry entry)
-            => $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.Level}] [{entry.Category}] {entry.Message}";
+            => $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.Level}] [{entry.Category}] {entry.DiagnosticText}";
 
         private static bool IsFileError(Exception ex) =>
             ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException;
@@ -260,9 +273,11 @@ namespace TestBuilder.Services.Logging
 
             public ObservableCollection<LogEntry> Entries { get; } = new ObservableCollection<LogEntry>();
 
-            public void Log(LogLevel level, string message)
+            public void Log(LogLevel level, string message) => Log(level, message, null);
+
+            public void Log(LogLevel level, string message, TestErrorCode? code)
             {
-                var entry = new LogEntry(DateTime.Now, level, Category, message);
+                var entry = new LogEntry(DateTime.Now, level, Category, message, code);
 
                 lock (_pendingEntries)
                 {

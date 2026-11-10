@@ -1,12 +1,16 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
+using TestBuilder.Services.Help;
 using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
@@ -39,7 +43,7 @@ public class FailureLogViewTests
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
             using var view = new LogPanelView { DataContext = vm };
-            var window = new Window { Width = 800, Height = 700, Content = view };
+            var window = new Window { Width = 960, Height = 800, Content = view };
             try
             {
                 var start = new StartNodeViewModel();
@@ -64,8 +68,11 @@ public class FailureLogViewTests
                 Assert.Contains("MissingMainValue", cause.Message);
                 Assert.DoesNotContain("MissingCleanupValue", cause.Message);
                 Assert.Equal(LogLevel.Error, cause.Level);
+                Assert.Equal(TestErrorCode.VariableMissing, cause.Code);
+                Assert.Equal(TestErrorCode.VariableMissing, vm.Station.ErrorCode);
                 var fileText = File.ReadAllText(Directory.GetFiles(folder).Single());
-                Assert.EndsWith(cause.Message + Environment.NewLine, fileText);
+                Assert.EndsWith(cause.Message + " [TB1201]" + Environment.NewLine, fileText);
+                Assert.EndsWith("[TB1201]", cause.ToString());
 
                 var logView = view.GetVisualDescendants().OfType<LogEntryView>()
                     .Single(v => ReferenceEquals(v.DataContext, cause));
@@ -73,11 +80,28 @@ public class FailureLogViewTests
                 Assert.Equal(FontWeight.Bold, text.FontWeight);
                 Assert.Equal(Color.Parse(dark ? "#FCA5A5" : "#991B1B"), ((ISolidColorBrush)text.Foreground!).Color);
                 Assert.Contains(logView.GetVisualDescendants().OfType<Border>(), b => b.BorderThickness.Left == 3 && b.Background != null);
+                var link = logView.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "TB1201"));
+                Assert.True(link.IsVisible);
+                var click = link.TranslatePoint(new Point(link.Bounds.Width / 2, link.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(click, MouseButton.Left);
+                window.MouseUp(click, MouseButton.Left);
+                Layout(window);
+                var help = Assert.Single(window.OwnedWindows.OfType<UserGuideWindow>());
+                try
+                {
+                    Layout(help);
+                    var article = Assert.IsType<GuideArticle>(help.GetVisualDescendants().OfType<ListBox>().Single().SelectedItem);
+                    Assert.Equal("TB1201", article.Id);
+                    Assert.Contains("Возможные причины", article.BodyText);
+                    Assert.Contains("Что проверить", article.BodyText);
+                }
+                finally { help.Close(); }
 
                 // Virtualized/recycled rows must return to ordinary styling for the next entry.
                 logView.DataContext = new LogEntry(DateTime.Now, LogLevel.Info, "Testing", "Обычная строка");
                 Layout(window);
                 Assert.Equal(FontWeight.Normal, text.FontWeight);
+                Assert.False(link.IsVisible);
             }
             finally
             {
@@ -106,6 +130,47 @@ public class FailureLogViewTests
     [InlineData(LogLevel.Info, "Обычная строка", LogHighlight.None)]
     public void LogEntry_UsesErrorSeverityBeforeMessageTags(LogLevel level, string message, LogHighlight highlight)
         => Assert.Equal(highlight, new LogEntry(DateTime.Now, level, "Testing", message).Highlight);
+
+    [Fact]
+    public async Task ErrorCatalog_FromSettings_CoversAllCodesAndSearchesByCode()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var expected = Enum.GetValues<TestErrorCode>().Select(code => code.Format());
+            Assert.Equal(expected, TestErrorHelp.All.Select(article => article.Id));
+            Assert.All(TestErrorHelp.All, article =>
+            {
+                Assert.False(string.IsNullOrWhiteSpace(article.Summary));
+                Assert.Equal(2, article.Blocks.Length);
+                Assert.All(article.Blocks, block => Assert.NotEmpty(block.Items));
+            });
+            var view = new SettingsView { DataContext = new SettingsViewModel() };
+            var window = new Window { Width = 1000, Height = 800, Content = view };
+            try
+            {
+                window.Show();
+                Layout(window);
+                var open = view.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Коды ошибок"));
+                open.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var help = Assert.Single(window.OwnedWindows.OfType<UserGuideWindow>());
+                try
+                {
+                    Layout(help);
+                    var list = help.GetVisualDescendants().OfType<ListBox>().Single();
+                    Assert.Equal(TestErrorHelp.All.Count, list.Items.Count);
+                    help.GetVisualDescendants().OfType<TextBox>().Single().Text = "tb1503";
+                    Layout(help);
+                    var article = Assert.IsType<GuideArticle>(Assert.Single(list.Items));
+                    Assert.Equal("TB1503", article.Id);
+                    Assert.Contains("Npcap", article.BodyText);
+                }
+                finally { help.Close(); }
+            }
+            finally { window.Close(); }
+            return true;
+        }, default);
+    }
 
     private static SubtestNodeViewModel FailingSubtest(string name, string variable)
     {

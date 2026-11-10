@@ -52,7 +52,8 @@ namespace TestBuilder.Domain.Steps
             if (actualSlaveId == null)
             {
                 _logger.Warning(
-                    $"[ШАГ] Ожидание значения -> устройство не задано, адрес {registerAddress}, ожидалось {_expectedValue}.");
+                    $"[ШАГ] Ожидание значения -> устройство не задано, адрес {registerAddress}, ожидалось {_expectedValue}.",
+                    TestErrorCode.RegisterWait);
 
                 return StepResult.False;
             }

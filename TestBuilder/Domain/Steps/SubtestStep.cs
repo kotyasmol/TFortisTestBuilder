@@ -67,8 +67,9 @@ namespace TestBuilder.Domain.Steps
             {
                 context.HasExecutionException |= stopOnError;
                 var message = $"[ОШИБКА] Подтест '{_name}' завершился ошибкой: {ex.Message}";
-                _logger.Warning(message);
-                context.AddReportEntry(_name, false, ex.Message);
+                var code = context.Failure?.Code ?? TestErrorCodes.Resolve(ex, TestErrorCode.Subtest);
+                _logger.Warning(message, code);
+                context.AddReportEntry(_name, false, ex.Message, code);
                 if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
                 if (stopOnError)
@@ -88,8 +89,9 @@ namespace TestBuilder.Domain.Steps
             }
 
             var failureMessage = $"[ОШИБКА] Подтест '{_name}' завершился с результатом {status}.";
-            _logger.Warning(failureMessage);
-            context.AddReportEntry(_name, false, status.ToString());
+            var failureCode = (context.CriticalFailure ?? context.Failure)?.Code ?? TestErrorCode.Subtest;
+            _logger.Warning(failureMessage, failureCode);
+            context.AddReportEntry(_name, false, status.ToString(), failureCode);
             if (_runOnFailure) context.SetVariable("Cleanup.Succeeded", false);
 
             if (stopOnError)

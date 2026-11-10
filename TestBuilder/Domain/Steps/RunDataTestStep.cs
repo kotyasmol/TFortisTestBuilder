@@ -133,12 +133,13 @@ namespace TestBuilder.Domain.Steps
                 return Finish(
                     context,
                     false,
-                    $"Не удалось получить список pcap-адаптеров. Проверьте, что установлен Npcap/WinPcap и есть права доступа. {ex.Message}");
+                    $"Не удалось получить список pcap-адаптеров. Проверьте, что установлен Npcap/WinPcap и есть права доступа. {ex.Message}",
+                    TestErrorCode.DataTestStand);
             }
 
             if (devices.Count == 0)
             {
-                return Finish(context, false, "Npcap/WinPcap не вернул ни одного сетевого адаптера.");
+                return Finish(context, false, "Npcap/WinPcap не вернул ни одного сетевого адаптера.", TestErrorCode.DataTestStand);
             }
 
             _logger.Info(
@@ -149,6 +150,7 @@ namespace TestBuilder.Domain.Steps
 
             var allPassed = true;
             var errors = new List<string>();
+            TestErrorCode? firstCode = null;
 
             for (var i = 0; i < _ports.Count; i++)
             {
@@ -170,6 +172,9 @@ namespace TestBuilder.Domain.Steps
                 {
                     allPassed = false;
                     errors.Add(pairError);
+                    firstCode ??= result.FailureCode;
+                    if (_ports.Count > 1)
+                        _logger.Warning($"[ОШИБКА] DataTest {pairError}", result.FailureCode);
                 }
 
                 if (i < _ports.Count - 1 && _interPairDelayMs > 0)
@@ -179,7 +184,7 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
-            return Finish(context, allPassed, string.Join(" | ", errors));
+            return Finish(context, allPassed, string.Join(" | ", errors), firstCode ?? TestErrorCode.DataTestConfig);
         }
 
         private async Task<DataTestPairResult> RunPortPairAsync(
@@ -345,7 +350,8 @@ namespace TestBuilder.Domain.Steps
                 }
 
                 _logger.Warning(
-                    $"DataTest {pairName}: {lastResult.Error} Повтор {attempt + 2}/{InfrastructureRetryCount + 1}.");
+                    $"DataTest {pairName}: {lastResult.Error} Повтор {attempt + 2}/{InfrastructureRetryCount + 1}.",
+                    TestErrorCode.DataTestStand);
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
             }
 
@@ -1019,12 +1025,12 @@ namespace TestBuilder.Domain.Steps
             return string.Join(" ", parts);
         }
 
-        private StepResult Finish(TestContext context, bool passed, string error)
+        private StepResult Finish(TestContext context, bool passed, string error, TestErrorCode code = TestErrorCode.DataTestConfig)
         {
             context.SetVariable($"{_outputVariableName}.Passed", passed);
             context.SetVariable($"{_outputVariableName}.Error", error);
             if (!passed)
-                context.AddReportEntry("Передача данных: " + _outputVariableName, false, error);
+                context.AddReportEntry("Передача данных: " + _outputVariableName, false, error, code);
 
             if (passed)
             {
@@ -1032,7 +1038,7 @@ namespace TestBuilder.Domain.Steps
                 return StepResult.True;
             }
 
-            _logger.Warning($"[ОШИБКА] DataTest не выполнен: {error}");
+            _logger.Warning($"[ОШИБКА] DataTest не выполнен: {error}", code);
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
@@ -1049,7 +1055,7 @@ namespace TestBuilder.Domain.Steps
             if (!result.Passed)
                 details = result.TargetBandwidthMbps == 0 || result.Forward.InfrastructureFailure || result.Reverse?.InfrastructureFailure == true
                     ? pairError : $"{pairError} ({details})";
-            context.AddReportEntry($"Передача данных {port.Name}", result.Passed, details);
+            context.AddReportEntry($"Передача данных {port.Name}", result.Passed, details, result.FailureCode);
             context.SetVariable($"{prefix}.Name", port.Name);
             context.SetVariable($"{prefix}.InIp", port.InIp);
             context.SetVariable($"{prefix}.OutIp", port.OutIp);
@@ -1385,6 +1391,10 @@ namespace TestBuilder.Domain.Steps
         DataTestPortResult Forward,
         DataTestPortResult? Reverse)
     {
+        internal TestErrorCode FailureCode =>
+            Forward.InfrastructureFailure || Reverse?.InfrastructureFailure == true ? TestErrorCode.DataTestStand :
+            TargetBandwidthMbps == 0 ? TestErrorCode.DataTestPair : TestErrorCode.DataTestLoss;
+
         public static DataTestPairResult FromDirections(DataTestPortResult forward, DataTestPortResult? reverse)
         {
             var directions = reverse == null ? new[] { forward } : new[] { forward, reverse };

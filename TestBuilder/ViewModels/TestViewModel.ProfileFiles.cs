@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services;
 
 namespace TestBuilder.ViewModels;
@@ -72,7 +73,7 @@ public partial class TestViewModel
         catch (Exception ex)
         {
             StatusMessage = $"Не удалось обновить профиль: {ex.Message}";
-            LogUiException("Обновление профиля", ex);
+            LogUiException("Обновление профиля", ex, TestErrorCode.ProfileLoad);
         }
     }
 

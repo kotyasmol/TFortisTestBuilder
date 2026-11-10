@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 using TestBuilder.Services.Logging;
@@ -160,7 +161,7 @@ public partial class TestViewModel
         catch (Exception error)
         {
             DiagnosticLog.WriteException("Проверка блокировки стенда", error);
-            TestingLogger.Error("Не удалось прочитать отметку проверки стенда. Запуск заблокирован.");
+            TestingLogger.Error("Не удалось прочитать отметку проверки стенда. Запуск заблокирован.", TestErrorCode.Cleanup);
             return true;
         }
     }
@@ -179,7 +180,7 @@ public partial class TestViewModel
         catch (Exception error)
         {
             DiagnosticLog.WriteException("Сохранение блокировки стенда", error);
-            TestingLogger.Error("Не удалось сохранить блокировку стенда на диске. Выключите питание стенда.");
+            TestingLogger.Error("Не удалось сохранить блокировку стенда на диске. Выключите питание стенда.", TestErrorCode.Cleanup);
         }
     }
 
@@ -189,7 +190,7 @@ public partial class TestViewModel
         catch (Exception error)
         {
             DiagnosticLog.WriteException("Снятие блокировки стенда", error);
-            TestingLogger.Error("Не удалось снять блокировку стенда. Проверьте доступ к локальным данным приложения.");
+            TestingLogger.Error("Не удалось снять блокировку стенда. Проверьте доступ к локальным данным приложения.", TestErrorCode.Cleanup);
             return false;
         }
         NeedsStandInspection = false;

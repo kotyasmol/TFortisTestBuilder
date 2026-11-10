@@ -1479,6 +1479,10 @@ public class ProductionStepTests
 
         Assert.Contains("192.168.0.9 → 192.168.0.8 (попытка 2). Сбой генератора или захвата на стенде.", pair.Error);
         Assert.Contains("192.168.0.8 → 192.168.0.9 (попытка 1). Потери превышают допуск.", pair.Error);
+        Assert.Equal(TestErrorCode.DataTestStand, pair.FailureCode);
+        Assert.Equal(TestErrorCode.DataTestPair, DataTestPairResult.Fail("Адаптер не найден.").FailureCode);
+        Assert.Equal(TestErrorCode.DataTestLoss, DataTestPairResult.FromDirections(
+            reverse with { TargetBandwidthMbps = 1000 }, null).FailureCode);
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Execution
 {
@@ -105,7 +106,8 @@ namespace TestBuilder.Domain.Execution
                 try { branch.Variables.Seed(pair.Key, ParallelVariableSnapshot.Clone(pair.Value)); }
                 catch (InvalidOperationException error)
                 {
-                    throw new InvalidOperationException($"Нельзя разделить переменную '{pair.Key}': {error.Message}", error);
+                    throw new InvalidOperationException($"Нельзя разделить переменную '{pair.Key}': {error.Message}", error)
+                        .WithCode(TestErrorCode.ParallelVariables);
                 }
             }
             foreach (var barrier in RequiredPollAfter) branch.RequiredPollAfter[barrier.Key] = barrier.Value;
@@ -200,7 +202,8 @@ namespace TestBuilder.Domain.Execution
             {
                 HasCriticalError = true;
                 throw new InvalidOperationException("Конфликт переменных параллельных ветвей: " +
-                    string.Join("; ", conflicts) + ". Используйте разные имена и поддерживаемые типы выходных переменных.");
+                    string.Join("; ", conflicts) + ". Используйте разные имена и поддерживаемые типы выходных переменных.")
+                    .WithCode(TestErrorCode.ParallelVariables);
             }
         }
 
@@ -222,12 +225,15 @@ namespace TestBuilder.Domain.Execution
             Variables[name] = value;
         }
 
-        public void AddReportEntry(string name, bool isSuccess, string value)
+        public void AddReportEntry(string name, bool isSuccess, string value, TestErrorCode? errorCode = null)
         {
             ReportEntries.Add(new TestReportEntry(
                 name?.Trim() ?? string.Empty,
                 isSuccess,
-                value ?? string.Empty));
+                value ?? string.Empty)
+            {
+                ErrorCode = isSuccess ? null : errorCode ?? StepLogScope.CurrentStepCode
+            });
         }
 
         public async Task WaitWhilePausedAsync(CancellationToken cancellationToken)

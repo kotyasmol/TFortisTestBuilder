@@ -8,6 +8,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Help;
 
 namespace TestBuilder.Views;
@@ -15,12 +16,27 @@ namespace TestBuilder.Views;
 public sealed class UserGuideWindow : Window
 {
     public static string ReadGuide() => UserGuide.PlainText();
-    public UserGuideWindow()
+    public UserGuideWindow() : this(false, null) { }
+
+    internal static void ShowErrorHelp(Control source, TestErrorCode? code = null)
     {
-        Title = "Инструкция TFortis TestBuilder"; Width = 1120; Height = 820; MinWidth = 850; MinHeight = 540;
+        var guide = new UserGuideWindow(true, code);
+        if (TopLevel.GetTopLevel(source) is Window owner) guide.Show(owner);
+        else guide.Show();
+    }
+
+    private UserGuideWindow(bool errors, TestErrorCode? selectedError)
+    {
+        Title = errors ? "Коды ошибок TFortis TestBuilder" : "Инструкция TFortis TestBuilder";
+        Width = 1120; Height = 820; MinWidth = 850; MinHeight = 540;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var search = new TextBox { Watermark = "Найти в инструкции", Margin = new Thickness(0, 0, 0, 12) };
-        var list = new ListBox { ItemsSource = UserGuide.All, Name = "GuideArticles" };
+        var search = new TextBox
+        {
+            Name = "GuideSearch", Watermark = errors ? "Найти код или причину" : "Найти в инструкции",
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        var articles = errors ? TestErrorHelp.All : UserGuide.All;
+        var list = new ListBox { ItemsSource = articles, Name = "GuideArticles" };
         list.ItemTemplate = new FuncDataTemplate<GuideArticle>((article, _) =>
         {
             var entry = new StackPanel { Spacing = 3 };
@@ -37,9 +53,11 @@ public sealed class UserGuideWindow : Window
         var scroll = new ScrollViewer { Content = content, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
         list.SelectionChanged += (_, _) => { if (list.SelectedItem is GuideArticle article) { title.Text = article.Title; body.ShowArticle(article); scroll.Offset = default; } };
         search.TextChanged += (_, _) => {
-            var matches = UserGuide.Search(search.Text ?? "");
+            var query = search.Text?.Trim() ?? "";
+            var matches = articles.Where(article =>
+                (article.Title + "\n" + article.Group + "\n" + article.BodyText).Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
             list.ItemsSource = matches; list.SelectedIndex = matches.Length > 0 ? 0 : -1;
-            if (matches.Length == 0) { title.Text = "Ничего не найдено"; body.Children.Clear(); body.Children.Add(new TextBlock { Text = "Попробуйте другое слово: профиль, регистр, этикетка.", TextWrapping = TextWrapping.Wrap }); }
+            if (matches.Length == 0) { title.Text = "Ничего не найдено"; body.Children.Clear(); }
         };
         var status = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
         var copy = new Button { Content = "Копировать статью" };
@@ -47,7 +65,7 @@ public sealed class UserGuideWindow : Window
             try { if (Clipboard != null && list.SelectedItem is GuideArticle a) { await Clipboard.SetTextAsync(a.Title + "\n\n" + a.BodyText); status.Text = "Статья скопирована"; } }
             catch { status.Text = "Не удалось скопировать"; }
         };
-        var save = new Button { Content = "Сохранить для печати…" };
+        var save = new Button { Content = "Сохранить для печати…", IsVisible = !errors };
         save.Click += async (_, _) => {
             try {
                 var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions {
@@ -70,6 +88,9 @@ public sealed class UserGuideWindow : Window
         paper.Bind(Border.BackgroundProperty, new DynamicResourceExtension("SurfaceBrush")); paper.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("BorderBrush"));
         Grid.SetColumn(paper, 1); columns.Children.Add(paper);
         var root = new DockPanel { Margin = new Thickness(20) }; DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer); root.Children.Add(columns);
-        Content = root; list.SelectedIndex = 0;
+        Content = root;
+        list.SelectedItem = articles.FirstOrDefault(article => article.Id == selectedError?.Format()) ?? articles.FirstOrDefault();
+        if (selectedError.HasValue && list.SelectedItem is { } selected)
+            Opened += (_, _) => list.ScrollIntoView(selected);
     }
 }

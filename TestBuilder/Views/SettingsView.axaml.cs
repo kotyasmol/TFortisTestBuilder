@@ -26,6 +26,8 @@ namespace TestBuilder.Views
             WindowsPrinterManagement.IsVisible = OperatingSystem.IsWindows();
         }
 
+        private void OnOpenErrorHelp(object? sender, RoutedEventArgs e) => UserGuideWindow.ShowErrorHelp(this);
+
         private async void OnOpenLabelTemplates(object? sender, RoutedEventArgs e)
         {
             if (TopLevel.GetTopLevel(this) is Window owner)
