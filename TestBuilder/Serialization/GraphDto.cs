@@ -388,6 +388,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? FixedSerialNumber { get; set; }
 
+        [JsonPropertyName("expectedSerialPrefix")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ExpectedSerialPrefix { get; set; }
+
         // --- Set Pro MAC / Build MAC / Print Label ---
         [JsonPropertyName("macVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

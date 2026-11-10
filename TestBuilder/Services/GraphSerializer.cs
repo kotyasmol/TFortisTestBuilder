@@ -49,6 +49,8 @@ namespace TestBuilder.Services
         private const string CaptureVariableEqualityType = "Check Variable Equality (capture v1)";
         private const string CaptureCompareVariablesType = "Compare Variables (capture v1)";
         private const string CaptureWaitVariableType = "Wait Variable Until (capture v1)";
+        private const string SerialWithPrefixType = "Get Serial Number (prefix v1)";
+        private const string ReportWithSerialPrefixType = "Build Test Report (prefix v1)";
         internal const string ReportStartType = "Start (report v1)";
         private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
             ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
@@ -80,6 +82,7 @@ namespace TestBuilder.Services
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
+            GetSerialNumberFromServerNodeViewModel serial when !string.IsNullOrWhiteSpace(serial.ExpectedSerialPrefix) => SerialWithPrefixType,
             GetSerialNumberFromServerNodeViewModel => "Get Serial Number",
             SetProMacNodeViewModel => "Set Pro MAC",
             SetPswMacNodeViewModel => "Set PSW MAC (UDP)",
@@ -92,6 +95,7 @@ namespace TestBuilder.Services
             WaitVariableUntilNodeViewModel wait when !string.IsNullOrWhiteSpace(wait.ResultVariableName) => CaptureWaitVariableType,
             WaitVariableUntilNodeViewModel wait when !string.IsNullOrWhiteSpace(wait.ReportName) => "Wait Variable Until (report v1)",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
+            BuildTestReportNodeViewModel report when !string.IsNullOrWhiteSpace(report.ExpectedSerialPrefix) => ReportWithSerialPrefixType,
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel p => p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
             SendTestReportNodeViewModel => "Send Test Report",
@@ -312,6 +316,7 @@ namespace TestBuilder.Services
                     case GetSerialNumberFromServerNodeViewModel s:
                         n.ServerBaseUrl = s.ServerBaseUrl;
                         n.DeviceType = s.DeviceType;
+                        n.ExpectedSerialPrefix = string.IsNullOrWhiteSpace(s.ExpectedSerialPrefix) ? null : s.ExpectedSerialPrefix.Trim();
                         n.CpuIdVariableName = s.CpuIdVariableName;
                         n.TimeoutMs = s.TimeoutMs;
                         n.RetryCount = s.RetryCount;
@@ -415,6 +420,7 @@ namespace TestBuilder.Services
                     case BuildTestReportNodeViewModel br:
                         n.ReportVariableName = br.ReportVariableName;
                         n.SerialVariableName = br.SerialVariableName;
+                        n.ExpectedSerialPrefix = string.IsNullOrWhiteSpace(br.ExpectedSerialPrefix) ? null : br.ExpectedSerialPrefix.Trim();
                         n.TestType = br.TestType;
                         n.IncludeAllVariables = br.IncludeAllVariables;
                         break;
@@ -780,11 +786,12 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? false
                     },
 
-                    "Get Serial Number" or "GET_SERIAL_NUMBER_FROM_SERVER" or "Получить серийный номер" => new GetSerialNumberFromServerNodeViewModel
+                    "Get Serial Number" or SerialWithPrefixType or "GET_SERIAL_NUMBER_FROM_SERVER" or "Получить серийный номер" => new GetSerialNumberFromServerNodeViewModel
                     {
                         Location = location,
                         ServerBaseUrl = n.ServerBaseUrl ?? string.Empty,
-                        DeviceType = GetObjectAsString(n.DeviceType, "PSW+UPS-Box 8x2Pro"),
+                        DeviceType = GetObjectAsString(n.DeviceType, string.Empty),
+                        ExpectedSerialPrefix = n.ExpectedSerialPrefix ?? string.Empty,
                         CpuIdVariableName = n.CpuIdVariableName ?? "Dut.cpu_id",
                         TimeoutMs = n.TimeoutMs ?? 30000,
                         RetryCount = n.RetryCount ?? 1,
@@ -792,7 +799,7 @@ namespace TestBuilder.Services
                         OutputVariableName = n.OutputVariableName ?? "SerialNumber",
                         FailOnError = n.FailOnError ?? true,
                         UseFixedSerialNumber = n.UseFixedSerialNumber ?? false,
-                        FixedSerialNumber = n.FixedSerialNumber ?? 3200428
+                        FixedSerialNumber = n.FixedSerialNumber ?? 0
                     },
 
                     "Set Pro MAC" or "SET_PRO_MAC" or "Запись MAC Pro" or
@@ -900,10 +907,11 @@ namespace TestBuilder.Services
                         ResultVariableName = GetCaptureName(n, CaptureWaitVariableType)
                     },
 
-                    "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
+                    "Build Test Report" or ReportWithSerialPrefixType or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
                     {
                         Location = location,
                         ReportVariableName = n.ReportVariableName ?? "TestReportText",
+                        ExpectedSerialPrefix = n.ExpectedSerialPrefix ?? string.Empty,
                         SerialVariableName = string.Equals(
                             n.SerialVariableName,
                             "SerialShort",

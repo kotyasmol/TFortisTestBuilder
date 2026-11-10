@@ -15,6 +15,7 @@ namespace TestBuilder.Domain.Steps
     /// </summary>
     public sealed class BuildTestReportStep : ITestStep
     {
+        private const string SerialField = "serial_num";
         private readonly ILogger _logger;
         private readonly string _reportVariableName;
         private readonly string _standId;
@@ -23,6 +24,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _testType;
         private readonly bool _includeAllVariables;
         private readonly ReportTemplate? _template;
+        private readonly string _expectedSerialPrefix;
 
         public BuildTestReportStep(
             ILogger logger,
@@ -32,7 +34,8 @@ namespace TestBuilder.Domain.Steps
             string sessionId,
             string testType,
             bool includeAllVariables,
-            ReportTemplate? template = null)
+            ReportTemplate? template = null,
+            string? expectedSerialPrefix = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _reportVariableName = string.IsNullOrWhiteSpace(reportVariableName)
@@ -46,6 +49,7 @@ namespace TestBuilder.Domain.Steps
             _testType = string.IsNullOrWhiteSpace(testType) ? "production" : testType.Trim();
             _includeAllVariables = includeAllVariables;
             _template = template;
+            _expectedSerialPrefix = expectedSerialPrefix?.Trim() ?? string.Empty;
         }
 
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -54,6 +58,9 @@ namespace TestBuilder.Domain.Steps
 
             if (_template?.Validate() is { } error)
                 return Task.FromResult(Fail(context, error));
+
+            if (SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
+                return Task.FromResult(Fail(context, prefixError));
 
             if (string.IsNullOrWhiteSpace(_standId))
             {
@@ -71,13 +78,16 @@ namespace TestBuilder.Domain.Steps
                     $"Полный серийный номер не найден в переменной '{_serialVariableName}'."));
             }
 
+            if (SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix) is { } seriesError)
+                return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
+
             var builder = new StringBuilder();
             var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
             var successful = !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
 
             AppendEntry(builder, "test_result", true, successful ? "1" : "0");
             AppendEntry(builder, "stand_id", true, _standId);
-            AppendEntry(builder, "serial_num", true, serialNumber.ToString(CultureInfo.InvariantCulture));
+            AppendEntry(builder, SerialField, true, serialNumber.ToString(CultureInfo.InvariantCulture));
 
             if (!string.IsNullOrWhiteSpace(_sessionId))
             {
@@ -89,7 +99,8 @@ namespace TestBuilder.Domain.Steps
                 var selected = _template.Project(context, entries, _testType, _reportVariableName);
                 foreach (var entry in selected)
                 {
-                    AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+                    if (!IsSerialField(entry.Name))
+                        AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
                 }
 
                 if (!successful && selected.All(entry => entry.IsSuccess))
@@ -104,14 +115,14 @@ namespace TestBuilder.Domain.Steps
 
                 foreach (var entry in entries)
                 {
-                    if (!string.IsNullOrWhiteSpace(entry.Name))
+                    if (!string.IsNullOrWhiteSpace(entry.Name) && !IsSerialField(entry.Name))
                         AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
                 }
 
                 if (_includeAllVariables)
                 {
                     foreach (var variable in context.Variables
-                                 .Where(item => ReportTemplate.IsLegacyReportVariable(item.Key, _reportVariableName))
+                                 .Where(item => ReportTemplate.IsLegacyReportVariable(item.Key, _reportVariableName) && !IsSerialField(item.Key))
                                  .OrderBy(item => item.Key, StringComparer.Ordinal))
                     {
                         AppendEntry(
@@ -146,6 +157,7 @@ namespace TestBuilder.Domain.Steps
         private StepResult Fail(TestContext context, string error)
         {
             context.Variables.Remove(_reportVariableName);
+            context.Variables.Remove("BuildReport.SerialNumber");
             context.SetVariable("BuildReport.Success", false);
             context.SetVariable("BuildReport.VariableName", _reportVariableName);
             context.SetVariable("BuildReport.Error", error);
@@ -183,6 +195,9 @@ namespace TestBuilder.Domain.Steps
 
             return ReportField.FormatText(value);
         }
+
+        private static bool IsSerialField(string name) =>
+            string.Equals(name.Trim(), SerialField, StringComparison.OrdinalIgnoreCase);
 
         private static void AppendEntry(
             StringBuilder builder,

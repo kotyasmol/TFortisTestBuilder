@@ -13,6 +13,39 @@ namespace TestBuilder.Tests.SerializationTests;
 public class FullProfileSerializationTests
 {
     [Theory]
+    [InlineData("", "")]
+    [InlineData("33", " (prefix v1)")]
+    public void SerialPrefixAndReportSourceSurviveCloningAndProfileRoundTrip(string prefix, string typeSuffix)
+    {
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        var serial = new GetSerialNumberFromServerNodeViewModel
+        {
+            DeviceType = "new-model",
+            ExpectedSerialPrefix = prefix
+        };
+        var report = new BuildTestReportNodeViewModel
+        {
+            SerialVariableName = "Dut.SerialNumber",
+            ExpectedSerialPrefix = prefix
+        };
+        vm.RootGraph.Nodes.Add(serial.Clone());
+        vm.RootGraph.Nodes.Add(report.Clone());
+
+        var json = GraphSerializer.Serialize(vm, "New product");
+        Assert.Contains($"\"Get Serial Number{typeSuffix}\"", json);
+        Assert.Contains($"\"Build Test Report{typeSuffix}\"", json);
+        GraphSerializer.Deserialize(json, vm);
+
+        var restoredSerial = Assert.Single(vm.RootGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>());
+        var restoredReport = Assert.Single(vm.RootGraph.Nodes.OfType<BuildTestReportNodeViewModel>());
+        Assert.Equal("new-model", restoredSerial.DeviceType);
+        Assert.Equal(prefix, restoredSerial.ExpectedSerialPrefix);
+        Assert.Equal("Dut.SerialNumber", restoredReport.SerialVariableName);
+        Assert.Equal(prefix, restoredReport.ExpectedSerialPrefix);
+    }
+
+    [Theory]
     [InlineData("PSW_2G6F_plus_full_algorithm.json", "/test.shtml")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "/cgi-bin/luci/admin/statistics/deviceinfo")]
     public void SelftestUrlsFollowSwitchFamily(string profileFile, string expectedPath)

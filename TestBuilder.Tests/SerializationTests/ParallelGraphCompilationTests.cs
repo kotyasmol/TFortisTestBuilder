@@ -782,20 +782,23 @@ public class ParallelGraphCompilationTests
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         var name = GraphSerializer.Deserialize(ReadProfile(filename), vm);
         var profile = JsonNode.Parse(GraphSerializer.Serialize(vm, name))!;
-        RemoveLayout(profile);
+        NormalizeForComparison(profile);
         return profile;
 
-        static void RemoveLayout(JsonNode? node)
+        static void NormalizeForComparison(JsonNode? node)
         {
             if (node is JsonObject obj)
             {
                 foreach (var field in new[] { "x", "y", "color" }) obj.Remove(field);
+                // A saved debug number has no effect when the node requests the number from the server.
+                if (obj["useFixedSerialNumber"]?.GetValue<bool>() == false)
+                    obj.Remove("fixedSerialNumber");
                 if (obj["nodes"] is JsonArray nodes && obj["connections"] is JsonArray connections)
                     NormalizeGraphNodeIds(nodes, connections);
-                foreach (var property in obj) RemoveLayout(property.Value);
+                foreach (var property in obj) NormalizeForComparison(property.Value);
             }
             else if (node is JsonArray array)
-                foreach (var item in array) RemoveLayout(item);
+                foreach (var item in array) NormalizeForComparison(item);
         }
     }
 

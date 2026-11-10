@@ -19,7 +19,7 @@ public sealed class ProfileEditHistory : IDisposable
         "Address", "AllowGigabit", "AllowedLossPercent", "AllowedTxDeficitPercent", "Arguments", "ArpdBatPath",
         "BaseUrl", "BatchPath", "Bidirectional", "BoardVersion", "Command", "ComparisonType",
         "ConnectOnly", "Copies", "CpuIdVariableName", "CustomName", "DataSourceFlags", "Description", "DestinationIp", "DeviceId", "DeviceType", "DurationMs",
-        "Endpoint", "ExpectedPackets", "ExpectedValue", "FailMessage", "FailOnError", "FailOnPrinterError",
+        "Endpoint", "ExpectedPackets", "ExpectedSerialPrefix", "ExpectedValue", "FailMessage", "FailOnError", "FailOnPrinterError",
         "FailOnTimeout", "FirmwarePath", "FixedSerialNumber", "ForceUpdate", "FromSlaveId", "IncludeAllVariables",
         "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel", "LabelTemplate",
         "LabelWidth", "LeftVariableName", "LiveRead", "LocalIp", "LocalPort", "LocalReportsDirectory",

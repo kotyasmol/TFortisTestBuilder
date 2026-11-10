@@ -577,12 +577,16 @@
                                Watermark="Пусто — адрес сервера из настроек" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="96,*">
+                    <Grid ColumnDefinitions="96,*,8,90">
                       <TextBlock Grid.Column="0" Text="Тип изделия:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1"
                                Text="{Binding DeviceType}"
                                FontSize="{StaticResource FontCaption}"
-                               Watermark="PSW+UPS-Box 8x2Pro" />
+                               Watermark="Тип на сервере"
+                               ToolTip.Tip="Тип изделия из справочника сервера серийных номеров (devType)" />
+                      <TextBox Grid.Column="3" Text="{Binding ExpectedSerialPrefix}" FontSize="{StaticResource FontCaption}"
+                               Watermark="Префикс"
+                               ToolTip.Tip="Ожидаемое начало полного серийного номера. Если поле заполнено, нода отклоняет номера другой серии." />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
@@ -1608,7 +1612,15 @@
                   <nodify:Node.OutputConnectorTemplate><DataTemplate x:DataType="vm:ConnectorViewModel"><nodify:NodeOutput Header="{Binding DisplayTitle}" IsConnected="{Binding IsConnected, Mode=TwoWay}" Anchor="{Binding Anchor, Mode=OneWayToSource}" /></DataTemplate></nodify:Node.OutputConnectorTemplate>
                   <StackPanel Margin="12" Spacing="8" Width="340">
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
-                    <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="128,*,8,90">
+                      <TextBlock Grid.Column="0" Text="Серийник для отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}"
+                               Watermark="Переменная"
+                               ToolTip.Tip="Имя переменной с полным серийным номером, который будет передан в отчёте" />
+                      <TextBox Grid.Column="3" Text="{Binding ExpectedSerialPrefix}" FontSize="{StaticResource FontCaption}"
+                               Watermark="Префикс"
+                               ToolTip.Tip="Ожидаемое начало полного серийного номера. Если поле заполнено, отчёт по другой серии не формируется." />
+                    </Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource ServerTestType}, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}"
                               ToolTip.Tip="Действует при автоматическом составе отчёта"><TextBlock Text="Включать все переменные" TextWrapping="Wrap" /></CheckBox>

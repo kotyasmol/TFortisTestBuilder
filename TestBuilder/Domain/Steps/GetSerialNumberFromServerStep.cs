@@ -24,6 +24,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
         private readonly int? _fixedSerialNumber;
+        private readonly string _expectedSerialPrefix;
 
         public GetSerialNumberFromServerStep(
             IHttpRequestService httpRequestService,
@@ -36,7 +37,8 @@ namespace TestBuilder.Domain.Steps
             int retryDelayMs,
             string outputVariableName,
             bool failOnError,
-            int? fixedSerialNumber = null)
+            int? fixedSerialNumber = null,
+            string? expectedSerialPrefix = null)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -49,6 +51,7 @@ namespace TestBuilder.Domain.Steps
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "SerialNumber" : outputVariableName.Trim();
             _failOnError = failOnError;
             _fixedSerialNumber = fixedSerialNumber;
+            _expectedSerialPrefix = expectedSerialPrefix?.Trim() ?? string.Empty;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -59,6 +62,9 @@ namespace TestBuilder.Domain.Steps
             }
 
             ResetResult(context);
+
+            if (SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
+                return Fail(context, prefixError, string.Empty, string.Empty);
 
             if (_fixedSerialNumber.HasValue)
             {
@@ -100,6 +106,9 @@ namespace TestBuilder.Domain.Steps
                     string.IsNullOrWhiteSpace(result.ErrorMessage) &&
                     result.IsSuccessStatusCode)
                 {
+                    if (SerialNumberPrefix.Check(serial, _expectedSerialPrefix) is { } seriesError)
+                        return Fail(context, seriesError, raw, url);
+
                     SaveSerial(context, serial, raw, url);
                     _logger.Info($"[OK] Serial number received: {serial}.");
                     return StepResult.True;
@@ -136,6 +145,9 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", cpuId);
             context.SetVariable("SerialNumberSource", "FixedDebug");
+            if (SerialNumberPrefix.Check(serial, _expectedSerialPrefix) is { } seriesError)
+                return Fail(context, seriesError, raw, string.Empty);
+
             SaveSerial(context, serial, raw, string.Empty);
 
             _logger.Info(
@@ -234,7 +246,7 @@ namespace TestBuilder.Domain.Steps
 
             if (string.IsNullOrWhiteSpace(_deviceType))
             {
-                throw new InvalidOperationException("DeviceType не задан для запроса серийного номера.");
+                throw new InvalidOperationException("Укажите тип изделия на сервере в ноде получения серийного номера.");
             }
 
             cpuId = ResolveCpuId(context);
