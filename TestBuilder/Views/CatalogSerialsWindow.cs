@@ -15,7 +15,7 @@ internal sealed class CatalogSerialsWindow : Window
 {
     public CatalogSerialsWindow(TestViewModel profile, EquipmentModel model)
     {
-        Title = "Серия изделия";
+        Title = "Справочник изделий";
         Width = 540;
         SizeToContent = SizeToContent.Height;
         CanResize = false;

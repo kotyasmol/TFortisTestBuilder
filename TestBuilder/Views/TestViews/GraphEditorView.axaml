@@ -160,6 +160,16 @@
     <Style Selector="AutoCompleteBox.profileIdentity /template/ TextBox">
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.graphTool">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="Margin" Value="0,0,4,4" />
+    </Style>
+    <Style Selector="Button.graphTool.icon">
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
     <!-- Keep the running graph readable and navigable without disabled-control dimming. -->
     <Style Selector="nodify|NodifyEditor.inspectOnly TextBox">
       <Setter Property="IsReadOnly" Value="True" />
@@ -197,10 +207,10 @@
 
   <Grid RowDefinitions="Auto,*">
 
-    <Border Grid.Row="0" Padding="12,12,12,4" Background="{DynamicResource SurfaceBrush}"
+    <Border Grid.Row="0" Padding="10,8,10,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-        <Grid ColumnDefinitions="Auto,Auto,200,Auto,*" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+        <Grid ColumnDefinitions="Auto,Auto,200,Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
           <Button Command="{Binding ToggleProfilesCommand}" ToolTip.Tip="{Binding ProfilesToggleTip}" AutomationProperties.Name="{Binding ProfilesToggleTip}" Margin="0,0,10,0" Padding="8,6">
             <PathIcon Width="18" Height="18" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
           </Button>
@@ -216,57 +226,104 @@
                    FilterMode="ContainsOrdinal" IsTextCompletionEnabled="False" MinimumPrefixLength="1"
                    Padding="10,5" MinHeight="32" IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Название профиля"
                    ToolTip.Tip="Полное имя: устройство · название проверки. Новое название и «Сохранить» создают копию. С прежним названием обновляется открытый профиль." />
+          <ComboBox Grid.Column="5" x:Name="ProfileProductKindInput" ItemsSource="{Binding ProductKinds}"
+                    SelectedItem="{Binding ProfileProductKind, Mode=TwoWay}" IsEnabled="{Binding CanEditGraph}"
+                    MinWidth="124" MinHeight="32" Margin="6,0,0,0" VerticalContentAlignment="Center"
+                    AutomationProperties.Name="Тип изделия" ToolTip.Tip="Тип изделия" />
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,0,0,8" IsVisible="{Binding CanGoBackGraph}">
           <Button Command="{Binding GoBackGraphCommand}" IsEnabled="{Binding CanGoBackGraph}" ToolTip.Tip="Назад к родительскому графу" AutomationProperties.Name="Назад к родительскому графу" Padding="9,8"><PathIcon Width="18" Height="18" Data="M10 4 L3 11 10 18 12 16 8 12 21 12 21 10 8 10 12 6 Z" /></Button>
           <TextBlock Grid.Column="1" Text="{Binding CurrentGraphPath}" TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="{Binding CurrentGraphPath}" Margin="12,0,0,0" VerticalAlignment="Center" />
         </Grid>
-        <WrapPanel Grid.Row="2" Classes="actions" Name="GraphActions">
-          <TextBlock IsVisible="{Binding !IsActionGraphEditor}" Text="Тип изделия" VerticalAlignment="Center" Margin="0,0,6,8" />
-          <ComboBox IsVisible="{Binding !IsActionGraphEditor}" x:Name="ProfileProductKindInput" ItemsSource="{Binding ProductKinds}"
-                    SelectedItem="{Binding ProfileProductKind, Mode=TwoWay}" IsEnabled="{Binding CanEditGraph}"
-                    MinWidth="145" Margin="0,0,12,8" VerticalContentAlignment="Center" AutomationProperties.Name="Тип изделия"
-                    ToolTip.Tip="Тип сохраняется в профиле и определяет доступные разделы программы." />
-          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding RunGraphCommand}" Classes="primary" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /><TextBlock Text="Запустить" Foreground="{Binding $parent[Button].Foreground}" /></StackPanel></Button>
-          <Button IsVisible="{Binding ShowRetryProfilePreparation}" Command="{Binding RetryProfilePreparationCommand}"
-                  Content="Повторить настройку" AutomationProperties.Name="Повторить настройку" ToolTip.Tip="Выполнить только настройку стенда" Padding="9,8" />
-          <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза" Padding="9,8"><PathIcon Width="18" Height="18" Data="M5 3 H10 V21 H5 Z M14 3 H19 V21 H14 Z" /></Button>
-          <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="primary" ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M6 3 L21 12 6 21 Z" /></Button>
-          <Button Command="{Binding StopTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="danger" ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 4 H20 V20 H4 Z" /></Button>
-          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding SaveGraphCommand}"  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" Padding="9,8"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="18" Height="18" Data="M3 3 H18 L21 6 V21 H3 Z M6 4 V10 H17 V4 Z M6 14 V20 H18 V14 Z" /><TextBlock Text="Сохранить" /></StackPanel></Button>
-          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding ReloadProfileCommand}" Content="Обновить профиль"
-                  ToolTip.Tip="Перечитать сохранённый профиль" AutomationProperties.Name="Обновить профиль" Padding="9,8" />
-          <Button Command="{Binding UndoCommand}"  ToolTip.Tip="Отменить (Ctrl / Cmd + Z)" AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" /></Button>
-          <Button Command="{Binding RedoCommand}"  ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)" AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)" Padding="9,8"><PathIcon Width="18" Height="18" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" /></Button>
-          <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />
-          <Button Content="Пинг" Click="OnConfigurePing" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Адрес, период опроса и отображение в профиле" AutomationProperties.Name="Настройки пинга профиля" Padding="9,8" />
-          <Button Content="Состав отчёта…" Click="OnConfigureReportTemplate"
+        <WrapPanel Grid.Row="2" Name="GraphActions">
+          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding RunGraphCommand}" Classes="graphTool primary"
+                  Content="Запустить" ToolTip.Tip="Запустить тест" AutomationProperties.Name="Запустить тест" />
+          <Button IsVisible="{Binding ShowRetryProfilePreparation}" Command="{Binding RetryProfilePreparationCommand}" Classes="graphTool"
+                  Content="Повторить настройку" AutomationProperties.Name="Повторить настройку" ToolTip.Tip="Выполнить только настройку стенда" />
+          <Button Command="{Binding PauseTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="graphTool icon"
+                  ToolTip.Tip="Пауза" AutomationProperties.Name="Пауза">
+            <PathIcon Width="16" Height="16" Data="M4 4 H9 V20 H4 Z M15 4 H20 V20 H15 Z" />
+          </Button>
+          <Button Command="{Binding ResumeTestCommand}" IsVisible="{Binding IsTestPaused}" Classes="graphTool icon primary"
+                  ToolTip.Tip="Продолжить" AutomationProperties.Name="Продолжить">
+            <PathIcon Width="16" Height="16" Data="M6 3 L21 12 L6 21 Z" />
+          </Button>
+          <Button Command="{Binding StopTestCommand}" IsVisible="{Binding IsTestRunning}" Classes="graphTool icon danger"
+                  ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить">
+            <PathIcon Width="16" Height="16" Data="M5 5 H19 V19 H5 Z" />
+          </Button>
+          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding SaveGraphCommand}" Classes="graphTool"
+                  Content="Сохранить" ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" />
+          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding ReloadProfileCommand}" Classes="graphTool icon"
+                  ToolTip.Tip="Перечитать сохранённый профиль" AutomationProperties.Name="Обновить профиль">
+            <PathIcon Width="16" Height="16" Data="M17.65 6.35 A8 8 0 1 0 19.9 13 H17.88 A6 6 0 1 1 16.24 7.76 L13 11 H21 V3 Z" />
+          </Button>
+          <Button Content="Состав отчёта…" Click="OnConfigureReportTemplate" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" Padding="9,8" />
-          <Button Content="Аварийные действия" Click="OnConfigureFailureCleanup"
+                  ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" />
+          <Button x:Name="CatalogToolsButton" Content="Справочник" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Порядок выполнения при ошибке и остановке" AutomationProperties.Name="Порядок аварийных действий" Padding="9,8" />
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,8,8">
-          <Button Click="OnZoomOutClick" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M4 11 H20 V13 H4 Z" /></Button>
-          <Button Click="OnZoomInClick" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб" Padding="9,8"><PathIcon Width="18" Height="18" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" /></Button>
-          <Button Click="OnCenterGraphClick" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф" Padding="9,8"><PathIcon Width="18" Height="18" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" /></Button>
-          <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,0,0" />
+                  ToolTip.Tip="Серийники и этикетки выбранного изделия" AutomationProperties.Name="Справочник">
+            <Button.Flyout>
+              <Flyout Placement="Bottom">
+                <StackPanel Width="300" Spacing="8" x:DataType="vm:TestViewModel">
+                  <CheckBox Content="Серийники из справочника" IsChecked="{Binding UseCatalogSerials, Mode=TwoWay}" />
+                  <TextBlock Text="{Binding CatalogSerialSeriesSummary}" IsVisible="{Binding UseCatalogSerials}" TextWrapping="Wrap" />
+                  <StackPanel Spacing="4" IsVisible="{Binding ShowCatalogLabelVariants}">
+                    <TextBlock Text="Комплектация этикетки" />
+                    <ComboBox ItemsSource="{Binding CatalogLabelVariants}" SelectedValueBinding="{ReflectionBinding Code}"
+                              SelectedValue="{Binding SelectedCatalogLabelVariant, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                              AutomationProperties.Name="Комплектация этикетки" ToolTip.Tip="Код варианта в штрихкоде этикетки">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CatalogLabelVariant">
+                          <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                  <Button Content="Редактировать изделие…" Click="OnConfigureCatalogSerials"
+                          AutomationProperties.Name="Редактировать изделие" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <Button Content="Ещё" Classes="graphTool" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
+                  ToolTip.Tip="Пинг и аварийные действия" AutomationProperties.Name="Ещё">
+            <Button.Flyout>
+              <MenuFlyout Placement="Bottom">
+                <MenuItem Header="Пинг" Click="OnConfigurePing" />
+                <MenuItem Header="Аварийные действия" Click="OnConfigureFailureCleanup" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <StackPanel Orientation="Horizontal">
+            <Button Command="{Binding UndoCommand}" Classes="graphTool icon" ToolTip.Tip="Отменить (Ctrl / Cmd + Z)"
+                    AutomationProperties.Name="Отменить (Ctrl / Cmd + Z)">
+              <PathIcon Width="16" Height="16" Data="M7 3 L1 9 7 15 V11 H14 C19 11 20 17 16 20 C24 19 24 7 14 7 H7 Z" />
+            </Button>
+            <Button Command="{Binding RedoCommand}" Classes="graphTool icon" ToolTip.Tip="Повторить (Ctrl + Y / Cmd + Shift + Z)"
+                    AutomationProperties.Name="Повторить (Ctrl + Y / Cmd + Shift + Z)">
+              <PathIcon Width="16" Height="16" Data="M17 3 L23 9 17 15 V11 H10 C5 11 4 17 8 20 C0 19 0 7 10 7 H17 Z" />
+            </Button>
+            <Button Command="{Binding ClearGraphCommand}" Classes="graphTool icon" ToolTip.Tip="Очистить граф" AutomationProperties.Name="Очистить граф">
+              <PathIcon Width="16" Height="16" Data="M3 6 H21 V8 H3 Z M9 3 H15 V5 H9 Z M6 9 H8 V19 H16 V9 H18 V19 A2 2 0 0 1 16 21 H8 A2 2 0 0 1 6 19 Z M10 10 H11 V17 H10 Z M13 10 H14 V17 H13 Z" />
+            </Button>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <Button Click="OnZoomOutClick" Classes="graphTool icon" ToolTip.Tip="Уменьшить масштаб" AutomationProperties.Name="Уменьшить масштаб">
+              <PathIcon Width="16" Height="16" Data="M4 11 H20 V13 H4 Z" />
+            </Button>
+            <Button Click="OnZoomInClick" Classes="graphTool icon" ToolTip.Tip="Увеличить масштаб" AutomationProperties.Name="Увеличить масштаб">
+              <PathIcon Width="16" Height="16" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" />
+            </Button>
+            <Button Click="OnCenterGraphClick" Classes="graphTool icon" ToolTip.Tip="Центрировать граф" AutomationProperties.Name="Центрировать граф">
+              <PathIcon Width="16" Height="16" Data="M2 2 H9 V4 H4 V9 H2 Z M15 2 H22 V9 H20 V4 H15 Z M2 15 H4 V20 H9 V22 H2 Z M20 15 H22 V22 H15 V20 H20 Z M8 8 H16 V16 H8 Z" />
+            </Button>
+            <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="2,0,0,4" />
           </StackPanel>
         </WrapPanel>
-        <WrapPanel Grid.Row="3" IsVisible="{Binding ShowQuickActionTools}" Margin="0,0,0,4">
-          <CheckBox Content="Серийники из справочника" IsChecked="{Binding UseCatalogSerials}"
-                    IsEnabled="{Binding CanEditGraph}" Margin="0,0,12,0"
-                    ToolTip.Tip="Тип для сервера, начальный номер и диапазон берутся из справочника выбранного изделия" />
-          <Button Content="Серия изделия…" Click="OnConfigureCatalogSerials" IsEnabled="{Binding CanEditGraph}" Margin="0,0,12,0" />
-          <TextBlock Text="{Binding CatalogSerialSeriesSummary}" IsVisible="{Binding UseCatalogSerials}"
-                     VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
-          <TextBlock Text="Комплектация" IsVisible="{Binding UseCatalogSerials}" VerticalAlignment="Center" Margin="0,0,6,0" />
-          <NumericUpDown Value="{Binding ProfileLabelVariant}" Minimum="0" Maximum="9" Increment="1" FormatString="0"
-                         Width="80" IsVisible="{Binding UseCatalogSerials}" IsEnabled="{Binding CanEditGraph}" />
-        </WrapPanel>
-        <Border Grid.Row="4" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
+        <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
                 CornerRadius="8" Padding="10" Margin="0,4,0,0">
           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
             <TextBlock Text="{Binding PartialRunCaption}" FontWeight="SemiBold" TextWrapping="Wrap" />

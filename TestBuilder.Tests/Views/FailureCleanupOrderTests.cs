@@ -149,8 +149,10 @@ public class FailureCleanupOrderTests
             try
             {
                 owner.Show(); Layout(owner);
-                var toolbar = view.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Порядок аварийных действий");
+                var toolbar = view.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Ещё");
                 Assert.True(toolbar.IsEffectivelyVisible); Assert.True(toolbar.IsEffectivelyEnabled);
+                var menu = Assert.IsType<MenuFlyout>(toolbar.Flyout);
+                Assert.Contains(menu.Items.OfType<MenuItem>(), item => Equals(item.Header, "Аварийные действия"));
                 for (var apply = 0; apply < 2; apply++)
                 {
                     var task = vm.ConfigureFailureCleanupCommand.ExecuteAsync(owner);

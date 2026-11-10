@@ -129,6 +129,30 @@ public partial class TestViewModel
         }
     }
 
+    public int? SelectedCatalogLabelVariant
+    {
+        get => ProfileLabelVariant;
+        set
+        {
+            if (value is int code) ProfileLabelVariant = code;
+        }
+    }
+
+    public IReadOnlyList<CatalogLabelVariant> CatalogLabelVariants
+    {
+        get
+        {
+            var variants = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)?.LabelVariants;
+            var names = variants == null ? new Dictionary<int, string>() : new Dictionary<int, string>(variants);
+            names.TryAdd(0, "По умолчанию");
+            names.TryAdd(ProfileLabelVariant, "Не задана в справочнике");
+            return names.OrderBy(pair => pair.Key)
+                .Select(pair => new CatalogLabelVariant(pair.Key, $"{pair.Key} · {pair.Value}")).ToArray();
+        }
+    }
+
+    public bool ShowCatalogLabelVariants => UseCatalogSerials && CatalogLabelVariants.Count > 1;
+
     public string CatalogSerialSeriesSummary
     {
         get
@@ -148,6 +172,9 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(UseCatalogSerials));
         OnPropertyChanged(nameof(ProfileLabelVariant));
         OnPropertyChanged(nameof(CatalogSerialSeriesSummary));
+        OnPropertyChanged(nameof(CatalogLabelVariants));
+        OnPropertyChanged(nameof(SelectedCatalogLabelVariant));
+        OnPropertyChanged(nameof(ShowCatalogLabelVariants));
     }
 
     private bool UseCatalogAfterModelChange(EquipmentModel? model) =>
@@ -313,6 +340,8 @@ public partial class TestViewModel
         SynchronizeStationItems(EngineerProfileGroups, groups);
     }
 }
+
+public sealed record CatalogLabelVariant(int Code, string DisplayName);
 
 public partial class EngineerProfileGroup : ViewModelBase
 {

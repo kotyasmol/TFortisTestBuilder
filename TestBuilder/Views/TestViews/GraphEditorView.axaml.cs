@@ -95,6 +95,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     {
         if (DataContext is not TestViewModel { CanEditGraph: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
             return;
+        CatalogToolsButton.Flyout?.Hide();
         try { await new CatalogSerialsWindow(vm, vm.ReadCatalogModelForEditing()).ShowDialog(owner); }
         catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or
             UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)

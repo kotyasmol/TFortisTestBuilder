@@ -110,26 +110,79 @@ public class DeviceProfileTests
     }
 
     [Fact]
+    public async Task CatalogMenuKeepsSavedVariantAndSelectsTheCodeShownWithItsName()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            GraphSerializer.Deserialize("""
+                {"name":"Проверка","deviceModelId":"psw-2g-plus-ups-box",
+                 "deviceModel":"PSW-2G+UPS-Box","useCatalogSerials":true,"labelVariant":8,
+                 "nodes":[],"connections":[]}
+                """, vm);
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 780, Height = 600, Content = view };
+            try
+            {
+                window.Show();
+                Layout();
+                var catalogButton = view.FindControl<Button>("CatalogToolsButton")!;
+                var flyout = Assert.IsType<Flyout>(catalogButton.Flyout);
+                flyout.ShowAt(catalogButton);
+                Layout();
+
+                var variants = Assert.IsType<StackPanel>(flyout.Content).GetVisualDescendants()
+                    .OfType<ComboBox>().Single();
+                Assert.True(variants.IsEffectivelyVisible);
+                Assert.Equal(8, vm.ProfileLabelVariant);
+                Assert.Equal(8, Assert.IsType<CatalogLabelVariant>(variants.SelectedItem).Code);
+                var option = variants.Items.OfType<CatalogLabelVariant>().Single(item => item.Code == 2);
+                Assert.Equal("2 · Plastim + PWR300", option.DisplayName);
+                variants.SelectedItem = option;
+                Layout();
+                Assert.Equal(2, vm.ProfileLabelVariant);
+
+                vm.DeviceName = "PSW-2G6F+";
+                Layout();
+                Assert.True(vm.UseCatalogSerials);
+                Assert.Equal(0, vm.ProfileLabelVariant);
+                Assert.False(variants.IsEffectivelyVisible);
+            }
+            finally { window.Close(); }
+
+            void Layout()
+            {
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+                Dispatcher.UIThread.RunJobs();
+            }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public void ChangingKnownDeviceClearsOldId_AndUndoRestoresBothMetadataAndTitle()
     {
         var folder = Path.Combine(Path.GetTempPath(), "device-catalog-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(folder, "catalog"));
-        File.WriteAllText(Path.Combine(folder, "catalog", "equipment-models.json"), """{"schemaVersion":1,"models":[{"id":"known","name":"PSW-2G6F+","aliases":["PSW 2G6F plus"]}]}""");
+        File.WriteAllText(Path.Combine(folder, "catalog", "equipment-models.json"), """{"schemaVersion":1,"models":[{"id":"known","name":"Fixture-2G6F+","aliases":["Fixture 2G6F plus"]}]}""");
         var old = AppSettings.Instance.GraphsFolder;
         AppSettings.Instance.GraphsFolder = folder;
         try
         {
             using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
             vm.NewProfileCommand.Execute(null);
-            vm.DeviceName = "PSW 2G6F plus";
+            vm.DeviceName = "Fixture 2G6F plus";
             Assert.Equal("known", vm.RootGraph.DeviceModelId);
-            Assert.Equal("PSW-2G6F+", vm.DeviceName);
+            Assert.Equal("Fixture-2G6F+", vm.DeviceName);
             Assert.Equal(vm.DeviceName, vm.CurrentProfileName);
             vm.DeviceName = "PSV2G4H+";
             Assert.Null(vm.RootGraph.DeviceModelId);
             vm.UndoCommand.Execute(null);
             Assert.Equal("known", vm.RootGraph.DeviceModelId);
-            Assert.Equal("PSW-2G6F+", vm.DeviceName);
+            Assert.Equal("Fixture-2G6F+", vm.DeviceName);
             vm.UndoCommand.Execute(null);
             Assert.Empty(vm.DeviceName); Assert.Equal("Новый профиль", vm.CurrentProfileName);
             vm.RedoCommand.Execute(null); Assert.Equal("known", vm.RootGraph.DeviceModelId);
