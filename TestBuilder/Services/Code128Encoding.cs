@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,6 +16,28 @@ internal static class Code128Encoding
         "411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 " +
         "114131 311141 411131 211412 211214 211232 2331112").Split(' ');
     public static bool CanUseC(string text) => text.Length > 0 && text.Length % 2 == 0 && text.All(char.IsAsciiDigit);
+
+    // ZPL invocation codes select C for digit pairs and B for the final unpaired digit.
+    public static string ZplData(string text)
+    {
+        if (CanUseC(text)) return ">;" + text;
+        if (text.Length >= 5 && text.All(char.IsAsciiDigit)) return ">;" + text[..^1] + ">6" + text[^1];
+        return ">:" + text;
+    }
+
+    public static string? EncodeZpl(string field, bool automatic, out string text)
+    {
+        var subsetC = field.StartsWith(">;", StringComparison.Ordinal);
+        text = subsetC || field.StartsWith(">:", StringComparison.Ordinal) ? field[2..] : field;
+        if (subsetC && text.Length >= 7 && text[^3..^1] == ">6")
+        {
+            text = text[..^3] + text[^1];
+            return ZplData(text) == field ? EncodeAuto(text) : null;
+        }
+        if (text.Contains('>')) return null;
+        return automatic && text == field ? EncodeAuto(text) : Encode(text, subsetC);
+    }
+
     public static string? EncodeAuto(string text)
     {
         if (CanUseC(text)) return Encode(text, true);

@@ -29,6 +29,13 @@ public sealed class LabelTemplateDefinition
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? VariantName { get; set; }
     public int WidthDots { get; set; } = 354;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? HeightDots { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int OriginXDots { get; set; }
+    public int BarcodeModuleDots { get; set; } = 2;
+    public int BarcodeTopDots { get; set; } = 112;
+    public int BarcodeHeightDots { get; set; } = 34;
     public int PrinterDpi { get; set; } = 300;
     public string Command { get; set; } = "^XA^FO20,20^A0N,30,30^FD{{Serial}}^FS^XZ";
     public LabelTemplateDefinition Copy() => JsonSerializer.Deserialize<LabelTemplateDefinition>(JsonSerializer.Serialize(this))!;
@@ -46,13 +53,16 @@ public sealed class LabelTemplateDefinition
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||
-            WidthDots is < 1 or > 10000 || PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
+            WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
+            BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
+            PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
             (long)SerialOffset + ShortSerialMax > int.MaxValue || ShortSerialDigits is < 1 or > 10 ||
             FirstSerialNumber.HasValue && (FirstSerialNumber < SerialOffset || FirstSerialNumber > (long)SerialOffset + ShortSerialMax) ||
             string.IsNullOrWhiteSpace(Command) || Command.Length > 100000 || (RequiresMac && !UseShortSerial) || (MatchServerSerial && !UseShortSerial))
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийных номеров и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
-            if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType" }.Contains(token.Groups[1].Value))
+            if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
+                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (!IsSafeLabelText(Name) || VariantName != null && !IsSafeLabelText(VariantName) ||
             BarcodePrefix.Any(c => !char.IsAsciiDigit(c)))
@@ -62,10 +72,13 @@ public sealed class LabelTemplateDefinition
     public string Render(string serial, int shortSerial, string mac, int barcodeX = 0, int textX = 0)
     {
         Validate();
+        var barcode = UseShortSerial ? Barcode(shortSerial) : serial;
         var values = new Dictionary<string, string> {
             ["Serial"] = serial, ["ShortSerial"] = shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture),
-            ["Mac"] = mac, ["Barcode"] = UseShortSerial ? Barcode(shortSerial) : serial, ["Name"] = Name,
+            ["Mac"] = mac, ["Barcode"] = barcode, ["Name"] = Name,
             ["Variant"] = string.IsNullOrWhiteSpace(VariantName) ? "" : $"TYPE: {VariantName}",
+            ["ZplBarcode"] = Code128Encoding.ZplData(barcode), ["BarcodeModuleDots"] = BarcodeModuleDots.ToString(CultureInfo.InvariantCulture),
+            ["BarcodeTopDots"] = BarcodeTopDots.ToString(CultureInfo.InvariantCulture), ["BarcodeHeightDots"] = BarcodeHeightDots.ToString(CultureInfo.InvariantCulture),
             ["BarcodeType"] = Code128Encoding.CanUseC(serial) ? "1C" : "1B",
             ["WidthDots"] = WidthDots.ToString(CultureInfo.InvariantCulture), ["BarcodeX"] = barcodeX.ToString(CultureInfo.InvariantCulture),
             ["TextX"] = textX.ToString(CultureInfo.InvariantCulture) };
@@ -84,6 +97,12 @@ public static class LabelTemplateCatalog
         {
             var current = Defaults().Single(t => t.Id == template.Id);
             template.Command = current.Command;
+            if (template.Language == "ZPL" && template.HeightDots == null)
+            {
+                if (template.WidthDots == 354) template.WidthDots = current.WidthDots;
+                template.HeightDots = current.HeightDots;
+                if (template.OriginXDots == 0) template.OriginXDots = current.OriginXDots;
+            }
             if (current.UseShortSerial && template.BarcodePrefix.Length == 3 &&
                 current.BarcodePrefix == "0" + template.BarcodePrefix)
                 template.BarcodePrefix = current.BarcodePrefix;
@@ -105,7 +124,7 @@ public static class LabelTemplateCatalog
             Logging.DiagnosticLog.WriteException("Каталог моделей для этикеток", ex);
             return templates;
         }
-        var stock = Defaults().First(template => template.Language == "ZPL" && template.UseShortSerial);
+        var stock = Legacy("PswUpsBox8x2Pro").CopyUpgraded();
         foreach (var model in catalog.Models)
         {
             if (model is not { SerialSeries: not null, LabelCode: not null } ||
@@ -129,5 +148,6 @@ public static class LabelTemplateCatalog
                 throw new InvalidOperationException($"Диапазоны поиска шаблонов «{ranges[i - 1].Name}» и «{ranges[i].Name}» пересекаются.");
     }
     public static LabelTemplateDefinition Legacy(string id) => AppSettings.Instance.LabelTemplates.FirstOrDefault(t => t.Id == id)?.Copy()
+        ?? Defaults().FirstOrDefault(t => t.Id == id)
         ?? throw new InvalidOperationException($"Не найден шаблон этикетки {id}. Выберите шаблон в ноде.");
 }

@@ -26,6 +26,12 @@ namespace TestBuilder.Views
             WindowsPrinterManagement.IsVisible = OperatingSystem.IsWindows();
         }
 
+        private async void OnOpenLabelTemplates(object? sender, RoutedEventArgs e)
+        {
+            if (TopLevel.GetTopLevel(this) is Window owner)
+                await new LabelTemplatesWindow(settingsOnly: true).ShowDialog(owner);
+        }
+
         private async void OnOpenWindowsPrinters(object? sender, RoutedEventArgs e)
         {
             if (!OperatingSystem.IsWindows() || sender is not Button button ||

@@ -51,17 +51,20 @@ public class LabelPreviewTests
     }
 
     [Fact]
-    public void ProLabel_AlignsSerialWithMac_AndKeepsCalibratedBarcodePosition()
+    public void ProLabel_CentersCode128WithQuietZonesOnThePhysicalLabel()
     {
         var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "PswUpsBox8x2Pro");
         var preview = LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC");
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
-        Assert.Equal(510, sn.X);
-        Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
+        Assert.Equal(295, preview.Width);
+        Assert.Equal(154, preview.Height);
+        Assert.Equal(sn.X, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
-        Assert.Equal(268, bars.Width);
-        Assert.Equal(510, bars.X);
-        Assert.Equal(644, bars.X + bars.Width / 2);
+        Assert.Equal(Code128Encoding.EncodeAuto("003200428"), bars.Bars);
+        Assert.Equal(202, bars.Width);
+        Assert.InRange(bars.X - preview.Left - bars.QuietZone, 0, 28);
+        Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 0, 28);
+        Assert.True(bars.Y + bars.Height <= preview.Height);
         Assert.Empty(preview.Message);
     }
 

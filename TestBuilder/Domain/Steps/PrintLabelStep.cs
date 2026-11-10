@@ -200,12 +200,12 @@ namespace TestBuilder.Domain.Steps
                     : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
             }
             catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
-            string singleLabel;
             string language;
             string logDescription;
 
             var printedSerial = serial;
             var printedMac = "";
+            var printedShortSerial = 0;
             if (printTemplate.UseShortSerial)
             {
                 int fullSerial;
@@ -283,7 +283,7 @@ namespace TestBuilder.Domain.Steps
                 var barcode = printTemplate.Barcode(shortSerial);
                 printedSerial = fullSerial == 0 ? serial : fullSerial.ToString(CultureInfo.InvariantCulture);
                 printedMac = mac;
-                singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, shortSerial, mac);
+                printedShortSerial = shortSerial;
                 language = printTemplate.Language;
                 logDescription =
                     $"этикеток {printTemplate.Name}: SN={printedSerial}, MAC={mac}, barcode={barcode}";
@@ -311,10 +311,16 @@ namespace TestBuilder.Domain.Steps
                     if (seriesError != null)
                         return Fail(context, 6, seriesError);
                 }
-                singleLabel = LabelPrintContent.Render(printTemplate, serial, 0, "");
                 language = printTemplate.Language;
                 logDescription = $"серийного номера {serial}";
             }
+
+            string singleLabel;
+            try { singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, printedShortSerial, printedMac); }
+            catch (Exception ex) when (ex is InvalidOperationException or FormatException or OverflowException)
+            { return Fail(context, 6, ex.Message); }
+            if (LabelPreview.Parse(printTemplate, singleLabel).BarcodeError is { } barcodeError)
+                return Fail(context, 6, barcodeError);
 
             var printData = Repeat(singleLabel, _copies);
             var bytes = GetPrinterEncoding().GetBytes(printData);
@@ -413,7 +419,7 @@ namespace TestBuilder.Domain.Steps
         {
             var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == id);
             if (shortSerial < 0 || shortSerial > template.ShortSerialMax) throw new ArgumentOutOfRangeException(nameof(shortSerial));
-            return template.Render((template.SerialOffset + shortSerial).ToString(CultureInfo.InvariantCulture), shortSerial, mac);
+            return LabelPrintContent.Render(template, (template.SerialOffset + shortSerial).ToString(CultureInfo.InvariantCulture), shortSerial, mac);
         }
 
         private static bool TryReadIntVariable(TestContext context, string variableName, out int value)

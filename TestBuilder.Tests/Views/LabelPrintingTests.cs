@@ -17,8 +17,8 @@ namespace TestBuilder.Tests.Views;
 public class LabelPrintingTests
 {
     [Theory]
-    [InlineData(0, "3200428", "003200428")]
-    [InlineData(0, "612447", "000612447")]
+    [InlineData(0, "3200428", "00320042>68")]
+    [InlineData(0, "612447", "00061244>67")]
     [InlineData(1, "12345678", "12345678")]
     public async Task PrintsSelectedTemplate_RepeatKeepsSnapshot_AndFailureDoesNotReplaceIt(int kind, string serial, string barcode)
     {
@@ -68,7 +68,7 @@ public class LabelPrintingTests
         await vm.PrintCommand.ExecuteAsync(null);
         var job = Assert.Single(printer.Jobs);
         Assert.Contains("^FDSN: 3300579^FS", job);
-        Assert.Contains("^FD>:003300579^FS", job);
+        Assert.Contains("^FD>;00330057>69^FS", job);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class LabelPrintingTests
         Assert.Equal(2, vm.LabelOptions.Count);
         Assert.Contains(vm.Preview!.Elements, e => e.Text == device);
         await vm.PrintCommand.ExecuteAsync(null);
-        Assert.Contains("000612447", Assert.Single(printer.Jobs));
+        Assert.Contains("00061244>67", Assert.Single(printer.Jobs));
         Assert.Contains("^FDPSW-2G6F+", printer.Jobs[0]);
         device = "PSW+UPS-Box 8x2Pro";
         vm.RefreshTemplates();
@@ -89,7 +89,7 @@ public class LabelPrintingTests
         Assert.Equal(printer.Jobs[0], printer.Jobs[1]);
         vm.SerialNumber = "428";
         await vm.PrintCommand.ExecuteAsync(null);
-        Assert.Contains("003200428", printer.Jobs[2]);
+        Assert.Contains("00320042>68", printer.Jobs[2]);
         Assert.Contains("^FDPSW+UPS-Box 8x2Pro", printer.Jobs[2]);
     }
 
@@ -168,7 +168,7 @@ public class LabelPrintingTests
             await vm.PrintTestLabelCommand.ExecuteAsync(null);
             var template = LabelTemplateCatalog.Defaults()[0];
             template.BarcodePrefix = "0000";
-            var expected = kind == 0 ? template.Render("00000000", 0, "00:00:00:00:00:00")
+            var expected = kind == 0 ? LabelPrintContent.Render(template, "00000000", 0, "00:00:00:00:00:00")
                 : PrintLabelStep.BuildEpl("00000000");
             Assert.Equal(expected, Assert.Single(printer.Jobs));
             Assert.Equal("Workstation printer", Assert.Single(printer.Names));
@@ -190,7 +190,7 @@ public class LabelPrintingTests
 
     [Theory]
     [InlineData("PSW+Box 8x2Pro · ZPL", "^FDPSW+Box 8x2Pro", "^FDSN: 00000000", "^FDMAC: 00:00:00:00:00:00")]
-    [InlineData("PSW-2G4F-Ex · DIN · ZPL", "^FDPSW-2G4F-Ex", "^FDSN: 00000000", "^FDTYPE: DIN")]
+    [InlineData("PSW-2G4F-Ex · DIN · ZPL", "^FDPSW-2G4F-Ex", "^FDSN: 00000000", "^FD>;00000000>60^FS")]
     [InlineData("RTL-POE · EPL", "q354", "\"00000000\"", "P1,1")]
     public async Task TestPrintSelectsCatalogLabelIndependentlyOfProduct(string label, params string[] fields)
     {
@@ -207,12 +207,40 @@ public class LabelPrintingTests
 
         var job = Assert.Single(printer.Jobs);
         foreach (var field in fields) Assert.Contains(field, job);
+        Assert.DoesNotContain("TYPE:", job);
         Assert.Equal(1, job.Split(label.EndsWith("ZPL") ? "^XA" : "P1,1").Length - 1);
         Assert.Empty(http.Url);
         Assert.Equal("PSW-2G6F+", vm.SelectedProductName);
         Assert.Equal("invalid", vm.SerialNumber);
         Assert.Equal("invalid", vm.MacAddress);
         Assert.False(vm.CanRepeat);
+    }
+
+    [Fact]
+    public async Task CatalogTestLabelsUseTheSharedPrintGeometry()
+    {
+        var original = AppSettings.Instance.LabelTemplates;
+        var printer = new Printer();
+        try
+        {
+            var templates = LabelTemplateCatalog.Defaults();
+            templates[0].WidthDots = 340;
+            templates[0].OriginXDots = 480;
+            templates[0].BarcodeHeightDots = 30;
+            AppSettings.Instance.LabelTemplates = templates;
+            using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer)
+                { PrinterName = "TSC TE310" };
+
+            foreach (var name in new[] { "PSW-2G4F-Box · Plastim · ZPL", "PSW+Box 8x2Pro · ZPL" })
+            {
+                vm.SelectedTestLabel = Assert.Single(vm.TestLabelOptions, item => item.Name == name);
+                await vm.PrintTestLabelCommand.ExecuteAsync(null);
+            }
+
+            Assert.Equal(2, printer.Jobs.Count);
+            Assert.All(printer.Jobs, job => Assert.Contains("^FO549,112^BY2^BCN,30,N,N,N", job));
+        }
+        finally { AppSettings.Instance.LabelTemplates = original; }
     }
 
     [Theory]

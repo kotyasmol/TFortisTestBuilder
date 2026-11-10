@@ -69,6 +69,15 @@ internal static class LabelPrintContent
 
     public static string Render(LabelTemplateDefinition template, string serial, int shortSerial, string mac)
     {
+        if (template.Language == "ZPL" && template.Command.Contains("{{ZplBarcode}}", StringComparison.Ordinal))
+        {
+            var barcode = template.UseShortSerial ? template.Barcode(shortSerial) : serial;
+            var bars = Code128Encoding.EncodeAuto(barcode)
+                ?? throw new InvalidOperationException("Данные штрихкода Code 128 недопустимы.");
+            var width = bars.Sum(c => c - '0') * template.BarcodeModuleDots;
+            var x = template.OriginXDots + Math.Max(0, (template.WidthDots - width) / 2);
+            return template.Render(serial, shortSerial, mac, x, template.OriginXDots + 8);
+        }
         if (template.UseShortSerial) return template.Render(serial, shortSerial, mac);
         var kind = Code128Encoding.CanUseC(serial) ? "1C" : "1B";
         var module = 2;
@@ -88,9 +97,9 @@ internal static class LabelPrintContent
             font = int.Parse(text.Groups[1].Value, CultureInfo.InvariantCulture);
             multiplier = int.Parse(text.Groups[2].Value, CultureInfo.InvariantCulture);
         }
-        var bars = kind == "1" ? Code128Encoding.EncodeAuto(serial)
+        var eplBars = kind == "1" ? Code128Encoding.EncodeAuto(serial)
             : Code128Encoding.Encode(serial, kind == "1C");
-        var barcodeWidth = (bars?.Sum(c => c - '0') ?? 0) * (long)module;
+        var barcodeWidth = (eplBars?.Sum(c => c - '0') ?? 0) * (long)module;
         var textWidth = (long)EplFontMetrics.Size(font, template.PrinterDpi).Width * multiplier * serial.Length;
         return template.Render(serial, 0, "", (int)Math.Max(0, (template.WidthDots - barcodeWidth) / 2),
             (int)Math.Max(0, (template.WidthDots - textWidth) / 2));

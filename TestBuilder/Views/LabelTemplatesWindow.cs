@@ -11,7 +11,7 @@ using TestBuilder.Services;
 namespace TestBuilder.Views;
 public sealed class LabelTemplatesWindow : Window
 {
-    public LabelTemplatesWindow(LabelTemplateDefinition? profileTemplate = null)
+    public LabelTemplatesWindow(LabelTemplateDefinition? profileTemplate = null, bool settingsOnly = false)
     {
         Title = "Шаблоны этикеток"; Width = 1040; Height = 800; MinWidth = 800; MinHeight = 600;
         var templates = new ObservableCollection<LabelTemplateDefinition>(AppSettings.Instance.LabelTemplates.Select(t => t.Copy()));
@@ -25,7 +25,7 @@ public sealed class LabelTemplatesWindow : Window
         var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         var footer = new StackPanel { Spacing = 8 };
         footer.Children.Add(status);
-        var save = new Button { Content = "Сохранить и выбрать шаблон" }; footer.Children.Add(save);
+        var save = new Button { Content = settingsOnly ? "Сохранить настройки" : "Сохранить и выбрать шаблон" }; footer.Children.Add(save);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("260,16,*") };
         var left = new DockPanel(); var actions = new StackPanel { Spacing = 8 };
@@ -39,13 +39,19 @@ public sealed class LabelTemplatesWindow : Window
         actions.Children.Add(add); actions.Children.Add(copy); actions.Children.Add(remove); DockPanel.SetDock(actions, Dock.Bottom); left.Children.Add(actions); left.Children.Add(list);
         grid.Children.Add(left);
         var fields = new StackPanel { Spacing = 6 }; var inputs = new List<TextBox>();
-        fields.Children.Add(new TextBlock { Text = "Пример этикетки", FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        var previewPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 12) };
+        previewPanel.Children.Add(new TextBlock { Text = "Пример этикетки", FontWeight = Avalonia.Media.FontWeight.SemiBold });
         var preview = new LabelPreviewControl { Height = 150, MaxWidth = 500 };
+        var paperSize = new TextBlock();
         var previewMessage = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
-        fields.Children.Add(preview); fields.Children.Add(previewMessage);
+        previewPanel.Children.Add(preview); previewPanel.Children.Add(paperSize); previewPanel.Children.Add(previewMessage);
         void UpdatePreview()
         {
-            preview.Preview = list.SelectedItem is LabelTemplateDefinition t ? LabelPreview.FromInput(t, "", "") : null;
+            var template = list.SelectedItem as LabelTemplateDefinition;
+            preview.Preview = template == null ? null : LabelPreview.FromInput(template, "", "");
+            paperSize.Text = template?.HeightDots is int height && template.PrinterDpi > 0
+                ? $"{template.WidthDots * 25.4 / template.PrinterDpi:0.#} × {height * 25.4 / template.PrinterDpi:0.#} мм · {template.PrinterDpi} dpi"
+                : "";
             previewMessage.Text = preview.Preview?.Message;
         }
         var previewTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -53,7 +59,10 @@ public sealed class LabelTemplatesWindow : Window
         void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
         Closed += (_, _) => previewTimer.Stop();
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
-            ("Ширина, точки", "WidthDots"), ("Разрешение EPL, dpi (203 или 300)", "PrinterDpi"), ("Смещение полного серийного номера", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
+            ("Разрешение принтера, dpi (203 или 300)", "PrinterDpi"), ("Ширина этикетки, точки", "WidthDots"), ("Высота этикетки, точки", "HeightDots"),
+            ("Левый край этикетки, точки", "OriginXDots"), ("Ширина узкой полосы ZPL, точки", "BarcodeModuleDots"),
+            ("Отступ штрихкода ZPL сверху, точки", "BarcodeTopDots"), ("Высота штрихкода ZPL, точки", "BarcodeHeightDots"),
+            ("Смещение полного серийного номера", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
             ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
         {
             fields.Children.Add(new TextBlock { Text = label });
@@ -66,12 +75,13 @@ public sealed class LabelTemplatesWindow : Window
             var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
             box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };
         }
-        fields.Children.Add(new TextBlock { Text = "Команда принтера. Подстановки: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Barcode}}, {{WidthDots}}, {{BarcodeX}}, {{TextX}}, {{BarcodeType}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        fields.Children.Add(new TextBlock { Text = "Команда принтера. Данные: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Variant}}, {{Barcode}}. Для компактного Code 128 в ZPL используйте {{ZplBarcode}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
         command.TextChanged += (_, _) => SchedulePreview();
         list.SelectionChanged += (_, _) => { fields.DataContext = list.SelectedItem; UpdatePreview(); };
-        var scroll = new ScrollViewer { Content = fields }; Grid.SetColumn(scroll, 2); grid.Children.Add(scroll);
+        var right = new DockPanel(); DockPanel.SetDock(previewPanel, Dock.Top); right.Children.Add(previewPanel);
+        right.Children.Add(new ScrollViewer { Content = fields }); Grid.SetColumn(right, 2); grid.Children.Add(right);
         root.Children.Add(grid); Content = root;
         list.SelectedItem = templates.FirstOrDefault(t => t.Id == profileTemplate?.Id) ?? templates.FirstOrDefault();
         save.Click += (_, _) =>

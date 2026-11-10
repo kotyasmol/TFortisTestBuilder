@@ -65,7 +65,11 @@ namespace TestBuilder.ViewModels
         }
 
         [ObservableProperty] private bool isSettingsOpen;
-        partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(WorkspaceTitle));
+        partial void OnIsSettingsOpenChanged(bool value)
+        {
+            OnPropertyChanged(nameof(WorkspaceTitle));
+            if (!value && IsLabelsPage) LabelPrintingVM.RefreshTemplates();
+        }
 
         [RelayCommand]
         private void OpenSettings() => IsSettingsOpen = true;

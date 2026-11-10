@@ -7,14 +7,16 @@ using System.Text.RegularExpressions;
 namespace TestBuilder.Services;
 
 public sealed record LabelPreviewElement(double X, double Y, double Width, double Height,
-    string Text = "", string Bars = "", double Stroke = 0);
+    string Text = "", string Bars = "", double Stroke = 0, double QuietZone = 0);
 
 /// <summary>A bounded, offline approximation of the rendered printer command, never a print job.</summary>
 public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, double Left, double Top,
     double Width, double Height, string Message, bool IsSample = false)
 {
+    private const string UnverifiedBarcode = "Не удалось проверить параметры штрихкода Code 128.";
     public bool HasContent => Elements.Count > 0;
     public bool HasMessage => Message.Length > 0;
+    internal string? BarcodeError { get; init; }
 
     public static LabelPreview FromInput(LabelTemplateDefinition template, string serial, string mac)
     {
@@ -50,7 +52,7 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
     public static LabelPreview Parse(LabelTemplateDefinition template, string command)
     {
         if (command.Length > 100000) return Empty("Шаблон слишком большой для предпросмотра.");
-        var parser = new Parser(template.WidthDots, template.PrinterDpi);
+        var parser = new Parser(template);
         try
         {
             if (template.Language == "ZPL") parser.Zpl(command);
@@ -59,15 +61,21 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
             return parser.Build();
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
-        { return Empty("Не удалось разобрать команду шаблона для предпросмотра."); }
+        {
+            var hasCode128 = template.Language == "ZPL" ? command.Contains("^BC", StringComparison.Ordinal)
+                : Regex.IsMatch(command, @"(?m)^\s*B[^\r\n,]*,[^,]*,[^,]*,1[BC]?,");
+            return Empty("Не удалось разобрать команду шаблона для предпросмотра.") with
+            { BarcodeError = hasCode128 ? UnverifiedBarcode : null };
+        }
     }
 
-    private sealed class Parser(int width, int dpi)
+    private sealed class Parser(LabelTemplateDefinition template)
     {
         private readonly List<LabelPreviewElement> _elements = new();
         private readonly HashSet<string> _unsupported = new();
-        private double _width = width, _height;
-        private bool _explicitWidth;
+        private double _width = template.WidthDots, _height = template.HeightDots ?? 0;
+        private readonly double _left = template.OriginXDots;
+        private string? _barcodeError;
         private static double Number(string[] args, int i, double fallback = 0)
         {
             if (i >= args.Length || string.IsNullOrWhiteSpace(args[i])) return fallback;
@@ -89,14 +97,20 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
             if (text.Length > 256) { _unsupported.Add("длинный текст"); return; }
             Add(new(x, y, Math.Max(charWidth, text.Length * charWidth), height, text));
         }
-        private void Barcode(double x, double y, double height, double module, string text, bool subsetC, bool readable, bool above = false, bool automatic = false)
+        private void Barcode(double x, double y, double height, double module, string text, string? bars, bool readable, bool above = false)
         {
-            var bars = automatic ? Code128Encoding.EncodeAuto(text) : Code128Encoding.Encode(text, subsetC);
-            if (bars == null) { _unsupported.Add("содержимое Code128"); return; }
+            if (bars == null || module is < 1 or > 10 || height <= 0)
+            {
+                _barcodeError = UnverifiedBarcode;
+                return;
+            }
             var w = bars.Sum(c => c - '0') * module;
-            Add(new(x, y, w, height, Bars: bars));
+            Add(new(x, y, w, height, Bars: bars, QuietZone: 10 * module));
             if (readable) Text(x, above ? y - 23 : y + height + 3, 20, Math.Min(12, w / Math.Max(1, text.Length)), text);
         }
+
+        private void LimitWidth(double width) => _width = Math.Min(_width, width - _left);
+        private void LimitHeight(double height) => _height = _height > 0 ? Math.Min(_height, height) : height;
 
         // Syntax: Zebra ZPL Programming Guide, ^FO/^A/^BC/^BY/^GB. Unsupported visual
         // commands are reported; a barcode in another symbology is never drawn as Code128.
@@ -117,8 +131,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                     case "XZ": return; // Preview one label, regardless of requested copies.
                     case "FO": x = Number(a, 0) + homeX; y = Number(a, 1) + homeY; break;
                     case "LH": homeX = Number(a, 0); homeY = Number(a, 1); break;
-                    case "PW": _width = Number(a, 0); _explicitWidth = true; break;
-                    case "LL": _height = Number(a, 0); break;
+                    case "PW": LimitWidth(Number(a, 0)); break;
+                    case "LL": LimitHeight(Number(a, 0)); break;
                     case "CF": defaultH = fontH = Number(a, 1, 30); defaultW = fontW = Number(a, 2, fontH * .6); break;
                     case "A0":
                         if (Part(a, 0) is not ("" or "N")) { _unsupported.Add("поворот текста"); skip = true; }
@@ -131,8 +145,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         break;
                     case "BC":
                         barcode = true;
-                        if (Part(a, 0) is not ("" or "N")) { _unsupported.Add("поворот штрихкода"); skip = true; }
-                        if (Part(a, 4) == "Y" || Part(a, 5) is not ("" or "N" or "A")) { _unsupported.Add("режим Code128"); skip = true; }
+                        if (Part(a, 0) is not ("" or "N") || Part(a, 4) == "Y" || Part(a, 5) is not ("" or "N" or "A"))
+                        { _barcodeError = UnverifiedBarcode; skip = true; }
                         barH = Number(a, 1, barH); readable = Part(a, 2, "Y") != "N"; above = Part(a, 3) == "Y"; auto = Part(a, 5) == "A"; break;
                     case "FD":
                         if (skip) break;
@@ -146,10 +160,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         }
                         else
                         {
-                            var subsetC = value.StartsWith(">;", StringComparison.Ordinal);
-                            var data = value.StartsWith(">:", StringComparison.Ordinal) || subsetC ? value[2..] : value;
-                            if (data.Contains('>')) { _unsupported.Add("переключение Code128"); break; }
-                            Barcode(x, y, barH, module, data, subsetC || (auto && Code128Encoding.CanUseC(data)), readable, above);
+                            var bars = Code128Encoding.EncodeZpl(value, auto, out var data);
+                            Barcode(x, y, barH, module, data, bars, readable, above);
                         }
                         break;
                     case "GB": Add(new(x, y, Math.Max(1, Number(a, 0)), Math.Max(1, Number(a, 1)), Stroke: Math.Max(1, Number(a, 2, 1)))); break;
@@ -165,8 +177,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
             foreach (var line in command.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))
             {
                 var op = line[0]; var a = line[1..].Split(',');
-                if (op == 'q') { _width = Number(a, 0); _explicitWidth = true; continue; }
-                if (op == 'Q') { _height = Number(a, 0); continue; }
+                if (op == 'q') { LimitWidth(Number(a, 0)); continue; }
+                if (op == 'Q') { LimitHeight(Number(a, 0)); continue; }
                 if (op == 'P') break;
                 // Orientation relative to the feed does not change the readable layout.
                 if (line is "ZT" or "ZB") continue;
@@ -176,20 +188,25 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 if (!field.Success) { _unsupported.Add("поле EPL"); continue; }
                 a = field.Groups[1].Value.TrimEnd(',').Split(','); var data = field.Groups[2].Value;
                 var x = Number(a, 0); var y = Number(a, 1);
-                if (Number(a, 2) != 0) { _unsupported.Add("поворот EPL"); continue; }
+                if (Number(a, 2) != 0)
+                {
+                    if (op == 'B' && Part(a, 3) is "1" or "1B" or "1C") _barcodeError = UnverifiedBarcode;
+                    _unsupported.Add("поворот EPL");
+                    continue;
+                }
                 if (op == 'A')
                 {
                     var font = (int)Number(a, 3, 3);
                     if (font is < 1 or > 5 || Part(a, 6) != "N") { _unsupported.Add("шрифт EPL"); continue; }
-                    var size = EplFontMetrics.Size(font, dpi);
+                    var size = EplFontMetrics.Size(font, template.PrinterDpi);
                     Text(x, y, size.Height * Number(a, 5, 1), size.Width * Number(a, 4, 1), data);
                 }
                 else
                 {
                     var kind = Part(a, 3);
                     if (kind is not ("1" or "1B" or "1C")) { _unsupported.Add("штрихкод EPL " + kind); continue; }
-                    Barcode(x, y, Number(a, 6, 50), Number(a, 4, 2), data,
-                        kind == "1C", Part(a, 7) == "B", automatic: kind == "1");
+                    var bars = kind == "1" ? Code128Encoding.EncodeAuto(data) : Code128Encoding.Encode(data, kind == "1C");
+                    Barcode(x, y, Number(a, 6, 50), Number(a, 4, 2), data, bars, Part(a, 7) == "B");
                 }
             }
         }
@@ -197,17 +214,16 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
         public LabelPreview Build()
         {
             var message = _unsupported.Count == 0 ? "" : "Не показаны команды: " + string.Join(", ", _unsupported.Take(8)) + ".";
-            if (_elements.Count == 0) return Empty("Нет элементов для предпросмотра. " + message);
-            // Old templates include a print-head offset (~500 dots). Fit content when the
-            // command does not declare a physical page; preserve spacing between fields.
-            var left = _explicitWidth ? 0 : _elements.Min(e => e.X) - 12;
-            var top = _height > 0 ? 0 : _elements.Min(e => e.Y) - 12;
-            var w = _explicitWidth ? _width : Math.Max(_width, _elements.Max(e => e.X + e.Width) - left + 12);
-            var h = _height > 0 ? _height : _elements.Max(e => e.Y + e.Height) - top + 12;
-            if (w <= 0 || h <= 0) throw new FormatException();
-            if (_elements.Any(e => e.X < left || e.Y < top || e.X + e.Width > left + w || e.Y + e.Height > top + h))
+            if (_elements.Any(e => e.QuietZone > 0 && (e.X - e.QuietZone < _left ||
+                    e.X + e.Width + e.QuietZone > _left + _width || e.Y < 0 || (_height > 0 && e.Y + e.Height > _height))))
+                _barcodeError = "Штрихкод Code 128 с полями не помещается на этикетке. Проверьте размер, смещение и размеры штрихкода в шаблоне.";
+            if (_barcodeError != null) message = (message + " " + _barcodeError).Trim();
+            if (_elements.Count == 0 || _width <= 0)
+                return Empty(("Нет элементов для предпросмотра. " + message).Trim()) with { BarcodeError = _barcodeError };
+            var h = _height > 0 ? _height : Math.Max(1, _elements.Max(e => e.Y + e.Height) + 12);
+            if (_elements.Any(e => e.X < _left || e.Y < 0 || e.X + e.Width > _left + _width || e.Y + e.Height > h))
                 message += " Часть содержимого выходит за размер этикетки.";
-            return new(_elements.ToArray(), left, top, w, h, message.Trim());
+            return new(_elements.ToArray(), _left, 0, _width, h, message.Trim()) { BarcodeError = _barcodeError };
         }
     }
 }

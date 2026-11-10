@@ -187,10 +187,10 @@ public class PrintLabelStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         const string singleLabel =
-            "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
-            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 3200428^FS^FO668,98^A0,17,10^FD^FS" +
-            "^FO510,117^BY2^BCN,50,N,N,N^FD>:003200428^FS^XZ ";
+            "^XA^MD10^FO502,30^A0N,30,18^FDPSW+UPS-Box 8x2Pro^FS" +
+            "^FO502,60^A0N,24,18^FDMAC: C0:11:A6:20:01:AC^FS" +
+            "^FO502,86^A0N,23,18^FDSN: 3200428^FS" +
+            "^FO540,112^BY2^BCN,34,N,N,N^FD>;00320042>68^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
@@ -224,6 +224,27 @@ public class PrintLabelStepTests
         Assert.Equal("Dut.default_mac", context.GetVariable<string>("PrintLabel.MacSource"));
         Assert.Equal("SerialShort", context.GetVariable<string>("PrintLabel.SerialShortSource"));
         Assert.DoesNotContain("1790000123", printer.GetText());
+    }
+
+    [Theory]
+    [InlineData(241, 154, 2)]
+    [InlineData(295, 145, 2)]
+    [InlineData(295, 154, 3)]
+    public async Task Code128OutsideThePaperOrQuietZoneNeverReachesThePrinter(int width, int height, int module)
+    {
+        var template = LabelTemplateCatalog.Defaults()[0];
+        template.WidthDots = width;
+        template.HeightDots = height;
+        template.BarcodeModuleDots = module;
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var context = new TestContext(new RegisterState());
+        var step = new PrintLabelStep(NullLogger.Instance, "TSC TE310", "", "", "", true, "3200428",
+            "C0:11:A6:20:01:AC", 1, true, true, printer, 30000, template: template);
+
+        Assert.Contains("не помещается", LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC").Message);
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Contains("не помещается", context.GetVariable<string>("PrintLabel.Error"));
+        Assert.Equal(0, printer.Calls);
     }
 
     [Fact]
@@ -332,10 +353,10 @@ public class PrintLabelStepTests
         var step = CreateStep(printer, 4, manualSerial: serial, manualMacAddress: "C0:11:A6:06:01:AC",
             useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
-        const string expected = "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+^FS" +
-            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 600428^FS^FO668,98^A0,17,10^FD^FS" +
-            "^FO510,117^BY2^BCN,50,N,N,N^FD000600428^FS^XZ ";
+        const string expected = "^XA^MD10^FO502,30^A0N,30,18^FDPSW-2G6F+^FS" +
+            "^FO502,60^A0N,24,18^FDMAC: C0:11:A6:06:01:AC^FS" +
+            "^FO502,86^A0N,23,18^FDSN: 600428^FS" +
+            "^FO540,112^BY2^BCN,34,N,N,N^FD>;00060042>68^FS^XZ ";
         Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
         Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));
@@ -368,8 +389,8 @@ public class PrintLabelStepTests
         {
             Assert.Contains("^FDPSW+Box 8x2Pro^FS", printer.GetText());
             Assert.Contains("^FDSN: 3300579^FS", printer.GetText());
-            Assert.Contains("^FDTYPE: DIN^FS", printer.GetText());
-            Assert.Contains("^FD>:103300579^FS", printer.GetText());
+            Assert.DoesNotContain("TYPE:", printer.GetText());
+            Assert.Contains("^FD>;10330057>69^FS", printer.GetText());
         }
     }
 

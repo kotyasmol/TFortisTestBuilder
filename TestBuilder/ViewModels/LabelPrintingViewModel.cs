@@ -171,14 +171,14 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         foreach (var template in _workstationTemplates)
             if (catalog?.Resolve(null, template.Name) is { } model)
                 modelTemplates.TryAdd(model.Id, template);
-        var defaults = LabelTemplateCatalog.Defaults();
+        var switchLayout = LabelTemplateCatalog.Legacy("PswUpsBox8x2Pro").CopyUpgraded();
+        var boardLayout = LabelTemplateCatalog.Legacy("SerialOnlyEpl").CopyUpgraded();
         foreach (var model in catalog?.Models.Where(model => model.LabelCode.HasValue) ?? Enumerable.Empty<EquipmentModel>())
         {
             if (!modelTemplates.TryGetValue(model.Id, out var template))
             {
-                var language = model.RtlReport == null ? "ZPL" : "EPL";
-                template = LabelPrintContent.ForDevice(defaults.First(template => template.Language == language), model.Name);
-                options.Add(new("model:" + model.Id, $"{model.Name} · {language}", template));
+                template = LabelPrintContent.ForDevice(model.RtlReport == null ? switchLayout : boardLayout, model.Name);
+                options.Add(new("model:" + model.Id, $"{model.Name} · {template.Language}", template));
             }
             if (model.LabelVariants == null) continue;
             foreach (var (code, name) in model.LabelVariants)

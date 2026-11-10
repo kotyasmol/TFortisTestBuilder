@@ -25,6 +25,7 @@
         <StackPanel Spacing="8">
           <TextBlock Text="Принтер по умолчанию" Classes="sectionTitle" />
           <views:PrinterPicker x:Name="DefaultPrinterPicker" PrinterName="{Binding DefaultPrinterName, Mode=TwoWay}" />
+          <Button Content="Настроить печать этикеток…" Click="OnOpenLabelTemplates" />
           <StackPanel x:Name="WindowsPrinterManagement" Spacing="4">
             <Button Content="Добавить принтер в Windows…" Click="OnOpenWindowsPrinters" />
             <TextBlock x:Name="WindowsPrinterSettingsError" IsVisible="False" TextWrapping="Wrap"
