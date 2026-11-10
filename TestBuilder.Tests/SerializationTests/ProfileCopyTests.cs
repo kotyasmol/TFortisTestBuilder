@@ -149,6 +149,19 @@ public class ProfileCopyTests
         vm.IsTestRunning = false;
     }
 
+    [Fact]
+    public void DeletingProfilesWithTheSameNameKeepsBothFiles()
+    {
+        using var files = new ProfileFolder();
+        var path = files.Write("profile.json", SimpleJson);
+        ProfileFileStorage.MoveToDeleted(path, ProfileFileStorage.Read(path).Revision);
+        var updated = SimpleJson.Replace("Проверка", "Другая");
+        files.Write("profile.json", updated);
+        ProfileFileStorage.MoveToDeleted(path, ProfileFileStorage.Read(path).Revision);
+        Assert.Equal(SimpleJson, File.ReadAllText(ProfileFileStorage.DeletedPath(path)));
+        Assert.Equal(updated, File.ReadAllText(Path.Combine(files.Path, "deleted", "profile (2).json")));
+    }
+
     internal sealed class ProfileFolder : IDisposable
     {
         private readonly string _previous = AppSettings.Instance.GraphsFolder;

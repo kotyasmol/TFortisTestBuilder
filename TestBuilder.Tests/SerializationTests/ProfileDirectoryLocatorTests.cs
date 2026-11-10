@@ -45,8 +45,10 @@ public class ProfileDirectoryLocatorTests
         }
     }
 
-    [Fact]
-    public void PortableTemplatesOnlySeedMissingFiles()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PortableProfilesFolderIgnoresOldTemplates(bool explicitPath)
     {
         var root = Directory.CreateTempSubdirectory("testbuilder-profiles-");
         try
@@ -54,63 +56,39 @@ public class ProfileDirectoryLocatorTests
             var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles", "standard"));
             var working = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles"));
             var edited = Path.Combine(working.FullName, "existing.json");
-            var seed = Path.Combine(templates.FullName, "new.json");
             File.WriteAllText(edited, "edited locally");
             File.WriteAllText(Path.Combine(templates.FullName, "existing.json"), "bundled");
-            File.WriteAllText(seed, "new bundled file");
-            File.SetLastWriteTimeUtc(seed, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            File.WriteAllText(Path.Combine(templates.FullName, "new.json"), "new bundled file");
             var oldDate = File.GetLastWriteTimeUtc(edited);
+            var file = Path.Combine(root.FullName, "testbuilder.settings");
+            var configured = explicitPath ? Path.Combine(root.FullName, ".", "profiles") + Path.DirectorySeparatorChar : "";
+            File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(new { graphsFolder = configured }));
 
-            Assert.Equal(working.FullName, ProfileDirectoryLocator.ResolvePortableDirectory(root.FullName));
+            var settings = AppSettings.Load(file);
+            Assert.Equal(explicitPath ? configured : working.FullName, settings.ResolvedGraphsFolder);
             Assert.Equal("edited locally", File.ReadAllText(edited));
             Assert.Equal(oldDate, File.GetLastWriteTimeUtc(edited));
-            var added = Path.Combine(working.FullName, "new.json");
-            Assert.Equal("new bundled file", File.ReadAllText(added));
-            Assert.Equal(File.GetLastWriteTimeUtc(seed), File.GetLastWriteTimeUtc(added));
-
-            ProfileFileStorage.MoveToDeleted(added, ProfileFileStorage.Read(added).Revision);
-            ProfileDirectoryLocator.ResolvePortableDirectory(root.FullName);
-            Assert.False(File.Exists(added));
-            Assert.Equal("new bundled file", File.ReadAllText(ProfileFileStorage.DeletedPath(added)));
-
-            File.WriteAllText(added, "updated after reimport");
-            ProfileFileStorage.MoveToDeleted(added, ProfileFileStorage.Read(added).Revision);
-            Assert.Equal("new bundled file", File.ReadAllText(ProfileFileStorage.DeletedPath(added)));
-            Assert.Equal("updated after reimport", File.ReadAllText(Path.Combine(working.FullName, "deleted", "new (2).json")));
+            Assert.Equal(edited, Assert.Single(Directory.GetFiles(working.FullName, "*.json")));
         }
         finally { root.Delete(recursive: true); }
     }
 
     [Fact]
-    public void SettingsWithLegacyPortablePathSeedMissingProfilesAndPreserveEdits()
+    public void ConfiguredEmptyFolderWinsOverInstallationAndProjectProfiles()
     {
         var root = Directory.CreateTempSubdirectory("testbuilder-profiles-");
         try
         {
-            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles", "standard"));
             var working = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles"));
             var custom = Directory.CreateDirectory(Path.Combine(root.FullName, "custom-profiles"));
-            var edited = Path.Combine(working.FullName, "existing.json");
-            File.WriteAllText(edited, "edited locally");
-            File.WriteAllText(Path.Combine(templates.FullName, "existing.json"), "bundled");
-            File.WriteAllText(Path.Combine(templates.FullName, "new.json"), "new bundled file");
+            File.WriteAllText(Path.Combine(root.FullName, "TestBuilder.slnx"), "<Solution />");
+            File.WriteAllText(Path.Combine(working.FullName, "existing.json"), "profile");
+            var installation = Directory.CreateDirectory(Path.Combine(root.FullName, "bin"));
+            var portable = Directory.CreateDirectory(Path.Combine(installation.FullName, "profiles"));
+            File.WriteAllText(Path.Combine(portable.FullName, "other.json"), "profile");
 
-            var file = Path.Combine(root.FullName, "testbuilder.settings");
-            var legacyPath = Path.Combine(root.FullName, ".", "profiles") + Path.DirectorySeparatorChar;
-            File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(new { graphsFolder = legacyPath }));
-
-            var settings = AppSettings.Load(file);
-            Assert.Equal(legacyPath, settings.GraphsFolder);
-            settings.GraphsFolder = custom.FullName;
-            Assert.Equal(custom.FullName, settings.ResolvedGraphsFolder);
+            Assert.Equal(custom.FullName, ProfileDirectoryLocator.Resolve(installation.FullName, custom.FullName));
             Assert.Empty(custom.GetFiles());
-            var added = Path.Combine(working.FullName, "new.json");
-            Assert.False(File.Exists(added));
-
-            settings.GraphsFolder = legacyPath;
-            Assert.Equal(working.FullName, settings.ResolvedGraphsFolder);
-            Assert.Equal("edited locally", File.ReadAllText(edited));
-            Assert.Equal("new bundled file", File.ReadAllText(added));
         }
         finally { root.Delete(recursive: true); }
     }

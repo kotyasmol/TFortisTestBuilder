@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging" / "windows"
-STANDARD_PROFILES = Path("profiles") / "standard"
+PROFILES_DIRECTORY = Path("profiles")
 PROFILE_UI_TEST_FILTER = (
     "FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
     "FullyQualifiedName~DataTestModeTests"
@@ -105,7 +105,7 @@ def firmware_references(profiles):
 
 
 def select_profiles(names=None):
-    available = {p.name: p for p in sorted((ROOT / "profiles").glob("*.json"))}
+    available = {p.name: p for p in sorted((ROOT / PROFILES_DIRECTORY).glob("*.json")) if p.is_file()}
     if names is None:
         return list(available.values())
     if not names or len(set(names)) != len(names):
@@ -117,13 +117,10 @@ def select_profiles(names=None):
 
 
 def stage_profiles(bundle, profiles):
-    # Only filter the fresh publish output. Repository profiles and catalog stay intact.
-    selected = {p.name for p in profiles}
-    for path in (bundle / STANDARD_PROFILES).glob("*.json"):
-        if path.name not in selected:
-            path.unlink()
+    destination = bundle / PROFILES_DIRECTORY
+    destination.mkdir()
     for source in profiles:
-        shutil.copy2(source, bundle / STANDARD_PROFILES / source.name)
+        shutil.copy2(source, destination / source.name)
 
 
 def validate_bundle(bundle, profiles):
@@ -138,14 +135,15 @@ def validate_bundle(bundle, profiles):
     config = json.loads((bundle / "TestBuilder.runtimeconfig.json").read_text())["runtimeOptions"]
     if "framework" in config or "frameworks" in config or not config.get("includedFrameworks"):
         raise RuntimeError("The publish output is not self-contained")
-    if (bundle / "profile-templates").exists() or (bundle / "testbuilder.settings").exists() or any(
-            child.name != "standard" for child in (bundle / "profiles").iterdir()):
-        raise RuntimeError("A release must not include working profiles or settings")
-    actual = sorted(p.name for p in (bundle / STANDARD_PROFILES).glob("*.json"))
+    if (bundle / "profile-templates").exists() or (bundle / "testbuilder.settings").exists():
+        raise RuntimeError("A release must not include legacy templates or workstation settings")
+    profile_directory = bundle / PROFILES_DIRECTORY
+    actual = sorted(p.name for p in profile_directory.iterdir())
     if actual != sorted(p.name for p in profiles):
         raise RuntimeError("Profile inventory does not match the selected release profiles")
     for profile in profiles:
-        if sha256(profile) != sha256(bundle / STANDARD_PROFILES / profile.name):
+        staged = profile_directory / profile.name
+        if not staged.is_file() or sha256(profile) != sha256(staged):
             raise RuntimeError(f"Profile content changed: {profile.name}")
         data = json.loads(profile.read_text(encoding="utf-8-sig"))
         if data.get("productKind") == "Board":

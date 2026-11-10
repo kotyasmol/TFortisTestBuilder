@@ -3,6 +3,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
+using TestBuilder.Tests.SerializationTests;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
@@ -12,6 +13,26 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class ProfileLifecycleTests
 {
+    [Fact]
+    public Task ProfileListOnlyLoadsJsonFilesInTheConfiguredFolder() => InSession(() =>
+    {
+        using var folder = new ProfileCopyTests.ProfileFolder();
+        foreach (var subfolder in new[] { "standard", "deleted" })
+        {
+            Directory.CreateDirectory(Path.Combine(folder.Path, subfolder));
+            folder.Write(Path.Combine(subfolder, "profile.json"), ProfileCopyTests.SimpleJson);
+        }
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        Assert.Empty(vm.AllProfiles);
+
+        var path = folder.Write("working.json", ProfileCopyTests.SimpleJson);
+        vm.RefreshProfiles();
+        Assert.Equal(path, Assert.Single(vm.AllProfiles).FilePath);
+        Assert.Equal(path, Assert.Single(vm.Profiles).FilePath);
+        Assert.Equal(path, Assert.Single(vm.StationProfiles).FilePath);
+    });
+
     [Fact]
     public Task Undo_TracksConsoleSettingsAndBothLabelSourceFlags() => InSession(() =>
     {
