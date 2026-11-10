@@ -106,6 +106,8 @@ public static class LabelTemplateCatalog
             }
             if (previousTemplate.OriginXDots != 0 && template.OriginXDots == previousTemplate.OriginXDots)
                 template.OriginXDots = current.OriginXDots;
+            if (template.Language == "ZPL" && template.BarcodeTopDots == previousTemplate.BarcodeTopDots)
+                template.BarcodeTopDots = current.BarcodeTopDots;
             if (current.UseShortSerial && template.BarcodePrefix.Length == 3 &&
                 current.BarcodePrefix == "0" + template.BarcodePrefix)
                 template.BarcodePrefix = current.BarcodePrefix;

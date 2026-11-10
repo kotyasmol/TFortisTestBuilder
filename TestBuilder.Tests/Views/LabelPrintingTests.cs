@@ -238,7 +238,7 @@ public class LabelPrintingTests
             }
 
             Assert.Equal(2, printer.Jobs.Count);
-            Assert.All(printer.Jobs, job => Assert.Contains("^FO549,112^BY2^BCN,30,N,N,N", job));
+            Assert.All(printer.Jobs, job => Assert.Contains("^FO549,117^BY2^BCN,30,N,N,N", job));
         }
         finally { AppSettings.Instance.LabelTemplates = original; }
     }

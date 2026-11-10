@@ -58,19 +58,20 @@ public class LabelPreviewTests
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
         Assert.Equal(295, preview.Width);
         Assert.Equal(154, preview.Height);
-        Assert.Equal(478, preview.Left);
-        Assert.Equal(36, preview.Elements.Single(e => e.Text == template.Name).Height);
+        Assert.Equal(494, preview.Left);
+        var name = preview.Elements.Single(e => e.Text == template.Name);
+        Assert.Equal((494d, 35d, 36d), (name.X, name.Y, name.Height));
         Assert.Equal(25, sn.Height);
         var mac = preview.Elements.Single(e => e.Text.StartsWith("MAC:"));
-        Assert.Equal(25, mac.Height);
-        Assert.Equal(sn.X, mac.X);
+        Assert.Equal((510d, 70d, 25d), (mac.X, mac.Y, mac.Height));
+        Assert.Equal((510d, 95d), (sn.X, sn.Y));
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
         Assert.Equal(Code128Encoding.EncodeAuto("003200428"), bars.Bars);
         Assert.Equal(202, bars.Width);
         Assert.InRange(bars.X - preview.Left - bars.QuietZone, 0, 28);
         Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 0, 28);
         Assert.True(bars.Y + bars.Height <= preview.Height);
-        Assert.Empty(preview.Message);
+        Assert.Null(preview.BarcodeError);
     }
 
     [Fact]
@@ -86,6 +87,7 @@ public class LabelPreviewTests
             old.WidthDots = 400;
             old.PrinterDpi = 203;
             old.OriginXDots = 480;
+            old.BarcodeTopDots = 106;
             var copy = old.CopyUpgraded();
             Assert.Equal(current.Command, copy.Command);
             Assert.NotEqual(old.Command, copy.Command);
@@ -93,6 +95,7 @@ public class LabelPreviewTests
             Assert.Equal(old.WidthDots, copy.WidthDots);
             Assert.Equal(old.PrinterDpi, copy.PrinterDpi);
             Assert.Equal(old.OriginXDots, copy.OriginXDots);
+            Assert.Equal(old.BarcodeTopDots, copy.BarcodeTopDots);
             Assert.Equal(copy.Command, copy.CopyUpgraded().Command);
             old.Command += "\n";
             Assert.Equal(old.Command, old.CopyUpgraded().Command);
@@ -107,7 +110,7 @@ public class LabelPreviewTests
     {
         var template = LabelTemplateCatalog.Defaults()[index];
         var preview = LabelPreview.FromInput(template, serial, "c011.a620.01ac");
-        Assert.True(preview.HasContent); Assert.False(preview.IsSample); Assert.Empty(preview.Message);
+        Assert.True(preview.HasContent); Assert.False(preview.IsSample); Assert.Null(preview.BarcodeError);
         Assert.Contains(preview.Elements, e => e.Text == expected);
         Assert.Single(preview.Elements.Where(e => e.Bars.Length > 0));
         if (template.RequiresMac)
