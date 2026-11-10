@@ -40,6 +40,7 @@ namespace TestBuilder.Domain.Execution
         public string? ProfileName { get; set; }
         public string? DeviceModel { get; set; }
         public EquipmentModel? ProductionModel { get; init; }
+        internal EquipmentModel? LegacySerialModel { get; init; }
         public int LabelVariant { get; init; }
         internal int? IssuedSerialNumber => Variables.TryGetValue("SerialNumber.Assigned", out var value) && value is int serial ? serial : null;
         public LabelPrintCapture LabelPrinting { get; private init; } = new();
@@ -86,6 +87,7 @@ namespace TestBuilder.Domain.Execution
                 ProfileName = ProfileName,
                 DeviceModel = DeviceModel,
                 ProductionModel = ProductionModel,
+                LegacySerialModel = LegacySerialModel,
                 LabelVariant = LabelVariant,
                 LabelPrinting = LabelPrinting,
                 LastTestLabel = LastTestLabel?.Copy(),

@@ -90,6 +90,32 @@ public class ProductionStepTests
     }
 
     [Theory]
+    [InlineData("PSW+UPS-Box 8x2Pro", 3200579, 0, false)]
+    [InlineData("PSW+Box 8x2Pro", 3200579, 1, false)]
+    [InlineData("PSW+Box 8x2Pro", 3300579, 1, true)]
+    public async Task LegacyProfileRejectsARequestOrSerialForAnotherProduct(
+        string nodeType, int serverSerial, int requests, bool accepted)
+    {
+        var model = EquipmentCatalog.Load(Path.GetTempPath()).Resolve(null, "PSW+Box 8x2Pro");
+        Assert.NotNull(model?.SerialSeries);
+        var context = new TestContext(new RegisterState()) { LegacySerialModel = model };
+        context.SetVariable("Dut.cpu_id", "CPU-test");
+        context.SetVariable("SerialNumber", 3200579);
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, serverSerial.ToString(), TimeSpan.Zero));
+        var step = new GetSerialNumberFromServerStep(service, NullLogger.Instance, "http://server",
+            nodeType, "Dut.cpu_id", 1000, 0, 0, "SerialNumber", true);
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal(requests, service.Calls);
+        if (accepted)
+            Assert.Equal(serverSerial, context.GetVariable<int>("SerialNumber"));
+        else
+            Assert.False(context.Variables.ContainsKey("SerialNumber"));
+        if (requests == 0)
+            Assert.Contains("Серийники из справочника", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Theory]
     [InlineData("RTL-SW", 5, false, 31300002, 5, true)]
     [InlineData("RTL-SW", 5, false, 31300003, 5, false)]
     [InlineData("RTL-POE", 6, true, 31200002, 6, true)]

@@ -154,9 +154,10 @@ public partial class TestViewModel
         RootGraph.UseCatalogSerials || !string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ||
         BoardNodes(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel);
 
-    private EquipmentModel? ResolveProductionModel()
+    private (EquipmentModel? Production, EquipmentModel? Legacy) ResolveRunSerialModels()
     {
-        if (!RootGraph.UseCatalogSerials) return null;
+        if (!RootGraph.UseCatalogSerials)
+            return (null, _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel));
         // Read once at the start. All nodes, including failure cleanup, use the same model.
         var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
         if (model == null || string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
@@ -164,7 +165,7 @@ public partial class TestViewModel
         if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
             model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
             throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");
-        return model;
+        return (model, null);
     }
 
     internal EquipmentModel ReadCatalogModelForEditing()

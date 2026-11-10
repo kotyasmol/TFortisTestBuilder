@@ -63,6 +63,7 @@ namespace TestBuilder.Domain.Steps
 
             var model = context.ProductionModel;
             var series = model?.SerialSeries;
+            var legacyModel = context.LegacySerialModel;
             var deviceType = model == null ? _deviceType : model.EffectiveServerDeviceType ?? string.Empty;
             ResetResult(context, deviceType);
 
@@ -76,8 +77,16 @@ namespace TestBuilder.Domain.Steps
             {
                 if (model != null)
                     return Fail(context, "Отключите фиксированный отладочный номер в профиле со справочником.", string.Empty, string.Empty);
+                if (legacyModel?.SerialSeries?.Check(_fixedSerialNumber.Value) is { } fixedError)
+                    return Fail(context, fixedError, string.Empty, string.Empty);
                 return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
             }
+
+            if (legacyModel?.EffectiveServerDeviceType is { Length: > 0 } expectedType &&
+                !string.Equals(deviceType, expectedType, StringComparison.OrdinalIgnoreCase))
+                return Fail(context, $"Для изделия «{legacyModel.Name}» в ноде указан серверный тип «{deviceType}», " +
+                    $"а в справочнике «{expectedType}». Включите «Серийники из справочника» в профиле.",
+                    string.Empty, string.Empty);
 
             string url;
             string cpuId;
@@ -116,6 +125,7 @@ namespace TestBuilder.Domain.Steps
                     result.IsSuccessStatusCode)
                 {
                     var seriesError = series == null ? SerialNumberPrefix.Check(serial, _expectedSerialPrefix) : series.Check(serial);
+                    seriesError ??= legacyModel?.SerialSeries?.Check(serial);
                     if (seriesError != null)
                         return Fail(context, seriesError, raw, url);
 

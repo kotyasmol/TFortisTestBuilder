@@ -140,9 +140,10 @@ public partial class TestViewModel
             };
             GraphCompiler.ValidateRunConnections(graph, RootGraph.Hardware, IsConnected ? SelectedPort : null);
             var compiled = compiler.Compile(graph);
+            var serialModels = ResolveRunSerialModels();
             var context = new TestContext(_registerState) {
                 CancellationToken = token, IsConnected = IsConnected, ProfileName = action.Name, DeviceModel = RootGraph.DeviceModel,
-                ProductionModel = ResolveProductionModel(), LabelVariant = RootGraph.LabelVariant,
+                ProductionModel = serialModels.Production, LegacySerialModel = serialModels.Legacy, LabelVariant = RootGraph.LabelVariant,
                 LastTestLabel = _lastCompletedTest?.Label?.Copy(),
                 RegisterMonitor = _registerMonitor, RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),
