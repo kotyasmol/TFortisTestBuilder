@@ -90,6 +90,30 @@ public class ProductionStepTests
     }
 
     [Theory]
+    [InlineData(3500001, true)]
+    [InlineData(3565535, true)]
+    [InlineData(3500000, false)]
+    [InlineData(3565536, false)]
+    [InlineData(3200579, false)]
+    public async Task CatalogExSeriesRequestsItsOwnDeviceTypeAndChecksReturnedSerial(int serial, bool accepted)
+    {
+        var model = EquipmentCatalog.Load(Path.GetTempPath()).Resolve("psw-plus-ex-8x2pro", null);
+        Assert.NotNull(model?.SerialSeries);
+        Assert.Equal(35, model.LabelCode);
+        Assert.Equal(3500000, model.SerialSeries.SerialOffset);
+        var context = new TestContext(new RegisterState()) { ProductionModel = model };
+        context.SetVariable("Dut.cpu_id", "CPU-test");
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, serial.ToString(), TimeSpan.Zero));
+        var step = new GetSerialNumberFromServerStep(service, NullLogger.Instance, "http://server",
+            "PSW+UPS-Box 8x2Pro", "Dut.cpu_id", 1000, 0, 0, "SerialNumber", true, expectedSerialPrefix: "32");
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Contains("devType=PSW%2BEx%208x2Pro&cpuId=CPU-test", service.LastUrl);
+        if (accepted) Assert.Equal(serial, context.GetVariable<int>("SerialNumber"));
+        else Assert.False(context.Variables.ContainsKey("SerialNumber"));
+    }
+
+    [Theory]
     [InlineData("PSW+UPS-Box 8x2Pro", 3200579, 0, false)]
     [InlineData("PSW+Box 8x2Pro", 3200579, 1, false)]
     [InlineData("PSW+Box 8x2Pro", 3300579, 1, true)]

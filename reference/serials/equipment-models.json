@@ -246,7 +246,13 @@
     {
       "id": "psw-plus-ex-8x2pro",
       "name": "PSW+Ex 8x2Pro",
-      "labelCode": 35
+      "labelCode": 35,
+      "serialSeries": {
+        "serverDeviceType": "PSW+Ex 8x2Pro",
+        "firstSerialNumber": 3500001,
+        "lastSerialNumber": 3565535,
+        "serialOffset": 3500000
+      }
     },
     {
       "id": "din-l2-plus-8x4pro",
