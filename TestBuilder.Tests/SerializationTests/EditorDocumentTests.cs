@@ -200,7 +200,7 @@ public class EditorDocumentTests
             {"id":"1","type":"Get Serial Number","deviceType":"UPS"}],"connections":[]}
             """, vm);
         Assert.False(vm.UseCatalogSerials);
-        vm.DeviceName = "Новая модель";
+        vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-2g");
         Assert.True(vm.UseCatalogSerials);
         vm.UndoCommand.Execute(null);
         Assert.False(vm.UseCatalogSerials);

@@ -170,8 +170,8 @@ public class ProfileSaveTests
         Assert.Equal("Исходный профиль", vm.CurrentProfileName);
         vm.ProfileDescription = "Проверка питания";
         Assert.Equal("Модель А · Проверка питания", vm.CurrentProfileName);
-        vm.DeviceName = "PSV2G4H+";
-        Assert.Equal("PSV2G4H+ · Проверка питания", vm.CurrentProfileName);
+        vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-2g");
+        Assert.Equal("PSW-2G · Проверка питания", vm.CurrentProfileName);
         vm.UndoCommand.Execute(null);
         Assert.Equal("Модель А · Проверка питания", vm.CurrentProfileName);
         vm.UndoCommand.Execute(null);
@@ -183,10 +183,10 @@ public class ProfileSaveTests
         Assert.Equal("Проверка питания", vm.SelectedProfile!.ConfigurationName);
         var copy = vm.SelectedProfile;
         vm.SelectedProfile = GraphSerializer.ReadProfile(original); vm.SelectedProfile = copy;
-        Assert.Equal("PSV2G4H+", vm.DeviceName);
+        Assert.Equal("PSW-2G", vm.DeviceName);
         Assert.Equal("Проверка питания", vm.ProfileDescription);
-        Assert.Equal("PSV2G4H+ · Проверка питания", vm.CurrentProfileName);
-        Assert.Equal("PSV2G4H+", vm.EngineerProfileGroups.Single(g => g.Profiles.Contains(copy)).Name);
+        Assert.Equal("PSW-2G · Проверка питания", vm.CurrentProfileName);
+        Assert.Equal("PSW-2G", vm.EngineerProfileGroups.Single(g => g.Profiles.Contains(copy)).Name);
     }
 
     [Fact]

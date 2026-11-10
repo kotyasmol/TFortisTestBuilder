@@ -12,7 +12,6 @@ namespace TestBuilder.ViewModels;
 public partial class TestViewModel
 {
     private EquipmentCatalog _equipmentCatalog = new();
-    public ObservableCollection<string> DeviceNameSuggestions { get; } = new();
     public ObservableCollection<string> ProfileNameSuggestions { get; } = new();
 
     public string ProfileDescription
@@ -47,52 +46,21 @@ public partial class TestViewModel
         SetProfileTitle(title);
     }
 
-    // Free text is stored in the profile; a server/catalog release is not required.
-    public string DeviceName
-    {
-        get => RootGraph.DeviceModel ?? "";
-        set
-        {
-            if (!CanEditGraph) return;
-            var name = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-            if (name == RootGraph.DeviceModel) return;
-            var known = _equipmentCatalog.Resolve(null, name);
-            var saved = name == null ? null : _profileCatalog.FirstOrDefault(p =>
-                EquipmentCatalog.Normalize(p.DeviceModel) == EquipmentCatalog.Normalize(name));
-            var id = known?.Id ?? saved?.DeviceModelId;
-            name = known?.Name ?? saved?.DeviceModel ?? name;
-            var oldId = RootGraph.DeviceModelId; var oldName = RootGraph.DeviceModel;
-            var oldTitle = CurrentProfileName;
-            var oldDescription = RootGraph.ConfigurationName;
-            var description = ProfileDescription;
-            var newTitle = ComposeProfileName(name, description);
-            var oldKind = RootGraph.ProductKind;
-            var kind = saved?.ProductKind ?? oldKind;
-            var oldUseCatalog = RootGraph.UseCatalogSerials;
-            var useCatalog = UseCatalogAfterModelChange(known);
-            var oldVariant = RootGraph.LabelVariant;
-            void Set(string? modelId, string? modelName, string title, string? detail, string productKind, bool useSeries, int variant)
-            {
-                RootGraph.DeviceModelId = modelId; RootGraph.DeviceModel = modelName;
-                RootGraph.ProductKind = productKind;
-                RootGraph.UseCatalogSerials = useSeries;
-                RootGraph.LabelVariant = variant;
-                SetProfileIdentity(title, detail);
-                NotifyDeviceNameChanged();
-                NotifyProfileMetadataChanged();
-            }
-            _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(id, name, newTitle, description, kind, useCatalog, 0),
-                () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
-        }
-    }
+    public string DeviceName => RootGraph.DeviceModel ?? "";
+
+    public string EquipmentPlaceholder => DeviceName.Length == 0
+        ? "Выберите из справочника" : $"{DeviceName} · вне справочника";
+
+    public bool HasCatalogEquipmentModel => SelectedEquipmentModel != null;
 
     internal void NotifyDeviceNameChanged()
     {
         OnPropertyChanged(nameof(CurrentProfileName));
         OnPropertyChanged(nameof(ProfileDescription));
         OnPropertyChanged(nameof(DeviceName));
+        OnPropertyChanged(nameof(EquipmentPlaceholder));
         OnPropertyChanged(nameof(SelectedEquipmentModel));
+        OnPropertyChanged(nameof(HasCatalogEquipmentModel));
         NotifyCatalogSerialSettingsChanged();
         RefreshNameSuggestions();
     }
@@ -197,30 +165,24 @@ public partial class TestViewModel
 
     internal EquipmentModel ReadCatalogModelForEditing()
     {
-        var name = DeviceName.Trim();
-        if (name.Length == 0) throw new InvalidOperationException("Сначала укажите изделие в шапке профиля.");
-        var catalog = EquipmentCatalog.Load(ProfilesFolder);
-        return catalog.Resolve(RootGraph.DeviceModelId, name) ?? catalog.Resolve(null, name)
-            ?? new EquipmentModel(Guid.NewGuid().ToString("N"), name);
+        return EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)
+            ?? throw new InvalidOperationException("Выберите изделие из справочника или добавьте новое.");
     }
 
-    internal void SaveCatalogModel(EquipmentModel model)
+    internal EquipmentModel NewCatalogModel() => new(Guid.NewGuid().ToString("N"),
+        HasCatalogEquipmentModel ? "" : DeviceName);
+
+    internal void SaveCatalogModel(EquipmentModel model, bool createNew)
     {
-        if (!CanEditGraph) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
-        EquipmentCatalog.SaveModel(ProfilesFolder, model);
+        if (!CanEditQuickActions) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
+        EquipmentCatalog.SaveModel(ProfilesFolder, model, createNew);
         LoadEquipmentCatalog(ProfilesFolder);
         SelectedEquipmentModel = EquipmentModels.Single(item => item.Id == model.Id);
-        UseCatalogSerials = true;
+        if (!string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType)) UseCatalogSerials = true;
     }
 
     private void RefreshNameSuggestions()
     {
-        var names = _equipmentCatalog.Models.Select(m => m.Name)
-            .Concat(_profileCatalog.Select(p => p.DeviceModel).OfType<string>())
-            .Append(DeviceName).Where(n => !string.IsNullOrWhiteSpace(n))
-            .GroupBy(EquipmentCatalog.Normalize).Select(g => g.First())
-            .OrderBy(EquipmentCatalog.SortKey, StringComparer.Ordinal).ToArray();
-        SynchronizeStationItems(DeviceNameSuggestions, names);
         var titles = _profileCatalog.OrderBy(p => p.DeviceModel != DeviceName)
             .Select(p => DescriptionFromTitle(p.ConfigurationName, p.DeviceModel)).Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -234,27 +196,32 @@ public partial class TestViewModel
     public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatus);
     public EquipmentModel? SelectedEquipmentModel
     {
-        get => EquipmentModels.FirstOrDefault(m => RootGraph.DeviceModelId != null ? m.Id == RootGraph.DeviceModelId : RootGraph.DeviceModel == null ? m.Id.Length == 0 : m.Name == RootGraph.DeviceModel);
+        get => _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
         set
         {
-            if (!CanEditGraph || value == null || Equals(value, SelectedEquipmentModel)) return;
+            if (!CanEditGraph || value == null || !EquipmentModels.Contains(value) ||
+                (value.Id == RootGraph.DeviceModelId && value.Name == RootGraph.DeviceModel)) return;
             var oldId = RootGraph.DeviceModelId; var oldName = RootGraph.DeviceModel;
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
-            var name = value.Id.Length == 0 ? null : value.Name;
+            var oldKind = RootGraph.ProductKind;
+            var kind = _profileCatalog.FirstOrDefault(p => p.DeviceModelId == value.Id)?.ProductKind ?? oldKind;
             var oldUseCatalog = RootGraph.UseCatalogSerials;
             var useCatalog = UseCatalogAfterModelChange(value);
             var oldVariant = RootGraph.LabelVariant;
-            void Set(string? id, string? model, string title, string? detail, bool useSeries, int variant)
+            void Set(string? id, string? model, string title, string? detail, string productKind, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = id; RootGraph.DeviceModel = model;
+                RootGraph.ProductKind = productKind;
                 RootGraph.UseCatalogSerials = useSeries;
                 RootGraph.LabelVariant = variant;
-                SetProfileIdentity(title, detail); NotifyDeviceNameChanged();
+                SetProfileIdentity(title, detail);
+                NotifyDeviceNameChanged();
+                NotifyProfileMetadataChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(value.Id.Length == 0 ? null : value.Id, name, ComposeProfileName(name, description), description, useCatalog, 0),
-                () => Set(oldId, oldName, oldTitle, oldDescription, oldUseCatalog, oldVariant)));
+                () => Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, 0),
+                () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
         }
     }
     private void LoadEquipmentCatalog(string folder)
@@ -265,10 +232,9 @@ public partial class TestViewModel
             SetCatalogStatus(Directory.Exists(folder) ? "" : $"Папка профилей недоступна: {folder}");
         }
         catch (Exception ex) { SetCatalogStatus("Каталог изделий недоступен: " + ex.Message); }
-        EquipmentModels.Clear();
-        EquipmentModels.Add(new EquipmentModel("", "Без модели"));
-        foreach (var model in _equipmentCatalog.Models.OrderBy(m => m.Name)) EquipmentModels.Add(model);
-        RefreshSelectedEquipmentModel();
+        SynchronizeStationItems(EquipmentModels, _equipmentCatalog.Models
+            .OrderBy(m => EquipmentCatalog.SortKey(m.Name), StringComparer.Ordinal).ToArray());
+        NotifyDeviceNameChanged();
     }
 
     private void SetCatalogStatus(string status)
@@ -316,8 +282,6 @@ public partial class TestViewModel
     {
         var known = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel, CurrentProfileName + " " + System.IO.Path.GetFileNameWithoutExtension(_currentProfilePath));
         if (known != null) { RootGraph.DeviceModelId = known.Id; RootGraph.DeviceModel = known.Name; }
-        if (SelectedEquipmentModel == null && RootGraph.DeviceModel != null)
-            EquipmentModels.Add(new EquipmentModel(RootGraph.DeviceModelId ?? "legacy:" + RootGraph.DeviceModel, RootGraph.DeviceModel));
         NotifyDeviceNameChanged();
     }
     private void RefreshEngineerProfileGroups()

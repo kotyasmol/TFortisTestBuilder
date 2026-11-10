@@ -186,7 +186,7 @@ public sealed class TutorialWindow : Window
             TutorialStep.Parameter => ("Измените параметр ноды", "В ноде «Задержка» замените значение «Мс» на 500. Это пауза в половину секунды."),
             TutorialStep.SaveCopy => ("Сохраните копию", "Нажмите «Сохранить». В учебном списке появится второй профиль с вашим названием."),
             TutorialStep.New => ("Создайте свой граф", "Нажмите «Новый» в левом меню. Соберём проверку с заданием оператору и двумя исходами."),
-            TutorialStep.Device => ("Укажите новое устройство", "В поле «Устройство» слева введите «Учебная плата» и нажмите Enter. Существующие устройства можно выбрать из подсказок; для нового достаточно ввести название."),
+            TutorialStep.Device => ("Выберите устройство", "Откройте список «Устройство» и выберите «Учебная плата». В обычном профиле новое изделие добавляется кнопкой «+» рядом со списком."),
             TutorialStep.HideProfiles => ("Освободите место для графа", "Нажмите кнопку «Скрыть профили» слева от поля устройства. Эта же кнопка возвращает список, когда он понадобится."),
             TutorialStep.AddStart => ("Добавьте старт", "Перетащите «Старт» из палитры справа на свободное место графа. От этой ноды начинается выполнение."),
             TutorialStep.AddAction => ("Добавьте задание оператору", "Перетащите «Действие оператора» на граф. Эта нода приостанавливает проверку, пока человек не подтвердит действие или не отменит его."),
@@ -204,7 +204,7 @@ public sealed class TutorialWindow : Window
             TutorialStep.Run => ("Проверьте свой граф", "Нажмите «Запустить». Появится окно с заданием, которое вы написали."),
             TutorialStep.ConfirmGraph => ("Подтвердите своё задание", "В окне задания нажмите «Продолжить». Граф перейдёт к задержке по соединённому вами выходу. Кнопка «Отмена» направляет выполнение сразу к концу."),
             TutorialStep.Wait => ("Выполняется проверка", "Дождитесь окончания задержки. Результаты шагов появятся в журнале под графом."),
-            _ => ("Вы собрали и запустили профиль", "Теперь вы умеете выбирать проверку, создавать устройство, менять параметры, сохранять копию, пользоваться справкой и соединять разные исходы. Повторить обучение можно в настройках. Подробные действия и справка по каждой ноде находятся в «Полной инструкции».")
+            _ => ("Вы собрали и запустили профиль", "Теперь вы умеете выбирать устройство и проверку, менять параметры, сохранять копию, пользоваться справкой и соединять разные исходы. Повторить обучение можно в настройках. Подробные действия и справка по каждой ноде находятся в «Полной инструкции».")
         };
         _title.Text = copy.Item1; _instruction.Text = copy.Item2;
         _finish.Content = Step == TutorialStep.Done ? "Завершить" : "Закончить обучение";
@@ -224,7 +224,7 @@ public sealed class TutorialWindow : Window
         TutorialStep.Confirm => Model.Station.IsAwaitingAction ? ButtonIn(_station, "Готово · продолжить") : null,
         TutorialStep.Result => null, // result and the workspace button remain readable and clickable
         TutorialStep.Rename or TutorialStep.Name => _editor.GetVisualDescendants().OfType<AutoCompleteBox>().FirstOrDefault(c => c.Name == "ProfileNameInput"),
-        TutorialStep.Device => _editor.GetVisualDescendants().OfType<AutoCompleteBox>().FirstOrDefault(c => c.Name == "DeviceNameInput"),
+        TutorialStep.Device => _editor.GetVisualDescendants().OfType<ComboBox>().FirstOrDefault(c => c.Name == "DeviceModelPicker"),
         TutorialStep.HideProfiles => _editor.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => ReferenceEquals(b.Command, Model.ToggleProfilesCommand)),
         TutorialStep.ActionMessage => Graph?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(c => c.DataContext is OperatorActionNodeViewModel),
         TutorialStep.Help => Graph?.GetVisualDescendants().OfType<Border>().FirstOrDefault(c => c.Classes.Contains("nodeHelpTrigger") && c.DataContext is OperatorActionNodeViewModel),

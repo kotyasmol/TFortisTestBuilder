@@ -23,6 +23,7 @@ internal sealed class TutorialSession : IDisposable
         Directory.CreateDirectory(DirectoryPath);
         using var source = AssetLoader.Open(new Uri("avares://TestBuilder/Assets/Tutorial/intro.json"));
         using (var output = File.Create(OriginalPath)) source.CopyTo(output);
+        EquipmentCatalog.SaveModel(DirectoryPath, new EquipmentModel("tutorial-board", "Учебная плата"));
         Model = new TestViewModel(_bus, new SlaveManager(_bus), true, DirectoryPath) { IsOperatorView = true };
         foreach (var group in Model.StationProfileGroups) group.IsExpanded = false;
         Model.AvailableNodeCategories.Clear();

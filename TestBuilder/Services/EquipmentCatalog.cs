@@ -80,11 +80,19 @@ public sealed class EquipmentCatalog
         return catalog;
     }
 
-    internal static void SaveModel(string profilesFolder, EquipmentModel model)
+    internal static void SaveModel(string profilesFolder, EquipmentModel model, bool createNew = false)
     {
         var file = Path.Combine(profilesFolder, RelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         using var editLock = new FileStream(file + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        if (createNew)
+        {
+            var key = Normalize(model.Name);
+            if (key.Length == 0) throw new InvalidDataException("Укажите название изделия.");
+            if (Load(profilesFolder).Models.Any(item =>
+                string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase) || Keys(item).Contains(key)))
+                throw new InvalidDataException("Такое изделие уже есть в справочнике. Выберите его в списке.");
+        }
         var catalog = Read(file);
         var index = catalog.Models.FindIndex(item => string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase));
         if (index >= 0) catalog.Models[index] = model;

@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Linq;
+using System.Threading.Tasks;
 using Nodify;
 using System;
 using TestBuilder.ViewModels;
@@ -91,12 +92,20 @@ public partial class GraphEditorView : UserControl, IDisposable
             await vm.ConfigureReportTemplateAsync(owner);
     }
 
-    private async void OnConfigureCatalogSerials(object? sender, RoutedEventArgs e)
+    private async void OnConfigureCatalogSerials(object? sender, RoutedEventArgs e) => await OpenCatalogModelAsync(createNew: false);
+
+    private async void OnAddCatalogModel(object? sender, RoutedEventArgs e) => await OpenCatalogModelAsync(createNew: true);
+
+    private async Task OpenCatalogModelAsync(bool createNew)
     {
-        if (DataContext is not TestViewModel { CanEditGraph: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
+        if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
             return;
         CatalogToolsButton.Flyout?.Hide();
-        try { await new CatalogSerialsWindow(vm, vm.ReadCatalogModelForEditing()).ShowDialog(owner); }
+        try
+        {
+            var model = createNew ? vm.NewCatalogModel() : vm.ReadCatalogModelForEditing();
+            await new CatalogSerialsWindow(vm, model, createNew).ShowDialog(owner);
+        }
         catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or
             UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
         {
@@ -451,8 +460,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         Dispatcher.UIThread.Post(() =>
         {
             if (ReferenceEquals(field.DataContext, vm) && !field.IsKeyboardFocusWithin)
-                field.SetCurrentValue(AutoCompleteBox.TextProperty,
-                    field.Name == "DeviceNameInput" ? vm.DeviceName : vm.ProfileDescription);
+                field.SetCurrentValue(AutoCompleteBox.TextProperty, vm.ProfileDescription);
         }, DispatcherPriority.Background);
     }
 
@@ -463,8 +471,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         // Save click or fast focus change cannot commit the previous text instead.
         var text = field.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()?.Text ?? field.Text ?? "";
         field.SetCurrentValue(AutoCompleteBox.TextProperty, text);
-        if (field.Name == "DeviceNameInput") vm.DeviceName = text;
-        else vm.ProfileDescription = text;
+        vm.ProfileDescription = text;
     }
 
     public void OnProfileFieldKeyDown(object? sender, KeyEventArgs e)

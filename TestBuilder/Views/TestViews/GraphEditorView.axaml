@@ -210,16 +210,23 @@
     <Border Grid.Row="0" Padding="10,8,10,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-        <Grid ColumnDefinitions="Auto,Auto,200,Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
+        <Grid ColumnDefinitions="Auto,Auto,236,Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
           <Button Command="{Binding ToggleProfilesCommand}" ToolTip.Tip="{Binding ProfilesToggleTip}" AutomationProperties.Name="{Binding ProfilesToggleTip}" Margin="0,0,10,0" Padding="8,6">
             <PathIcon Width="18" Height="18" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
           </Button>
           <TextBlock Grid.Column="1" Text="Устройство" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <AutoCompleteBox x:Name="DeviceNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="2" Margin="0,0,12,0" ItemsSource="{Binding DeviceNameSuggestions}"
-                   Text="{Binding DeviceName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Watermark="Устройство"
-                   FilterMode="ContainsOrdinal" IsTextCompletionEnabled="False" MinimumPrefixLength="1"
-                   Padding="10,5" MinHeight="32" IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Устройство"
-                   ToolTip.Tip="Выберите устройство или введите новое название. После сохранения появится раздел с этим названием." />
+          <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,6,0">
+            <ComboBox x:Name="DeviceModelPicker" ItemsSource="{Binding EquipmentModels}"
+                      SelectedItem="{Binding SelectedEquipmentModel, Mode=TwoWay}" PlaceholderText="{Binding EquipmentPlaceholder}"
+                      HorizontalAlignment="Stretch" VerticalContentAlignment="Center" MinHeight="32"
+                      IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Устройство"
+                      ToolTip.Tip="Выберите устройство из справочника. Если его нет, нажмите «+»." />
+            <Button Grid.Column="1" x:Name="AddCatalogModelButton" Classes="graphTool icon" Margin="4,0,0,0"
+                    Click="OnAddCatalogModel" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
+                    ToolTip.Tip="Добавить изделие в справочник" AutomationProperties.Name="Добавить изделие в справочник">
+              <PathIcon Width="16" Height="16" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" />
+            </Button>
+          </Grid>
           <TextBlock Grid.Column="3" Text="·" FontSize="18" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
           <AutoCompleteBox x:Name="ProfileNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="4" ItemsSource="{Binding ProfileNameSuggestions}"
                    Text="{Binding ProfileDescription, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Watermark="Название проверки"
@@ -283,7 +290,9 @@
                     </ComboBox>
                   </StackPanel>
                   <Button Content="Редактировать изделие…" Click="OnConfigureCatalogSerials"
-                          AutomationProperties.Name="Редактировать изделие" />
+                          IsVisible="{Binding HasCatalogEquipmentModel}" AutomationProperties.Name="Редактировать изделие" />
+                  <Button Content="Добавить изделие…" Click="OnAddCatalogModel"
+                          IsVisible="{Binding !HasCatalogEquipmentModel}" AutomationProperties.Name="Добавить изделие" />
                 </StackPanel>
               </Flyout>
             </Button.Flyout>

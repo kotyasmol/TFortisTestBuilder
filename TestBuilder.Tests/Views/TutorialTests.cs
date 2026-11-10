@@ -58,8 +58,8 @@ public class TutorialTests
                 Assert.Equal(2, Directory.GetFiles(folder, "*.json").Length);
                 Assert.Equal(original, File.ReadAllText(Path.Combine(folder, "intro.json")));
                 ClickTarget(window); await At(window, TutorialStep.Device);
-                var device = window.Target!.GetVisualDescendants().OfType<TextBox>().First();
-                device.Focus(); device.Text = "Учебная плата"; window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                var device = Assert.IsType<ComboBox>(window.Target);
+                device.SelectedItem = device.Items.OfType<EquipmentModel>().Single(model => model.Id == "tutorial-board");
                 await At(window, TutorialStep.HideProfiles); ClickTarget(window);
                 await At(window, TutorialStep.AddStart);
                 Drop(window, "Старт"); await At(window, TutorialStep.AddAction);

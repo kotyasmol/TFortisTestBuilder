@@ -48,7 +48,7 @@ public class StandIdentityTests
         using var bus = new ModbusService(); var manager = new SlaveManager(bus);
         using var vm = new TestViewModel(bus, manager);
         Assert.Equal("Стенд АПК-03", vm.StandSectionTitle);
-        vm.DeviceName = "Проверяемое изделие";
+        vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-plus-box-8x2pro");
         var device = new DeviceDefinition { Name = "RTL-SW", Registers = new() {
             new() { Address = 2300, Name = "Серийный номер стенда" } } };
         var model = new ConfiguredSlaveModel(device, bus);

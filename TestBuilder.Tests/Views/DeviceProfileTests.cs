@@ -10,6 +10,7 @@ using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
+using TestBuilder.Views;
 using TestBuilder.Views.TestViews;
 
 namespace TestBuilder.Tests.Views;
@@ -19,7 +20,7 @@ public class DeviceProfileTests
 {
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public async Task NewDeviceAndProfile_CanBeTypedSavedSuggestedAndReloaded(bool dark)
+    public async Task NewDeviceCanBeAddedToCatalogAndSelectedInSavedProfiles(bool dark)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
@@ -40,15 +41,32 @@ public class DeviceProfileTests
                 var kind = view.FindControl<ComboBox>("ProfileProductKindInput")!;
                 kind.SelectedItem = "Плата"; Layout();
                 Assert.Equal("Board", vm.RootGraph.ProductKind);
-                var model = Field("Устройство");
+                var model = view.FindControl<ComboBox>("DeviceModelPicker")!;
+                Assert.Null(model.SelectedItem);
+                Click(view.FindControl<Button>("AddCatalogModelButton")!, window);
+                var dialog = Assert.Single(window.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var modelName = dialog.GetVisualDescendants().OfType<TextBox>()
+                    .Single(field => AutomationProperties.GetName(field) == "Название изделия");
+                var saveModel = dialog.GetVisualDescendants().OfType<Button>()
+                    .Single(button => Equals(button.Content, "Сохранить в справочник"));
+                modelName.Text = "PSW 2G6F plus";
+                Click(saveModel, dialog);
+                Assert.True(dialog.IsVisible);
+                Assert.Null(model.SelectedItem);
+                Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(),
+                    field => field.Text?.Contains("уже есть в справочнике") == true);
+                modelName.Text = "PSV2G4H+";
+                Click(saveModel, dialog);
+                Assert.False(dialog.IsVisible);
+                var added = Assert.IsType<EquipmentModel>(model.SelectedItem);
+                Assert.Equal("PSV2G4H+", added.Name);
+                Assert.Equal(added.Id, EquipmentCatalog.Load(folder).Resolve(null, "PSV2G4H+")?.Id);
+                Assert.False(vm.UseCatalogSerials);
                 var title = Field("Название профиля");
-                var modelText = model.GetVisualDescendants().OfType<TextBox>().Single();
                 var titleText = title.GetVisualDescendants().OfType<TextBox>().Single();
-                modelText.Focus(); window.KeyTextInput("PSV2G4H+");
-                titleText.Focus(); Layout();
                 Assert.Equal("PSV2G4H+", vm.DeviceName);
                 Assert.Equal("PSV2G4H+", vm.CurrentProfileName);
-                titleText.SelectAll(); window.KeyTextInput("Проверка питания");
+                titleText.Focus(); titleText.SelectAll(); window.KeyTextInput("Проверка питания");
                 SaveClick();
                 await vm.SaveGraphCommand.ExecutionTask!; Layout();
                 Assert.Equal("PSV2G4H+ · Проверка питания", vm.CurrentProfileName);
@@ -59,7 +77,7 @@ public class DeviceProfileTests
                 Assert.Equal("Board", first.ProductKind);
                 var bytes = File.ReadAllBytes(first.FilePath);
                 Assert.Equal("PSV2G4H+", first.DeviceModel);
-                Assert.Contains("PSV2G4H+", vm.DeviceNameSuggestions);
+                Assert.Equal(added.Id, first.DeviceModelId);
                 Assert.Contains("Проверка питания", vm.ProfileNameSuggestions);
                 titleText.Focus(); titleText.SelectAll(); window.KeyTextInput("Проверка"); Layout();
                 Assert.True(title.IsDropDownOpen);
@@ -71,19 +89,16 @@ public class DeviceProfileTests
                 Assert.Equal("Другой профиль", vm.RootGraph.ConfigurationName);
                 Assert.Equal(bytes, File.ReadAllBytes(first.FilePath));
                 Assert.Equal(2, Assert.Single(vm.StationProfileGroups).Profiles.Count);
-                vm.NewProfileCommand.Execute(null); Layout(); Assert.Empty(model.Text!);
+                vm.NewProfileCommand.Execute(null); Layout(); Assert.Null(model.SelectedItem);
                 Assert.Equal("Коммутатор", vm.ProfileProductKind);
-                modelText.Focus(); window.KeyTextInput("psv"); Layout(); Assert.True(model.IsDropDownOpen);
-                // Keyboard selection must commit the suggested device, not the typed prefix.
-                window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None); window.KeyReleaseQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
-                window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None); window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
-                titleText.Focus(); Layout(); Assert.Equal("PSV2G4H+", vm.DeviceName);
+                model.SelectedItem = model.Items.OfType<EquipmentModel>().Single(item => item.Id == added.Id);
+                Layout(); Assert.Equal("PSV2G4H+", vm.DeviceName);
                 Assert.Equal("Плата", vm.ProfileProductKind);
                 using var reloaded = new TestViewModel(bus, new SlaveManager(bus));
                 reloaded.SelectedProfile = reloaded.Profiles.First();
                 Assert.Equal("PSV2G4H+", reloaded.DeviceName);
                 Assert.Equal("Board", reloaded.RootGraph.ProductKind);
-                Assert.Contains("PSV2G4H+", reloaded.DeviceNameSuggestions);
+                Assert.Equal(added.Id, reloaded.SelectedEquipmentModel?.Id);
                 var artifacts = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
                 if (artifacts != null)
                 {
@@ -103,8 +118,13 @@ public class DeviceProfileTests
             void SaveClick()
             {
                 var save = view.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand));
-                var point = save.TranslatePoint(new Point(save.Bounds.Width / 2, save.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout();
+                Click(save, window);
+            }
+            void Click(Button button, Window host)
+            {
+                host.UpdateLayout();
+                var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), host)!.Value;
+                host.MouseDown(point, MouseButton.Left); host.MouseUp(point, MouseButton.Left); Layout();
             }
         }, CancellationToken.None);
     }
@@ -144,7 +164,7 @@ public class DeviceProfileTests
                 Layout();
                 Assert.Equal(2, vm.ProfileLabelVariant);
 
-                vm.DeviceName = "PSW-2G6F+";
+                vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-2g6f-plus");
                 Layout();
                 Assert.True(vm.UseCatalogSerials);
                 Assert.Equal(0, vm.ProfileLabelVariant);
@@ -163,7 +183,7 @@ public class DeviceProfileTests
     }
 
     [Fact]
-    public void ChangingKnownDeviceClearsOldId_AndUndoRestoresBothMetadataAndTitle()
+    public void UnknownDeviceRemainsInProfile_AndChangingModelCanBeUndone()
     {
         var folder = Path.Combine(Path.GetTempPath(), "device-catalog-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(folder, "catalog"));
@@ -173,18 +193,29 @@ public class DeviceProfileTests
         try
         {
             using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            vm.NewProfileCommand.Execute(null);
-            vm.DeviceName = "Fixture 2G6F plus";
+            GraphSerializer.Deserialize("""
+                {"name":"Старый профиль","deviceModelId":"legacy-id","deviceModel":"Старое изделие",
+                 "configurationName":"Проверка","nodes":[],"connections":[]}
+                """, vm);
+            Assert.Null(vm.SelectedEquipmentModel);
+            Assert.DoesNotContain(vm.EquipmentModels, model => model.Id == "legacy-id");
+            Assert.Equal("Старое изделие · вне справочника", vm.EquipmentPlaceholder);
+            Assert.Equal("Старое изделие", vm.NewCatalogModel().Name);
+
+            vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "known");
             Assert.Equal("known", vm.RootGraph.DeviceModelId);
             Assert.Equal("Fixture-2G6F+", vm.DeviceName);
-            Assert.Equal(vm.DeviceName, vm.CurrentProfileName);
-            vm.DeviceName = "PSV2G4H+";
-            Assert.Null(vm.RootGraph.DeviceModelId);
+            Assert.Equal("Fixture-2G6F+ · Проверка", vm.CurrentProfileName);
+            vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-2g");
+            Assert.Equal("psw-2g", vm.RootGraph.DeviceModelId);
             vm.UndoCommand.Execute(null);
             Assert.Equal("known", vm.RootGraph.DeviceModelId);
             Assert.Equal("Fixture-2G6F+", vm.DeviceName);
             vm.UndoCommand.Execute(null);
-            Assert.Empty(vm.DeviceName); Assert.Equal("Новый профиль", vm.CurrentProfileName);
+            Assert.Null(vm.SelectedEquipmentModel);
+            Assert.Equal("legacy-id", vm.RootGraph.DeviceModelId);
+            Assert.Equal("Старое изделие", vm.DeviceName);
+            Assert.Equal("Старый профиль", vm.CurrentProfileName);
             vm.RedoCommand.Execute(null); Assert.Equal("known", vm.RootGraph.DeviceModelId);
         }
         finally { AppSettings.Instance.GraphsFolder = old; Directory.Delete(folder, true); }
