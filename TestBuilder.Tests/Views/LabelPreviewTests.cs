@@ -58,7 +58,12 @@ public class LabelPreviewTests
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
         Assert.Equal(295, preview.Width);
         Assert.Equal(154, preview.Height);
-        Assert.Equal(sn.X, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
+        Assert.Equal(478, preview.Left);
+        Assert.Equal(36, preview.Elements.Single(e => e.Text == template.Name).Height);
+        Assert.Equal(25, sn.Height);
+        var mac = preview.Elements.Single(e => e.Text.StartsWith("MAC:"));
+        Assert.Equal(25, mac.Height);
+        Assert.Equal(sn.X, mac.X);
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
         Assert.Equal(Code128Encoding.EncodeAuto("003200428"), bars.Bars);
         Assert.Equal(202, bars.Width);
@@ -75,15 +80,19 @@ public class LabelPreviewTests
         var previous = System.Text.Json.JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
         foreach (var old in previous)
         {
+            var current = LabelTemplateCatalog.Defaults().Single(t => t.Id == old.Id);
+            if (old.OriginXDots != 0) Assert.Equal(current.OriginXDots, old.CopyUpgraded().OriginXDots);
             old.Name = "Название пользователя";
             old.WidthDots = 400;
             old.PrinterDpi = 203;
+            old.OriginXDots = 480;
             var copy = old.CopyUpgraded();
-            Assert.Equal(LabelTemplateCatalog.Defaults().Single(t => t.Id == old.Id).Command, copy.Command);
+            Assert.Equal(current.Command, copy.Command);
             Assert.NotEqual(old.Command, copy.Command);
             Assert.Equal(old.Name, copy.Name);
             Assert.Equal(old.WidthDots, copy.WidthDots);
             Assert.Equal(old.PrinterDpi, copy.PrinterDpi);
+            Assert.Equal(old.OriginXDots, copy.OriginXDots);
             Assert.Equal(copy.Command, copy.CopyUpgraded().Command);
             old.Command += "\n";
             Assert.Equal(old.Command, old.CopyUpgraded().Command);

@@ -93,7 +93,8 @@ public static class LabelTemplateCatalog
         if (template == null) return;
         using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
         var previous = JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
-        if (previous.Any(t => t.Id == template.Id && t.Language == template.Language && t.Command == template.Command))
+        var previousTemplate = previous.FirstOrDefault(t => t.Id == template.Id && t.Language == template.Language && t.Command == template.Command);
+        if (previousTemplate != null)
         {
             var current = Defaults().Single(t => t.Id == template.Id);
             template.Command = current.Command;
@@ -103,6 +104,8 @@ public static class LabelTemplateCatalog
                 template.HeightDots = current.HeightDots;
                 if (template.OriginXDots == 0) template.OriginXDots = current.OriginXDots;
             }
+            if (previousTemplate.OriginXDots != 0 && template.OriginXDots == previousTemplate.OriginXDots)
+                template.OriginXDots = current.OriginXDots;
             if (current.UseShortSerial && template.BarcodePrefix.Length == 3 &&
                 current.BarcodePrefix == "0" + template.BarcodePrefix)
                 template.BarcodePrefix = current.BarcodePrefix;

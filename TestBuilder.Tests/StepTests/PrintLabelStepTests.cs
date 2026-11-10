@@ -187,10 +187,10 @@ public class PrintLabelStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         const string singleLabel =
-            "^XA^MD10^FO502,30^A0N,30,18^FDPSW+UPS-Box 8x2Pro^FS" +
-            "^FO502,60^A0N,24,18^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO502,86^A0N,23,18^FDSN: 3200428^FS" +
-            "^FO540,112^BY2^BCN,34,N,N,N^FD>;00320042>68^FS^XZ ";
+            "^XA^MD10^FO486,22^A0N,36,24^FDPSW+UPS-Box 8x2Pro^FS" +
+            "^FO486,59^A0N,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
+            "^FO486,85^A0N,25,20^FDSN: 3200428^FS" +
+            "^FO524,112^BY2^BCN,34,N,N,N^FD>;00320042>68^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
@@ -353,10 +353,10 @@ public class PrintLabelStepTests
         var step = CreateStep(printer, 4, manualSerial: serial, manualMacAddress: "C0:11:A6:06:01:AC",
             useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
-        const string expected = "^XA^MD10^FO502,30^A0N,30,18^FDPSW-2G6F+^FS" +
-            "^FO502,60^A0N,24,18^FDMAC: C0:11:A6:06:01:AC^FS" +
-            "^FO502,86^A0N,23,18^FDSN: 600428^FS" +
-            "^FO540,112^BY2^BCN,34,N,N,N^FD>;00060042>68^FS^XZ ";
+        const string expected = "^XA^MD10^FO486,22^A0N,36,24^FDPSW-2G6F+^FS" +
+            "^FO486,59^A0N,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
+            "^FO486,85^A0N,25,20^FDSN: 600428^FS" +
+            "^FO524,112^BY2^BCN,34,N,N,N^FD>;00060042>68^FS^XZ ";
         Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
         Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));

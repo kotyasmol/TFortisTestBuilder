@@ -48,5 +48,17 @@
     "Id": "Psw2G6FPlus",
     "Language": "ZPL",
     "Command": "^XA^MD10^FO559,35^A0,36,25^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO510,95^A0,25,20^FDSN: {{Serial}}^FS^FO668,98^A0,17,10^FD{{Variant}}^FS^FO510,117^BY2^BCN,50,N,N,N^FD{{Barcode}}^FS^XZ "
+  },
+  {
+    "Id": "PswUpsBox8x2Pro",
+    "Language": "ZPL",
+    "Command": "^XA^MD10^FO{{TextX}},30^A0N,30,18^FD{{Name}}^FS^FO{{TextX}},60^A0N,24,18^FDMAC: {{Mac}}^FS^FO{{TextX}},86^A0N,23,18^FDSN: {{Serial}}^FS^FO{{BarcodeX}},{{BarcodeTopDots}}^BY{{BarcodeModuleDots}}^BCN,{{BarcodeHeightDots}},N,N,N^FD{{ZplBarcode}}^FS^XZ ",
+    "OriginXDots": 494
+  },
+  {
+    "Id": "Psw2G6FPlus",
+    "Language": "ZPL",
+    "Command": "^XA^MD10^FO{{TextX}},30^A0N,30,18^FD{{Name}}^FS^FO{{TextX}},60^A0N,24,18^FDMAC: {{Mac}}^FS^FO{{TextX}},86^A0N,23,18^FDSN: {{Serial}}^FS^FO{{BarcodeX}},{{BarcodeTopDots}}^BY{{BarcodeModuleDots}}^BCN,{{BarcodeHeightDots}},N,N,N^FD{{ZplBarcode}}^FS^XZ ",
+    "OriginXDots": 494
   }
 ]
