@@ -10,6 +10,7 @@ using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.Tests.SerializationTests;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.StepVM;
 using TestBuilder.Views;
 using TestBuilder.Views.TestViews;
 
@@ -162,6 +163,98 @@ public class ProfileListMenuTests
         var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
         window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
     }
+
+    [Fact]
+    public async Task RightClickDeleteCanBeCancelled_AndMovesOnlyTheConfirmedProfile()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch<bool>(async () =>
+        {
+            using var files = new ProfileCopyTests.ProfileFolder();
+            var sourcePath = files.Write("source.json", ProfileCopyTests.SimpleJson);
+            var otherPath = files.Write("other.json", ProfileCopyTests.SimpleJson.Replace("Проверка", "Другая"));
+            var originalOther = File.ReadAllBytes(otherPath);
+            File.SetLastWriteTimeUtc(sourcePath, new DateTime(2025, 1, 2, 0, 0, 0, DateTimeKind.Utc));
+            File.SetLastWriteTimeUtc(otherPath, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            var source = vm.Profiles.Single(p => p.FilePath == sourcePath);
+            var other = vm.Profiles.Single(p => p.FilePath == otherPath);
+            vm.SelectedProfile = other;
+            var currentNode = Assert.IsType<DelayNodeViewModel>(Assert.Single(vm.Nodes));
+            currentNode.Milliseconds = 99;
+            var view = new ProfileListView { DataContext = vm };
+            var window = new Window { Width = 340, Height = 620, Content = view };
+            ReloadProfileDialog? dialog = null;
+            vm.ShowDeleteProfileDialogAsync = create => (dialog = create()).ShowDialog<bool>(window);
+            try
+            {
+                window.Show();
+                Assert.True(source.IsLatest);
+                Assert.False(other.IsLatest);
+                var pending = OpenDeleteMenu(source);
+                ClickButton("Отмена");
+                await pending;
+                Assert.True(File.Exists(sourcePath));
+                Assert.False(Directory.Exists(Path.Combine(files.Path, "deleted")));
+
+                pending = OpenDeleteMenu(source);
+                ClickButton("Удалить");
+                await pending;
+                Assert.False(File.Exists(sourcePath));
+                Assert.Equal(ProfileCopyTests.SimpleJson, File.ReadAllText(ProfileFileStorage.DeletedPath(sourcePath)));
+                Assert.Same(other, Assert.Single(vm.Profiles));
+                Assert.True(other.IsLatest);
+                Assert.Same(other, vm.SelectedProfile);
+                Assert.Same(currentNode, Assert.Single(vm.Nodes));
+                Assert.Equal(99, currentNode.Milliseconds);
+
+                vm.IsConnected = true;
+                Assert.False(vm.DeleteProfileCommand.CanExecute(other));
+                vm.IsConnected = false;
+                pending = OpenDeleteMenu(other);
+                Assert.Contains(dialog!.GetVisualDescendants().OfType<TextBlock>(),
+                    text => text.Text?.Contains("Несохранённые изменения") == true);
+                ClickButton("Удалить");
+                await pending;
+                Assert.Null(vm.SelectedProfile);
+                Assert.Empty(vm.Nodes);
+                Assert.Empty(vm.Profiles);
+                Assert.Equal("Новый профиль", vm.CurrentProfileName);
+                Assert.False(vm.CanReloadProfile);
+                Assert.False(vm.UndoCommand.CanExecute(null));
+                Assert.Equal(originalOther, File.ReadAllBytes(ProfileFileStorage.DeletedPath(otherPath)));
+            }
+            finally { view.ProfileMenu?.Close(); dialog?.Close(); window.Close(); }
+            return true;
+
+            Task OpenDeleteMenu(GraphProfile profile)
+            {
+                Layout(window);
+                var item = view.GetVisualDescendants().OfType<ListBoxItem>().Single(x => ReferenceEquals(x.DataContext, profile));
+                var point = item.TranslatePoint(new Point(30, item.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, MouseButton.Right); window.MouseUp(point, MouseButton.Right); Layout(window);
+                var menu = Assert.IsType<ContextMenu>(view.ProfileMenu);
+                Assert.True(menu.IsOpen);
+                Assert.Same(other, vm.SelectedProfile);
+                var action = menu.Items.OfType<MenuItem>().Single(x => Equals(x.Header, "Удалить профиль"));
+                Assert.Same(profile, action.CommandParameter);
+                menu.Close();
+                var task = ((IAsyncRelayCommand)action.Command!).ExecuteAsync(profile);
+                Layout(dialog!);
+                Assert.Contains(dialog!.GetVisualDescendants().OfType<TextBlock>(),
+                    text => text.Text?.Contains(profile.DisplayName) == true);
+                return task;
+            }
+
+            void ClickButton(string name)
+            {
+                var shown = Assert.IsType<ReloadProfileDialog>(dialog);
+                Click(shown, shown.GetVisualDescendants().OfType<Button>().Single(x => Equals(x.Content, name)));
+            }
+        }, CancellationToken.None);
+    }
+
     private static void Layout(Window window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
 }

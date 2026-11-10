@@ -67,6 +67,16 @@ public class ProfileDirectoryLocatorTests
             var added = Path.Combine(working.FullName, "new.json");
             Assert.Equal("new bundled file", File.ReadAllText(added));
             Assert.Equal(File.GetLastWriteTimeUtc(seed), File.GetLastWriteTimeUtc(added));
+
+            ProfileFileStorage.MoveToDeleted(added, ProfileFileStorage.Read(added).Revision);
+            ProfileDirectoryLocator.ResolvePortableDirectory(root.FullName);
+            Assert.False(File.Exists(added));
+            Assert.Equal("new bundled file", File.ReadAllText(ProfileFileStorage.DeletedPath(added)));
+
+            File.WriteAllText(added, "updated after reimport");
+            ProfileFileStorage.MoveToDeleted(added, ProfileFileStorage.Read(added).Revision);
+            Assert.Equal("new bundled file", File.ReadAllText(ProfileFileStorage.DeletedPath(added)));
+            Assert.Equal("updated after reimport", File.ReadAllText(Path.Combine(working.FullName, "deleted", "new (2).json")));
         }
         finally { root.Delete(recursive: true); }
     }

@@ -32,6 +32,23 @@ internal static class ProfileFileStorage
         throw new IOException("Файл изменился на диске. Обновите профиль или сохраните правки в копию.");
     }
 
+    internal static string DeletedPath(string path) =>
+        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "deleted", Path.GetFileName(path));
+
+    internal static void MoveToDeleted(string path, string expectedRevision)
+    {
+        lock (PublishLock)
+        {
+            CheckRevision(path, expectedRevision);
+            var destination = DeletedPath(path);
+            var folder = Path.GetDirectoryName(destination)!;
+            Directory.CreateDirectory(folder);
+            if (File.Exists(destination))
+                destination = NewCopyPath(folder, Path.GetFileNameWithoutExtension(path));
+            File.Move(path, destination, overwrite: false);
+        }
+    }
+
     public static string WithName(string json, GraphProfile source, string description)
     {
         if (string.IsNullOrWhiteSpace(description) || description.Any(char.IsControl))

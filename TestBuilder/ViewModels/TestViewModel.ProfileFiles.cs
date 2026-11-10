@@ -15,12 +15,13 @@ public partial class TestViewModel
     public bool CanReloadProfile => CanChooseProfile && !IsActionGraphEditor && !IsNetworkSetupBusy &&
         !IsLabelToolBusy && !SaveGraphCommand.IsRunning && _currentProfilePath != null;
 
-    internal Func<Task<bool>> ConfirmReloadProfileAsync { get; set; } = () => ShowDiscardProfileDialogAsync(() => new());
-    internal Func<Task<bool>> ConfirmDiscardProfileAsync { get; set; } = () => ShowDiscardProfileDialogAsync(() => new(
+    internal Func<Task<bool>> ConfirmReloadProfileAsync { get; set; } = () => ShowProfileConfirmationAsync(() => new());
+    internal Func<Task<bool>> ConfirmDiscardProfileAsync { get; set; } = () => ShowProfileConfirmationAsync(() => new(
         "Закрыть профиль?", "Закрыть без сохранения",
         "В профиле есть несохранённые изменения. Закрыть его без сохранения?"));
+    internal Func<Func<Views.ReloadProfileDialog>, Task<bool>> ShowDeleteProfileDialogAsync { get; set; } = ShowProfileConfirmationAsync;
 
-    private static async Task<bool> ShowDiscardProfileDialogAsync(Func<Views.ReloadProfileDialog> createDialog)
+    private static async Task<bool> ShowProfileConfirmationAsync(Func<Views.ReloadProfileDialog> createDialog)
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
@@ -89,6 +90,43 @@ public partial class TestViewModel
 
     private bool IsCurrentProfile(GraphProfile profile) =>
         string.Equals(_currentProfilePath, profile.FilePath, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsOpenDeleteTarget(GraphProfile profile) => IsCurrentProfile(profile) ||
+        string.Equals(_selectedProfile?.FilePath, profile.FilePath, StringComparison.OrdinalIgnoreCase);
+
+    private bool CanDeleteProfile(GraphProfile? profile) => profile != null && CanManageProfile(profile) &&
+        !_confirmingProfileDiscard && _profileCatalog.Contains(profile) &&
+        (!IsConnected || !IsOpenDeleteTarget(profile)) &&
+        Path.GetRelativePath(ProfilesFolder, profile.FilePath) == Path.GetFileName(profile.FilePath);
+
+    [RelayCommand(CanExecute = nameof(CanDeleteProfile))]
+    private async Task DeleteProfile(GraphProfile? profile)
+    {
+        if (profile == null || !CanDeleteProfile(profile)) return;
+        var isOpen = IsOpenDeleteTarget(profile);
+        var unsaved = isOpen && HasUnsavedProfileChanges();
+        try
+        {
+            var revision = (IsCurrentProfile(profile) ? _savedProfileRevision : null) ??
+                ProfileFileStorage.Read(profile.FilePath).Revision;
+            var question = $"Удалить профиль «{profile.DisplayName}»? Файл будет перемещён в папку deleted.";
+            if (unsaved) question += " Несохранённые изменения будут потеряны.";
+            if (!await ShowDeleteProfileDialogAsync(() => new("Удалить профиль?", "Удалить", question)) ||
+                !CanDeleteProfile(profile) || isOpen != IsOpenDeleteTarget(profile) ||
+                (isOpen && !unsaved && HasUnsavedProfileChanges())) return;
+            ProfileFileStorage.MoveToDeleted(profile.FilePath, revision);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Не удалось удалить профиль: {ex.Message}";
+            LogUiException("Удаление профиля", ex);
+            return;
+        }
+
+        if (isOpen) ResetToEmptyProfile();
+        RefreshProfiles();
+        StatusMessage = $"Профиль «{profile.DisplayName}» перемещён в папку deleted.";
+    }
 
     private string? ValidateProfileDescription(GraphProfile source, string name, bool copy)
     {

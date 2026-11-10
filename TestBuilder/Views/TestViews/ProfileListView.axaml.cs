@@ -66,7 +66,8 @@ public partial class ProfileListView : UserControl
                         ItemsSource = new[]
                         {
                             new MenuItem { Header = "Копировать профиль", Command = vm.CopyProfileCommand, CommandParameter = profile },
-                            new MenuItem { Header = "Переименовать профиль", Command = vm.RenameProfileCommand, CommandParameter = profile }
+                            new MenuItem { Header = "Переименовать профиль", Command = vm.RenameProfileCommand, CommandParameter = profile },
+                            new MenuItem { Header = "Удалить профиль", Command = vm.DeleteProfileCommand, CommandParameter = profile }
                         }
                     };
                     ProfileMenu.Open(element);

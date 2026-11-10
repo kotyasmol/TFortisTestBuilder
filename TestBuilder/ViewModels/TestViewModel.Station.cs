@@ -282,7 +282,8 @@ public partial class TestViewModel
         ToggleConnectionCommand?.NotifyCanExecuteChanged();
         foreach (var command in new object?[] { AddNodeCommand, DisconnectConnectorCommand,
             DeleteSelectedNodesCommand, ClearGraphCommand, ClearPartialRunCommand, NewProfileCommand, SaveGraphCommand,
-            ImportProfilesCommand, CopyProfileCommand, RenameProfileCommand, UndoCommand, RedoCommand, StopTestCommand, PauseTestCommand, ResumeTestCommand })
+            ImportProfilesCommand, CopyProfileCommand, RenameProfileCommand, DeleteProfileCommand, UndoCommand, RedoCommand,
+            StopTestCommand, PauseTestCommand, ResumeTestCommand })
             if (command is IRelayCommand relay) relay.NotifyCanExecuteChanged();
     }
 }

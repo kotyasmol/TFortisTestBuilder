@@ -45,7 +45,7 @@ namespace TestBuilder.Services
                 foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.TopDirectoryOnly))
                 {
                     var destination = Path.Combine(workingFolder, Path.GetFileName(source));
-                    if (File.Exists(destination)) continue;
+                    if (File.Exists(destination) || File.Exists(ProfileFileStorage.DeletedPath(destination))) continue;
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                     var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
                     try

@@ -799,6 +799,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (!CanEditGraph || !CanChooseProfile || IsConnected) { StatusMessage = "Отключите стенд перед сменой профиля."; return; }
         if (SaveGraphCommand.IsRunning || !await CanDiscardProfileChangesAsync(ConfirmDiscardProfileAsync)) return;
         if (!CanEditGraph || !CanChooseProfile || IsConnected || SaveGraphCommand.IsRunning) return;
+        ResetToEmptyProfile();
+        StatusMessage = "Создан новый профиль. Укажите устройство, тип изделия и название проверки, затем нажмите «Сохранить».";
+    }
+
+    private void ResetToEmptyProfile()
+    {
         ResetProfilePreparation();
         ResetToRootGraph();
 
@@ -833,8 +839,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         _profileLoadError = string.Empty;
         Station.Prepare(RootGraph);
         RefreshStationAvailability();
-
-        StatusMessage = "Создан новый профиль. Укажите устройство, тип изделия и название проверки, затем нажмите «Сохранить».";
     }
 
     internal void DiscardRootGraphContents()

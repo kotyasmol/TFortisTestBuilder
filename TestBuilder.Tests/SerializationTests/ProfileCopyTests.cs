@@ -120,6 +120,35 @@ public class ProfileCopyTests
         Assert.False(vm.CopyProfileCommand.CanExecute(source));
     }
 
+    [Fact]
+    public async Task DeleteChecksFileRevisionAndRunStateAfterConfirmation()
+    {
+        using var files = new ProfileFolder();
+        var sourcePath = files.Write("source.json", SimpleJson);
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        var source = Assert.Single(vm.Profiles);
+        vm.ShowDeleteProfileDialogAsync = _ =>
+        {
+            File.AppendAllText(sourcePath, "\n");
+            return Task.FromResult(true);
+        };
+        await vm.DeleteProfileCommand.ExecuteAsync(source);
+        Assert.Equal(SimpleJson + "\n", File.ReadAllText(sourcePath));
+        Assert.Contains("Файл изменился на диске", vm.StatusMessage);
+
+        vm.ShowDeleteProfileDialogAsync = _ =>
+        {
+            vm.IsTestRunning = true;
+            return Task.FromResult(true);
+        };
+        await vm.DeleteProfileCommand.ExecuteAsync(source);
+        Assert.False(vm.DeleteProfileCommand.CanExecute(source));
+        Assert.True(File.Exists(sourcePath));
+        Assert.False(Directory.Exists(Path.Combine(files.Path, "deleted")));
+        vm.IsTestRunning = false;
+    }
+
     internal sealed class ProfileFolder : IDisposable
     {
         private readonly string _previous = AppSettings.Instance.GraphsFolder;

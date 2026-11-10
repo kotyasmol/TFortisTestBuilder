@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Local release packages and downloaded build inputs.
 /artifacts/
+
+# Profiles removed from the local workspace through the editor.
+/profiles/deleted/
