@@ -13,6 +13,7 @@ using Avalonia.VisualTree;
 using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 using TestBuilder.ViewModels;
+using TestBuilder.ViewModels.StepVM;
 using TestBuilder.Views;
 using TestBuilder.Views.TestViews;
 
@@ -175,6 +176,66 @@ public class ThemeContrastTests
     }
 
     [Fact]
+    public async Task GraphNodeText_StaysReadableAcrossLiveThemeChanges()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var app = Application.Current!;
+            var originalTheme = app.RequestedThemeVariant;
+            using var vm = new MainWindowViewModel();
+            vm.TestVM.IsOperatorView = false;
+            using var view = new GraphEditorView { DataContext = vm.TestVM };
+            var window = new Window { Width = 1450, Height = 1150, Content = view };
+            var failures = new List<string>();
+            try
+            {
+                window.Show();
+                view.FindControl<Nodify.NodifyEditor>("Editor")!.ViewportZoom = 1;
+                foreach (var sample in vm.TestVM.AvailableNodes)
+                {
+                    var model = sample.Clone();
+                    model.Location = new Point(40, 40);
+                    vm.TestVM.Nodes.Add(model);
+                    try
+                    {
+                        var subtest = model as SubtestNodeViewModel;
+                        if (subtest != null) subtest.ProgressText = "Проверка питания";
+                        foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark, ThemeVariant.Light })
+                        {
+                            app.RequestedThemeVariant = theme;
+                            if (subtest != null) subtest.IsEnabled = true;
+                            CheckNode(model.DisplayTitle, theme);
+                            if (model is RunProgramNodeViewModel) Capture(window, "node-program-" + theme);
+                            vm.TestVM.IsConnecting = true;
+                            CheckNode(model.DisplayTitle + " (просмотр)", theme);
+                            vm.TestVM.IsConnecting = false;
+                            if (subtest == null) continue;
+                            subtest.IsEnabled = false;
+                            CheckNode(model.DisplayTitle + " (выключен)", theme);
+                        }
+                    }
+                    finally { vm.TestVM.Nodes.Remove(model); model.Dispose(); }
+                }
+                Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures.Distinct()));
+            }
+            finally { window.Close(); app.RequestedThemeVariant = originalTheme; }
+
+            void CheckNode(string name, ThemeVariant theme)
+            {
+                Layout(window);
+                var node = Assert.Single(view.GetVisualDescendants().OfType<Nodify.Node>());
+                foreach (var text in node.GetVisualDescendants().OfType<TextBlock>()
+                             .Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
+                    CheckInk(text, text.Foreground, $"Node/{theme}/{name}/{text.Text}", failures);
+                foreach (var text in node.GetVisualDescendants().OfType<TextPresenter>()
+                             .Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
+                    CheckInk(text, text.Foreground, $"Node value/{theme}/{name}/{text.Text}", failures);
+            }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task DisabledInputsAndRegisterRows_StayReadableWhenSwitchingTheme()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
@@ -282,7 +343,7 @@ public class ThemeContrastTests
         foreach (var v in visual.GetSelfAndVisualAncestors().Reverse())
         {
             var brush = v switch { ContentPresenter p => p.Background, Border b => b.Background, Panel p => p.Background,
-                DataGridRow row => row.Background, Window w => w.Background, _ => null };
+                DataGridRow row => row.Background, TextBox field => field.Background, Window w => w.Background, _ => null };
             if (brush is ISolidColorBrush solid) color = Blend(solid.Color, color, solid.Opacity * v.Opacity);
         }
         return color;

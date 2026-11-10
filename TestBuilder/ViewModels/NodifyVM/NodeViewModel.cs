@@ -37,6 +37,8 @@ namespace TestBuilder.ViewModels.NodifyVM
         private static readonly IBrush SucceededBorderBrush =
             new SolidColorBrush(Color.FromRgb(34, 197, 94));
 
+        private static readonly IBrush InactiveHeaderTextBrush = NodeColorOption.GetContrastBrush(Colors.Gray);
+
         [ObservableProperty] private bool runOnlyOnFirstRun;
         public bool CanRunOnlyOnFirstRun => Output.Count > 0 && this is not
             (TestBuilder.ViewModels.StepVM.StartNodeViewModel or
@@ -115,7 +117,7 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         public virtual bool IsInactive => false;
         public IBrush NodeColorBrush => IsInactive ? Brushes.Gray : SelectedColor.Brush;
-        public IBrush NodeHeaderTextBrush => IsInactive ? Brushes.White : SelectedColor.HeaderTextBrush;
+        public IBrush NodeHeaderTextBrush => IsInactive ? InactiveHeaderTextBrush : SelectedColor.HeaderTextBrush;
 
         [RelayCommand]
         private void SelectColor(string color) => NodeColor = color;
@@ -216,7 +218,7 @@ namespace TestBuilder.ViewModels.NodifyVM
         public IBrush Brush { get; }
         public IBrush HeaderTextBrush { get; }
 
-        private static IBrush GetContrastBrush(Color color)
+        internal static IBrush GetContrastBrush(Color color)
         {
             var luminance = GetRelativeLuminance(color);
             const double darkLuminance = 0.009;

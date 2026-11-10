@@ -134,8 +134,8 @@
           <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1D232B" />
           <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#232A33" />
           <SolidColorBrush x:Key="EditorDotBrush" Color="#526171" />
-          <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#555555" />
-          <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#626262" />
+          <SolidColorBrush x:Key="InactiveNodeBackgroundBrush" Color="#404040" />
+          <SolidColorBrush x:Key="InactiveNodeFieldBrush" Color="#494949" />
           <SolidColorBrush x:Key="GridLineBrush" Color="#343F4C" />
           <SolidColorBrush x:Key="SurfaceBrush" Color="#272F39" />
           <SolidColorBrush x:Key="SurfaceAltBrush" Color="#232A33" />
@@ -494,6 +494,10 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource UiCornerRadius}" />
     <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="nodify|Node /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
 
   <Style Selector="nodify|NodeInput">

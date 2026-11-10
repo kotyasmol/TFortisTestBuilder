@@ -1080,7 +1080,7 @@
                                FontSize="{StaticResource FontCaption}"
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"
-                               Foreground="{DynamicResource NodeWaitBrush}" />
+                               Foreground="{DynamicResource PrimaryTextBrush}" />
 
                     <Button Content="Открыть"
                             x:CompileBindings="False"
