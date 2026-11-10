@@ -44,7 +44,10 @@ namespace TestBuilder.Services
                 if (!Directory.Exists(templates)) return workingFolder;
                 foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.AllDirectories))
                 {
-                    var destination = Path.Combine(workingFolder, Path.GetRelativePath(templates, source));
+                    var relative = Path.GetRelativePath(templates, source);
+                    // The catalog is loaded directly from each release. The working catalog is an explicit override.
+                    if (string.Equals(relative, EquipmentCatalog.RelativePath, StringComparison.OrdinalIgnoreCase)) continue;
+                    var destination = Path.Combine(workingFolder, relative);
                     if (File.Exists(destination)) continue;
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                     var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";

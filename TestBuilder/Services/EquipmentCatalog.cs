@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,6 +12,10 @@ namespace TestBuilder.Services;
 public sealed record EquipmentModel(string Id, string Name)
 {
     public string[] Aliases { get; init; } = Array.Empty<string>();
+    public int? LabelCode { get; init; }
+    public Dictionary<int, string>? LabelVariants { get; init; }
+    public ModelSerialSeries? SerialSeries { get; init; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; init; }
     public override string ToString() => Name;
 }
 
@@ -19,16 +24,81 @@ public sealed class EquipmentCatalog
     public int SchemaVersion { get; set; } = 1;
     public string Revision { get; set; } = "";
     public List<EquipmentModel> Models { get; set; } = new();
+    internal static string RelativePath { get; } = Path.Combine("catalog", "equipment-models.json");
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     public static EquipmentCatalog Load(string profilesFolder)
     {
-        var file = Path.Combine(profilesFolder, "catalog", "equipment-models.json");
+        var bundled = Read(Path.Combine(AppContext.BaseDirectory, "profile-templates", RelativePath));
+        var local = Read(Path.Combine(profilesFolder, RelativePath));
+        var models = bundled.Models.ToDictionary(model => model.Id, StringComparer.OrdinalIgnoreCase);
+        foreach (var model in local.Models)
+        {
+            // Older installations retain their original local catalog after updates.
+            if (models.TryGetValue(model.Id, out var baseline) && Keys(baseline).Contains(Normalize(model.Name)))
+                models[model.Id] = model with
+                {
+                    LabelCode = model.LabelCode ?? baseline.LabelCode,
+                    LabelVariants = model.LabelVariants ?? baseline.LabelVariants,
+                    SerialSeries = model.SerialSeries ?? baseline.SerialSeries
+                };
+            else
+                models[model.Id] = model;
+        }
+        local.Models = models.Values.ToList();
+        return local;
+    }
+
+    private static EquipmentCatalog Read(string file)
+    {
         if (!File.Exists(file)) return new EquipmentCatalog();
-        var catalog = JsonSerializer.Deserialize<EquipmentCatalog>(File.ReadAllText(file),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("Пустой каталог изделий.");
-        if (catalog.SchemaVersion != 1 || catalog.Models == null || catalog.Models.Any(m => m == null || string.IsNullOrWhiteSpace(m.Id) || string.IsNullOrWhiteSpace(m.Name)) ||
-            catalog.Models.Select(m => m.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != catalog.Models.Count)
-            throw new InvalidDataException("Некорректная версия каталога или повторяющиеся ID изделий.");
+        var catalog = JsonSerializer.Deserialize<EquipmentCatalog>(File.ReadAllText(file), JsonOptions)
+            ?? throw new InvalidDataException("Пустой каталог изделий.");
+        catalog.Validate();
         return catalog;
+    }
+
+    internal static void SaveModel(string profilesFolder, EquipmentModel model)
+    {
+        var file = Path.Combine(profilesFolder, RelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        using var editLock = new FileStream(file + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        var catalog = Read(file);
+        var index = catalog.Models.FindIndex(item => string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase));
+        if (index >= 0) catalog.Models[index] = model;
+        else catalog.Models.Add(model);
+        catalog.Validate();
+        var temporary = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(catalog, JsonOptions));
+            File.Move(temporary, file, overwrite: true);
+        }
+        finally { File.Delete(temporary); }
+    }
+
+    private void Validate()
+    {
+        if (SchemaVersion != 1 || Models == null || Models.Any(m => m == null || string.IsNullOrWhiteSpace(m.Id) || string.IsNullOrWhiteSpace(m.Name)) ||
+            Models.Select(m => m.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Models.Count)
+            throw new InvalidDataException("Некорректная версия каталога или повторяющиеся ID изделий.");
+        foreach (var model in Models)
+        {
+            if (model.LabelCode is < 0 or > 999 ||
+                model.LabelCode.HasValue && !LabelTemplateDefinition.IsSafeLabelText(model.Name) ||
+                model.LabelVariants?.Any(pair => pair.Key is < 0 or > 9 || string.IsNullOrWhiteSpace(pair.Value) ||
+                    !LabelTemplateDefinition.IsSafeLabelText(pair.Value)) == true)
+                throw new InvalidDataException($"Проверьте код этикетки и комплектации изделия «{model.Name}».");
+            model.SerialSeries?.Validate(model.Name);
+        }
     }
     // Separators/case are presentation; +, port counts and model suffixes are identity.
     public static string Normalize(string? value)

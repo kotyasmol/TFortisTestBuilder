@@ -147,6 +147,65 @@ public class EditorDocumentTests
         Assert.Equal("custom-model", json.RootElement.GetProperty("deviceModelId").GetString());
         Assert.Equal("Изделие", json.RootElement.GetProperty("deviceModel").GetString());
     }
+
+    [Fact]
+    public void CatalogSeriesSettingsRoundTripWithoutRewritingNodeParameters()
+    {
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize("""
+            {"name":"Box","deviceModelId":"box","deviceModel":"Box","nodes":[{"id":"0","type":"Start"},
+            {"id":"1","type":"Get Serial Number","deviceType":"UPS"}],"connections":[]}
+            """, vm);
+        vm.RootGraph.UseCatalogSerials = true;
+        vm.RootGraph.LabelVariant = 1;
+        var serialized = GraphSerializer.Serialize(vm, "Box");
+        Assert.Contains("Start (catalog serials v1)", serialized);
+        GraphSerializer.Deserialize(serialized, vm);
+        Assert.True(vm.RootGraph.UseCatalogSerials);
+        Assert.Equal(1, vm.RootGraph.LabelVariant);
+        Assert.Equal("box", vm.RootGraph.DeviceModelId);
+        Assert.Equal("UPS", vm.RootGraph.Nodes.OfType<GetSerialNumberFromServerNodeViewModel>().Single().DeviceType);
+    }
+
+    [Fact]
+    public void CatalogCanSaveNewSeriesAndRejectInvalidEdits()
+    {
+        var folder = Directory.CreateTempSubdirectory();
+        try
+        {
+            var model = new EquipmentModel("new-local", "New local")
+            {
+                LabelCode = 42,
+                SerialSeries = new() { ServerDeviceType = "New server name", FirstSerialNumber = 4200001,
+                    LastSerialNumber = 4265535, SerialOffset = 4200000 }
+            };
+            EquipmentCatalog.SaveModel(folder.FullName, model);
+            Assert.Throws<InvalidDataException>(() => EquipmentCatalog.SaveModel(folder.FullName,
+                model with { SerialSeries = model.SerialSeries with { FirstSerialNumber = 0 } }));
+            var loaded = EquipmentCatalog.Load(folder.FullName).Resolve(model.Id, null);
+            Assert.Equal(model.SerialSeries, loaded!.SerialSeries);
+            Assert.Equal(42, loaded.LabelCode);
+        }
+        finally { folder.Delete(true); }
+    }
+
+    [Fact]
+    public void ChangingDeviceOnCopiedProfileEnablesCatalogEvenForAnUnconfiguredModel()
+    {
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        GraphSerializer.Deserialize("""
+            {"name":"UPS","deviceModel":"UPS","nodes":[{"id":"0","type":"Start"},
+            {"id":"1","type":"Get Serial Number","deviceType":"UPS"}],"connections":[]}
+            """, vm);
+        Assert.False(vm.UseCatalogSerials);
+        vm.DeviceName = "Новая модель";
+        Assert.True(vm.UseCatalogSerials);
+        vm.UndoCommand.Execute(null);
+        Assert.False(vm.UseCatalogSerials);
+        Assert.Equal("UPS", vm.DeviceName);
+    }
     private static EquipmentCatalog ModelCatalog() => new()
     {
         Models = new()

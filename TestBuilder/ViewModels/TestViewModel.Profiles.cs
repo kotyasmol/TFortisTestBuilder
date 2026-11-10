@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Services;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
 
@@ -67,16 +68,22 @@ public partial class TestViewModel
             var newTitle = ComposeProfileName(name, description);
             var oldKind = RootGraph.ProductKind;
             var kind = saved?.ProductKind ?? oldKind;
-            void Set(string? modelId, string? modelName, string title, string? detail, string productKind)
+            var oldUseCatalog = RootGraph.UseCatalogSerials;
+            var useCatalog = UseCatalogAfterModelChange(known);
+            var oldVariant = RootGraph.LabelVariant;
+            void Set(string? modelId, string? modelName, string title, string? detail, string productKind, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = modelId; RootGraph.DeviceModel = modelName;
                 RootGraph.ProductKind = productKind;
+                RootGraph.UseCatalogSerials = useSeries;
+                RootGraph.LabelVariant = variant;
                 SetProfileIdentity(title, detail);
                 NotifyDeviceNameChanged();
                 NotifyProfileMetadataChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(id, name, newTitle, description, kind), () => Set(oldId, oldName, oldTitle, oldDescription, oldKind)));
+                () => Set(id, name, newTitle, description, kind, useCatalog, 0),
+                () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
         }
     }
 
@@ -86,7 +93,87 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(ProfileDescription));
         OnPropertyChanged(nameof(DeviceName));
         OnPropertyChanged(nameof(SelectedEquipmentModel));
+        NotifyCatalogSerialSettingsChanged();
         RefreshNameSuggestions();
+    }
+
+    public bool UseCatalogSerials
+    {
+        get => RootGraph.UseCatalogSerials;
+        set
+        {
+            var old = RootGraph.UseCatalogSerials;
+            if (!CanEditGraph || old == value) return;
+            void Set(bool enabled)
+            {
+                RootGraph.UseCatalogSerials = enabled;
+                NotifyCatalogSerialSettingsChanged();
+            }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(value), () => Set(old)));
+        }
+    }
+
+    public int ProfileLabelVariant
+    {
+        get => RootGraph.LabelVariant;
+        set
+        {
+            var old = RootGraph.LabelVariant;
+            if (!CanEditGraph || value is < 0 or > 9 || old == value) return;
+            void Set(int variant)
+            {
+                RootGraph.LabelVariant = variant;
+                NotifyCatalogSerialSettingsChanged();
+            }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(value), () => Set(old)));
+        }
+    }
+
+    public string CatalogSerialSeriesSummary =>
+        _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)?.SerialSeries is { } series
+            ? $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}"
+            : "Для модели не настроена серия в catalog/equipment-models.json";
+
+    private void NotifyCatalogSerialSettingsChanged()
+    {
+        OnPropertyChanged(nameof(UseCatalogSerials));
+        OnPropertyChanged(nameof(ProfileLabelVariant));
+        OnPropertyChanged(nameof(CatalogSerialSeriesSummary));
+    }
+
+    private bool UseCatalogAfterModelChange(EquipmentModel? model) =>
+        RootGraph.UseCatalogSerials || model?.SerialSeries != null ||
+        BoardNodes(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel);
+
+    private EquipmentModel? ResolveProductionModel()
+    {
+        if (!RootGraph.UseCatalogSerials) return null;
+        // Read once at the start. All nodes, including failure cleanup, use the same model.
+        var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+        if (model?.SerialSeries == null)
+            throw new InvalidOperationException("Выберите изделие с настроенной серией в справочнике.");
+        if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
+            model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
+            throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");
+        return model;
+    }
+
+    internal EquipmentModel ReadCatalogModelForEditing()
+    {
+        var name = DeviceName.Trim();
+        if (name.Length == 0) throw new InvalidOperationException("Сначала укажите изделие в шапке профиля.");
+        var catalog = EquipmentCatalog.Load(ProfilesFolder);
+        return catalog.Resolve(RootGraph.DeviceModelId, name) ?? catalog.Resolve(null, name)
+            ?? new EquipmentModel(Guid.NewGuid().ToString("N"), name);
+    }
+
+    internal void SaveCatalogModel(EquipmentModel model)
+    {
+        if (!CanEditGraph) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
+        EquipmentCatalog.SaveModel(ProfilesFolder, model);
+        LoadEquipmentCatalog(ProfilesFolder);
+        SelectedEquipmentModel = EquipmentModels.Single(item => item.Id == model.Id);
+        UseCatalogSerials = true;
     }
 
     private void RefreshNameSuggestions()
@@ -118,14 +205,19 @@ public partial class TestViewModel
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
             var name = value.Id.Length == 0 ? null : value.Name;
-            void Set(string? id, string? model, string title, string? detail)
+            var oldUseCatalog = RootGraph.UseCatalogSerials;
+            var useCatalog = UseCatalogAfterModelChange(value);
+            var oldVariant = RootGraph.LabelVariant;
+            void Set(string? id, string? model, string title, string? detail, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = id; RootGraph.DeviceModel = model;
+                RootGraph.UseCatalogSerials = useSeries;
+                RootGraph.LabelVariant = variant;
                 SetProfileIdentity(title, detail); NotifyDeviceNameChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(value.Id.Length == 0 ? null : value.Id, name, ComposeProfileName(name, description), description),
-                () => Set(oldId, oldName, oldTitle, oldDescription)));
+                () => Set(value.Id.Length == 0 ? null : value.Id, name, ComposeProfileName(name, description), description, useCatalog, 0),
+                () => Set(oldId, oldName, oldTitle, oldDescription, oldUseCatalog, oldVariant)));
         }
     }
     private void LoadEquipmentCatalog(string folder)

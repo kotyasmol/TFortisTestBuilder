@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -16,6 +17,23 @@ internal static class LabelPrintContent
         return copy;
     }
 
+    public static LabelTemplateDefinition ForModel(LabelTemplateDefinition template, EquipmentModel model, int variant)
+    {
+        var copy = ForDevice(template, model.Name);
+        if (!copy.UseShortSerial) return copy;
+        if (model.LabelCode is not { } code || model.SerialSeries is not { } series)
+            throw new InvalidOperationException($"Для «{model.Name}» укажите код этикетки и серию в справочнике.");
+        copy.DeviceCode = code;
+        copy.SerialOffset = series.SerialOffset;
+        copy.FirstSerialNumber = series.FirstSerialNumber;
+        copy.ShortSerialMax = series.LastSerialNumber - series.SerialOffset;
+        copy.ShortSerialDigits = 5;
+        copy.BarcodePrefix = variant.ToString(CultureInfo.InvariantCulture) + code.ToString("D3", CultureInfo.InvariantCulture);
+        copy.VariantName = model.LabelVariants?.GetValueOrDefault(variant);
+        copy.Validate();
+        return copy;
+    }
+
     public static bool TryResolveSerial(LabelTemplateDefinition template, string serial,
         out int fullSerial, out int shortSerial, out string error)
     {
@@ -26,18 +44,14 @@ internal static class LabelPrintContent
             error = $"Серийный номер '{serial}' слишком большой или имеет неверный формат.";
             return false;
         }
-        if (parsed <= template.ShortSerialMax)
-        {
-            shortSerial = parsed;
-            fullSerial = template.SerialOffset + parsed;
-            return true;
-        }
+        if (parsed < (template.FirstSerialNumber ?? template.SerialOffset) && parsed <= template.ShortSerialMax)
+            parsed += template.SerialOffset;
         shortSerial = parsed - template.SerialOffset;
-        if (shortSerial < 0 || shortSerial > template.ShortSerialMax)
+        if (parsed < (template.FirstSerialNumber ?? template.SerialOffset) || shortSerial > template.ShortSerialMax)
         {
             error = $"Для {template.Name} введите полный серийник " +
-                $"{template.SerialOffset}..{template.SerialOffset + template.ShortSerialMax} " +
-                $"или короткий номер 0..{template.ShortSerialMax}.";
+                $"{template.FirstSerialNumber ?? template.SerialOffset}..{template.SerialOffset + template.ShortSerialMax} " +
+                $"или короткий номер {(template.FirstSerialNumber ?? template.SerialOffset) - template.SerialOffset}..{template.ShortSerialMax}.";
             return false;
         }
         fullSerial = parsed;

@@ -25,6 +25,14 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? DeviceModel { get; set; }
 
+        [JsonPropertyName("useCatalogSerials")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool UseCatalogSerials { get; set; }
+
+        [JsonPropertyName("labelVariant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int LabelVariant { get; set; }
+
         [JsonPropertyName("configurationName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ConfigurationName { get; set; }

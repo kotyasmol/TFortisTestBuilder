@@ -52,6 +52,7 @@ namespace TestBuilder.Services
         private const string SerialWithPrefixType = "Get Serial Number (prefix v1)";
         private const string ReportWithSerialPrefixType = "Build Test Report (prefix v1)";
         internal const string ReportStartType = "Start (report v1)";
+        private const string CatalogSerialsStartType = "Start (catalog serials v1)";
         private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
             ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
                 ? type[FirstRunPrefix.Length..] : type ?? "";
@@ -149,6 +150,10 @@ namespace TestBuilder.Services
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = ReportStartType;
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
+            dto.UseCatalogSerials = vm.RootGraph.UseCatalogSerials;
+            dto.LabelVariant = vm.RootGraph.LabelVariant;
+            if (dto.UseCatalogSerials)
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = CatalogSerialsStartType;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
@@ -531,6 +536,8 @@ namespace TestBuilder.Services
             var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName, dto.DeviceModelId);
             vm.RootGraph.DeviceModel = profile.DeviceModel;
             vm.RootGraph.DeviceModelId = profile.DeviceModelId;
+            vm.RootGraph.UseCatalogSerials = dto.UseCatalogSerials;
+            vm.RootGraph.LabelVariant = dto.LabelVariant;
             vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
                 (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
@@ -711,7 +718,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" or ReportStartType => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" or ReportStartType or CatalogSerialsStartType => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 

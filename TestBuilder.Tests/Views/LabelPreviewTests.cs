@@ -59,9 +59,9 @@ public class LabelPreviewTests
         Assert.Equal(510, sn.X);
         Assert.Equal(510, preview.Elements.Single(e => e.Text.StartsWith("MAC:")).X);
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
-        Assert.Equal(246, bars.Width);
+        Assert.Equal(268, bars.Width);
         Assert.Equal(510, bars.X);
-        Assert.Equal(633, bars.X + bars.Width / 2);
+        Assert.Equal(644, bars.X + bars.Width / 2);
         Assert.Empty(preview.Message);
     }
 
@@ -88,8 +88,8 @@ public class LabelPreviewTests
     }
 
     [Theory]
-    [InlineData(0, "3200428", "SN: 00428")]
-    [InlineData(1, "612447", "SN: 12447")]
+    [InlineData(0, "3200428", "SN: 3200428")]
+    [InlineData(1, "612447", "SN: 612447")]
     [InlineData(2, "12345678", "12345678")]
     public void BuiltInTemplates_UseDataAndRealCommandLayout(int index, string serial, string expected)
     {
@@ -101,7 +101,8 @@ public class LabelPreviewTests
         if (template.RequiresMac)
         {
             Assert.Contains(preview.Elements, e => e.Text == "MAC: C0:11:A6:20:01:AC");
-            Assert.Equal(preview.Elements, LabelPreview.FromInput(template, expected[4..], "c011.a620.01ac").Elements);
+            var shortSerial = (int.Parse(serial) - template.SerialOffset).ToString();
+            Assert.Equal(preview.Elements, LabelPreview.FromInput(template, shortSerial, "c011.a620.01ac").Elements);
         }
     }
 

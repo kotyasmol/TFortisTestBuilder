@@ -59,7 +59,8 @@ namespace TestBuilder.Domain.Steps
             if (_template?.Validate() is { } error)
                 return Task.FromResult(Fail(context, error));
 
-            if (SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
+            var series = context.ProductionModel?.SerialSeries;
+            if (series == null && SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
                 return Task.FromResult(Fail(context, prefixError));
 
             if (string.IsNullOrWhiteSpace(_standId))
@@ -78,7 +79,9 @@ namespace TestBuilder.Domain.Steps
                     $"Полный серийный номер не найден в переменной '{_serialVariableName}'."));
             }
 
-            if (SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix) is { } seriesError)
+            var seriesError = series == null ? SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix)
+                : series.Check(serialNumber, context.IssuedSerialNumber);
+            if (seriesError != null)
                 return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
 
             var builder = new StringBuilder();

@@ -77,7 +77,11 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, $"Некорректный MAC: '{rawMac}'. Ожидаются ровно 6 байт, например C0:11:A6:20:01:AC.");
             }
 
-            if (!TryValidateArgument(_boardVersion, "Версия платы", out var argumentError))
+            var series = context.ProductionModel?.SerialSeries;
+            if (series?.CheckMac(normalizedMac, context.IssuedSerialNumber) is { } macError)
+                return Fail(context, macError);
+            var boardVersion = series == null ? _boardVersion : series.BoardVersion?.Trim() ?? string.Empty;
+            if (!TryValidateArgument(boardVersion, "Версия платы", out var argumentError))
             {
                 return Fail(context, argumentError);
             }
@@ -97,13 +101,13 @@ namespace TestBuilder.Domain.Steps
             var request = new SetProMacProcessRequest(
                 resolvedBatchPath,
                 normalizedMac,
-                _boardVersion,
+                boardVersion,
                 timestamp,
                 _timeoutMs);
 
             context.SetVariable("SetMac.Method", "ProBatch");
             context.SetVariable("SetMac.Mac", normalizedMac);
-            context.SetVariable("SetMac.BoardVersion", _boardVersion);
+            context.SetVariable("SetMac.BoardVersion", boardVersion);
             context.SetVariable("SetMac.Timestamp", timestamp);
             context.SetVariable("SetMac.BatchPath", resolvedBatchPath);
 

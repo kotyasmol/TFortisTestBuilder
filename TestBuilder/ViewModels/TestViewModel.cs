@@ -846,6 +846,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.QuickActions.Clear();
         RootGraph.RegisterIndicators.Clear();
         RootGraph.ReportTemplate = null;
+        RootGraph.UseCatalogSerials = false;
+        RootGraph.LabelVariant = 0;
         _reportVariableHistory.ClearDraft();
     }
 
@@ -1257,6 +1259,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             if (partialRun) NavigateToGraph(runWorkspace);
             else ResetToRootGraph();
 
+            var productionModel = ResolveProductionModel();
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
             using var compiler = new GraphCompiler(_modbusService, TestingLogger)
@@ -1292,6 +1295,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 CancellationToken = _testRunCts.Token,
                 IsConnected = IsConnected,
                 ProfileName = profileName, DeviceModel = RootGraph.DeviceModel,
+                ProductionModel = productionModel, LabelVariant = RootGraph.LabelVariant,
                 LastTestLabel = _lastCompletedTest?.Label?.Copy(),
                 ExecutionObserver = this,
                 WaitIfPausedAsync = WaitIfPausedAsync,

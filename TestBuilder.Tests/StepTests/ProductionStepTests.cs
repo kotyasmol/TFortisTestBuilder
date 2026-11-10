@@ -12,6 +12,49 @@ namespace TestBuilder.Tests.StepTests;
 [Collection(AppSettingsTestCollection.Name)]
 public class ProductionStepTests
 {
+    [Theory]
+    [InlineData(3300579, true)]
+    [InlineData(3200579, false)]
+    [InlineData(3300000, false)]
+    public async Task CatalogModelControlsAllocationMacAndReportOfCopiedProfile(int serverSerial, bool accepted)
+    {
+        var model = new EquipmentModel("box", "PSW+Box 8x2Pro")
+        {
+            SerialSeries = new() { ServerDeviceType = "PSW+Box 8x2Pro", FirstSerialNumber = 3300001,
+                LastSerialNumber = 3365535, SerialOffset = 3300000, MacPrefix = "C0:11:A6:21" }
+        };
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, serverSerial.ToString(), TimeSpan.Zero));
+        var context = new TestContext(new RegisterState()) { ProductionModel = model };
+        context.SetVariable("Dut.cpu_id", "CPU-33");
+        var serial = new GetSerialNumberFromServerStep(service, NullLogger.Instance, "http://server", "Old UPS type",
+            "Dut.cpu_id", 1000, 1, 0, "SerialNumber", true, expectedSerialPrefix: "32");
+        var range = new CheckVariableRangeStep(NullLogger.Instance, "SerialNumber", 3200000, 3299999, true, "Old UPS range");
+        var mac = new BuildMacFromSerialStep(NullLogger.Instance, "SerialNumber", 3200000, "C0:11:A6:20", "SerialShort", "Mac", true);
+        var report = new BuildTestReportStep(NullLogger.Instance, "Report", "Stand", "SerialNumber", "", "production",
+            false, expectedSerialPrefix: "32");
+        using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var send = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "Report", "/api/Api.svc/result.json",
+            1000, 0, 0, false, "reports", true, () => new HttpClient(handler, disposeHandler: false));
+
+        var expected = accepted ? StepResult.True : StepResult.False;
+        Assert.Equal(expected, await serial.ExecuteAsync(context, default));
+        Assert.Equal(1, service.Calls);
+        Assert.Contains("devType=PSW%2BBox%208x2Pro&cpuId=CPU-33", service.LastUrl);
+        Assert.Equal(expected, await range.ExecuteAsync(context, default));
+        Assert.Equal(expected, await mac.ExecuteAsync(context, default));
+        Assert.Equal(expected, await report.ExecuteAsync(context, default));
+        if (!accepted) context.SetVariable("Report", $"serial_num=true={serverSerial}\r\n");
+        Assert.Equal(expected, await send.ExecuteAsync(context, default));
+        if (accepted)
+        {
+            Assert.Equal("C0:11:A6:21:02:43", context.GetVariable<string>("Mac"));
+            Assert.Contains("serial_num=true=3300579\r\n", handler.Body);
+            context.SetVariable("Report", "serial_num=true=3300580\r\n");
+            Assert.Equal(StepResult.False, await send.ExecuteAsync(context, default));
+        }
+        else Assert.Null(handler.Method);
+    }
+
     [Fact]
     public async Task GetSerialNumberFromServerStep_EncodesDeviceTypeAndSavesSerial()
     {

@@ -105,6 +105,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             var report = reportValue.ToString() ?? string.Empty;
+            if (context.ProductionModel?.SerialSeries?.CheckReport(report, context.IssuedSerialNumber) is { } serialError)
+                return Fail(context, serialError, string.Empty, 0, string.Empty);
             var localPath = string.Empty;
             if (_saveLocalCopy)
             {

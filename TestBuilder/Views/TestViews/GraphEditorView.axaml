@@ -199,7 +199,7 @@
 
     <Border Grid.Row="0" Padding="12,12,12,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
         <Grid ColumnDefinitions="Auto,Auto,200,Auto,*" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
           <Button Command="{Binding ToggleProfilesCommand}" ToolTip.Tip="{Binding ProfilesToggleTip}" AutomationProperties.Name="{Binding ProfilesToggleTip}" Margin="0,0,10,0" Padding="8,6">
             <PathIcon Width="18" Height="18" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
@@ -255,7 +255,18 @@
           <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="4,0,0,0" />
           </StackPanel>
         </WrapPanel>
-        <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
+        <WrapPanel Grid.Row="3" IsVisible="{Binding ShowQuickActionTools}" Margin="0,0,0,4">
+          <CheckBox Content="Серийники из справочника" IsChecked="{Binding UseCatalogSerials}"
+                    IsEnabled="{Binding CanEditGraph}" Margin="0,0,12,0"
+                    ToolTip.Tip="Тип для сервера, начальный номер и диапазон берутся из справочника выбранного изделия" />
+          <Button Content="Серия изделия…" Click="OnConfigureCatalogSerials" IsEnabled="{Binding CanEditGraph}" Margin="0,0,12,0" />
+          <TextBlock Text="{Binding CatalogSerialSeriesSummary}" IsVisible="{Binding UseCatalogSerials}"
+                     VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
+          <TextBlock Text="Комплектация" IsVisible="{Binding UseCatalogSerials}" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <NumericUpDown Value="{Binding ProfileLabelVariant}" Minimum="0" Maximum="9" Increment="1" FormatString="0"
+                         Width="80" IsVisible="{Binding UseCatalogSerials}" IsEnabled="{Binding CanEditGraph}" />
+        </WrapPanel>
+        <Border Grid.Row="4" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
                 CornerRadius="8" Padding="10" Margin="0,4,0,0">
           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
             <TextBlock Text="{Binding PartialRunCaption}" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -583,10 +594,10 @@
                                Text="{Binding DeviceType}"
                                FontSize="{StaticResource FontCaption}"
                                Watermark="Тип на сервере"
-                               ToolTip.Tip="Тип изделия из справочника сервера серийных номеров (devType)" />
+                               ToolTip.Tip="Тип для сервера. При включённом справочнике используется тип выбранного изделия." />
                       <TextBox Grid.Column="3" Text="{Binding ExpectedSerialPrefix}" FontSize="{StaticResource FontCaption}"
                                Watermark="Префикс"
-                               ToolTip.Tip="Ожидаемое начало полного серийного номера. Если поле заполнено, нода отклоняет номера другой серии." />
+                               ToolTip.Tip="Проверяет начало номера. При включённом справочнике применяется диапазон выбранного изделия." />
                     </Grid>
 
                     <Grid ColumnDefinitions="96,*">
@@ -1619,7 +1630,7 @@
                                ToolTip.Tip="Имя переменной с полным серийным номером, который будет передан в отчёте" />
                       <TextBox Grid.Column="3" Text="{Binding ExpectedSerialPrefix}" FontSize="{StaticResource FontCaption}"
                                Watermark="Префикс"
-                               ToolTip.Tip="Ожидаемое начало полного серийного номера. Если поле заполнено, отчёт по другой серии не формируется." />
+                               ToolTip.Tip="Проверяет начало номера. При включённом справочнике применяется диапазон выбранного изделия." />
                     </Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource ServerTestType}, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <CheckBox IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}"

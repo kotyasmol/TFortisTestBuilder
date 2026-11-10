@@ -91,6 +91,18 @@ public partial class GraphEditorView : UserControl, IDisposable
             await vm.ConfigureReportTemplateAsync(owner);
     }
 
+    private async void OnConfigureCatalogSerials(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel { CanEditGraph: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
+            return;
+        try { await new CatalogSerialsWindow(vm, vm.ReadCatalogModelForEditing()).ShowDialog(owner); }
+        catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or
+            UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            vm.StatusMessage = ex.Message;
+        }
+    }
+
     private async void OnConfigureFailureCleanup(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel vm && TopLevel.GetTopLevel(this) is Window owner)

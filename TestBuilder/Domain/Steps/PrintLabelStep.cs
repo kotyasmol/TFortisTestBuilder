@@ -42,7 +42,6 @@ namespace TestBuilder.Domain.Steps
         private readonly string _manualSerialNumber;
         private readonly string _manualMacAddress;
         private readonly int _copies;
-        private readonly bool _useQtProZplFormat;
         private readonly bool _failOnPrinterError;
         private readonly IRawLabelPrinter _printer;
         private readonly int _printerTimeoutMs;
@@ -50,8 +49,6 @@ namespace TestBuilder.Domain.Steps
         private readonly LabelTemplateDefinition _template;
         private readonly bool _useLastTestLabel;
         private string DeviceName => _template.Name;
-        private int DeviceType => _template.DeviceCode;
-        private int SerialOffset => _template.SerialOffset;
 
         public PrintLabelStep(
             ILogger logger,
@@ -119,9 +116,8 @@ namespace TestBuilder.Domain.Steps
             _copies = Math.Max(1, copies);
             _useLastTestLabel = useLastTestLabel;
             _template = (useLastTestLabel ? new LabelTemplateDefinition() :
-                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).Copy();
+                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).CopyUpgraded();
             _template.Validate();
-            _useQtProZplFormat = _template.UseShortSerial;
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
             _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
@@ -195,14 +191,22 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
+            var model = preserveTemplateName ? null : context.ProductionModel;
+            var series = model?.SerialSeries;
             LabelTemplateDefinition printTemplate;
-            try { printTemplate = preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel); }
+            try
+            {
+                printTemplate = model != null ? LabelPrintContent.ForModel(_template, model, context.LabelVariant)
+                    : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
+            }
             catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
             string singleLabel;
             string language;
             string logDescription;
 
-            if (_useQtProZplFormat)
+            var printedSerial = serial;
+            var printedMac = "";
+            if (printTemplate.UseShortSerial)
             {
                 int fullSerial;
                 int shortSerial;
@@ -212,12 +216,12 @@ namespace TestBuilder.Domain.Steps
 
                 if (_useManualSerialNumber)
                 {
-                    if (!LabelPrintContent.TryResolveSerial(_template, serial, out fullSerial, out shortSerial, out var serialError))
+                    if (!LabelPrintContent.TryResolveSerial(printTemplate, serial, out fullSerial, out shortSerial, out var serialError))
                     {
                         return Fail(context, 6, serialError);
                     }
 
-                    if (_template.RequiresMac && !LabelPrintContent.TryNormalizeMac(_manualMacAddress, out mac))
+                    if (printTemplate.RequiresMac && !LabelPrintContent.TryNormalizeMac(_manualMacAddress, out mac))
                     {
                         return Fail(
                             context,
@@ -235,7 +239,9 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, 6, $"Серийный номер '{serial}' слишком большой или имеет неверный формат.");
                     }
 
-                    if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
+                    if (series != null)
+                        shortSerial = fullSerial - printTemplate.SerialOffset;
+                    else if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
                     {
                         return Fail(
                             context,
@@ -243,12 +249,12 @@ namespace TestBuilder.Domain.Steps
                             $"Переменная короткого серийного номера '{_serialShortVariableName}' не найдена или не является целым числом.");
                     }
 
-                    if (shortSerial < 0 || shortSerial > _template.ShortSerialMax)
+                    if (shortSerial < 0 || shortSerial > printTemplate.ShortSerialMax)
                     {
-                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..{_template.ShortSerialMax}.");
+                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..{printTemplate.ShortSerialMax}.");
                     }
 
-                    if (fullSerial != SerialOffset + shortSerial)
+                    if (fullSerial != printTemplate.SerialOffset + shortSerial)
                     {
                         return Fail(
                             context,
@@ -257,7 +263,7 @@ namespace TestBuilder.Domain.Steps
                             $"{_serialShortVariableName}={shortSerial}.");
                     }
 
-                    if (_template.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
+                    if (printTemplate.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
                         !LabelPrintContent.TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
                     {
                         return Fail(
@@ -266,21 +272,27 @@ namespace TestBuilder.Domain.Steps
                             $"Переменная MAC '{_macVariableName}' не найдена или содержит некорректный адрес.");
                     }
 
-                    shortSerialSource = _serialShortVariableName;
+                    shortSerialSource = series == null ? _serialShortVariableName : "Catalog";
                     macSource = _macVariableName;
                 }
 
-                var barcode = _template.Barcode(shortSerial);
-                singleLabel = LabelPrintContent.Render(printTemplate, fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
-                language = _template.Language;
+                if (series?.Check(fullSerial, context.IssuedSerialNumber) is { } seriesError)
+                    return Fail(context, 6, seriesError);
+                if (printTemplate.RequiresMac && series?.CheckMac(mac, fullSerial) is { } macError)
+                    return Fail(context, 6, macError);
+                var barcode = printTemplate.Barcode(shortSerial);
+                printedSerial = fullSerial == 0 ? serial : fullSerial.ToString(CultureInfo.InvariantCulture);
+                printedMac = mac;
+                singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, shortSerial, mac);
+                language = printTemplate.Language;
                 logDescription =
-                    $"этикеток {printTemplate.Name}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
+                    $"этикеток {printTemplate.Name}: SN={printedSerial}, MAC={mac}, barcode={barcode}";
 
                 context.SetVariable("PrintLabel.Template", _template.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
                 context.SetVariable("PrintLabel.DeviceName", printTemplate.Name);
-                context.SetVariable("PrintLabel.DeviceType", DeviceType);
+                context.SetVariable("PrintLabel.DeviceType", printTemplate.DeviceCode);
                 context.SetVariable("PrintLabel.Mac", mac);
                 context.SetVariable("PrintLabel.MacSource", macSource);
                 context.SetVariable("PrintLabel.SerialShortSource", shortSerialSource);
@@ -288,8 +300,15 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
+                if (series != null)
+                {
+                    if (!long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var fullSerial))
+                        return Fail(context, 6, "Введите полный серийный номер изделия.");
+                    if (series.Check(fullSerial, context.IssuedSerialNumber) is { } seriesError)
+                        return Fail(context, 6, seriesError);
+                }
                 singleLabel = LabelPrintContent.Render(printTemplate, serial, 0, "");
-                language = _template.Language;
+                language = printTemplate.Language;
                 logDescription = $"серийного номера {serial}";
             }
 
@@ -308,9 +327,7 @@ namespace TestBuilder.Domain.Steps
             // A printer failure must not discard the validated product identity/template.
             if (!context.IsCleanup)
                 context.LabelPrinting.Set(new PreparedLabel(printTemplate,
-                    _useQtProZplFormat ? context.GetVariable<int>("PrintLabel.FullSerial").ToString(CultureInfo.InvariantCulture) : serial,
-                    _useQtProZplFormat ? context.GetVariable<string>("PrintLabel.Mac") ?? "" : "",
-                    _printerName, _copies));
+                    printedSerial, printedMac, _printerName, _copies));
             if (string.IsNullOrWhiteSpace(_printerName))
                 return Fail(context, 3, "Имя принтера не задано.");
 
