@@ -18,6 +18,12 @@ public class ParallelGraphCompilationTests
     private const string ParallelProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json";
     private const string OptimizedProfile = "PSW_UPS_Box_8x2Pro_parallel_el60.json";
     private const string BootStage = "06. Загрузка DUT и получение серийного номера";
+    private const string SelftestStage = "07. Проверка selftest DUT";
+    private const string ParallelBootStage = "06. Ожидание загрузки DUT";
+    private const string SerialAndSelftestStage = "07. Серийный номер и селфтест DUT";
+    private const string HeaterStage = "08. Проверка нагревателя 1";
+    private const string SecondHeaterStage = "09. Проверка нагревателя 2";
+    private const string SensorsStage = "09a. Проверка Sensor1 и Sensor2";
 
     [Fact]
     public void SameOutputFanout_CompilesBothBranchesAndNearestJoin()
@@ -438,28 +444,23 @@ public class ParallelGraphCompilationTests
         Assert.Equal(originalNodes.Keys.Order(), parallelNodes.Keys.Order());
         foreach (var (key, node) in originalNodes)
         {
-            if (key is "10. DataTest" or "09a. Проверка Sensor1 и Sensor2" or "Отчёт при ошибке") continue;
+            if (key is "10. DataTest" or SensorsStage or "Отчёт при ошибке" or BootStage or SelftestStage) continue;
             var copiedNode = parallelNodes[key];
             var expected = node.DeepClone().AsObject();
             var actual = copiedNode.DeepClone().AsObject();
             expected.Remove("id");
             actual.Remove("id");
-            var timeoutNodeType = key switch
-            {
-                BootStage => "Read Selftest Field (v1)",
-                "07. Проверка selftest DUT" or "15. Запись и проверка MAC" => "Selftest Check",
-                _ => null
-            };
-            if (timeoutNodeType != null)
+            if (key == "15. Запись и проверка MAC")
             {
                 var timeoutNode = expected["bodyGraph"]!["nodes"]!.AsArray()
-                    .Single(n => n!["type"]!.GetValue<string>() == timeoutNodeType)!;
+                    .Single(n => n!["type"]!.GetValue<string>() == "Selftest Check")!;
                 timeoutNode["timeoutMs"] = 250000;
             }
             Assert.True(JsonNode.DeepEquals(expected, actual), $"Changed original settings for stage {key}.");
         }
 
-        AssertProTopology(original, parallel);
+        AssertProTopology(original, parallel, parallelBoot: true);
+        AssertBootAndSelftestParameters(originalNodes, parallelNodes);
         Assert.Equal("Start (connections v1)", original["nodes"]![0]!["type"]!.GetValue<string>());
         Assert.Equal(GraphSerializer.CatalogSerialsStartType, parallel["nodes"]![0]!["type"]!.GetValue<string>());
     }
@@ -518,7 +519,7 @@ public class ParallelGraphCompilationTests
         using var modbus = new ModbusService();
         var originalVm = new TestViewModel(modbus, new SlaveManager(modbus));
         var profileName = GraphSerializer.Deserialize(ReadProfile(file), originalVm);
-        AssertProFork(Compile(originalVm.RootGraph));
+        AssertProFork(Compile(originalVm.RootGraph), parallelBoot: file == ParallelProfile);
         if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
@@ -527,7 +528,7 @@ public class ParallelGraphCompilationTests
         var loadedVm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(saved, loadedVm);
 
-        AssertProFork(Compile(loadedVm.RootGraph));
+        AssertProFork(Compile(loadedVm.RootGraph), parallelBoot: file == ParallelProfile);
         if (file == OptimizedProfile) AssertEl60Forks(loadedVm.RootGraph);
         Assert.Equal(originalVm.RootGraph.ConfigurationName, loadedVm.RootGraph.ConfigurationName);
         Assert.Equal(originalVm.RootGraph.DeviceModel, loadedVm.RootGraph.DeviceModel);
@@ -679,17 +680,38 @@ public class ParallelGraphCompilationTests
         }
     }
 
-    private static void AssertProFork(CompiledGraph graph)
+    private static void AssertProFork(CompiledGraph graph, bool parallelBoot)
     {
         var power = FindNode(graph.StartNode, n => n.Source is SubtestNodeViewModel s && s.Name.StartsWith("05."));
+        if (parallelBoot)
+        {
+            var bootFork = power.ParallelTransitions[StepResult.True];
+            Assert.Equal(new[] { ParallelBootStage, HeaterStage },
+                bootFork.Branches.Select(n => ((SubtestNodeViewModel)n.Source!).Name));
+            Assert.Equal(SerialAndSelftestStage, ((SubtestNodeViewModel)bootFork.JoinNode.Source!).Name);
+            Assert.Equal(SecondHeaterStage, ((SubtestNodeViewModel)bootFork.Branches[1].OnTrue!.Source!).Name);
+            Assert.Same(bootFork.JoinNode, bootFork.Branches[0].OnTrue);
+            Assert.Same(bootFork.JoinNode, bootFork.Branches[1].OnTrue!.OnTrue);
+            Assert.Equal(SensorsStage, ((SubtestNodeViewModel)bootFork.JoinNode.OnTrue!.Source!).Name);
+
+            var body = Compile(((SubtestNodeViewModel)bootFork.JoinNode.Source!).BodyGraph);
+            var serial = Assert.IsType<TestNode>(body.StartNode.Next);
+            Assert.IsType<GetSerialNumberFromServerNodeViewModel>(serial.Source);
+            Assert.IsType<CheckVariableRangeNodeViewModel>(serial.OnTrue!.Source);
+            var settle = serial.OnTrue.OnTrue!;
+            Assert.IsType<DelayNodeViewModel>(settle.Source);
+            Assert.IsType<SelfTestCheckNodeViewModel>(settle.Next!.Source);
+            return;
+        }
+
         Assert.Empty(power.ParallelTransitions);
         var boot = Assert.IsType<TestNode>(power.OnTrue);
         Assert.Equal(BootStage, Assert.IsType<SubtestNodeViewModel>(boot.Source).Name);
         var fork = boot.ParallelTransitions[StepResult.True];
-        Assert.Equal(new[] { "07. Проверка selftest DUT", "08. Проверка нагревателя 1" },
+        Assert.Equal(new[] { SelftestStage, HeaterStage },
             fork.Branches.Select(n => ((SubtestNodeViewModel)n.Source!).Name));
-        Assert.Equal("09a. Проверка Sensor1 и Sensor2", ((SubtestNodeViewModel)fork.JoinNode.Source!).Name);
-        Assert.Equal("09. Проверка нагревателя 2", ((SubtestNodeViewModel)fork.Branches[1].OnTrue!.Source!).Name);
+        Assert.Equal(SensorsStage, ((SubtestNodeViewModel)fork.JoinNode.Source!).Name);
+        Assert.Equal(SecondHeaterStage, ((SubtestNodeViewModel)fork.Branches[1].OnTrue!.Source!).Name);
         Assert.Same(fork.JoinNode, fork.Branches[0].OnTrue);
         Assert.Same(fork.JoinNode, fork.Branches[1].OnTrue!.OnTrue);
     }
@@ -808,17 +830,44 @@ public class ParallelGraphCompilationTests
     {
         var name = node["name"]?.GetValue<string>();
         if (name == null) return node["type"]!.GetValue<string>().Split(' ')[0];
+        if (name == ParallelBootStage) return BootStage;
+        if (name == SerialAndSelftestStage) return SelftestStage;
         return name.StartsWith("10. DataTest", StringComparison.Ordinal) ? "10. DataTest" : name;
     }
 
-    private static void AssertProTopology(JsonNode original, JsonNode parallel)
+    private static void AssertBootAndSelftestParameters(Dictionary<string, JsonNode> original, Dictionary<string, JsonNode> parallel)
+    {
+        var originalBoot = Actions(original[BootStage]);
+        var originalSelftest = Actions(original[SelftestStage]);
+        originalBoot.Single(node => (string?)node["type"] == "Read Selftest Field (v1)")["timeoutMs"] = 250000;
+        originalSelftest.Single(node => (string?)node["type"] == "Selftest Check")["timeoutMs"] = 250000;
+        Assert.Equal(originalBoot.Take(3).Select(node => node.ToJsonString()),
+            Actions(parallel[BootStage]).Select(node => node.ToJsonString()));
+        Assert.Equal(originalBoot.Skip(3).Concat(originalSelftest).Select(node => node.ToJsonString()),
+            Actions(parallel[SelftestStage]).Select(node => node.ToJsonString()));
+
+        static JsonObject[] Actions(JsonNode stage) => stage["bodyGraph"]!["nodes"]!.AsArray().OfType<JsonObject>()
+            .Where(node => (string?)node["type"] is not ("Start" or "End")).Select(node =>
+            {
+                var copy = node.DeepClone().AsObject();
+                copy.Remove("id");
+                return copy;
+            }).ToArray();
+    }
+
+    private static void AssertProTopology(JsonNode original, JsonNode parallel, bool parallelBoot = false)
     {
         var expected = Links(original).ToList();
-        const string selfTest = "07. Проверка selftest DUT";
-        const string heater = "08. Проверка нагревателя 1";
-        Assert.True(expected.Remove($"{selfTest}|Success|{heater}|In"));
-        expected.Add($"{selfTest}|Success|09a. Проверка Sensor1 и Sensor2|In");
-        expected.Add($"{BootStage}|Success|{heater}|In");
+        Assert.True(expected.Remove($"{SelftestStage}|Success|{HeaterStage}|In"));
+        expected.Add($"{SelftestStage}|Success|{SensorsStage}|In");
+        if (parallelBoot)
+        {
+            Assert.True(expected.Remove($"{SecondHeaterStage}|Success|{SensorsStage}|In"));
+            expected.Add($"05. Подача питания DUT|Success|{HeaterStage}|In");
+            expected.Add($"{SecondHeaterStage}|Success|{SelftestStage}|In");
+        }
+        else
+            expected.Add($"{BootStage}|Success|{HeaterStage}|In");
         Assert.Equal(expected.Order(StringComparer.Ordinal), Links(parallel).Order(StringComparer.Ordinal));
 
         static IEnumerable<string> Links(JsonNode profile)

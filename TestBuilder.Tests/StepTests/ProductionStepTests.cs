@@ -1466,6 +1466,22 @@ public class ProductionStepTests
     }
 
     [Fact]
+    public void DataTestDirectionErrors_IdentifyBothIpsAndDistinguishStandFailure()
+    {
+        var first = IPAddress.Parse("192.168.0.8");
+        var second = IPAddress.Parse("192.168.0.9");
+        var forward = DataTestPortResult.Fail("Очередь передала 199122 из 203186 пакетов.", infrastructureFailure: true)
+            with { AttemptCount = 2 };
+        var reverse = DataTestPortResult.Fail("Потери превышают допуск.");
+        var pair = DataTestPairResult.FromDirections(
+            forward with { Error = forward.DescribeFailure(second, first) },
+            reverse with { Error = reverse.DescribeFailure(first, second) });
+
+        Assert.Contains("192.168.0.9 → 192.168.0.8 (попытка 2). Сбой генератора или захвата на стенде.", pair.Error);
+        Assert.Contains("192.168.0.8 → 192.168.0.9 (попытка 1). Потери превышают допуск.", pair.Error);
+    }
+
+    [Fact]
     public void RunDataTestStep_BuildsLegacyEthernetUdpPacket()
     {
         var sourceMac = new byte[] { 0x10, 0xFF, 0xE0, 0x68, 0xFE, 0x24 };

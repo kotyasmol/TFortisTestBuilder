@@ -155,19 +155,21 @@ namespace TestBuilder.Domain.Steps
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var port = _ports[i];
-                _logger.Info($"DataTest {port.Name} [{i + 1}/{_ports.Count}]: запуск отдельной пары.");
+                var pair = $"{port.Name} ({port.InIp} ↔ {port.OutIp})";
+                _logger.Info($"DataTest {pair} [{i + 1}/{_ports.Count}]: запуск отдельной пары.");
 
                 // Queue preparation and pcap injection are CPU/native-driver work. Running
                 // the pair on a worker keeps the Avalonia UI responsive during line-rate tests.
                 var result = await Task.Run(
                     () => RunPortPairAsync(i, port, devices, cancellationToken),
                     cancellationToken);
-                WritePortResult(context, i, port, result);
+                var pairError = result.Passed ? string.Empty : $"{pair}: {result.Error}";
+                WritePortResult(context, i, port, result, pairError);
 
                 if (!result.Passed)
                 {
                     allPassed = false;
-                    errors.Add($"{port.Name}: {result.Error}");
+                    errors.Add(pairError);
                 }
 
                 if (i < _ports.Count - 1 && _interPairDelayMs > 0)
@@ -177,7 +179,7 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
-            return Finish(context, allPassed, string.Join("; ", errors));
+            return Finish(context, allPassed, string.Join(" | ", errors));
         }
 
         private async Task<DataTestPairResult> RunPortPairAsync(
@@ -330,19 +332,20 @@ namespace TestBuilder.Domain.Steps
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     lastResult = DataTestPortResult.Fail(
-                        $"Таймаут направления {sourceIp} -> {destinationIp} после {_maxPortTestTimeMs} мс.",
+                        $"Таймаут измерения после {_maxPortTestTimeMs} мс.",
                         infrastructureFailure: true);
                 }
 
                 lastResult = lastResult with { AttemptCount = attempt + 1 };
+                if (!lastResult.Passed)
+                    lastResult = lastResult with { Error = lastResult.DescribeFailure(sourceIp, destinationIp) };
                 if (lastResult.Passed || !lastResult.InfrastructureFailure || attempt >= InfrastructureRetryCount)
                 {
                     return lastResult;
                 }
 
                 _logger.Warning(
-                    $"DataTest {pairName} {direction}: инфраструктурная ошибка генератора/захвата, " +
-                    $"повтор {attempt + 2}/{InfrastructureRetryCount + 1}. {lastResult.Error}");
+                    $"DataTest {pairName}: {lastResult.Error} Повтор {attempt + 2}/{InfrastructureRetryCount + 1}.");
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
             }
 
@@ -999,21 +1002,21 @@ namespace TestBuilder.Domain.Steps
             if (txDeficitPercent > _allowedTxDeficitPercent)
             {
                 parts.Add(
-                    $"TX deficit {txDeficitPercent:F3}% is greater than allowed {_allowedTxDeficitPercent:F3}%: " +
-                    $"generator {sendEngine}, sent {transmittedPackets} of expected {expectedPackets} packets");
+                    $"Дефицит отправки {txDeficitPercent:F3}% превышает допуск {_allowedTxDeficitPercent:F3}%. " +
+                    $"Генератор {sendEngine} передал {transmittedPackets} из {expectedPackets} пакетов.");
             }
 
             if (lossPercent > _allowedLossPercent)
             {
-                parts.Add($"Loss {lossPercent:F3}% is greater than allowed {_allowedLossPercent:F3}%: RX {receivedPackets}, TX {transmittedPackets}");
+                parts.Add($"Потери {lossPercent:F3}% превышают допуск {_allowedLossPercent:F3}%. Принято {receivedPackets} из {transmittedPackets} пакетов.");
             }
 
             if (captureDroppedPackets > 0)
             {
-                parts.Add($"PC/Npcap capture dropped {captureDroppedPackets} packets; DUT result is inconclusive");
+                parts.Add($"Npcap потерял при захвате {captureDroppedPackets} пакетов на стенде.");
             }
 
-            return string.Join("; ", parts);
+            return string.Join(" ", parts);
         }
 
         private StepResult Finish(TestContext context, bool passed, string error)
@@ -1037,12 +1040,16 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             int index,
             DataTestPortConfig port,
-            DataTestPairResult result)
+            DataTestPairResult result,
+            string pairError)
         {
             var prefix = $"{_outputVariableName}.Port{index}";
-            context.AddReportEntry($"Передача данных {port.Name}", result.Passed,
-                FormattableString.Invariant($"цель {result.TargetBandwidthMbps} Мбит/с; TX {result.ActualTxMbps:F3}; RX {result.ActualRxMbps:F3}; потери {result.LossPercent:F3}%") +
-                (string.IsNullOrEmpty(result.Error) ? string.Empty : "; " + result.Error));
+            var details = FormattableString.Invariant(
+                $"цель {result.TargetBandwidthMbps} Мбит/с; TX {result.ActualTxMbps:F3}; RX {result.ActualRxMbps:F3}; потери {result.LossPercent:F3}%");
+            if (!result.Passed)
+                details = result.TargetBandwidthMbps == 0 || result.Forward.InfrastructureFailure || result.Reverse?.InfrastructureFailure == true
+                    ? pairError : $"{pairError} ({details})";
+            context.AddReportEntry($"Передача данных {port.Name}", result.Passed, details);
             context.SetVariable($"{prefix}.Name", port.Name);
             context.SetVariable($"{prefix}.InIp", port.InIp);
             context.SetVariable($"{prefix}.OutIp", port.OutIp);
@@ -1062,7 +1069,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.CaptureDroppedPackets", result.CaptureDroppedPackets);
             context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
             context.SetVariable($"{prefix}.DirectionsTested", result.Reverse == null ? 1 : 2);
-            context.SetVariable($"{prefix}.Error", result.Error);
+            context.SetVariable($"{prefix}.Error", pairError);
 
             WriteDirectionResult(context, $"{prefix}.Forward", result.Forward);
             if (result.Reverse != null)
@@ -1327,6 +1334,12 @@ namespace TestBuilder.Domain.Steps
         int AttemptCount,
         string Error)
     {
+        internal string DescribeFailure(IPAddress source, IPAddress destination)
+        {
+            var category = InfrastructureFailure ? "Сбой генератора или захвата на стенде. Результат измерения недостоверен. " : "";
+            return $"{source} → {destination} (попытка {AttemptCount}). {category}{Error}";
+        }
+
         public static DataTestPortResult Fail(string error, bool infrastructureFailure = false) => new(
             false,
             0,
@@ -1375,17 +1388,7 @@ namespace TestBuilder.Domain.Steps
         public static DataTestPairResult FromDirections(DataTestPortResult forward, DataTestPortResult? reverse)
         {
             var directions = reverse == null ? new[] { forward } : new[] { forward, reverse };
-            var errors = new List<string>();
-
-            if (!forward.Passed)
-            {
-                errors.Add($"Forward: {forward.Error}");
-            }
-
-            if (reverse is { Passed: false })
-            {
-                errors.Add($"Reverse: {reverse.Error}");
-            }
+            var errors = directions.Where(result => !result.Passed).Select(result => result.Error);
 
             return new DataTestPairResult(
                 directions.All(result => result.Passed),
@@ -1403,7 +1406,7 @@ namespace TestBuilder.Domain.Steps
                 forward.SendDeviceName,
                 directions.Aggregate(0u, (total, result) => total + result.CaptureDroppedPackets),
                 directions.Max(result => result.AttemptCount),
-                string.Join("; ", errors),
+                string.Join(" | ", errors),
                 forward,
                 reverse);
         }
