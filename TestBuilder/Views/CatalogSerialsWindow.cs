@@ -52,6 +52,8 @@ internal sealed class CatalogSerialsWindow : Window
         var first = AddField(serial, "Стартовый серийный номер", model.SerialSeries == null ? "" : NumberText(current.FirstSerialNumber));
         var last = AddField(serial, "Последний серийный номер", model.SerialSeries == null ? "" : NumberText(current.LastSerialNumber));
         var offset = AddField(serial, "База короткого номера", model.SerialSeries == null ? "" : NumberText(current.SerialOffset));
+        var failureSerial = AddField(serial, "Номер для аварийного отчёта",
+            current.FailureReportSerialNumber is { } fallback ? NumberText(fallback) : "", "При сбое до получения номера устройства");
         var mac = AddField(serial, "Префикс MAC", current.MacPrefix ?? "", "Четыре байта через двоеточие");
         var board = AddField(serial, "Имя платы при записи Pro MAC", current.BoardVersion ?? "");
 
@@ -88,7 +90,7 @@ internal sealed class CatalogSerialsWindow : Window
             {
                 var server = Optional(serverType);
                 var hasRange = !string.IsNullOrWhiteSpace(first.Text) || !string.IsNullOrWhiteSpace(last.Text) ||
-                    !string.IsNullOrWhiteSpace(offset.Text) || Optional(mac) != null || Optional(board) != null;
+                    !string.IsNullOrWhiteSpace(offset.Text) || Optional(failureSerial) != null || Optional(mac) != null || Optional(board) != null;
                 if (server == null && (hasRange || useRtl.IsChecked == true))
                     throw new FormatException("Укажите тип на сервере.");
                 var newName = Optional(name) ?? "";
@@ -114,6 +116,7 @@ internal sealed class CatalogSerialsWindow : Window
                         FirstSerialNumber = ReadNumber(first, "стартовый номер"),
                         LastSerialNumber = ReadNumber(last, "последний номер"),
                         SerialOffset = ReadNumber(offset, "базу короткого номера"),
+                        FailureReportSerialNumber = Optional(failureSerial) == null ? null : ReadNumber(failureSerial, "номер для аварийного отчёта"),
                         MacPrefix = Optional(mac),
                         BoardVersion = Optional(board)
                     } : null,

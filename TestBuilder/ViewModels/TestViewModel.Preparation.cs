@@ -48,7 +48,7 @@ public partial class TestViewModel
             }
             finally { IsConnecting = false; }
         }
-        await WithRunFileLogAsync(PrepareProfileAsync);
+        await WithRunFileLogAsync(() => PrepareProfileAsync());
     }
 
     private string CurrentPreparationKey() =>
@@ -82,7 +82,7 @@ public partial class TestViewModel
             StatusMessage = "Профиль изменён. Настройка выполнится при следующем запуске.";
     }
 
-    private async Task<bool> PrepareProfileAsync()
+    private async Task<bool> PrepareProfileAsync(bool forTestRun = false)
     {
         if (!CanPrepareProfile || _isPreparingProfile || HasRunningQuickActions) return false;
         if (ProfileRequiresHardware && (!IsConnected || !IsMonitoringActive))
@@ -98,7 +98,7 @@ public partial class TestViewModel
             ResetProfilePreparation();
             Station.Prepare(RootGraph);
             _isPreparingProfile = true;
-            await ExecuteGraphAsync(plan);
+            await ExecuteGraphAsync(plan, forTestRun);
             return _preparedProfileKey == key;
         }
         catch (Exception ex)

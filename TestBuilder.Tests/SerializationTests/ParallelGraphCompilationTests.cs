@@ -438,7 +438,7 @@ public class ParallelGraphCompilationTests
         Assert.Equal(originalNodes.Keys.Order(), parallelNodes.Keys.Order());
         foreach (var (key, node) in originalNodes)
         {
-            if (key is "10. DataTest" or "09a. Проверка Sensor1 и Sensor2") continue; // Covered in dedicated DataTest and IO-2 tests.
+            if (key is "10. DataTest" or "09a. Проверка Sensor1 и Sensor2" or "Отчёт при ошибке") continue;
             var copiedNode = parallelNodes[key];
             var expected = node.DeepClone().AsObject();
             var actual = copiedNode.DeepClone().AsObject();

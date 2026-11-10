@@ -288,6 +288,73 @@ public class ProductionStepTests
     }
 
     [Theory]
+    [InlineData(true, null, null, 3200001)]
+    [InlineData(true, 3200579, 3200579, 3200579)]
+    [InlineData(true, null, 3300579, null)]
+    [InlineData(true, 3200579, 3200580, null)]
+    [InlineData(false, null, null, null)]
+    public async Task ProFailureProfile_UsesServiceSerialOnlyWhenDeviceSerialIsMissing(
+        bool eligible, int? issued, int? deviceSerial, int? reportSerial)
+    {
+        var settings = AppSettings.Instance;
+        var previousStand = settings.StandId;
+        var directory = Directory.CreateTempSubdirectory("tfortis-pro-report-");
+        try
+        {
+            settings.StandId = "TEST-STAND";
+            var model = EquipmentCatalog.Load(directory.FullName).Resolve("psw-ups-box-8x2pro", null);
+            Assert.NotNull(model);
+            using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find(
+                "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json")), vm);
+            var cleanup = TestBuilder.Services.Graph.FailureCleanupOrder.GetNodes(vm.RootGraph);
+            Assert.Equal("Аварийное выключение стенда", cleanup[0].Name);
+            var recovery = cleanup[^1];
+            Assert.Equal("Отчёт при ошибке", recovery.Name);
+            recovery.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single().LocalReportsDirectory = directory.FullName;
+            using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
+            {
+                ProfileReportTemplate = vm.RootGraph.ReportTemplate,
+                ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
+            };
+            var graph = compiler.Compile(recovery.BodyGraph);
+            var context = new TestContext(new RegisterState()) { ProductionModel = model, IsCleanup = true, HasCriticalError = true };
+            const string cause = "Ошибка подготовки графа";
+            context.SetVariable("Execution.SendFailureReport", eligible);
+            context.SetVariable("Execution.Error", cause);
+            if (issued.HasValue) context.SetVariable("SerialNumber.Assigned", issued.Value);
+            if (deviceSerial.HasValue) context.SetVariable("SerialNumber", deviceSerial.Value);
+
+            await new TestExecutor().ExecuteAsync(graph.StartNode, context, default);
+
+            Assert.Equal(issued, context.IssuedSerialNumber);
+            Assert.Equal(deviceSerial.HasValue, context.Variables.ContainsKey("SerialNumber"));
+            Assert.Equal(deviceSerial ?? 0, context.GetVariable<int>("SerialNumber"));
+            if (reportSerial.HasValue)
+            {
+                Assert.Equal(HttpMethod.Post, handler.Method);
+                Assert.Contains($"serial_num=true={reportSerial}\r\n", handler.Body);
+                Assert.Contains("test_result=true=0", handler.Body);
+                Assert.Contains(cause, handler.Body);
+                Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
+                Assert.Contains($"serial_num=true={reportSerial}", File.ReadAllText(Assert.Single(directory.GetFiles()).FullName));
+            }
+            else
+            {
+                Assert.Null(handler.Method);
+                Assert.Empty(directory.GetFiles());
+            }
+        }
+        finally
+        {
+            settings.StandId = previousStand;
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
     [InlineData("33", "3300579", true, 1)]
     [InlineData("33", "3200579", false, 1)]
     [InlineData("33", "33", false, 1)]

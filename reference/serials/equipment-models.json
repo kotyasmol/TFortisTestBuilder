@@ -221,6 +221,7 @@
         "firstSerialNumber": 3200001,
         "lastSerialNumber": 3265535,
         "serialOffset": 3200000,
+        "failureReportSerialNumber": 3200001,
         "macPrefix": "C0:11:A6:20",
         "boardVersion": "PSW+UPS-Box 8x2Pro"
       }

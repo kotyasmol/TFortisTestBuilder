@@ -11,6 +11,7 @@ public sealed record ModelSerialSeries
     public int FirstSerialNumber { get; init; }
     public int LastSerialNumber { get; init; }
     public int SerialOffset { get; init; }
+    public int? FailureReportSerialNumber { get; init; }
     public string? MacPrefix { get; init; }
     public string? BoardVersion { get; init; }
     [System.Text.Json.Serialization.JsonExtensionData]
@@ -22,6 +23,8 @@ public sealed record ModelSerialSeries
             LastSerialNumber < FirstSerialNumber || SerialOffset < 0 ||
             SerialOffset > FirstSerialNumber || LastSerialNumber - SerialOffset > 99999)
             throw new InvalidDataException($"Проверьте серверный тип, диапазон и смещение серийных номеров изделия «{modelName}».");
+        if (FailureReportSerialNumber is { } failureSerial && Check(failureSerial) is { } error)
+            throw new InvalidDataException($"Проверьте номер для аварийного отчёта. {error}");
         if (MacPrefix != null && (!LabelPrintContent.TryNormalizeMac(MacPrefix + ":00:00", out var normalized) ||
             !string.Equals(normalized, MacPrefix + ":00:00", StringComparison.OrdinalIgnoreCase) ||
             LastSerialNumber - SerialOffset > ushort.MaxValue))

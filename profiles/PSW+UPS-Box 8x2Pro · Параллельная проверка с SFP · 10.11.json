@@ -7672,34 +7672,8 @@
             "DisabledPortsText": null
           },
           {
-            "id": "1",
-            "type": "Check Variable Range",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "reportName": null,
-            "min": 3200000,
-            "max": 3299999,
-            "variableName": "SerialNumber",
-            "failMessage": "Отчёт при ошибке не отправлен: серийный номер не относится к коммутатору PSW+UPS-Box 8x2Pro",
-            "inclusive": true,
-            "DisabledPortsText": null
-          },
-          {
             "id": "2",
-            "type": "Build Test Report",
+            "type": "Build Test Report (prefix v1)",
             "x": 1000,
             "y": 120,
             "color": "blue",
@@ -7718,6 +7692,7 @@
             "reportName": null,
             "DisabledPortsText": null,
             "serialVariableName": "SerialNumber",
+            "expectedSerialPrefix": "32",
             "reportVariableName": "TestReportText",
             "includeAllVariables": true,
             "testType": "production"
@@ -7778,20 +7753,8 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
             "targetNodeId": "2",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "2",

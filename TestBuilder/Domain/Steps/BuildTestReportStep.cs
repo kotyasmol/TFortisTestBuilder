@@ -75,8 +75,10 @@ namespace TestBuilder.Domain.Steps
             }
 
             var actualDeviceIdent = rtl == null ? string.Empty : GetVariableText(context, rtl.DeviceIdentifierVariable).Trim();
-            var usesFailureRoute = rtl != null && context.IsCleanup && context.GetVariable<bool>("Execution.SendFailureReport") &&
-                !context.IssuedSerialNumber.HasValue;
+            var issuedSerial = context.IssuedSerialNumber;
+            var failureBeforeAssignment = context.IsCleanup && context.GetVariable<bool>("Execution.SendFailureReport") &&
+                !issuedSerial.HasValue;
+            var usesFailureRoute = rtl != null && failureBeforeAssignment;
             var deviceIdent = usesFailureRoute ? rtl?.FailureDeviceIdentifier?.Trim() ?? string.Empty : actualDeviceIdent;
             if (usesFailureRoute && deviceIdent.Length == 0)
                 return Task.FromResult(Fail(context, "В справочнике изделия не задан серверный идентификатор для отчётов об отказах."));
@@ -84,9 +86,13 @@ namespace TestBuilder.Domain.Steps
                 return Task.FromResult(Fail(context, $"Идентификатор платы не найден в переменной '{rtl.DeviceIdentifierVariable}'."));
 
             var serial = GetVariableText(context, _serialVariableName);
-            var assignOnReport = usesFailureRoute || (rtl?.AssignSerialOnReport == true && !context.IssuedSerialNumber.HasValue);
+            var fallbackSerial = rtl == null && failureBeforeAssignment && string.IsNullOrWhiteSpace(serial)
+                ? series?.FailureReportSerialNumber : null;
+            var assignOnReport = usesFailureRoute || (rtl?.AssignSerialOnReport == true && !issuedSerial.HasValue);
             long serialNumber = 0;
-            if (!assignOnReport &&
+            if (fallbackSerial.HasValue)
+                serialNumber = fallbackSerial.Value;
+            else if (!assignOnReport &&
                 (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out serialNumber) || serialNumber <= 0))
             {
                 return Task.FromResult(Fail(
@@ -97,18 +103,19 @@ namespace TestBuilder.Domain.Steps
             if (!assignOnReport)
             {
                 var seriesError = series == null ? SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix)
-                    : series.Check(serialNumber, context.IssuedSerialNumber);
+                    : series.Check(serialNumber, issuedSerial);
                 if (series == null && context.ProductionModel != null)
-                    seriesError ??= ModelSerialSeries.CheckAssigned(serialNumber, context.IssuedSerialNumber);
+                    seriesError ??= ModelSerialSeries.CheckAssigned(serialNumber, issuedSerial);
                 if (seriesError != null)
                     return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
-                if (rtl != null && !context.IssuedSerialNumber.HasValue)
+                if (rtl != null && !issuedSerial.HasValue)
                     return Task.FromResult(Fail(context, "Сервер ещё не выдал номер для платы в текущем прогоне."));
             }
 
             var builder = new StringBuilder();
             var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
-            var successful = !usesFailureRoute && !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
+            var successful = !usesFailureRoute && !fallbackSerial.HasValue && !context.HasCriticalError &&
+                entries.All(entry => entry.IsSuccess);
             var reportEntries = new List<TestReportEntry>();
             var serialText = assignOnReport ? null : serialNumber.ToString(CultureInfo.InvariantCulture);
 
@@ -161,10 +168,10 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
-            if (usesFailureRoute)
+            if (usesFailureRoute && actualDeviceIdent.Length > 0)
+                reportEntries.Add(new TestReportEntry("Идентификатор проверенной платы", true, actualDeviceIdent));
+            if (usesFailureRoute || fallbackSerial.HasValue)
             {
-                if (actualDeviceIdent.Length > 0)
-                    reportEntries.Add(new TestReportEntry("Идентификатор проверенной платы", true, actualDeviceIdent));
                 if (!reportEntries.Any(entry => entry.Name == ReportTemplate.FailureLabel))
                     reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false,
                         FailureReason(context, entries.FirstOrDefault(entry => !entry.IsSuccess))));
@@ -191,6 +198,8 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("BuildReport.TestType", _testType);
             context.SetVariable("BuildReport.Error", string.Empty);
 
+            if (fallbackSerial.HasValue)
+                _logger.Info($"Для аварийного отчёта выбран служебный серийный номер {serialText}.");
             _logger.Info(
                 $"[OK] Отчёт собран в переменную {_reportVariableName}: " +
                 $"stand={_standId}, serial={serialText ?? "ожидается от сервера"}.");

@@ -11,6 +11,7 @@ using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 using TestBuilder.Services.Modbus;
+using TestBuilder.Tests.SerializationTests;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
@@ -22,6 +23,45 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class FailureCleanupOrderTests
 {
+    [Fact]
+    public async Task GraphCompilationFailure_CanBuildReportWithCatalogServiceSerial()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(async () =>
+        {
+            using var folder = new ProfileCopyTests.ProfileFolder();
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            vm.NewProfileCommand.Execute(null);
+            vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-ups-box-8x2pro");
+            Assert.True(vm.UseCatalogSerials);
+            var start = new StartNodeViewModel();
+            var branch1 = new DelayNodeViewModel();
+            var branch2 = new DelayNodeViewModel();
+            var cleanup = new SubtestNodeViewModel { Name = "Отчёт при ошибке", RunOnFailure = true };
+            var report = new BuildTestReportNodeViewModel();
+            cleanup.BodyGraph.Nodes.Add(report);
+            cleanup.BodyGraph.Connections.Add(new(cleanup.BodyGraph.Nodes.OfType<StartNodeViewModel>().Single().Output[0], report.In));
+            cleanup.BodyGraph.Connections.Add(new(report.TrueOut, cleanup.BodyGraph.Nodes.OfType<EndNodeViewModel>().Single().Input[0]));
+            foreach (var node in new NodeViewModel[] { start, branch1, branch2, cleanup })
+                vm.RootGraph.Nodes.Add(node);
+            vm.RootGraph.Connections.Add(new(start.Output[0], branch1.Input[0]));
+            vm.RootGraph.Connections.Add(new(start.Output[0], branch2.Input[0]));
+            var settings = AppSettings.Instance;
+            var stand = settings.StandId;
+            settings.StandId = "TEST-STAND";
+            try
+            {
+                await vm.RunGraphCommand.ExecuteAsync(null);
+                Assert.Contains(vm.TestingLogger.Entries, entry => entry.Message.Contains("Подготовка графа"));
+                Assert.Contains(vm.TestingLogger.Entries, entry => entry.Message.Contains("serial=3200001"));
+                Assert.False(vm.Station.IsSuccessful);
+            }
+            finally { settings.StandId = stand; }
+            return true;
+        }, default);
+    }
+
     [Fact]
     public async Task ContinuedPrintFailure_CompletesNormalPath_WithoutRepeatingEmergencyActions()
     {

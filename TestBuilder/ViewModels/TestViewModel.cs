@@ -1170,7 +1170,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         TestingLogger.Clear();
         await WithRunFileLogAsync(async () =>
         {
-            if (ShouldPrepareForRun && !await PrepareProfileAsync()) return;
+            if (ShouldPrepareForRun && !await PrepareProfileAsync(forTestRun: true)) return;
             await ExecuteGraphAsync();
         });
     }
@@ -1185,7 +1185,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
     }
 
-    private async Task ExecuteGraphAsync(ProfilePreparationPlan? preparation = null)
+    private async Task ExecuteGraphAsync(ProfilePreparationPlan? preparation = null, bool preparationForRun = false)
     {
         if (preparation == null ? !CanStartRun : !CanPrepareProfile) return;
         var preparing = preparation != null;
@@ -1257,13 +1257,14 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var executionStatus = ExecutionStatus.Failed;
         ExecutionFailure? runFailure = null;
         Dictionary<string, object>? preparedVariables = null;
+        (EquipmentModel? Production, EquipmentModel? Legacy) serialModels = default;
 
         try
         {
             if (partialRun) NavigateToGraph(runWorkspace);
             else ResetToRootGraph();
 
-            var serialModels = ResolveRunSerialModels();
+            serialModels = ResolveRunSerialModels();
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
             using var compiler = new GraphCompiler(_modbusService, TestingLogger)
@@ -1414,11 +1415,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 context ??= new TestContext(_registerState)
                 {
                     IsConnected = IsConnected, ProfileName = profileName, DeviceModel = RootGraph.DeviceModel, HasCriticalError = true,
+                    ProductionModel = serialModels.Production, LegacySerialModel = serialModels.Legacy, LabelVariant = RootGraph.LabelVariant,
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };
-                context.SetVariable("Execution.SendFailureReport", executionStatus == ExecutionStatus.Failed &&
-                    !preparing && !partialRun && context.ProductionModel?.RtlReport != null);
+                var hasFailureSerial = context.ProductionModel?.SerialSeries?.FailureReportSerialNumber != null;
+                context.SetVariable("Execution.SendFailureReport", executionStatus == ExecutionStatus.Failed && !partialRun &&
+                    (hasFailureSerial && (!preparing || preparationForRun) || !preparing && context.ProductionModel?.RtlReport != null));
+                context.SetVariable("Execution.Status", executionStatus.ToString());
+                if (runFailure != null) context.SetVariable("Execution.Error", runFailure.Summary);
                 if (observedReportVariables != null) context.Variables.ObserveAssignment = ObserveReportVariable;
                 IsStopping = true;
                 IsTestPaused = false;

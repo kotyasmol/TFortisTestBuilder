@@ -56,6 +56,14 @@ public sealed class EquipmentCatalog
         {
             // Older installations retain their original local catalog after updates.
             if (!model.IsFullOverride && models.TryGetValue(model.Id, out var baseline) && Keys(baseline).Contains(Normalize(model.Name)))
+            {
+                var series = model.SerialSeries;
+                var bundledSeries = baseline.SerialSeries;
+                if (series is { FailureReportSerialNumber: null } &&
+                    bundledSeries?.FailureReportSerialNumber is { } fallback &&
+                    string.Equals(series.ServerDeviceType, bundledSeries.ServerDeviceType, StringComparison.OrdinalIgnoreCase) &&
+                    series.Check(fallback) == null)
+                    series = series with { FailureReportSerialNumber = fallback };
                 models[model.Id] = model with
                 {
                     LabelCode = model.LabelCode ?? baseline.LabelCode,
@@ -65,8 +73,9 @@ public sealed class EquipmentCatalog
                         ? report with { FailureDeviceIdentifier = report.FailureDeviceIdentifier ?? baselineReport.FailureDeviceIdentifier }
                         : model.RtlReport ?? baseline.RtlReport,
                     LabelVariants = model.LabelVariants ?? baseline.LabelVariants,
-                    SerialSeries = model.SerialSeries ?? (model.ServerDeviceType == null ? baseline.SerialSeries : null)
+                    SerialSeries = series ?? (model.ServerDeviceType == null ? bundledSeries : null)
                 };
+            }
             else
                 models[model.Id] = model;
         }
