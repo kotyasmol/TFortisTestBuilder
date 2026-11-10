@@ -470,7 +470,8 @@
       "serverDeviceType": "RTL-POE",
       "rtlReport": {
         "deviceType": 6,
-        "assignSerialOnReport": true
+        "assignSerialOnReport": true,
+        "failureDeviceIdentifier": "413148580e5939514c53698b"
       }
     },
     {
@@ -480,7 +481,8 @@
       "serverDeviceType": "RTL-SW",
       "rtlReport": {
         "deviceType": 5,
-        "assignSerialOnReport": false
+        "assignSerialOnReport": false,
+        "failureDeviceIdentifier": "default"
       }
     },
     {

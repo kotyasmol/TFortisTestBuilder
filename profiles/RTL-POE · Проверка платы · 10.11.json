@@ -7498,17 +7498,27 @@
     {
       "type": "Subtest",
       "name": "Отчёт при отказе",
-      "description": "После снятия питания. Для отчёта нужен MCU ID платы. Уже отправленный отчёт повторно не отправляется.",
-      "isEnabled": false,
+      "description": "После снятия питания. Если плата не получила номер, отчёт отправляется на служебную запись.",
+      "isEnabled": true,
       "stopOnError": true,
       "boardElements": "",
       "bodyGraph": {
-        "name": "Отчёт при отказе — если есть серийный номер",
+        "name": "Отчёт при отказе",
         "nodes": [
           {
             "type": "Start",
             "id": "0",
             "x": 80,
+            "y": 80,
+            "runOnlyOnFirstRun": false
+          },
+          {
+            "type": "Check Variable Equality",
+            "variableName": "Execution.SendFailureReport",
+            "expectedValue": "true",
+            "comparisonType": "Boolean",
+            "id": "1",
+            "x": 320,
             "y": 80,
             "runOnlyOnFirstRun": false
           },
@@ -7561,6 +7571,12 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
@@ -7587,6 +7603,12 @@
             "sourceConnector": "False",
             "targetNodeId": "3",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
           }
         ]
       },

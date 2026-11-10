@@ -11,7 +11,7 @@ namespace TestBuilder.Domain.Steps;
 
 internal sealed record RtlTestReport(
     string LocalText, int DeviceType, string DeviceIdent, string? DeviceSerial,
-    string StandName, DateTime TestTime, bool IsFull, bool IsSuccess, IReadOnlyList<TestReportEntry> SubTests)
+    string StandName, DateTime TestTime, bool IsFull, bool IsSuccess, bool UsesFailureRoute, IReadOnlyList<TestReportEntry> SubTests)
 {
     internal const string Endpoint = "/api/Api.svc/SendTestResultUniverse";
     internal static bool IsEndpoint(string? value) =>

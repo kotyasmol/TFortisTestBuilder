@@ -74,12 +74,17 @@ namespace TestBuilder.Domain.Steps
                     "Stand ID не задан. Укажи его во вкладке Настройки."));
             }
 
-            var deviceIdent = rtl == null ? string.Empty : GetVariableText(context, rtl.DeviceIdentifierVariable).Trim();
+            var actualDeviceIdent = rtl == null ? string.Empty : GetVariableText(context, rtl.DeviceIdentifierVariable).Trim();
+            var usesFailureRoute = rtl != null && context.IsCleanup && context.GetVariable<bool>("Execution.SendFailureReport") &&
+                !context.IssuedSerialNumber.HasValue;
+            var deviceIdent = usesFailureRoute ? rtl?.FailureDeviceIdentifier?.Trim() ?? string.Empty : actualDeviceIdent;
+            if (usesFailureRoute && deviceIdent.Length == 0)
+                return Task.FromResult(Fail(context, "В справочнике изделия не задан серверный идентификатор для отчётов об отказах."));
             if (rtl != null && string.IsNullOrEmpty(deviceIdent))
                 return Task.FromResult(Fail(context, $"Идентификатор платы не найден в переменной '{rtl.DeviceIdentifierVariable}'."));
 
             var serial = GetVariableText(context, _serialVariableName);
-            var assignOnReport = rtl?.AssignSerialOnReport == true && !context.IssuedSerialNumber.HasValue;
+            var assignOnReport = usesFailureRoute || (rtl?.AssignSerialOnReport == true && !context.IssuedSerialNumber.HasValue);
             long serialNumber = 0;
             if (!assignOnReport &&
                 (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out serialNumber) || serialNumber <= 0))
@@ -103,7 +108,7 @@ namespace TestBuilder.Domain.Steps
 
             var builder = new StringBuilder();
             var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
-            var successful = !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
+            var successful = !usesFailureRoute && !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
             var reportEntries = new List<TestReportEntry>();
             var serialText = assignOnReport ? null : serialNumber.ToString(CultureInfo.InvariantCulture);
 
@@ -156,6 +161,14 @@ namespace TestBuilder.Domain.Steps
                 }
             }
 
+            if (usesFailureRoute)
+            {
+                if (actualDeviceIdent.Length > 0)
+                    reportEntries.Add(new TestReportEntry("Идентификатор проверенной платы", true, actualDeviceIdent));
+                if (!reportEntries.Any(entry => entry.Name == ReportTemplate.FailureLabel))
+                    reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false,
+                        FailureReason(context, entries.FirstOrDefault(entry => !entry.IsSuccess))));
+            }
             foreach (var entry in reportEntries)
                 AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
 
@@ -163,7 +176,7 @@ namespace TestBuilder.Domain.Steps
             if (rtl != null)
                 context.SetVariable("BuildReport.RtlPayload", new RtlTestReport(
                     report, rtl.DeviceType, deviceIdent, serialText, _standId, DateTime.UtcNow,
-                    !context.IsCleanup && !context.HasCriticalError, successful, reportEntries));
+                    !context.IsCleanup && !context.HasCriticalError, successful, usesFailureRoute, reportEntries));
             context.SetVariable(_reportVariableName, report);
             context.SetVariable("BuildReport.Success", true);
             context.SetVariable("BuildReport.DevicePassed", successful);

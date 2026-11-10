@@ -85,11 +85,12 @@ public class RtlOriginalSettingsTests
 
     [Theory]
     [InlineData("SW"), InlineData("POE")]
-    public void OriginalProfilesDoNotEnableReportsPrintingOrAutomaticFlashing(string board)
+    public void StandardProfilesEnableFailureReportsAndKeepOrdinaryReportsPrintingAndFlashingDisabled(string board)
     {
         using var profile = Read($"profiles/RTL-{board} · Проверка платы · 10.11.json");
         var nodes = Nodes(profile.RootElement).ToArray();
-        Assert.All(nodes.Where(n => Text(n,"name").StartsWith("Отчёт") || Text(n,"name").StartsWith("Этикетка")),
+        Assert.True(Assert.Single(nodes.Where(n => Text(n,"id") == "failure-report")).GetProperty("isEnabled").GetBoolean());
+        Assert.All(nodes.Where(n => Text(n,"name") == "Отчёт TestBuilder" || Text(n,"name").StartsWith("Этикетка")),
             n => Assert.False(n.GetProperty("isEnabled").GetBoolean()));
         Assert.DoesNotContain(EnabledNodes(profile.RootElement), n => Text(n, "type") == "Run Program");
         Assert.DoesNotContain(nodes, n => Text(n,"type") == "Run Program" && !n.GetProperty("runProgram").GetProperty("programPath").GetString()!.StartsWith("read_"));

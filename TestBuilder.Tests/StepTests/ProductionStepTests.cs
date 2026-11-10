@@ -131,7 +131,7 @@ public class ProductionStepTests
         var model = new EquipmentModel("board", serverType)
         {
             ServerDeviceType = serverType,
-            RtlReport = new RtlReportSettings(deviceType, assignOnReport)
+            RtlReport = new RtlReportSettings(deviceType, assignOnReport) { FailureDeviceIdentifier = "test-failure-route" }
         };
         var context = new TestContext(new RegisterState()) { ProductionModel = model };
         context.SetVariable("CpuId", cpu);
@@ -173,6 +173,94 @@ public class ProductionStepTests
             item.GetProperty("additionalInfo").GetString() == "3,3 В");
         Assert.Equal(accepted ? returnedSerial : assignOnReport ? null : swSerial, context.IssuedSerialNumber);
         if (assignOnReport) Assert.Equal(1, context.GetVariable<int>("SendReport.Attempts"));
+    }
+
+    [Theory]
+    [InlineData("RTL-SW", null, null, true, false)]
+    [InlineData("RTL-POE", null, null, true, false)]
+    [InlineData("RTL-POE", "413148580E5939514C53698A", null, true, false)]
+    [InlineData("RTL-SW", "413148580E5939514C53698A", 31300002, true, false)]
+    [InlineData("RTL-POE", null, null, false, false)]
+    [InlineData("RTL-POE", "413148580E5939514C53698A", 31200002, true, true)]
+    public async Task RtlFailureProfileRoutesReportsAndKeepsTheFallbackSerialOutOfTheDeviceContext(
+        string board, string? cpuId, int? issued, bool eligible, bool alreadySent)
+    {
+        var settings = AppSettings.Instance;
+        var previousStand = settings.StandId;
+        var previousServer = settings.ServerBaseUrl;
+        var directory = Directory.CreateTempSubdirectory("tfortis-rtl-report-");
+        try
+        {
+            const string server = "https://rtl-test.example";
+            App.ConfigureStartupArguments(new[] { "rtl-test-session", "Оператор" });
+            settings.StandId = "TEST-STAND";
+            settings.ServerBaseUrl = server;
+            var model = EquipmentCatalog.Load(directory.FullName).Resolve(null, board);
+            var reportSettings = Assert.IsType<RtlReportSettings>(model?.RtlReport);
+            var fallbackSerial = board == "RTL-SW" ? 9912345 : 9912346;
+            var returnedSerial = issued ?? fallbackSerial;
+            using var handler = new RecordingReportHandler(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new { id = 10, serialNumber = returnedSerial, deviceType = reportSettings.DeviceType }));
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"{board} · Проверка платы · 10.11.json")), vm);
+            var cleanup = TestBuilder.Services.Graph.FailureCleanupOrder.GetNodes(vm.RootGraph);
+            Assert.StartsWith("Снятие питания", cleanup[0].Name);
+            var recovery = cleanup[^1];
+            Assert.Equal("Отчёт при отказе", recovery.Name);
+            recovery.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single().LocalReportsDirectory = directory.FullName;
+            using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
+            {
+                ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
+            };
+            var graph = compiler.Compile(recovery.BodyGraph);
+            var context = new TestContext(new RegisterState()) { ProductionModel = model, IsCleanup = true, HasCriticalError = true };
+            context.SetVariable("Execution.SendFailureReport", eligible);
+            context.SetVariable("Execution.Error", "Проверка питания не пройдена");
+            context.SetVariable("ReportDelivery.Status", alreadySent ? "Sent" : "Pending");
+            if (cpuId != null) context.SetVariable("CpuId", cpuId);
+            if (issued.HasValue)
+            {
+                context.SetVariable("SerialNumber", issued.Value);
+                context.SetVariable("SerialNumber.Assigned", issued.Value);
+            }
+
+            Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(graph.StartNode, context, default));
+            if (!eligible || alreadySent)
+            {
+                Assert.Null(handler.Method);
+                Assert.Empty(directory.GetFiles());
+                return;
+            }
+
+            Assert.Equal(HttpMethod.Post, handler.Method);
+            using var payload = JsonDocument.Parse(handler.Body);
+            var result = payload.RootElement.GetProperty("result");
+            Assert.Equal(reportSettings.DeviceType, result.GetProperty("deviceType").GetInt32());
+            Assert.Equal(issued.HasValue ? cpuId : reportSettings.FailureDeviceIdentifier, result.GetProperty("deviceIdent").GetString());
+            Assert.Equal(issued?.ToString(), result.GetProperty("deviceSerial").GetString());
+            Assert.False(result.GetProperty("isSuccess").GetBoolean());
+            Assert.False(result.GetProperty("isFull").GetBoolean());
+            Assert.Equal(issued, context.IssuedSerialNumber);
+            Assert.Equal(issued ?? 0, context.GetVariable<int>("SerialNumber"));
+            Assert.Equal(returnedSerial, context.GetVariable<int>("SendReport.SerialNumber"));
+            Assert.Contains($"serial_num=true={returnedSerial}", File.ReadAllText(Assert.Single(directory.GetFiles()).FullName));
+            Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
+            if (!issued.HasValue)
+            {
+                var subTests = result.GetProperty("subTests").EnumerateArray().ToArray();
+                Assert.Contains(subTests, item => item.GetProperty("additionalInfo").GetString() == "Проверка питания не пройдена");
+                if (cpuId != null)
+                    Assert.Contains(subTests, item => item.GetProperty("additionalInfo").GetString() == cpuId);
+            }
+        }
+        finally
+        {
+            App.ConfigureStartupArguments(Array.Empty<string>());
+            settings.StandId = previousStand;
+            settings.ServerBaseUrl = previousServer;
+            directory.Delete(recursive: true);
+        }
     }
 
     [Theory]

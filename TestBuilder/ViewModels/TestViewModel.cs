@@ -1413,6 +1413,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };
+                context.SetVariable("Execution.SendFailureReport", executionStatus == ExecutionStatus.Failed &&
+                    !preparing && !partialRun && context.ProductionModel?.RtlReport != null);
                 if (observedReportVariables != null) context.Variables.ObserveAssignment = ObserveReportVariable;
                 IsStopping = true;
                 IsTestPaused = false;

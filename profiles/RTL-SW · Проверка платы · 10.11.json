@@ -9636,13 +9636,13 @@
     },
     {
       "type": "Subtest",
-      "name": "Отчёт при отказе — если есть серийный номер",
-      "description": "После снятия питания. Без серийного номера сохраняется журнал; уже отправленный отчёт повторно не отправляется.",
-      "isEnabled": false,
+      "name": "Отчёт при отказе",
+      "description": "После снятия питания. Если плата не получила номер, отчёт отправляется на служебную запись.",
+      "isEnabled": true,
       "stopOnError": true,
       "boardElements": "",
       "bodyGraph": {
-        "name": "Отчёт при отказе — если есть серийный номер",
+        "name": "Отчёт при отказе",
         "nodes": [
           {
             "type": "Start",
@@ -9652,11 +9652,10 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Check Variable Range",
-            "variableName": "SerialNumber",
-            "min": 1,
-            "max": 2147483647,
-            "inclusive": true,
+            "type": "Check Variable Equality",
+            "variableName": "Execution.SendFailureReport",
+            "expectedValue": "true",
+            "comparisonType": "Boolean",
             "id": "1",
             "x": 320,
             "y": 80,

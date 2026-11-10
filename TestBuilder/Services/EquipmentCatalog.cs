@@ -25,6 +25,7 @@ public sealed record EquipmentModel(string Id, string Name)
 public sealed record RtlReportSettings(int DeviceType, bool AssignSerialOnReport)
 {
     public string DeviceIdentifierVariable { get; init; } = "CpuId";
+    public string? FailureDeviceIdentifier { get; init; }
 }
 
 public sealed class EquipmentCatalog
@@ -56,7 +57,10 @@ public sealed class EquipmentCatalog
                 {
                     LabelCode = model.LabelCode ?? baseline.LabelCode,
                     ServerDeviceType = model.ServerDeviceType ?? baseline.ServerDeviceType,
-                    RtlReport = model.RtlReport ?? baseline.RtlReport,
+                    RtlReport = model.RtlReport is { } report && baseline.RtlReport is { } baselineReport &&
+                        report.DeviceType == baselineReport.DeviceType
+                        ? report with { FailureDeviceIdentifier = report.FailureDeviceIdentifier ?? baselineReport.FailureDeviceIdentifier }
+                        : model.RtlReport ?? baseline.RtlReport,
                     LabelVariants = model.LabelVariants ?? baseline.LabelVariants,
                     SerialSeries = model.SerialSeries ?? (model.ServerDeviceType == null ? baseline.SerialSeries : null)
                 };
@@ -109,8 +113,9 @@ public sealed class EquipmentCatalog
                 throw new InvalidDataException($"Проверьте код этикетки и комплектации изделия «{model.Name}».");
             model.SerialSeries?.Validate(model.Name);
             if (model.RtlReport is { } report &&
-                (report.DeviceType <= 0 || string.IsNullOrWhiteSpace(report.DeviceIdentifierVariable)))
-                throw new InvalidDataException($"Проверьте серверный код отчёта и переменную идентификатора «{model.Name}».");
+                (report.DeviceType <= 0 || string.IsNullOrWhiteSpace(report.DeviceIdentifierVariable) ||
+                 (report.FailureDeviceIdentifier != null && string.IsNullOrWhiteSpace(report.FailureDeviceIdentifier))))
+                throw new InvalidDataException($"Проверьте серверный код отчёта и идентификаторы «{model.Name}».");
         }
     }
     // Separators/case are presentation; +, port counts and model suffixes are identity.

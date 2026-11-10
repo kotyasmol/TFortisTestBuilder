@@ -52,16 +52,11 @@ def serial(kind,cpu='CpuId'):return n('Get Serial Number',serverBaseUrl='',devic
 def report():return [n('Build Test Report',reportVariableName='TestReportText',serialVariableName='SerialNumber',testType='production',includeAllVariables=False),n('Send Test Report (RTL v1)',serverBaseUrl='',reportVariableName='TestReportText',endpoint='/api/Api.svc/SendTestResultUniverse',timeoutMs=10000,retryCount=0,retryDelayMs=1000,saveLocalCopy=True,localReportsDirectory='reports',failOnError=False)]
 def failure_report(g):
  # Detached RunOnFailure stage is called by TestBuilder only after its power cleanup.
- items=[n('Check Variable Range',variableName='SerialNumber',min=1,max=2147483647,inclusive=True),eq('ReportDelivery.Status','Sent')]+report()
- stage=sub('Отчёт при отказе — если есть серийный номер',items,runOnFailure=True,description='После снятия питания. Без серийного номера сохраняется журнал; уже отправленный отчёт повторно не отправляется.')
+ items=[eq('Execution.SendFailureReport','true','Boolean'),eq('ReportDelivery.Status','Sent')]+report()
+ stage=sub('Отчёт при отказе',items,runOnFailure=True,description='После снятия питания. Если плата не получила номер, отчёт отправляется на служебную запись.')
  body=stage['bodyGraph'];end=body['nodes'][-1]
  body['connections']=[c for c in body['connections'] if c['sourceNodeId']!='2']
  body['connections'] += [dict(sourceNodeId='1',sourceConnector='False',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='True',targetNodeId=end['id'],targetConnector='Вход'),dict(sourceNodeId='2',sourceConnector='False',targetNodeId='3',targetConnector='In')]
- if g['deviceModel']=='RTL-POE':
-  stage.update(name='Отчёт при отказе',description='После снятия питания. Для отчёта нужен MCU ID платы. Уже отправленный отчёт повторно не отправляется.')
-  body['nodes']=[node for node in body['nodes'] if node['id']!='1']
-  body['connections']=[link for link in body['connections'] if link['sourceNodeId']!='1']
-  next(link for link in body['connections'] if link['sourceNodeId']=='0')['targetNodeId']='2'
  stage.update(id='failure-report',x=100,y=2500);g['nodes'].append(stage)
 def label():return n('Print Label',printerName='TSC TE310',serialVariableName='SerialNumber',copies=1,useQtProZplFormat=False,failOnPrinterError=True)
 def hardware(kind):return dict(StandName=kind,PortName='',ConsoleDevices=[dict(Id='dut',Name='Процессор DUT',PortName='',PortDescriptionContains='CH340',UsbVendorId='1A86',UsbProductId='7523',BaudRate=115200,Parity=0,DataBits=8,StopBits=1,EncodingName='utf-8',LineEnding='\n',DtrEnable=False,RtsEnable=False)] if kind=='RTL-SW' else [],BaudRate=9600,Parity=0,DataBits=8,StopBits=1,PollIntervalMs=1000,Devices=[copy.deepcopy(next(p for p in presets if p['Name']==kind))])

@@ -176,16 +176,23 @@ namespace TestBuilder.Domain.Steps
                     var assigned = 0;
                     var accepted = rtl == null ? raw.StartsWith("Ok", StringComparison.Ordinal) :
                         rtl.TryReadSerial(responseBody, out assigned) &&
-                        (context.IssuedSerialNumber == null || context.IssuedSerialNumber == assigned) &&
-                        model?.SerialSeries?.Check(assigned) == null;
+                        (rtl.UsesFailureRoute
+                            ? context.IssuedSerialNumber == null
+                            : (context.IssuedSerialNumber == null || context.IssuedSerialNumber == assigned) &&
+                                model?.SerialSeries?.Check(assigned) == null);
                     if (response.IsSuccessStatusCode && accepted)
                     {
                         if (rtl != null)
                         {
-                            context.SetVariable("SerialNumber", assigned);
-                            context.SetVariable("SerialNumber.Assigned", assigned);
                             context.SetVariable("SendReport.SerialNumber", assigned);
-                            _logger.Info($"[OK] Серийный номер из ответа сервера: {assigned}.");
+                            if (rtl.UsesFailureRoute)
+                                _logger.Info($"[OK] Отчёт об отказе принят на служебный серийный номер {assigned}.");
+                            else
+                            {
+                                context.SetVariable("SerialNumber", assigned);
+                                context.SetVariable("SerialNumber.Assigned", assigned);
+                                _logger.Info($"[OK] Серийный номер из ответа сервера: {assigned}.");
+                            }
                             if (rtl.DeviceSerial == null && localPath.Length > 0)
                             {
                                 try
