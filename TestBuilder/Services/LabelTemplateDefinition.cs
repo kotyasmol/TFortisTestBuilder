@@ -10,6 +10,8 @@ using System.Text.RegularExpressions;
 namespace TestBuilder.Services;
 public sealed class LabelTemplateDefinition
 {
+    private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD\{\{Name\}\}\^FS");
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
@@ -62,7 +64,7 @@ public sealed class LabelTemplateDefinition
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийных номеров и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
             if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
-                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots" }.Contains(token.Groups[1].Value))
+                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (!IsSafeLabelText(Name) || VariantName != null && !IsSafeLabelText(VariantName) ||
             BarcodePrefix.Any(c => !char.IsAsciiDigit(c)))
@@ -82,7 +84,26 @@ public sealed class LabelTemplateDefinition
             ["BarcodeType"] = Code128Encoding.CanUseC(serial) ? "1C" : "1B",
             ["WidthDots"] = WidthDots.ToString(CultureInfo.InvariantCulture), ["BarcodeX"] = barcodeX.ToString(CultureInfo.InvariantCulture),
             ["TextX"] = textX.ToString(CultureInfo.InvariantCulture) };
+        if (Command.Contains("{{FitNameWidth}}", StringComparison.Ordinal))
+            values["FitNameWidth"] = FitNameWidth().ToString(CultureInfo.InvariantCulture);
         return Regex.Replace(Command, @"\{\{(.*?)\}\}", m => values[m.Groups[1].Value]);
+    }
+
+    private int FitNameWidth()
+    {
+        var field = FittedZplName.Match(Command);
+        if (Language != "ZPL" || !int.TryParse(field.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var x) || x > 32000)
+            throw new InvalidOperationException("Для подгонки названия укажите координату X в ^FO и ширину {{FitNameWidth}} в ^A0.");
+
+        const int rightMargin = 20;
+        const int standardWidth = 25;
+        const int minimumWidth = 10;
+        var available = OriginXDots + WidthDots - Math.Max(x, OriginXDots) - rightMargin;
+        // Budget the full requested width per character because the printer's font is proportional.
+        var width = Math.Min(standardWidth, available / Name.Length);
+        if (width < minimumWidth)
+            throw new InvalidOperationException($"Название «{Name}» не помещается. Проверьте ширину этикетки или выберите другой макет.");
+        return width;
     }
 }
 public static class LabelTemplateCatalog

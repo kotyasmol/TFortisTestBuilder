@@ -187,7 +187,7 @@ public class PrintLabelStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         const string singleLabel =
-            "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
+            "^XA^MD10^FO494,35^A0,36,15^FDPSW+UPS-Box 8x2Pro^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
             "^FO510,95^A0,25,20^FDSN: 3200428^FS" +
             "^FO540,117^BY2^BCN,34,N,N,N^FD>;00320042>68^FS^XZ ";
@@ -353,7 +353,7 @@ public class PrintLabelStepTests
         var step = CreateStep(printer, 4, manualSerial: serial, manualMacAddress: "C0:11:A6:06:01:AC",
             useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
-        const string expected = "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+^FS" +
+        const string expected = "^XA^MD10^FO559,35^A0,36,23^FDPSW-2G6F+^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
             "^FO510,95^A0,25,20^FDSN: 600428^FS" +
             "^FO540,117^BY2^BCN,34,N,N,N^FD>;00060042>68^FS^XZ ";

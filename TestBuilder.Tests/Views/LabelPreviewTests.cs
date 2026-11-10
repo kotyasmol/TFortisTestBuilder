@@ -74,6 +74,24 @@ public class LabelPreviewTests
         Assert.Null(preview.BarcodeError);
     }
 
+    [Theory]
+    [InlineData("PSW-2G", 25)]
+    [InlineData("PSW-2G4F-Box", 22)]
+    [InlineData("PSW+UPS-Box 8x2Pro", 15)]
+    public void ZplNameFitsWithoutChangingOtherFields(string name, int expectedWidth)
+    {
+        var template = LabelTemplateCatalog.Defaults()[0];
+        const string mac = "C0:11:A6:20:01:AC";
+        var original = LabelPrintContent.Render(template, "3200428", 428, mac);
+        template.Name = name;
+
+        var rendered = LabelPrintContent.Render(template, "3200428", 428, mac);
+
+        var title = $"^XA^MD10^FO494,35^A0,36,{expectedWidth}^FD{name}^FS";
+        Assert.Equal(title + original[(original.IndexOf("^FS", StringComparison.Ordinal) + 3)..], rendered);
+        Assert.True(name.Length * expectedWidth <= template.WidthDots - 20);
+    }
+
     [Fact]
     public void BuiltInUpgrade_PreservesCustomCommandsAndMetadata_AndIsIdempotent()
     {
