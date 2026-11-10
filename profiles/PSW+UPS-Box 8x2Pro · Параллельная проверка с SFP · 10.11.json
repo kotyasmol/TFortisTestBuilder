@@ -4625,7 +4625,7 @@
       "runProgram": null,
       "parseResponse": null,
       "checkLedColor": null,
-      "name": "06. Загрузка DUT и получение серийника",
+      "name": "06. Загрузка DUT и получение серийного номера",
       "description": "Дождаться CPU ID на странице DUT и получить серийный номер до проверок",
       "isEnabled": true,
       "reportName": null,
@@ -4633,7 +4633,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "06. Загрузка DUT и получение серийника",
+        "name": "06. Загрузка DUT и получение серийного номера",
         "productKind": "Switch",
         "nodes": [
           {

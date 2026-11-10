@@ -161,7 +161,7 @@ namespace TestBuilder.Domain.Steps
             {
                 if (string.IsNullOrWhiteSpace(_manualSerialNumber))
                 {
-                    return Fail(context, 6, "Введите серийный номер в поле 'Серийник вручную'.");
+                    return Fail(context, 6, "Заполните поле «Серийный номер».");
                 }
 
                 serial = _manualSerialNumber;
@@ -259,7 +259,7 @@ namespace TestBuilder.Domain.Steps
                         return Fail(
                             context,
                             6,
-                            $"Серийники не согласованы: {_serialVariableName}={fullSerial}, " +
+                            $"Серийные номера не согласованы: {_serialVariableName}={fullSerial}, " +
                             $"{_serialShortVariableName}={shortSerial}.");
                     }
 

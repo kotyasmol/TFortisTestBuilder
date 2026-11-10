@@ -85,7 +85,7 @@ namespace TestBuilder.Domain.Steps
             if (legacyModel?.EffectiveServerDeviceType is { Length: > 0 } expectedType &&
                 !string.Equals(deviceType, expectedType, StringComparison.OrdinalIgnoreCase))
                 return Fail(context, $"Для изделия «{legacyModel.Name}» в ноде указан серверный тип «{deviceType}», " +
-                    $"а в справочнике «{expectedType}». Включите «Серийники из справочника» в профиле.",
+                    $"а в справочнике «{expectedType}». Включите «Серийные номера из справочника» в профиле.",
                     string.Empty, string.Empty);
 
             string url;
@@ -174,7 +174,7 @@ namespace TestBuilder.Domain.Steps
 
             _logger.Info(
                 $"[ОТЛАДКА] Используется фиксированный серийный номер {serial}; " +
-                "запрос к серверу серийников не выполнялся.");
+                "запрос к серверу выдачи серийных номеров не выполнялся.");
             return StepResult.True;
         }
 
@@ -264,7 +264,7 @@ namespace TestBuilder.Domain.Steps
             if (string.IsNullOrWhiteSpace(baseUrl))
             {
                 throw new InvalidOperationException(
-                    "ServerBaseUrl не задан. Укажи адрес сервера серийников в ноде или во вкладке Настройки.");
+                    "ServerBaseUrl не задан. Укажите адрес сервера выдачи серийных номеров в ноде или в настройках.");
             }
 
             if (string.IsNullOrWhiteSpace(deviceType))

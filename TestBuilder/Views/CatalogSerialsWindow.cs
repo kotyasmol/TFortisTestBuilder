@@ -28,7 +28,7 @@ internal sealed class CatalogSerialsWindow : Window
             panel.Children.Add(new TextBlock { Text = model.Name, FontSize = 17, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = "Сервер выдаёт номер. Стартовый номер задаёт нижнюю границу проверки.",
             TextWrapping = TextWrapping.Wrap });
-        var serverType = AddField("Тип на сервере", current.ServerDeviceType, "Для серверной выдачи серийников");
+        var serverType = AddField("Тип на сервере", current.ServerDeviceType, "Выдача серийных номеров");
         var first = AddField("Стартовый серийный номер", model.SerialSeries == null ? "" : NumberText(current.FirstSerialNumber));
         var last = AddField("Последний серийный номер", model.SerialSeries == null ? "" : NumberText(current.LastSerialNumber));
         var offset = AddField("База короткого номера", model.SerialSeries == null ? "" : NumberText(current.SerialOffset));

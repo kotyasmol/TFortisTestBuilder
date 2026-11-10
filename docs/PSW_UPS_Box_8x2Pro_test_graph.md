@@ -30,7 +30,7 @@
 - `PS_SLAVE_ID` - реальный slave ID блока питания/PS-2/PS-3 в GUI.
 - `SIMBAT_SLAVE_ID` - реальный slave ID SIMBAT24. По старой логике выбран SIMBAT24, потому что `charge_CV_voltage_min = 23000 < 40000`.
 - `EL60_FIRST`, `EL60_LAST`, `EL60_STEP` - диапазон slave ID нагрузок EL60v5. Если они не идут ровным шагом, цикл `For` использовать нельзя, узлы надо развернуть вручную.
-- `SERVER_BASE_URL` - адрес старого API выдачи серийника и приема отчета. В JSON его нет.
+- `SERVER_BASE_URL` - адрес старого API выдачи серийного номера и приема отчета. В JSON его нет.
 - `PRINTER_NAME` - имя принтера этикеток. В JSON его нет.
 - `DUT_BASE_URL = http://192.168.0.1`.
 - `DUT_SELFTEST_URL = http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin`.
@@ -103,7 +103,7 @@
 
 9. Нода `Build Test Report`.
 
-   Текущая `Send Test Report` отправляет уже готовую переменную `TestReportJson`, но ее никто не собирает. В старом тесте отчет собирался автоматически из всех ошибок, серийника, MAC, статистики и имени теста.
+   Текущая `Send Test Report` отправляет уже готовую переменную `TestReportJson`, но ее никто не собирает. В старом тесте отчет собирался автоматически из всех ошибок, серийного номера, MAC, статистики и имени теста.
 
 10. Нода `Get IRP Status`.
 

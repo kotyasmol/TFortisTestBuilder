@@ -53,7 +53,7 @@ public sealed class LabelTemplatesWindow : Window
         void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
         Closed += (_, _) => previewTimer.Stop();
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
-            ("Ширина, точки", "WidthDots"), ("Разрешение EPL, dpi (203 или 300)", "PrinterDpi"), ("Смещение полного серийника", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
+            ("Ширина, точки", "WidthDots"), ("Разрешение EPL, dpi (203 или 300)", "PrinterDpi"), ("Смещение полного серийного номера", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
             ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
         {
             fields.Children.Add(new TextBlock { Text = label });
@@ -61,7 +61,7 @@ public sealed class LabelTemplatesWindow : Window
             box.TextChanged += (_, _) => SchedulePreview();
         }
         foreach (var (label, property) in new[] { ("Использовать полный и короткий серийный номер", "UseShortSerial"),
-            ("Требовать MAC", "RequiresMac"), ("Определять шаблон по диапазону серийника с сервера", "MatchServerSerial") })
+            ("Требовать MAC", "RequiresMac"), ("Определять шаблон по диапазону серийного номера с сервера", "MatchServerSerial") })
         {
             var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
             box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };

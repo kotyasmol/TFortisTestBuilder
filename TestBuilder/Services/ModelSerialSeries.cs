@@ -21,7 +21,7 @@ public sealed record ModelSerialSeries
         if (string.IsNullOrWhiteSpace(ServerDeviceType) || FirstSerialNumber <= 0 ||
             LastSerialNumber < FirstSerialNumber || SerialOffset < 0 ||
             SerialOffset > FirstSerialNumber || LastSerialNumber - SerialOffset > 99999)
-            throw new InvalidDataException($"Проверьте серверный тип, диапазон и смещение серийников изделия «{modelName}».");
+            throw new InvalidDataException($"Проверьте серверный тип, диапазон и смещение серийных номеров изделия «{modelName}».");
         if (MacPrefix != null && (!LabelPrintContent.TryNormalizeMac(MacPrefix + ":00:00", out var normalized) ||
             !string.Equals(normalized, MacPrefix + ":00:00", StringComparison.OrdinalIgnoreCase) ||
             LastSerialNumber - SerialOffset > ushort.MaxValue))

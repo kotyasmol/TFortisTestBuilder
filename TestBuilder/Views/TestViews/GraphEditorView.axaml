@@ -271,11 +271,11 @@
                   ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" />
           <Button x:Name="CatalogToolsButton" Content="Справочник" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Серийники и этикетки выбранного изделия" AutomationProperties.Name="Справочник">
+                  ToolTip.Tip="Серийные номера и этикетки выбранного изделия" AutomationProperties.Name="Справочник">
             <Button.Flyout>
               <Flyout Placement="Bottom">
                 <StackPanel Width="300" Spacing="8" x:DataType="vm:TestViewModel">
-                  <CheckBox Content="Серийники из справочника" IsChecked="{Binding UseCatalogSerials, Mode=TwoWay}" />
+                  <CheckBox Content="Серийные номера из справочника" IsChecked="{Binding UseCatalogSerials, Mode=TwoWay}" />
                   <TextBlock Text="{Binding CatalogSerialSeriesSummary}" IsVisible="{Binding UseCatalogSerials}" TextWrapping="Wrap" />
                   <StackPanel Spacing="4" IsVisible="{Binding ShowCatalogLabelVariants}">
                     <TextBlock Text="Комплектация этикетки" />
@@ -1690,7 +1690,7 @@
                   <StackPanel Margin="12" Spacing="8" Width="340">
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*,8,90">
-                      <TextBlock Grid.Column="0" Text="Серийник для отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="0" Text="Серийный номер для отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}"
                                Watermark="Переменная"
                                ToolTip.Tip="Имя переменной с полным серийным номером, который будет передан в отчёте" />
@@ -1724,7 +1724,7 @@
                     </StackPanel>
                     <ComboBox x:Name="LabelDataSource" ItemsSource="{Binding DataSources}" SelectedIndex="{Binding SelectedDataSource}" HorizontalAlignment="Stretch" />
                     <TextBlock IsVisible="{Binding UseLastTestLabel}" Text="Модель, SN, MAC и шаблон — из последнего полного теста. Если принтер не выбран, используется очередь из того теста." TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualSerialMode}"><TextBlock Grid.Column="0" Text="Серийник вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualSerialMode}"><TextBlock Grid.Column="0" Text="Серийный номер:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <ComboBox IsVisible="{Binding IsNewLabelMode}" ItemsSource="{Binding PrintFormats}" SelectedIndex="{Binding SelectedPrintFormat}" HorizontalAlignment="Stretch"/>
                     <Button IsVisible="{Binding IsNewLabelMode}" Content="Выбрать / настроить шаблон…" Command="{Binding ChooseTemplateCommand}"/>

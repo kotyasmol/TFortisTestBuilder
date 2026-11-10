@@ -59,7 +59,7 @@
         <TextBlock Text="Серийный номер" />
         <Grid ColumnDefinitions="*,Auto">
           <TextBox x:Name="LabelSerialInput" Text="{Binding SerialNumber}" Watermark="Полный номер или короткий для выбранного изделия" MinWidth="320" />
-          <Button x:Name="FindLabelBySerialButton" Grid.Column="1" Content="Получить по серийнику" Command="{Binding FindBySerialCommand}" Margin="12,0,0,0" />
+          <Button x:Name="FindLabelBySerialButton" Grid.Column="1" Content="По серийному номеру" Command="{Binding FindBySerialCommand}" Margin="12,0,0,0" />
         </Grid>
         <TextBlock Text="MAC-адрес" />
         <Grid ColumnDefinitions="*,Auto">

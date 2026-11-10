@@ -49,7 +49,7 @@ internal static class LabelPrintContent
         shortSerial = parsed - template.SerialOffset;
         if (parsed < (template.FirstSerialNumber ?? template.SerialOffset) || shortSerial > template.ShortSerialMax)
         {
-            error = $"Для {template.Name} введите полный серийник " +
+            error = $"Для {template.Name} введите полный серийный номер " +
                 $"{template.FirstSerialNumber ?? template.SerialOffset}..{template.SerialOffset + template.ShortSerialMax} " +
                 $"или короткий номер {(template.FirstSerialNumber ?? template.SerialOffset) - template.SerialOffset}..{template.ShortSerialMax}.";
             return false;

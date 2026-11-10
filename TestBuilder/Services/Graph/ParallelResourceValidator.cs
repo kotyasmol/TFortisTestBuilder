@@ -91,7 +91,7 @@ internal static class ParallelResourceValidator
                 or CheckVariableRangeNodeViewModel or CompareVariablesNodeViewModel or BuildMacFromSerialNodeViewModel:
                 return;
             default:
-                Reject(node, "действия оператора, выдача серийника, запись MAC/прошивки, печать и отчёт выполняются вне параллельных ветвей; для других типов требуется явная поддержка ресурсов");
+                Reject(node, "действия оператора, выдача серийного номера, запись MAC/прошивки, печать и отчёт выполняются вне параллельных ветвей; для других типов требуется явная поддержка ресурсов");
                 return;
         }
     }

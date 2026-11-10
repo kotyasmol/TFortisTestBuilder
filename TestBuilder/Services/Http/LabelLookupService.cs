@@ -75,7 +75,7 @@ public sealed class LabelLookupService(IHttpRequestService http, List<LabelTempl
         var distinct = matches.Distinct().ToArray();
         if (distinct.Length != 1)
             throw new InvalidOperationException(distinct.Length == 0
-                ? "Не найдена полная этикетка: в ответе нужны совпадающий серийник/MAC и поддерживаемая модель."
+                ? "Этикетка не найдена. В ответе сервера нужны поддерживаемая модель и совпадение с запрошенным серийным номером или MAC-адресом."
                 : "Сервер вернул несколько разных этикеток. Уточните запрос.");
         return distinct[0];
     }

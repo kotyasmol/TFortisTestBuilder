@@ -260,7 +260,7 @@ public class FullProfileSerializationTests
         Assert.True(GraphConnectionRequirements.RequiresStandConnection(viewModel.RootGraph));
         var startupSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
-            .Single(node => node.Name == "06. Загрузка DUT и получение серийника");
+            .Single(node => node.Name == "06. Загрузка DUT и получение серийного номера");
         var dataTestSubtest = viewModel.RootGraph.Nodes
             .OfType<SubtestNodeViewModel>()
             .Single(node => node.Name == "10. DataTest портов 0..9");

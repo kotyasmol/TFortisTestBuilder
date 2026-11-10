@@ -112,7 +112,7 @@ public class ProductionStepTests
         else
             Assert.False(context.Variables.ContainsKey("SerialNumber"));
         if (requests == 0)
-            Assert.Contains("Серийники из справочника", context.GetVariable<string>("SerialNumberError"));
+            Assert.Contains("Серийные номера из справочника", context.GetVariable<string>("SerialNumberError"));
     }
 
     [Theory]
