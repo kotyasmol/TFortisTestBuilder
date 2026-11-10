@@ -19,7 +19,9 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty, NotifyPropertyChangedFor(nameof(IsReadingField))] private string readField = string.Empty;
         [ObservableProperty] private string validationRules = SelfTestCheckStep.DefaultValidationRules;
         [ObservableProperty] private bool failOnError = true;
-        [ObservableProperty] private bool psw2G6FHardwareChecks;
+
+        // Retain checks explicitly enabled in profiles saved with the former control.
+        internal bool Psw2G6FHardwareChecks { get; init; }
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }

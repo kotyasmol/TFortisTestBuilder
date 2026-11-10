@@ -610,11 +610,6 @@
                     </Grid>
 
                     <CheckBox
-                              IsVisible="{Binding !IsReadingField}"
-                              ToolTip.Tip="Дополнительные проверки аппаратуры PSW-2G6F+. Адрес test.shtml задаётся отдельно в URL."
-                              IsChecked="{Binding Psw2G6FHardwareChecks}"
-                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверять питание, SFP и PoE PSW-2G6F+" TextWrapping="Wrap" /></CheckBox>
-                    <CheckBox
                               IsChecked="{Binding FailOnError}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Ошибка ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />

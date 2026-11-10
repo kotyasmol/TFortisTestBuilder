@@ -290,7 +290,7 @@ namespace TestBuilder.Services
                         n.OutputPrefix = s.OutputPrefix;
                         n.ReadField = s.IsReadingField ? s.ReadField.Trim() : null;
                         n.ValidationRules = s.ValidationRules;
-                        n.Psw2G6FHardwareChecks = s.Psw2G6FHardwareChecks;
+                        n.Psw2G6FHardwareChecks = s.Psw2G6FHardwareChecks ? true : null;
                         n.FailOnError = s.FailOnError;
                         break;
 
