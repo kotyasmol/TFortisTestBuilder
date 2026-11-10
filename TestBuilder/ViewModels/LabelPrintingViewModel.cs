@@ -21,6 +21,8 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 {
     public ObservableCollection<LabelTemplatePreviewItem> LabelOptions { get; } = new();
     public ObservableCollection<string> ProductNames { get; } = new();
+    [ObservableProperty] private IReadOnlyList<TestLabelOption> testLabelOptions = Array.Empty<TestLabelOption>();
+    [ObservableProperty] private TestLabelOption? selectedTestLabel;
     [ObservableProperty] private string? selectedProductName;
     private readonly Func<IReadOnlyList<GraphProfile>>? _profiles;
     private List<LabelTemplateDefinition> _workstationTemplates = new();
@@ -141,7 +143,10 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     internal void RefreshTemplates(string? selectedId = null)
     {
         selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-        _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates();
+        _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates(out var catalog);
+        var testId = SelectedTestLabel?.Id;
+        TestLabelOptions = GetTestLabelOptions(catalog);
+        SelectedTestLabel = TestLabelOptions.FirstOrDefault(option => option.Id == testId) ?? TestLabelOptions[0];
         var selected = _workstationTemplates.FirstOrDefault(t => t.Id == selectedId);
         if (selected != null) selectedId = OptionId(selected);
         LabelOptions.Clear();
@@ -156,6 +161,36 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ProfileDeviceName));
         OnPropertyChanged(nameof(HasMac));
         UpdatePreview();
+    }
+
+    private IReadOnlyList<TestLabelOption> GetTestLabelOptions(EquipmentCatalog? catalog)
+    {
+        var options = _workstationTemplates.Select(template => new TestLabelOption(
+            "template:" + template.Id, $"{template.Name} · {template.Language}", template)).ToList();
+        var modelTemplates = new Dictionary<string, LabelTemplateDefinition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var template in _workstationTemplates)
+            if (catalog?.Resolve(null, template.Name) is { } model)
+                modelTemplates.TryAdd(model.Id, template);
+        var defaults = LabelTemplateCatalog.Defaults();
+        foreach (var model in catalog?.Models.Where(model => model.LabelCode.HasValue) ?? Enumerable.Empty<EquipmentModel>())
+        {
+            if (!modelTemplates.TryGetValue(model.Id, out var template))
+            {
+                var language = model.RtlReport == null ? "ZPL" : "EPL";
+                template = LabelPrintContent.ForDevice(defaults.First(template => template.Language == language), model.Name);
+                options.Add(new("model:" + model.Id, $"{model.Name} · {language}", template));
+            }
+            if (model.LabelVariants == null) continue;
+            foreach (var (code, name) in model.LabelVariants)
+            {
+                var variant = template.Copy();
+                variant.VariantName = name;
+                options.Add(new($"model:{model.Id}:{code}", $"{model.Name} · {name} · {variant.Language}", variant));
+            }
+        }
+        options.Sort((left, right) => StringComparer.CurrentCultureIgnoreCase.Compare(left.Name, right.Name));
+        options.Insert(0, new("selected", "По выбранной карточке", null));
+        return options;
     }
 
     private LabelPreview PreviewFor(LabelTemplateDefinition template, string serial, string mac)
@@ -231,7 +266,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private Task Print() => PrintData(new(SelectedType, SerialNumber.Trim(), MacAddress.Trim()));
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private Task PrintTestLabel() => PrintData(new(0, "00000000", "00:00:00:00:00:00"), testPrint: true);
+    private Task PrintTestLabel() => PrintData(new(0, "00000000", "00:00:00:00:00:00"), SelectedTestLabel?.Template, testPrint: true);
     [RelayCommand(CanExecute = nameof(CanRepeat))]
     private Task RepeatLast() => _last == null ? Task.CompletedTask : PrintData(_last, _lastTemplate);
     [RelayCommand(CanExecute = nameof(CanPrintLastTest))]
@@ -250,8 +285,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         {
             template.SerialOffset = 0;
             template.FirstSerialNumber = null;
-            template.BarcodePrefix = "0000";
-            template.VariantName = null;
+            template.BarcodePrefix = new string('0', template.BarcodePrefix.Length);
         }
         template.Validate();
         var count = testPrint ? 1 : Copies;
@@ -293,6 +327,11 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 }
 
 public sealed record LabelTemplatePreviewItem(string Id, string Name, LabelPreview Preview)
+{
+    public override string ToString() => Name;
+}
+
+public sealed record TestLabelOption(string Id, string Name, LabelTemplateDefinition? Template)
 {
     public override string ToString() => Name;
 }

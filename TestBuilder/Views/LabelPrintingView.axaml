@@ -87,12 +87,19 @@
       </StackPanel>
       <WrapPanel>
         <Button Content="Печатать" Classes="primary" Command="{Binding PrintCommand}" Margin="0,0,12,8" />
-        <Button x:Name="PrintTestLabelButton" Content="Тестовая печать" Command="{Binding PrintTestLabelCommand}" Margin="0,0,12,8"
-                ToolTip.Tip="Напечатать одну этикетку с нулями по выбранному шаблону" />
         <Button Content="Повторить последнюю этикетку" Command="{Binding RepeatLastCommand}" Margin="0,0,12,8"
                 ToolTip.Tip="Повторяет данные последней успешной печати этой вкладки. Количество и принтер берутся из текущих полей." />
         <Button Content="Отменить" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" Margin="0,0,0,8" />
       </WrapPanel>
+      <StackPanel Spacing="8" IsEnabled="{Binding CanEdit}">
+        <TextBlock Text="Тестовая этикетка" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="*,Auto">
+          <ComboBox x:Name="TestLabelPicker" ItemsSource="{Binding TestLabelOptions}" SelectedItem="{Binding SelectedTestLabel, Mode=TwoWay}"
+                    AutomationProperties.Name="Шаблон тестовой этикетки" HorizontalAlignment="Stretch" />
+          <Button x:Name="PrintTestLabelButton" Grid.Column="1" Content="Тестовая печать" Command="{Binding PrintTestLabelCommand}"
+                  Margin="12,0,0,0" ToolTip.Tip="Напечатать одну этикетку с нулями" />
+        </Grid>
+      </StackPanel>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="16" />
       <TextBlock Text="Последняя этикетка этой вкладки" FontWeight="SemiBold" />
       <SelectableTextBlock Text="{Binding LastLabelDescription}" TextWrapping="Wrap" />

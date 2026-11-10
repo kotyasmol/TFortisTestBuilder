@@ -95,13 +95,13 @@ public static class LabelTemplateCatalog
         return JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
     }
 
-    internal static List<LabelTemplateDefinition> WorkstationTemplates()
+    internal static List<LabelTemplateDefinition> WorkstationTemplates(out EquipmentCatalog? catalog)
     {
         var templates = AppSettings.Instance.LabelTemplates.Select(template => template.CopyUpgraded()).ToList();
-        EquipmentCatalog catalog;
         try { catalog = EquipmentCatalog.Load(AppSettings.Instance.ResolvedGraphsFolder); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         {
+            catalog = null;
             Logging.DiagnosticLog.WriteException("Каталог моделей для этикеток", ex);
             return templates;
         }

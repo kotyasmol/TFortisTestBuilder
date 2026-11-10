@@ -189,6 +189,33 @@ public class LabelPrintingTests
     }
 
     [Theory]
+    [InlineData("PSW+Box 8x2Pro · ZPL", "^FDPSW+Box 8x2Pro", "^FDSN: 00000000", "^FDMAC: 00:00:00:00:00:00")]
+    [InlineData("PSW-2G4F-Ex · DIN · ZPL", "^FDPSW-2G4F-Ex", "^FDSN: 00000000", "^FDTYPE: DIN")]
+    [InlineData("RTL-POE · EPL", "q354", "\"00000000\"", "P1,1")]
+    public async Task TestPrintSelectsCatalogLabelIndependentlyOfProduct(string label, params string[] fields)
+    {
+        var http = new Http();
+        var printer = new Printer();
+        using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, http, printer,
+            profiles: () => new[] { new GraphProfile("one", "One", "PSW-2G6F+") })
+        { PrinterName = "Label printer", SerialNumber = "invalid", MacAddress = "invalid", Copies = 4 };
+        vm.SelectedTestLabel = Assert.Single(vm.TestLabelOptions, option => option.Name == label);
+        vm.RefreshTemplates();
+        Assert.Equal(label, vm.SelectedTestLabel?.Name);
+
+        await vm.PrintTestLabelCommand.ExecuteAsync(null);
+
+        var job = Assert.Single(printer.Jobs);
+        foreach (var field in fields) Assert.Contains(field, job);
+        Assert.Equal(1, job.Split(label.EndsWith("ZPL") ? "^XA" : "P1,1").Length - 1);
+        Assert.Empty(http.Url);
+        Assert.Equal("PSW-2G6F+", vm.SelectedProductName);
+        Assert.Equal("invalid", vm.SerialNumber);
+        Assert.Equal("invalid", vm.MacAddress);
+        Assert.False(vm.CanRepeat);
+    }
+
+    [Theory]
     [InlineData("[]")]
     [InlineData("NoAuth")]
     [InlineData("[{\"device\":{\"serial\":3200429,\"mac\":\"C0:11:A6:20:01:AC\"}}]")]
@@ -212,8 +239,13 @@ public class LabelPrintingTests
                 var input = view.FindControl<TextBox>("LabelSerialInput")!;
                 input.Text = "3200428";
                 Assert.Equal("3200428", vm.SerialNumber);
+                var testPicker = view.FindControl<ComboBox>("TestLabelPicker")!;
+                Assert.Equal(vm.TestLabelOptions[0], testPicker.SelectedItem);
+                testPicker.SelectedItem = Assert.Single(testPicker.Items.OfType<TestLabelOption>(), option => option.Name == "RTL-SW · EPL");
+                Assert.Equal("RTL-SW · EPL", vm.SelectedTestLabel?.Name);
                 allowed = false; vm.RefreshAvailability(); Dispatcher.UIThread.RunJobs();
                 Assert.False(input.IsEffectivelyEnabled);
+                Assert.False(testPicker.IsEffectivelyEnabled);
                 Assert.False(vm.PrintCommand.CanExecute(null));
                 Assert.False(view.FindControl<Button>("PrintTestLabelButton")!.IsEffectivelyEnabled);
                 allowed = true; vm.RefreshAvailability(); Dispatcher.UIThread.RunJobs();
@@ -242,9 +274,12 @@ public class LabelPrintingTests
                 { SerialNumber = "42", Copies = 1, PrinterName = "Label printer" };
             await vm.PrintCommand.ExecuteAsync(null);
             Assert.Equal("^XA^FDCustom 8000042 880042^FS^XZ", Assert.Single(printer.Jobs));
+            vm.SelectedTestLabel = Assert.Single(vm.TestLabelOptions, option => option.Template?.Id == template.Id);
+            await vm.PrintTestLabelCommand.ExecuteAsync(null);
+            Assert.Equal("^XA^FDCustom 00000000 000000^FS^XZ", printer.Jobs[1]);
             template.Command = "CHANGED";
             await vm.RepeatLastCommand.ExecuteAsync(null);
-            Assert.Equal(printer.Jobs[0], printer.Jobs[1]);
+            Assert.Equal(printer.Jobs[0], printer.Jobs[2]);
         }
         finally { TestBuilder.Services.AppSettings.Instance.LabelTemplates = original; }
     }
