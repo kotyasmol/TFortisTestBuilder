@@ -185,13 +185,18 @@ public partial class TestViewModel
             ?? throw new InvalidOperationException("Выберите изделие из справочника или добавьте новое.");
     }
 
-    internal EquipmentModel NewCatalogModel() => new(Guid.NewGuid().ToString("N"),
-        HasCatalogEquipmentModel ? "" : DeviceName);
+    internal EquipmentModel NewCatalogModel(bool useProfileName = true) => new(Guid.NewGuid().ToString("N"),
+        useProfileName && !HasCatalogEquipmentModel ? DeviceName : "");
 
-    internal void SaveCatalogModel(EquipmentModel model, bool createNew)
+    internal void SaveCatalogModel(EquipmentModel model, bool createNew, bool selectForProfile = true, EquipmentModel? original = null)
     {
         if (!CanEditQuickActions) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
-        EquipmentCatalog.SaveModel(ProfilesFolder, model, createNew);
+        EquipmentCatalog.SaveModel(ProfilesFolder, model, createNew, original);
+        if (!selectForProfile)
+        {
+            RefreshProfiles();
+            return;
+        }
         LoadEquipmentCatalog(ProfilesFolder);
         SelectedEquipmentModel = EquipmentModels.Single(item => item.Id == model.Id);
         if (!string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType)) UseCatalogSerials = true;
@@ -218,6 +223,7 @@ public partial class TestViewModel
             if (!CanEditGraph || value == null || !EquipmentModels.Contains(value) ||
                 (value.Id == RootGraph.DeviceModelId && value.Name == RootGraph.DeviceModel)) return;
             var oldId = RootGraph.DeviceModelId; var oldName = RootGraph.DeviceModel;
+            var sameModel = string.Equals(oldId, value.Id, StringComparison.OrdinalIgnoreCase);
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
             var oldKind = RootGraph.ProductKind;
@@ -236,7 +242,7 @@ public partial class TestViewModel
                 NotifyProfileMetadataChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, 0),
+                () => Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, sameModel ? oldVariant : 0),
                 () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
         }
     }

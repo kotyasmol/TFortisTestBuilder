@@ -17,6 +17,8 @@ public sealed record EquipmentModel(string Id, string Name)
     public RtlReportSettings? RtlReport { get; init; }
     public Dictionary<int, string>? LabelVariants { get; init; }
     public ModelSerialSeries? SerialSeries { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsFullOverride { get; init; }
     internal string? EffectiveServerDeviceType => SerialSeries?.ServerDeviceType.Trim() ?? ServerDeviceType?.Trim();
     [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; init; }
     public override string ToString() => Name;
@@ -26,6 +28,7 @@ public sealed record RtlReportSettings(int DeviceType, bool AssignSerialOnReport
 {
     public string DeviceIdentifierVariable { get; init; } = "CpuId";
     public string? FailureDeviceIdentifier { get; init; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }
 
 public sealed class EquipmentCatalog
@@ -52,7 +55,7 @@ public sealed class EquipmentCatalog
         foreach (var model in local.Models)
         {
             // Older installations retain their original local catalog after updates.
-            if (models.TryGetValue(model.Id, out var baseline) && Keys(baseline).Contains(Normalize(model.Name)))
+            if (!model.IsFullOverride && models.TryGetValue(model.Id, out var baseline) && Keys(baseline).Contains(Normalize(model.Name)))
                 models[model.Id] = model with
                 {
                     LabelCode = model.LabelCode ?? baseline.LabelCode,
@@ -80,17 +83,21 @@ public sealed class EquipmentCatalog
         return catalog;
     }
 
-    internal static void SaveModel(string profilesFolder, EquipmentModel model, bool createNew = false)
+    internal static void SaveModel(string profilesFolder, EquipmentModel model, bool createNew = false, EquipmentModel? original = null)
     {
         var file = Path.Combine(profilesFolder, RelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         using var editLock = new FileStream(file + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        if (createNew)
+        if (createNew || original != null)
         {
-            var key = Normalize(model.Name);
-            if (key.Length == 0) throw new InvalidDataException("Укажите название изделия.");
-            if (Load(profilesFolder).Models.Any(item =>
-                string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase) || Keys(item).Contains(key)))
+            if (Normalize(model.Name).Length == 0) throw new InvalidDataException("Укажите название изделия.");
+            var models = Load(profilesFolder).Models;
+            var current = models.FirstOrDefault(item => string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase));
+            if (original != null && JsonSerializer.Serialize(current, JsonOptions) != JsonSerializer.Serialize(original, JsonOptions))
+                throw new InvalidDataException("Карточка уже изменена. Откройте её заново.");
+            var newKeys = Keys(model).Except(current == null ? Array.Empty<string>() : Keys(current)).ToArray();
+            if (createNew && current != null || models.Any(item =>
+                !string.Equals(item.Id, model.Id, StringComparison.OrdinalIgnoreCase) && Keys(item).Intersect(newKeys).Any()))
                 throw new InvalidDataException("Такое изделие уже есть в справочнике. Выберите его в списке.");
         }
         var catalog = Read(file);

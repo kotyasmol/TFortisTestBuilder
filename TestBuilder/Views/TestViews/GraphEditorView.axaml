@@ -302,6 +302,7 @@
                           IsVisible="{Binding HasCatalogEquipmentModel}" AutomationProperties.Name="Редактировать изделие" />
                   <Button Content="Добавить изделие…" Click="OnAddCatalogModel"
                           IsVisible="{Binding !HasCatalogEquipmentModel}" AutomationProperties.Name="Добавить изделие" />
+                  <Button Content="Все изделия…" Click="OnOpenEquipmentCatalog" AutomationProperties.Name="Все изделия" />
                 </StackPanel>
               </Flyout>
             </Button.Flyout>

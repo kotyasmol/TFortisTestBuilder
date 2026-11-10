@@ -19,6 +19,93 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class DeviceProfileTests
 {
+    [Fact]
+    public async Task CatalogWindowCreatesAndEditsRtlModelWithoutSwitchingTheOpenProfile()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var folder = new ProfileCopyTests.ProfileFolder();
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-plus-box-8x2pro");
+            var openProfile = GraphSerializer.Serialize(vm, vm.CurrentProfileName);
+            var catalog = new EquipmentCatalogWindow(vm);
+            try
+            {
+                catalog.Show();
+                Layout(catalog);
+                Press(catalog, "Добавить изделие…");
+                var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                Layout(card);
+                Field(card, "Название изделия").Text = "Тестовая плата X1";
+                Field(card, "Альтернативные названия").Text = "Fixture X1";
+                Field(card, "Код модели на этикетке").Text = "321";
+                Field(card, "Название комплектации 2").Text = "DIN";
+                SelectTab(card, 1);
+                Field(card, "Тип на сервере").Text = "RTL-X1";
+                SelectTab(card, 2);
+                Toggle(card, "Использовать отчёт RTL").IsChecked = true;
+                Field(card, "Числовой тип отчёта на сервере").Text = "17";
+                Field(card, "Переменная идентификатора платы").Text = "McuId";
+                Field(card, "Служебный идентификатор отказов").Text = "fixture-failures";
+                Toggle(card, "Получать серийный номер из ответа на отчёт").IsChecked = true;
+                Press(card, "Сохранить в справочник");
+                Assert.False(card.IsVisible);
+                var created = Assert.IsType<EquipmentModel>(EquipmentCatalog.Load(folder.Path).Resolve(null, "Fixture X1"));
+                Assert.Equal("RTL-X1", created.EffectiveServerDeviceType);
+                Assert.Equal(321, created.LabelCode);
+                Assert.Equal("DIN", created.LabelVariants![2]);
+                Assert.Equal(new RtlReportSettings(17, true) { DeviceIdentifierVariable = "McuId", FailureDeviceIdentifier = "fixture-failures" }, created.RtlReport);
+
+                var search = Assert.Single(catalog.GetVisualDescendants().OfType<TextBox>());
+                search.Text = "Fixture X1";
+                Layout(catalog);
+                Assert.Equal(created.Id, Assert.IsType<EquipmentModel>(Assert.Single(catalog.GetVisualDescendants().OfType<ListBox>()).SelectedItem).Id);
+                Press(catalog, "Редактировать изделие…");
+                card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                Layout(card);
+                Field(card, "Название изделия").Text = "Плата X1";
+                SelectTab(card, 2);
+                Field(card, "Служебный идентификатор отказов").Text = "fixture-new-failures";
+                Press(card, "Сохранить в справочник");
+                Assert.False(card.IsVisible);
+                var renamed = Assert.IsType<EquipmentModel>(EquipmentCatalog.Load(folder.Path).Resolve(null, "Тестовая плата X1"));
+                Assert.Equal(created.Id, renamed.Id);
+                Assert.Equal("Плата X1", renamed.Name);
+                Assert.Equal("fixture-new-failures", renamed.RtlReport!.FailureDeviceIdentifier);
+                Assert.Equal(openProfile, GraphSerializer.Serialize(vm, vm.CurrentProfileName));
+            }
+            finally { catalog.Close(); }
+
+            static void Layout(Window window)
+            {
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            static void Press(Window window, string caption)
+            {
+                window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, caption))
+                    .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Layout(window);
+            }
+
+            static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
+                .Single(field => AutomationProperties.GetName(field) == caption);
+
+            static CheckBox Toggle(Window window, string caption) => window.GetVisualDescendants().OfType<CheckBox>()
+                .Single(field => Equals(field.Content, caption));
+
+            static void SelectTab(Window window, int index)
+            {
+                window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index;
+                Layout(window);
+            }
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData(false)] [InlineData(true)]
     public async Task NewDeviceCanBeAddedToCatalogAndSelectedInSavedProfiles(bool dark)

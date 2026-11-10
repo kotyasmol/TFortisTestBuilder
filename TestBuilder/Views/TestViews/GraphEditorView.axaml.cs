@@ -96,6 +96,15 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private async void OnAddCatalogModel(object? sender, RoutedEventArgs e) => await OpenCatalogModelAsync(createNew: true);
 
+    private async void OnOpenEquipmentCatalog(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
+            return;
+        CatalogToolsButton.Flyout?.Hide();
+        vm.RefreshProfiles();
+        await new EquipmentCatalogWindow(vm).ShowDialog(owner);
+    }
+
     private async Task OpenCatalogModelAsync(bool createNew)
     {
         if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
