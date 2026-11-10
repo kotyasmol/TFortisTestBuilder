@@ -139,7 +139,7 @@ public class UsabilityTests
             try
             {
                 vm.TestVM.IsOperatorView = false;
-                GraphSerializer.Deserialize(File.ReadAllText(Profile("RTL_SW_board.json")), vm.TestVM);
+                GraphSerializer.Deserialize(File.ReadAllText(Profile("RTL-SW · Проверка платы · 10.11.json")), vm.TestVM);
                 var original = GraphSerializer.Serialize(vm.TestVM, "Исходный профиль");
                 var hardware = new HardwareEditorWindow(vm.TestVM);
                 try

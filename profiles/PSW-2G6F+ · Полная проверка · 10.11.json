@@ -1,11 +1,11 @@
 {
-  "name": "PSW_2G6F_plus_full_algorithm",
+  "name": "PSW-2G6F+ · Полная проверка · 10.11",
   "deviceModel": "PSW-2G6F+",
-  "configurationName": "Полная проверка",
+  "configurationName": "Полная проверка · 10.11",
   "nodes": [
     {
       "id": "0",
-      "type": "Start",
+      "type": "Start (catalog serials v1)",
       "x": 80,
       "y": 112,
       "color": "blue",
@@ -3776,5 +3776,8 @@
         "IdentificationAddress": 0
       }
     ]
-  }
+  },
+  "useCatalogSerials": true,
+  "deviceModelId": "psw-2g6f-plus",
+  "updatedAt": "2026-11-10T05:15:48.020260+00:00"
 }

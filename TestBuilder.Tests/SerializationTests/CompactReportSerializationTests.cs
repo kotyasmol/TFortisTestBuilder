@@ -26,7 +26,7 @@ public class CompactReportSerializationTests
     public void CurrentProductionProfileCompilesAndKeepsBothReportsCompact()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-            "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+            "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(File.ReadAllText(path), vm);

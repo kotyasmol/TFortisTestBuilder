@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace TestBuilder.Models;
 public sealed class BoardRegion
@@ -25,6 +26,27 @@ public sealed class BoardDesign
 
     public string ImageBase64 { get; set; } = "";
     public List<BoardRegion> Regions { get; set; } = new();
+
+    public static BoardDesign ReadReference(string path)
+    {
+        var design = JsonSerializer.Deserialize<BoardDesign>(File.ReadAllText(path))
+            ?? throw new InvalidOperationException("Файл не содержит описание платы.");
+        if (design.ExtensionData?.Remove("ImageFile", out var imageField) == true)
+        {
+            var file = imageField.ValueKind == JsonValueKind.String ? imageField.GetString() : null;
+            if (string.IsNullOrWhiteSpace(file) || file.IndexOfAny(new[] { '/', '\\', ':' }) >= 0 ||
+                !string.Equals(Path.GetExtension(file), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Укажите имя PNG рядом с файлом платы.");
+            var imagePath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, file);
+            if (new FileInfo(imagePath).Length > 10_000_000)
+                throw new InvalidOperationException("Максимальный размер изображения — 10 МБ.");
+            design.ImageBase64 = Convert.ToBase64String(File.ReadAllBytes(imagePath));
+        }
+        design.Validate();
+        if (string.IsNullOrEmpty(design.ImageBase64)) throw new InvalidOperationException("В шаблоне нет изображения платы.");
+        return design;
+    }
+
     public void Validate()
     {
         if (ImageBase64 == null || ImageBase64.Length > 14_000_000) throw new InvalidOperationException("Изображение платы слишком велико (до 10 МБ).");

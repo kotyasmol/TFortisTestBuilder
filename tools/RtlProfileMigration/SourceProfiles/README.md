@@ -2,8 +2,8 @@
 
 RTL_SW_v1.json и RTL_POE_v1.json предоставлены владельцем 2026-10-19.
 Файлы скопированы без изменения содержимого. Это формат старого приложения,
-не графы TestBuilder: открывать в редакторе нужно profiles/RTL_SW_board.json
-и profiles/RTL_POE_board.json.
+не графы TestBuilder: открывать в редакторе нужно profiles/RTL-SW · Проверка платы · 10.11.json
+и profiles/RTL-POE · Проверка платы · 10.11.json.
 
 tools/rtl_source_profiles.py переносит значения в сгенерированные графы;
 generate_rtl_profiles.py вызывает его перед сохранением. Скрипт не запускается

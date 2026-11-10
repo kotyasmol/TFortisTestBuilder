@@ -17,12 +17,12 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class Io2ProfileTests
 {
-    private const string FullProfile = "PSW_2G6F_plus_full_algorithm.json";
+    private const string FullProfile = "PSW-2G6F+ · Полная проверка · 10.11.json";
 
     [Theory]
     [InlineData(FullProfile, false)]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", true)]
-    [InlineData("PSW_UPS_Box_8x2Pro_parallel_start.json", true)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", true)]
     public void ProfilesUseVisibleWriteAndFreshWebWaitNodes(string file, bool isPro)
     {
         using var service = new ModbusService();
@@ -170,7 +170,7 @@ public class Io2ProfileTests
 
     private static TestViewModel Load(string file, ModbusService service)
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file));
+        var path = TestBuilder.Tests.Support.TestProfilePaths.Find(file);
         var vm = new TestViewModel(service, new SlaveManager(service));
         var json = File.ReadAllText(path);
         GraphSerializer.Deserialize(json, vm);

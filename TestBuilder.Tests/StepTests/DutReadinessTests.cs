@@ -22,7 +22,7 @@ public class DutReadinessTests
     {
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
-        var file = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL_SW_board.json"));
+        var file = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 10.11.json"));
         GraphSerializer.Deserialize(File.ReadAllText(file), vm);
         var stage = Assert.Single(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Where(n => n.Name == "Запуск и готовность DUT"));
         var nodes = BoardProfileTests.All(stage.BodyGraph).ToArray();

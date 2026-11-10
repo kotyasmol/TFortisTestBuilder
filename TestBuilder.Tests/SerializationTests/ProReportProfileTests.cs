@@ -12,7 +12,7 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class ProReportProfileTests
 {
-    private const string ProProfile = "PSW_UPS_Box_8x2Pro_parallel_start.json";
+    private const string ProProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json";
 
     [Theory]
     [InlineData(false, "17. Отчёт о проверке")]
@@ -23,7 +23,8 @@ public class ProReportProfileTests
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         var source = File.ReadAllText(TestProfilePaths.Find(ProProfile));
         GraphSerializer.Deserialize(source, vm);
-        Assert.Null(vm.RootGraph.ReportTemplate);
+        Assert.Equal(50, vm.RootGraph.ReportTemplate!.Fields.Count);
+        vm.RootGraph.ReportTemplate = null;
         var original = JsonNode.Parse(GraphSerializer.Serialize(vm, "8x2Pro"))!.AsObject();
 
         vm.RootGraph.ReportTemplate = new ReportTemplate
@@ -40,7 +41,7 @@ public class ProReportProfileTests
         };
         var saved = GraphSerializer.Serialize(vm, "8x2Pro");
         var configured = JsonNode.Parse(saved)!.AsObject();
-        Assert.Equal(GraphSerializer.ReportStartType, configured["nodes"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal(GraphSerializer.CatalogSerialsStartType, configured["nodes"]![0]!["type"]!.GetValue<string>());
         Assert.True(configured.Remove("reportTemplate"));
         configured["nodes"]![0]!["type"] = original["nodes"]![0]!["type"]!.GetValue<string>();
         Assert.True(JsonNode.DeepEquals(original, configured));
@@ -80,7 +81,6 @@ public class ProReportProfileTests
         }
 
         GraphSerializer.Deserialize(source, vm);
-        Assert.Null(vm.RootGraph.ReportTemplate);
-        Assert.DoesNotContain("\"reportTemplate\"", GraphSerializer.Serialize(vm, "8x2Pro"));
+        Assert.Equal(50, vm.RootGraph.ReportTemplate!.Fields.Count);
     }
 }

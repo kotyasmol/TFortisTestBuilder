@@ -300,11 +300,15 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
-                if (series != null)
+                if (model != null)
                 {
-                    if (!long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var fullSerial))
+                    if (model.RtlReport != null && !context.IssuedSerialNumber.HasValue)
+                        return Fail(context, 6, "Сервер ещё не выдал номер для платы в текущем прогоне.");
+                    if (!long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var fullSerial) || fullSerial <= 0)
                         return Fail(context, 6, "Введите полный серийный номер изделия.");
-                    if (series.Check(fullSerial, context.IssuedSerialNumber) is { } seriesError)
+                    var seriesError = series == null ? ModelSerialSeries.CheckAssigned(fullSerial, context.IssuedSerialNumber)
+                        : series.Check(fullSerial, context.IssuedSerialNumber);
+                    if (seriesError != null)
                         return Fail(context, 6, seriesError);
                 }
                 singleLabel = LabelPrintContent.Render(printTemplate, serial, 0, "");

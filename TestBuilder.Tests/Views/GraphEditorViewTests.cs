@@ -112,8 +112,7 @@ public class GraphEditorViewTests
             using var view = new TestView();
             var graphView = view.FindControl<GraphEditorView>("GraphEditor")!;
             var profiles = view.GetLogicalDescendants().OfType<ProfileListView>().Single();
-            var profileFolder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles"));
-            var pro = GraphSerializer.ReadProfile(Path.Combine(profileFolder, "PSW_UPS_Box_8x2Pro_parallel_el60.json"));
+            var pro = GraphSerializer.ReadProfile(TestBuilder.Tests.Support.TestProfilePaths.Find("PSW_UPS_Box_8x2Pro_parallel_el60.json"));
             var small = GraphSerializer.ReadProfile(TestBuilder.Tests.Support.TestProfilePaths.Find("manual_label_printing.json"));
             vm.Profiles.Clear();
             vm.Profiles.Add(pro);

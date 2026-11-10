@@ -38,16 +38,13 @@ namespace TestBuilder.Services
         internal static string ResolvePortableDirectory(string installation)
         {
             var workingFolder = Path.Combine(installation, ProfilesFolderName);
-            var templates = Path.Combine(installation, "profile-templates");
+            var templates = Path.Combine(workingFolder, "standard");
             try
             {
                 if (!Directory.Exists(templates)) return workingFolder;
-                foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.AllDirectories))
+                foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.TopDirectoryOnly))
                 {
-                    var relative = Path.GetRelativePath(templates, source);
-                    // The catalog is loaded directly from each release. The working catalog is an explicit override.
-                    if (string.Equals(relative, EquipmentCatalog.RelativePath, StringComparison.OrdinalIgnoreCase)) continue;
-                    var destination = Path.Combine(workingFolder, relative);
+                    var destination = Path.Combine(workingFolder, Path.GetFileName(source));
                     if (File.Exists(destination)) continue;
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                     var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";

@@ -21,14 +21,14 @@ internal sealed class CatalogSerialsWindow : Window
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        var current = model.SerialSeries ?? new ModelSerialSeries();
+        var current = model.SerialSeries ?? new ModelSerialSeries { ServerDeviceType = model.ServerDeviceType ?? "" };
         var panel = new StackPanel { Margin = new Thickness(20), Spacing = 8 };
         panel.Children.Add(new TextBlock { Text = model.Name, FontSize = 17, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = "Сервер выдаёт номер. Стартовый номер задаёт нижнюю границу проверки.",
             TextWrapping = TextWrapping.Wrap });
         var serverType = AddField("Тип на сервере", current.ServerDeviceType);
-        var first = AddField("Стартовый серийный номер", NumberText(current.FirstSerialNumber));
-        var last = AddField("Последний серийный номер", NumberText(current.LastSerialNumber));
+        var first = AddField("Стартовый серийный номер", model.SerialSeries == null ? "" : NumberText(current.FirstSerialNumber));
+        var last = AddField("Последний серийный номер", model.SerialSeries == null ? "" : NumberText(current.LastSerialNumber));
         var offset = AddField("База короткого номера", model.SerialSeries == null ? "" : NumberText(current.SerialOffset));
         var label = AddField("Код модели на этикетке", model.LabelCode?.ToString("D3", CultureInfo.InvariantCulture) ?? "");
         var mac = AddField("Префикс MAC", current.MacPrefix ?? "", "Четыре байта через двоеточие");
@@ -44,18 +44,23 @@ internal sealed class CatalogSerialsWindow : Window
         {
             try
             {
+                var server = serverType.Text?.Trim();
+                if (string.IsNullOrEmpty(server)) throw new FormatException("Укажите тип на сервере.");
+                var hasRange = !string.IsNullOrWhiteSpace(first.Text) || !string.IsNullOrWhiteSpace(last.Text) ||
+                    !string.IsNullOrWhiteSpace(offset.Text) || Optional(mac) != null || Optional(board) != null;
                 profile.SaveCatalogModel(model with
                 {
                     LabelCode = string.IsNullOrWhiteSpace(label.Text) ? null : ReadNumber(label, "код модели на этикетке"),
-                    SerialSeries = current with
+                    ServerDeviceType = hasRange ? null : server,
+                    SerialSeries = hasRange ? current with
                     {
-                        ServerDeviceType = serverType.Text?.Trim() ?? "",
+                        ServerDeviceType = server,
                         FirstSerialNumber = ReadNumber(first, "стартовый номер"),
                         LastSerialNumber = ReadNumber(last, "последний номер"),
                         SerialOffset = ReadNumber(offset, "базу короткого номера"),
                         MacPrefix = Optional(mac),
                         BoardVersion = Optional(board)
-                    }
+                    } : null
                 });
                 Close();
             }

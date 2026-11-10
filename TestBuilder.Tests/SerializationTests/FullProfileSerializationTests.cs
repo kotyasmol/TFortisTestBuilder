@@ -13,6 +13,22 @@ namespace TestBuilder.Tests.SerializationTests;
 public class FullProfileSerializationTests
 {
     [Theory]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 32, "PSW+UPS-Box 8x2Pro")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", 6, "PSW-2G6F+")]
+    [InlineData("RTL-SW · Проверка платы · 10.11.json", 313, "RTL-SW")]
+    [InlineData("RTL-POE · Проверка платы · 10.11.json", 312, "RTL-POE")]
+    public void StandardProfileUsesDisplayFilenameAndCatalogModel(string filename, int code, string serverType)
+    {
+        var path = TestProfilePaths.Find(filename);
+        using var profile = ReadProfile(filename);
+        Assert.Equal(Path.GetFileNameWithoutExtension(path), GraphSerializer.ReadProfile(path).DisplayName);
+        Assert.True(profile.RootElement.GetProperty("useCatalogSerials").GetBoolean());
+        var catalog = EquipmentCatalog.Load(Path.GetDirectoryName(path)!);
+        var model = catalog.Resolve(profile.RootElement.GetProperty("deviceModelId").GetString(), null);
+        Assert.Equal(code, model!.LabelCode);
+        Assert.Equal(serverType, model.EffectiveServerDeviceType);
+    }
+    [Theory]
     [InlineData("", "")]
     [InlineData("33", " (prefix v1)")]
     public void SerialPrefixAndReportSourceSurviveCloningAndProfileRoundTrip(string prefix, string typeSuffix)
@@ -46,7 +62,7 @@ public class FullProfileSerializationTests
     }
 
     [Theory]
-    [InlineData("PSW_2G6F_plus_full_algorithm.json", "/test.shtml")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", "/test.shtml")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "/cgi-bin/luci/admin/statistics/deviceinfo")]
     public void SelftestUrlsFollowSwitchFamily(string profileFile, string expectedPath)
     {
@@ -61,7 +77,7 @@ public class FullProfileSerializationTests
     }
 
     [Theory]
-    [InlineData("PSW_2G6F_plus_full_algorithm.json", "Set PSW MAC (UDP)", "Set Pro MAC")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", "Set PSW MAC (UDP)", "Set Pro MAC")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "Set Pro MAC", "Set PSW MAC (UDP)")]
     public void MacWriterFollowsSwitchFamily(string profileFile, string expectedType, string forbiddenType)
     {
@@ -110,7 +126,7 @@ public class FullProfileSerializationTests
     [Fact]
     public void StandProfileTestsEightCopperLinesAndBothSfpPortsAfterRoundTrip()
     {
-        using var profile = ReadProfile("PSW_UPS_Box_8x2Pro_parallel_start.json");
+        using var profile = ReadProfile("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json");
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(profile.RootElement.GetRawText(), vm);
@@ -180,8 +196,7 @@ public class FullProfileSerializationTests
         Assert.Equal("^XA^FD{{Serial}}^FS^XZ", clone.LabelTemplate!.Command);
     }
 
-    private static JsonDocument ReadProfile(string file) => JsonDocument.Parse(File.ReadAllText(
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", file))));
+    private static JsonDocument ReadProfile(string file) => JsonDocument.Parse(File.ReadAllText(TestProfilePaths.Find(file)));
 
     private static IEnumerable<JsonElement> AllNodes(JsonElement element)
     {
@@ -233,14 +248,7 @@ public class FullProfileSerializationTests
     [Fact]
     public void FullPollingProfile_LoadsThroughApplicationSerializer()
     {
-        var profilePath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "profiles",
-            "PSW_UPS_Box_8x2Pro_full_algorithm_polling.json"));
+        var profilePath = TestProfilePaths.Find("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json");
         var json = File.ReadAllText(profilePath);
 
         using var modbus = new ModbusService();

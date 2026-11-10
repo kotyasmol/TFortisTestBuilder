@@ -32,10 +32,13 @@ public sealed record ModelSerialSeries
     {
         if (serial < FirstSerialNumber || serial > LastSerialNumber)
             return $"Серийный номер {serial} не входит в диапазон {FirstSerialNumber}–{LastSerialNumber} для «{ServerDeviceType}».";
-        return issuedSerial.HasValue && serial != issuedSerial.Value
+        return CheckAssigned(serial, issuedSerial);
+    }
+
+    internal static string? CheckAssigned(long serial, int? issuedSerial) =>
+        issuedSerial.HasValue && serial != issuedSerial.Value
             ? $"Серийный номер {serial} отличается от номера {issuedSerial} текущего прогона."
             : null;
-    }
 
     internal string? CheckMac(string mac, int? serial)
     {
@@ -49,7 +52,7 @@ public sealed record ModelSerialSeries
             ? null : $"MAC {mac} не соответствует серийному номеру {serial}. Ожидается {expected}.";
     }
 
-    internal string? CheckReport(string report, int? issuedSerial)
+    internal static string? CheckReport(string report, ModelSerialSeries? series, int? issuedSerial)
     {
         var serialLines = report.Split('\n')
             .Where(line =>
@@ -60,8 +63,9 @@ public sealed record ModelSerialSeries
             .Take(2).ToArray();
         const string header = "serial_num=true=";
         if (serialLines.Length != 1 || !serialLines[0].StartsWith(header, StringComparison.Ordinal) ||
-            !long.TryParse(serialLines[0].AsSpan(header.Length).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var serial))
+            !long.TryParse(serialLines[0].AsSpan(header.Length).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var serial) ||
+            serial <= 0)
             return "В отчёте нужна одна служебная строка с полным серийным номером.";
-        return Check(serial, issuedSerial);
+        return series == null ? CheckAssigned(serial, issuedSerial) : series.Check(serial, issuedSerial);
     }
 }

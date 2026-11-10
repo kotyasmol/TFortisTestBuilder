@@ -78,6 +78,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             var series = context.ProductionModel?.SerialSeries;
+            if (context.ProductionModel != null && series == null)
+                return Fail(context, "Для записи MAC укажите серию изделия в справочнике.");
             if (series?.CheckMac(normalizedMac, context.IssuedSerialNumber) is { } macError)
                 return Fail(context, macError);
             var boardVersion = series == null ? _boardVersion : series.BoardVersion?.Trim() ?? string.Empty;

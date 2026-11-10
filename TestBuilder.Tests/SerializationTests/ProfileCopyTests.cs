@@ -20,7 +20,7 @@ public class ProfileCopyTests
     public async Task CopyUnopenedProfile_PreservesAllGraphsHardwareButtonsAndUnknownFields_AndGetsUniqueName()
     {
         using var files = new ProfileFolder();
-        var original = JsonNode.Parse(File.ReadAllText(TestProfilePaths.Find("PSW_UPS_Box_8x2Pro_parallel_start.json")))!;
+        var original = JsonNode.Parse(File.ReadAllText(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json")))!;
         original["extensionData"] = JsonNode.Parse("""{"keep":[1,2,3]}""");
         var sourcePath = files.Write("original.json", original.ToJsonString());
         var originalBytes = File.ReadAllBytes(sourcePath);
@@ -59,7 +59,9 @@ public class ProfileCopyTests
         vm.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds = 30;
         vm.PromptProfileNameAsync = (_, _, _, _) => Task.FromResult<string?>("Питание");
         await vm.RenameProfileCommand.ExecuteAsync(vm.SelectedProfile);
-        Assert.Equal(copyPath, vm.SelectedProfile!.FilePath);
+        Assert.False(File.Exists(copyPath));
+        copyPath = vm.SelectedProfile!.FilePath;
+        Assert.Equal("Модель А · Питание.json", Path.GetFileName(copyPath));
         Assert.Equal("Модель А · Питание", vm.SelectedProfile.DisplayName);
         Assert.Equal("Питание", vm.ProfileDescription);
         Assert.Equal(30, vm.Nodes.OfType<DelayNodeViewModel>().Single().Milliseconds);
@@ -88,7 +90,9 @@ public class ProfileCopyTests
         await vm.RenameProfileCommand.ExecuteAsync(source);
         Assert.Equal(otherPath, vm.SelectedProfile!.FilePath);
         Assert.Same(node, vm.Nodes.Single()); Assert.Equal(99, node.Milliseconds);
-        Assert.Contains(vm.Profiles, p => p.FilePath == sourcePath && p.ConfigurationName == "Новое название");
+        Assert.False(File.Exists(sourcePath));
+        Assert.Contains(vm.Profiles, p => Path.GetFileName(p.FilePath) == "Модель А · Новое название.json" &&
+            p.ConfigurationName == "Новое название");
     }
 
     [Fact]

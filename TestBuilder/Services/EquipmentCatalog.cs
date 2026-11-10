@@ -13,10 +13,18 @@ public sealed record EquipmentModel(string Id, string Name)
 {
     public string[] Aliases { get; init; } = Array.Empty<string>();
     public int? LabelCode { get; init; }
+    public string? ServerDeviceType { get; init; }
+    public RtlReportSettings? RtlReport { get; init; }
     public Dictionary<int, string>? LabelVariants { get; init; }
     public ModelSerialSeries? SerialSeries { get; init; }
+    internal string? EffectiveServerDeviceType => SerialSeries?.ServerDeviceType.Trim() ?? ServerDeviceType?.Trim();
     [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; init; }
     public override string ToString() => Name;
+}
+
+public sealed record RtlReportSettings(int DeviceType, bool AssignSerialOnReport)
+{
+    public string DeviceIdentifierVariable { get; init; } = "CpuId";
 }
 
 public sealed class EquipmentCatalog
@@ -37,7 +45,7 @@ public sealed class EquipmentCatalog
 
     public static EquipmentCatalog Load(string profilesFolder)
     {
-        var bundled = Read(Path.Combine(AppContext.BaseDirectory, "profile-templates", RelativePath));
+        var bundled = Read(Path.Combine(AppContext.BaseDirectory, "reference", "serials", "equipment-models.json"));
         var local = Read(Path.Combine(profilesFolder, RelativePath));
         var models = bundled.Models.ToDictionary(model => model.Id, StringComparer.OrdinalIgnoreCase);
         foreach (var model in local.Models)
@@ -47,8 +55,10 @@ public sealed class EquipmentCatalog
                 models[model.Id] = model with
                 {
                     LabelCode = model.LabelCode ?? baseline.LabelCode,
+                    ServerDeviceType = model.ServerDeviceType ?? baseline.ServerDeviceType,
+                    RtlReport = model.RtlReport ?? baseline.RtlReport,
                     LabelVariants = model.LabelVariants ?? baseline.LabelVariants,
-                    SerialSeries = model.SerialSeries ?? baseline.SerialSeries
+                    SerialSeries = model.SerialSeries ?? (model.ServerDeviceType == null ? baseline.SerialSeries : null)
                 };
             else
                 models[model.Id] = model;
@@ -98,6 +108,9 @@ public sealed class EquipmentCatalog
                     !LabelTemplateDefinition.IsSafeLabelText(pair.Value)) == true)
                 throw new InvalidDataException($"Проверьте код этикетки и комплектации изделия «{model.Name}».");
             model.SerialSeries?.Validate(model.Name);
+            if (model.RtlReport is { } report &&
+                (report.DeviceType <= 0 || string.IsNullOrWhiteSpace(report.DeviceIdentifierVariable)))
+                throw new InvalidDataException($"Проверьте серверный код отчёта и переменную идентификатора «{model.Name}».");
         }
     }
     // Separators/case are presentation; +, port counts and model suffixes are identity.

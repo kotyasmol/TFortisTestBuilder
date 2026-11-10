@@ -51,8 +51,9 @@ namespace TestBuilder.Services
         private const string CaptureWaitVariableType = "Wait Variable Until (capture v1)";
         private const string SerialWithPrefixType = "Get Serial Number (prefix v1)";
         private const string ReportWithSerialPrefixType = "Build Test Report (prefix v1)";
+        private const string RtlReportType = "Send Test Report (RTL v1)";
         internal const string ReportStartType = "Start (report v1)";
-        private const string CatalogSerialsStartType = "Start (catalog serials v1)";
+        internal const string CatalogSerialsStartType = "Start (catalog serials v1)";
         private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
             ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
                 ? type[FirstRunPrefix.Length..] : type ?? "";
@@ -99,7 +100,7 @@ namespace TestBuilder.Services
             BuildTestReportNodeViewModel report when !string.IsNullOrWhiteSpace(report.ExpectedSerialPrefix) => ReportWithSerialPrefixType,
             BuildTestReportNodeViewModel => "Build Test Report",
             PrintLabelNodeViewModel p => p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
-            SendTestReportNodeViewModel => "Send Test Report",
+            SendTestReportNodeViewModel n => RtlTestReport.IsEndpoint(n.Endpoint) ? RtlReportType : "Send Test Report",
             SubtestNodeViewModel { FailureOrder: not null } => "Subtest (cleanup order v1)",
             SubtestNodeViewModel => "Subtest",
             ForEachSlaveNodeViewModel f => f.RepeatOnSameSlave ? "For Slaves (repeat v1)" : "For Slaves",
@@ -948,12 +949,12 @@ namespace TestBuilder.Services
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 
-                    "Send Test Report" or "SEND_TEST_REPORT" or "Отправить отчёт" => new SendTestReportNodeViewModel
+                    "Send Test Report" or "SEND_TEST_REPORT" or "Отправить отчёт" or RtlReportType => new SendTestReportNodeViewModel
                     {
                         Location = location,
                         ServerBaseUrl = n.ServerBaseUrl ?? "http://server-address",
                         ReportVariableName = n.ReportVariableName ?? "TestReportText",
-                        Endpoint = n.Endpoint ?? "/api/Api.svc/result.json",
+                        Endpoint = n.Endpoint ?? (UnwrapNodeType(n.Type) == RtlReportType ? RtlTestReport.Endpoint : "/api/Api.svc/result.json"),
                         TimeoutMs = n.TimeoutMs ?? 10000,
                         RetryCount = n.RetryCount ?? 1,
                         RetryDelayMs = n.RetryDelayMs ?? 1000,

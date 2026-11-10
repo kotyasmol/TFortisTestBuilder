@@ -61,16 +61,20 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var series = context.ProductionModel?.SerialSeries;
-            var deviceType = series?.ServerDeviceType.Trim() ?? _deviceType;
+            var model = context.ProductionModel;
+            var series = model?.SerialSeries;
+            var deviceType = model == null ? _deviceType : model.EffectiveServerDeviceType ?? string.Empty;
             ResetResult(context, deviceType);
+
+            if (model?.RtlReport?.AssignSerialOnReport == true)
+                return Fail(context, "Сервер выдаёт номер этой платы при отправке отчёта.", string.Empty, string.Empty);
 
             if (series == null && SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
                 return Fail(context, prefixError, string.Empty, string.Empty);
 
             if (_fixedSerialNumber.HasValue)
             {
-                if (series != null)
+                if (model != null)
                     return Fail(context, "Отключите фиксированный отладочный номер в профиле со справочником.", string.Empty, string.Empty);
                 return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
             }
@@ -80,7 +84,7 @@ namespace TestBuilder.Domain.Steps
             try
             {
                 url = BuildUrl(context, deviceType, out cpuId);
-                if (series != null && string.IsNullOrEmpty(cpuId))
+                if (model != null && string.IsNullOrEmpty(cpuId))
                     return Fail(context, "Для выдачи номера по справочнику нужен идентификатор устройства.", string.Empty, string.Empty);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is UriFormatException)
@@ -116,7 +120,7 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, seriesError, raw, url);
 
                     SaveSerial(context, serial, raw, url);
-                    if (series != null)
+                    if (model != null)
                         context.SetVariable("SerialNumber.Assigned", serial);
                     _logger.Info($"[OK] Serial number received: {serial}.");
                     return StepResult.True;

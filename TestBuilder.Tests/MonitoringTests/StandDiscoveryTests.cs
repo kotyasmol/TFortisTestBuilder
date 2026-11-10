@@ -76,8 +76,8 @@ public class StandDiscoveryTests
                 using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false, ProductFilter = "Платы" };
                 Assert.False(vm.IsConnected);
                 Assert.True(vm.CanChooseProfile);
-                Assert.Contains(vm.EngineerProfileGroups, g => g.Profiles.Any(p => Path.GetFileName(p.FilePath) == "RTL_SW_board.json"));
-                foreach (var file in new[] { "RTL_SW_board.json", "RTL_POE_board.json" })
+                Assert.Contains(vm.EngineerProfileGroups, g => g.Profiles.Any(p => Path.GetFileName(p.FilePath) == "RTL-SW · Проверка платы · 10.11.json"));
+                foreach (var file in new[] { "RTL-SW · Проверка платы · 10.11.json", "RTL-POE · Проверка платы · 10.11.json" })
                 {
                     vm.SelectedProfile = Assert.Single(vm.Profiles.Where(p => Path.GetFileName(p.FilePath) == file));
                     Assert.NotNull(vm.RootGraph.Hardware);

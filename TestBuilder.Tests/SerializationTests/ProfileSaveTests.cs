@@ -97,7 +97,9 @@ public class ProfileSaveTests
         vm.Nodes.Remove(Assert.IsType<DelayNodeViewModel>(vm.Nodes[0]));
         await vm.SaveGraphCommand.ExecuteAsync(null);
 
-        using var saved = JsonDocument.Parse(File.ReadAllText(path));
+        Assert.False(File.Exists(path));
+        Assert.Equal("Профиль.json", Path.GetFileName(vm.SelectedProfile!.FilePath));
+        using var saved = JsonDocument.Parse(File.ReadAllText(vm.SelectedProfile.FilePath));
         var root = saved.RootElement;
         Assert.Equal(3, root.GetProperty("vendorData").GetProperty("revision").GetInt32());
         var serial = root.GetProperty("nodes")[0];
@@ -111,13 +113,35 @@ public class ProfileSaveTests
     public async Task ImportDoesNotPublishInvalidProfilesOrOverwriteExistingFiles()
     {
         using var files = new ProfileFolder();
-        var path = files.Write("existing.json", OriginalJson);
+        var path = files.Write("Модель А · Полная проверка.json", OriginalJson);
         using var source = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson));
         await Assert.ThrowsAsync<IOException>(() => ProfileFileStorage.ImportAsync(source, files.Path, "existing.json"));
         Assert.Equal(OriginalJson, File.ReadAllText(path));
         using var invalid = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson.Replace("Delay", "Unknown node")));
         await Assert.ThrowsAsync<InvalidOperationException>(() => ProfileFileStorage.ImportAsync(invalid, files.Path, "broken.json"));
         Assert.Single(Directory.GetFiles(files.Path));
+    }
+
+    [Fact]
+    public async Task ImportUsesProfileDisplayNameInsteadOfSourceFilename()
+    {
+        using var files = new ProfileFolder();
+        using var source = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson));
+        await ProfileFileStorage.ImportAsync(source, files.Path, "external_name.json");
+        Assert.Equal("Модель А · Полная проверка.json", Path.GetFileName(Assert.Single(Directory.GetFiles(files.Path))));
+    }
+
+    [Fact]
+    public async Task RenameDoesNotReplaceAnotherProfile()
+    {
+        using var files = new ProfileFolder();
+        var source = files.Write("old.json", OriginalJson);
+        var occupied = files.Write("Новое имя.json", "another profile");
+        var snapshot = ProfileFileStorage.Read(source);
+        await Assert.ThrowsAsync<IOException>(() =>
+            ProfileFileStorage.RenameAsync(source, occupied, snapshot.Json, snapshot.Revision));
+        Assert.Equal(OriginalJson, File.ReadAllText(source));
+        Assert.Equal("another profile", File.ReadAllText(occupied));
     }
 
     [Fact]
@@ -207,7 +231,7 @@ public class ProfileSaveTests
     public async Task SameNameSave_UpdatesDateWithoutReplacingCatalogItem_AndBlankNameWritesNothing()
     {
         using var files = new ProfileFolder();
-        var path = files.Write("original.json", OriginalJson);
+        var path = files.Write("Модель А · Полная проверка.json", OriginalJson);
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
         vm.RefreshProfiles(); vm.SelectedProfile = Assert.Single(vm.Profiles);
@@ -232,13 +256,13 @@ public class ProfileSaveTests
     {
         using var files = new ProfileFolder();
         var original = files.Write("original.json", OriginalJson);
-        var existing = files.Write("Копия.json", "occupied");
+        var existing = files.Write("Модель А · Копия.json", "occupied");
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
         vm.SelectedProfile = GraphSerializer.ReadProfile(original);
         vm.CurrentProfileName = "Копия";
         await vm.SaveGraphCommand.ExecuteAsync(null);
-        Assert.Equal("Копия (2).json", System.IO.Path.GetFileName(vm.SelectedProfile!.FilePath));
+        Assert.Equal("Модель А · Копия (2).json", System.IO.Path.GetFileName(vm.SelectedProfile!.FilePath));
         Assert.Equal("occupied", File.ReadAllText(existing));
         Assert.Equal(OriginalJson, File.ReadAllText(original));
         var selected = vm.SelectedProfile;

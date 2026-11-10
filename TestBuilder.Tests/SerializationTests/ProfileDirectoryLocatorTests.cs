@@ -51,7 +51,7 @@ public class ProfileDirectoryLocatorTests
         var root = Directory.CreateTempSubdirectory("testbuilder-profiles-");
         try
         {
-            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profile-templates"));
+            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles", "standard"));
             var working = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles"));
             var edited = Path.Combine(working.FullName, "existing.json");
             var seed = Path.Combine(templates.FullName, "new.json");
@@ -77,7 +77,7 @@ public class ProfileDirectoryLocatorTests
         var root = Directory.CreateTempSubdirectory("testbuilder-profiles-");
         try
         {
-            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profile-templates"));
+            var templates = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles", "standard"));
             var working = Directory.CreateDirectory(Path.Combine(root.FullName, "profiles"));
             var custom = Directory.CreateDirectory(Path.Combine(root.FullName, "custom-profiles"));
             var edited = Path.Combine(working.FullName, "existing.json");

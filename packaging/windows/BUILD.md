@@ -16,14 +16,15 @@
 python3 scripts/package_windows_release.py \
   --browser-bundle artifacts/windows-20261019/TFortisTestBuilder-2026.10.19.16-win-x64 \
   --version 1.0.2-beta --output artifacts/windows-1.0.2-beta \
-  --profile PSW_UPS_Box_8x2Pro_parallel_start.json \
-  --profile PSW_2G6F_plus_full_algorithm.json \
-  --profile RTL_SW_board.json \
-  --profile RTL_POE_board.json
+  --profile "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json" \
+  --profile "PSW-2G6F+ · Полная проверка · 10.11.json" \
+  --profile "RTL-SW · Проверка платы · 10.11.json" \
+  --profile "RTL-POE · Проверка платы · 10.11.json"
 ```
 
 Параметр `--profile` повторяется для каждого поставляемого профиля.
-Без него включаются все профили репозитория. Неизвестные и повторные имена
+Без него включаются четыре стандартных профиля из `profiles`. Другие
+варианты лежат в `examples/profiles`. Неизвестные и повторные имена
 отклоняются до сборки. Фильтрация выполняется только во временном каталоге
 публикации; исходные профили и каталог оборудования остаются на месте.
 README и манифест перечисляют фактический состав выбранного комплекта.

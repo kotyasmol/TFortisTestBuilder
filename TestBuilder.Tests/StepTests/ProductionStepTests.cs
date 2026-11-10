@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -86,6 +87,66 @@ public class ProductionStepTests
         Assert.Equal("CPU 1", context.GetVariable<string>("SerialNumberCpuId"));
         Assert.Contains("devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
         Assert.Contains("cpuId=CPU%201", service.LastUrl);
+    }
+
+    [Theory]
+    [InlineData("RTL-SW", 5, false, 31300002, 5, true)]
+    [InlineData("RTL-SW", 5, false, 31300003, 5, false)]
+    [InlineData("RTL-POE", 6, true, 31200002, 6, true)]
+    [InlineData("RTL-POE", 6, true, 31300002, 5, false)]
+    [InlineData("RTL-POE", 6, true, 0, 6, false)]
+    public async Task RtlBoardsUseDirectJsonAndTheExpectedSerialFlow(
+        string serverType, int deviceType, bool assignOnReport, int returnedSerial, int returnedType, bool accepted)
+    {
+        const string server = "https://report-server.local/api";
+        const string session = "test-session";
+        const string cpu = "413148580E5939514C53698A";
+        const int swSerial = 31300002;
+        var model = new EquipmentModel("board", serverType)
+        {
+            ServerDeviceType = serverType,
+            RtlReport = new RtlReportSettings(deviceType, assignOnReport)
+        };
+        var context = new TestContext(new RegisterState()) { ProductionModel = model };
+        context.SetVariable("CpuId", cpu);
+        context.AddReportEntry("Питание 3,3 В", true, "3,3 В");
+        if (!assignOnReport)
+        {
+            var http = new CapturingHttpService(HttpRequestResult.Success(200, swSerial.ToString(), TimeSpan.Zero));
+            var serial = new GetSerialNumberFromServerStep(http, NullLogger.Instance, server, "Old type",
+                "CpuId", 1000, 0, 0, "SerialNumber", true);
+            Assert.Equal(StepResult.True, await serial.ExecuteAsync(context, default));
+            Assert.Contains($"devType={serverType}&cpuId={cpu}", http.LastUrl);
+        }
+        else context.SetVariable("SerialNumber", 3200579);
+
+        var build = new BuildTestReportStep(NullLogger.Instance, "Report", "Стенд", "SerialNumber",
+            session, "production", false);
+        Assert.Equal(StepResult.True, await build.ExecuteAsync(context, default));
+        using var handler = new RecordingReportHandler(HttpStatusCode.OK,
+            JsonSerializer.Serialize(new { id = 10, serialNumber = returnedSerial, deviceType = returnedType }));
+        var send = new SendTestReportStep(NullLogger.Instance, server, "Report", RtlTestReport.Endpoint,
+            1000, 3, 0, false, "reports", true, () => new HttpClient(handler, disposeHandler: false), server, session);
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, await send.ExecuteAsync(context, default));
+        Assert.Equal(HttpMethod.Post, handler.Method);
+        Assert.Equal("https://report-server.local/api/Api.svc/SendTestResultUniverse", handler.Url);
+        Assert.StartsWith("application/json", handler.ContentType);
+        using var request = JsonDocument.Parse(handler.Body);
+        var root = request.RootElement;
+        Assert.True(root.GetProperty("isPswDevice").GetBoolean());
+        Assert.Equal(session, root.GetProperty("sessId").GetString());
+        var result = root.GetProperty("result");
+        Assert.Equal(deviceType, result.GetProperty("deviceType").GetInt32());
+        Assert.Equal(cpu, result.GetProperty("deviceIdent").GetString());
+        Assert.Equal(assignOnReport ? null : swSerial.ToString(), result.GetProperty("deviceSerial").GetString());
+        Assert.True(result.GetProperty("isFull").GetBoolean());
+        Assert.True(result.GetProperty("isSuccess").GetBoolean());
+        Assert.Contains(result.GetProperty("subTests").EnumerateArray(), item =>
+            item.GetProperty("name").GetString() == "Питание 3,3 В" &&
+            item.GetProperty("additionalInfo").GetString() == "3,3 В");
+        Assert.Equal(accepted ? returnedSerial : assignOnReport ? null : swSerial, context.IssuedSerialNumber);
+        if (assignOnReport) Assert.Equal(1, context.GetVariable<int>("SendReport.Attempts"));
     }
 
     [Theory]
@@ -744,7 +805,7 @@ public class ProductionStepTests
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
             var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+                "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
                 .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
@@ -801,11 +862,11 @@ public class ProductionStepTests
     }
 
     [Theory]
-    [InlineData("parallel_start", null, false)]
-    [InlineData("parallel_start", 3300000, false)]
-    [InlineData("parallel_start", 3200123, true)]
-    [InlineData("full_algorithm_polling", 3200123, true)]
-    [InlineData("parallel_el60", 3200123, true)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", null, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3300000, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3200123, true)]
+    [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", 3200123, true)]
+    [InlineData("PSW_UPS_Box_8x2Pro_parallel_el60.json", 3200123, true)]
     public async Task ProFailureReportRequiresAValidSerial(string variant, int? serial, bool sendsReport)
     {
         var settings = AppSettings.Instance;
@@ -818,8 +879,7 @@ public class ProductionStepTests
             settings.ServerBaseUrl = AppSettings.DefaultServerBaseUrl;
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
-            var path = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "profiles", $"PSW_UPS_Box_8x2Pro_{variant}.json");
+            var path = TestProfilePaths.Find(variant);
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
                 .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
@@ -827,6 +887,7 @@ public class ProductionStepTests
             using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
             using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
             {
+                ProfileReportTemplate = vm.RootGraph.ReportTemplate,
                 ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
             };
             var graph = compiler.Compile(recovery.BodyGraph);

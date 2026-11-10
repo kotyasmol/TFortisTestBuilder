@@ -15,7 +15,7 @@ namespace TestBuilder.Tests.SerializationTests;
 public class ParallelGraphCompilationTests
 {
     private const string SourceProfile = "PSW_UPS_Box_8x2Pro_full_algorithm_polling.json";
-    private const string ParallelProfile = "PSW_UPS_Box_8x2Pro_parallel_start.json";
+    private const string ParallelProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json";
     private const string OptimizedProfile = "PSW_UPS_Box_8x2Pro_parallel_el60.json";
     private const string BootStage = "06. Загрузка DUT и получение серийника";
 
@@ -430,7 +430,7 @@ public class ParallelGraphCompilationTests
         var parallel = NormalizeProfile(ParallelProfile);
         Assert.Equal(original["deviceModel"]!.GetValue<string>(), parallel["deviceModel"]!.GetValue<string>());
         Assert.NotEqual(original["name"]!.GetValue<string>(), parallel["name"]!.GetValue<string>());
-        Assert.Contains("параллельный старт", parallel["configurationName"]!.GetValue<string>());
+        Assert.Contains("Параллельная проверка", parallel["configurationName"]!.GetValue<string>());
 
         Assert.True(JsonNode.DeepEquals(original["hardware"], parallel["hardware"]));
         var originalNodes = Stages(original);
@@ -461,7 +461,7 @@ public class ParallelGraphCompilationTests
 
         AssertProTopology(original, parallel);
         Assert.Equal("Start (connections v1)", original["nodes"]![0]!["type"]!.GetValue<string>());
-        Assert.Equal("Start (action state v1)", parallel["nodes"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal(GraphSerializer.CatalogSerialsStartType, parallel["nodes"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
@@ -522,7 +522,7 @@ public class ParallelGraphCompilationTests
         if (file == OptimizedProfile) AssertEl60Forks(originalVm.RootGraph);
 
         var saved = GraphSerializer.Serialize(originalVm, profileName);
-        Assert.Equal(file == ParallelProfile ? "Start (action state v1)" : "Start (connections v1)",
+        Assert.Equal(file == ParallelProfile ? GraphSerializer.CatalogSerialsStartType : "Start (connections v1)",
             JsonNode.Parse(saved)!["nodes"]![0]!["type"]!.GetValue<string>());
         var loadedVm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(saved, loadedVm);
@@ -773,8 +773,7 @@ public class ParallelGraphCompilationTests
         return compiler.Compile(graph);
     }
 
-    private static string ReadProfile(string filename) => File.ReadAllText(Path.GetFullPath(Path.Combine(
-        AppContext.BaseDirectory, "..", "..", "..", "..", "profiles", filename)));
+    private static string ReadProfile(string filename) => File.ReadAllText(TestBuilder.Tests.Support.TestProfilePaths.Find(filename));
 
     private static JsonNode NormalizeProfile(string filename)
     {

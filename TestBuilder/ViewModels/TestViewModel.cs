@@ -2038,12 +2038,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (!string.IsNullOrWhiteSpace(_currentProfilePath))
         {
             if (string.Equals(CurrentProfileName.Trim(), _savedProfileName, StringComparison.Ordinal))
-                await SaveGraphToPathAsync(_currentProfilePath);
+                await SaveGraphToPathAsync(_currentProfilePath, alignFileName: true);
             else
             {
                 try
                 {
-                    var copyPath = ProfileFileStorage.NewCopyPath(folder, CurrentProfileName);
+                    var copyPath = ProfileFileStorage.NewCopyPath(folder, GraphProfile.ComposeName(RootGraph.DeviceModel, ProfileDescription));
                     await SaveGraphToPathAsync(copyPath, createNew: true, renameConfiguration: true);
                 }
                 catch (Exception ex) { StatusMessage = $"Ошибка сохранения: {ex.Message}"; }
@@ -2053,13 +2053,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         try
         {
-            var filePath = ProfileFileStorage.NewCopyPath(folder, CurrentProfileName);
+            var filePath = ProfileFileStorage.NewCopyPath(folder, GraphProfile.ComposeName(RootGraph.DeviceModel, ProfileDescription));
             await SaveGraphToPathAsync(filePath, createNew: true);
         }
         catch (Exception ex) { StatusMessage = $"Ошибка сохранения: {ex.Message}"; }
     }
 
-    internal async Task SaveGraphToPathAsync(string filePath, bool createNew = false, bool renameConfiguration = false)
+    internal async Task SaveGraphToPathAsync(string filePath, bool createNew = false, bool renameConfiguration = false, bool alignFileName = false)
     {
         if (!IsAllowedProfilePath(filePath)) { StatusMessage = "Учебные профили сохраняются только в папке обучения."; return; }
         if (!CanEditGraph || string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
@@ -2069,6 +2069,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var profileName = CurrentProfileName.Trim();
             var currentFile = !createNew && string.Equals(_currentProfilePath, filePath, StringComparison.Ordinal);
             var expectedRevision = currentFile ? _savedProfileRevision : null;
+            var destination = alignFileName
+                ? ProfileFileStorage.DisplayPath(Path.GetDirectoryName(filePath)!, GraphProfile.ComposeName(RootGraph.DeviceModel, ProfileDescription))
+                : filePath;
+            var moving = !string.Equals(filePath, destination, StringComparison.Ordinal) &&
+                (string.Equals(filePath, destination, StringComparison.OrdinalIgnoreCase) || !File.Exists(destination));
             if (expectedRevision != null && !HasUnsavedProfileChanges())
             {
                 ProfileFileStorage.CheckRevision(filePath, expectedRevision);
@@ -2079,7 +2084,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var configurationName = renameConfiguration ? ProfileDescription : RootGraph.ConfigurationName;
             var json = GraphSerializer.Serialize(this, profileName, updatedAt, configurationName);
 
-            var revision = await ProfileFileStorage.WriteAsync(filePath, json, createNew, expectedRevision);
+            var revision = moving
+                ? await ProfileFileStorage.RenameAsync(filePath, destination, json, expectedRevision ?? ProfileFileStorage.Read(filePath).Revision)
+                : await ProfileFileStorage.WriteAsync(filePath, json, createNew, expectedRevision);
+            if (moving && !IsTraining)
+                _reportVariableHistory.Remember(destination, _reportVariableHistory.Read(filePath));
+            filePath = moving ? destination : filePath;
 
             if (_currentProfilePath == null && !IsTraining)
             {

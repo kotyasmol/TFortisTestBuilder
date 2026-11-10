@@ -17,7 +17,7 @@ namespace TestBuilder.Tests.StepTests;
 public class BoardAlgorithmExecutionTests
 {
     [Theory]
-    [InlineData("RTL_SW_board.json")][InlineData("RTL_POE_board.json")]
+    [InlineData("RTL-SW · Проверка платы · 10.11.json")][InlineData("RTL-POE · Проверка платы · 10.11.json")]
     public async Task CompleteHardwareAlgorithm_WithControlledInputs_PassesAndPowersOff(string filename)
     {
         using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -31,7 +31,8 @@ public class BoardAlgorithmExecutionTests
             var result=await new TestExecutor().ExecuteAsync(compiler.Compile(vm.RootGraph).StartNode,ctx,cts.Token);
             Assert.True(result == ExecutionStatus.Completed,ctx.Failure?.Summary + "\n" + string.Join("\n",ctx.ReportEntries.Where(x=>!x.IsSuccess).Select(x=>x.Name+": "+x.Value)));Assert.False(ctx.HasCriticalError);
             Assert.All(ctx.ReportEntries,e=>Assert.True(e.IsSuccess,e.Name+": "+e.Value));
-            Assert.Equal(123456,ctx.GetVariable<int>("SerialNumber"));
+            if (filename.Contains("SW")) Assert.Equal(123456, ctx.GetVariable<int>("SerialNumber"));
+            else Assert.False(ctx.Variables.ContainsKey("SerialNumber"));
             var power=filename.Contains("SW")?new[]{2301,2302,2307,2385}:new[]{2403,2492,2489,2511};
             Assert.All(power,a=>Assert.Equal(0,rig.Values[a]));
             if(filename.Contains("SW"))Assert.Contains(rig.Commands,c=>c.Contains("sensorTemperature"));
@@ -40,8 +41,8 @@ public class BoardAlgorithmExecutionTests
         finally {cts.Cancel();await polling;}
     }
     [Theory]
-    [InlineData("RTL_POE_board.json",false)][InlineData("RTL_POE_board.json",true)]
-    [InlineData("RTL_SW_board.json",false)][InlineData("RTL_SW_board.json",true)]
+    [InlineData("RTL-POE · Проверка платы · 10.11.json",false)][InlineData("RTL-POE · Проверка платы · 10.11.json",true)]
+    [InlineData("RTL-SW · Проверка платы · 10.11.json",false)][InlineData("RTL-SW · Проверка платы · 10.11.json",true)]
     public async Task FailureOrCancellation_KeepsCleanupExecutable(string filename,bool cancel)
     {
         using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(10));using var pollingCts=new CancellationTokenSource();

@@ -129,10 +129,19 @@ public partial class TestViewModel
         }
     }
 
-    public string CatalogSerialSeriesSummary =>
-        _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)?.SerialSeries is { } series
-            ? $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}"
-            : "Для модели не настроена серия в catalog/equipment-models.json";
+    public string CatalogSerialSeriesSummary
+    {
+        get
+        {
+            var model = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+            if (model?.SerialSeries is { } series)
+                return $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}";
+            return model?.EffectiveServerDeviceType is { Length: > 0 } serverType
+                ? $"{serverType} · " + (model.RtlReport?.AssignSerialOnReport == true
+                    ? "номер возвращается в ответе на отчёт" : "номер выдаёт сервер")
+                : "Для модели не настроен серверный тип в справочнике";
+        }
+    }
 
     private void NotifyCatalogSerialSettingsChanged()
     {
@@ -142,7 +151,7 @@ public partial class TestViewModel
     }
 
     private bool UseCatalogAfterModelChange(EquipmentModel? model) =>
-        RootGraph.UseCatalogSerials || model?.SerialSeries != null ||
+        RootGraph.UseCatalogSerials || !string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ||
         BoardNodes(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel);
 
     private EquipmentModel? ResolveProductionModel()
@@ -150,8 +159,8 @@ public partial class TestViewModel
         if (!RootGraph.UseCatalogSerials) return null;
         // Read once at the start. All nodes, including failure cleanup, use the same model.
         var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
-        if (model?.SerialSeries == null)
-            throw new InvalidOperationException("Выберите изделие с настроенной серией в справочнике.");
+        if (model == null || string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
+            throw new InvalidOperationException("Выберите изделие с настроенным серверным типом в справочнике.");
         if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
             model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
             throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");

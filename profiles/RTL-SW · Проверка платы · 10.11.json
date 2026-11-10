@@ -1,8 +1,8 @@
 {
-  "name": "RTL-SW · Проверка платы · параметры RTL_v1",
+  "name": "RTL-SW · Проверка платы · 10.11",
   "nodes": [
     {
-      "type": "Start (connections v1)",
+      "type": "Start (catalog serials v1)",
       "id": "0",
       "x": 80,
       "y": 80,
@@ -8522,12 +8522,12 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Send Test Report",
+            "type": "Send Test Report (RTL v1)",
             "serverBaseUrl": "",
             "reportVariableName": "TestReportText",
-            "endpoint": "/api/Api.svc/result.json",
+            "endpoint": "/api/Api.svc/SendTestResultUniverse",
             "timeoutMs": 10000,
-            "retryCount": 2,
+            "retryCount": 0,
             "retryDelayMs": 1000,
             "saveLocalCopy": true,
             "localReportsDirectory": "reports",
@@ -9684,12 +9684,12 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Send Test Report",
+            "type": "Send Test Report (RTL v1)",
             "serverBaseUrl": "",
             "reportVariableName": "TestReportText",
-            "endpoint": "/api/Api.svc/result.json",
+            "endpoint": "/api/Api.svc/SendTestResultUniverse",
             "timeoutMs": 10000,
-            "retryCount": 2,
+            "retryCount": 0,
             "retryDelayMs": 1000,
             "saveLocalCopy": true,
             "localReportsDirectory": "reports",
@@ -9883,7 +9883,7 @@
   ],
   "productKind": "Board",
   "deviceModel": "RTL-SW",
-  "configurationName": "Проверка платы · параметры RTL_v1",
+  "configurationName": "Проверка платы · 10.11",
   "hardware": {
     "BaudRate": 9600,
     "Parity": 0,
@@ -10890,5 +10890,8 @@
         "Height": 0.1452991452991453
       }
     ]
-  }
+  },
+  "deviceModelId": "rtl-sw",
+  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
+  "useCatalogSerials": true
 }

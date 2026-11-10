@@ -51,6 +51,8 @@ namespace TestBuilder.Domain.Steps
             }
 
             var series = context.ProductionModel?.SerialSeries;
+            if (context.ProductionModel != null && series == null)
+                return Task.FromResult(Fail(context, "Для расчёта MAC укажите серию изделия в справочнике."));
             if (series?.Check(serial, context.IssuedSerialNumber) is { } seriesError)
                 return Task.FromResult(Fail(context, seriesError));
             if (series is { MacPrefix: null })

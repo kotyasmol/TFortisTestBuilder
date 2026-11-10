@@ -24,8 +24,8 @@ public class ProfileLayoutTests
     }
 
     [Theory]
-    [InlineData("RTL_SW_board.json")]
-    [InlineData("RTL_POE_board.json")]
+    [InlineData("RTL-SW · Проверка платы · 10.11.json")]
+    [InlineData("RTL-POE · Проверка платы · 10.11.json")]
     [InlineData("RTL_LED_color_template.json")]
     [InlineData("board_manual_label.json")]
     [InlineData("board_highlight_demo.json")]

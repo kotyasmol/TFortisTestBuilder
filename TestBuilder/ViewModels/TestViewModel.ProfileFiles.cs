@@ -150,15 +150,21 @@ public partial class TestViewModel
             if (description == null || !CanManageProfile(profile)) return;
             description = DescriptionFromTitle(description, profile.DeviceModel);
             if (ValidateProfileDescription(profile, description, false) is { } error) { StatusMessage = error; return; }
-            if (description.Equals(profile.ConfigurationName, StringComparison.Ordinal)) return;
+            var target = ProfileFileStorage.DisplayPath(Path.GetDirectoryName(profile.FilePath)!, GraphProfile.ComposeName(profile.DeviceModel, description));
+            var moving = !string.Equals(profile.FilePath, target, StringComparison.Ordinal);
+            if (!moving && description.Equals(profile.ConfigurationName, StringComparison.Ordinal)) return;
             var (json, revision) = ProfileFileStorage.Read(profile.FilePath);
             if (IsCurrentProfile(profile) && _savedProfileRevision != null && revision != _savedProfileRevision)
                 ProfileFileStorage.CheckRevision(profile.FilePath, _savedProfileRevision);
             var updated = ProfileFileStorage.WithName(json, profile, description);
-            var newRevision = await ProfileFileStorage.WriteAsync(profile.FilePath, updated, createNew: false, expectedRevision: revision);
-            var renamed = GraphSerializer.ReadProfile(profile.FilePath);
-            if (IsCurrentProfile(profile))
+            var newRevision = moving ? await ProfileFileStorage.RenameAsync(profile.FilePath, target, updated, revision)
+                : await ProfileFileStorage.WriteAsync(profile.FilePath, updated, createNew: false, expectedRevision: revision);
+            if (moving) _reportVariableHistory.Remember(target, _reportVariableHistory.Read(profile.FilePath));
+            var renamed = GraphSerializer.ReadProfile(moving ? target : profile.FilePath);
+            var isCurrent = IsCurrentProfile(profile);
+            if (isCurrent)
             {
+                _currentProfilePath = renamed.FilePath;
                 SetProfileIdentity(renamed.Name, renamed.ConfigurationName);
                 _savedProfileName = renamed.Name;
                 RootGraph.UpdatedAt = renamed.UpdatedAt;
@@ -166,8 +172,8 @@ public partial class TestViewModel
                 if (_savedProfileSnapshot != null)
                     _savedProfileSnapshot = GraphSerializer.UpdateSnapshotIdentity(_savedProfileSnapshot, renamed);
             }
-            RevealProfileFile(profile.FilePath);
-            if (IsCurrentProfile(profile)) SelectProfileByPath(profile.FilePath);
+            RevealProfileFile(renamed.FilePath);
+            if (isCurrent) SelectProfileByPath(renamed.FilePath);
             StatusMessage = $"Профиль переименован: {renamed.DisplayName}";
         }
         catch (Exception ex) { StatusMessage = $"Не удалось переименовать профиль: {ex.Message}"; LogUiException("Переименование профиля", ex); }

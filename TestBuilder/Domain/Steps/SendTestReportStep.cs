@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -28,6 +29,9 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _failOnError;
         private readonly Func<HttpClient> _httpClientFactory;
         private readonly string? _trustedServerBaseUrl;
+        private readonly string _sessionId;
+        private bool IsRtl => RtlTestReport.IsEndpoint(_endpoint);
+        private string ReportFormat => IsRtl ? "RTL JSON" : "QTstand legacy multipart";
 
         public SendTestReportStep(
             ILogger logger,
@@ -67,7 +71,8 @@ namespace TestBuilder.Domain.Steps
             string localReportsDirectory,
             bool failOnError,
             Func<HttpClient> httpClientFactory,
-            string? trustedServerBaseUrl = null)
+            string? trustedServerBaseUrl = null,
+            string? sessionId = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serverBaseUrl = serverBaseUrl?.Trim() ?? string.Empty;
@@ -81,6 +86,7 @@ namespace TestBuilder.Domain.Steps
             _failOnError = failOnError;
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _trustedServerBaseUrl = trustedServerBaseUrl;
+            _sessionId = sessionId ?? App.StartupSessionId;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -88,13 +94,14 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("ReportDelivery.Status", "Sending");
             context.SetVariable("ReportDelivery.Message", "Отправка отчёта не завершена.");
             context.SetVariable("SendReport.Success", false);
+            context.Variables.Remove("SendReport.SerialNumber");
             context.SetVariable("SendReport.RawResponse", string.Empty);
             context.SetVariable("SendReport.Attempts", 0);
             context.SetVariable("SendReport.Url", string.Empty);
             context.SetVariable("SendReport.LocalPath", string.Empty);
             context.SetVariable("SendReport.LocalCopyError", string.Empty);
             context.SetVariable("SendReport.StatusCode", 0);
-            context.SetVariable("SendReport.Format", "QTstand legacy multipart");
+            context.SetVariable("SendReport.Format", ReportFormat);
             context.SetVariable("SendReport.Error", string.Empty);
 
             if (!context.Variables.TryGetValue(_reportVariableName, out var reportValue) ||
@@ -105,7 +112,17 @@ namespace TestBuilder.Domain.Steps
             }
 
             var report = reportValue.ToString() ?? string.Empty;
-            if (context.ProductionModel?.SerialSeries?.CheckReport(report, context.IssuedSerialNumber) is { } serialError)
+            var model = context.ProductionModel;
+            RtlTestReport? rtl = null;
+            if (IsRtl)
+            {
+                rtl = context.GetVariable<RtlTestReport>("BuildReport.RtlPayload");
+                if (rtl == null || !string.Equals(rtl.LocalText, report, StringComparison.Ordinal) ||
+                    model?.RtlReport?.DeviceType != rtl.DeviceType)
+                    return Fail(context, "Сформируйте отчёт RTL для выбранной модели платы.", string.Empty, 0, string.Empty);
+            }
+            if (model != null && (rtl == null || rtl.DeviceSerial != null) &&
+                ModelSerialSeries.CheckReport(report, model.SerialSeries, context.IssuedSerialNumber) is { } serialError)
                 return Fail(context, serialError, string.Empty, 0, string.Empty);
             var localPath = string.Empty;
             if (_saveLocalCopy)
@@ -127,17 +144,20 @@ namespace TestBuilder.Domain.Steps
             {
                 url = BuildUrl();
                 if (!ServerBaseUrlResolver.IsSameHttpOrigin(url, _trustedServerBaseUrl ?? AppSettings.Instance.ServerBaseUrl) &&
-                    ContainsLauncherSession(report))
+                    (rtl != null || ContainsLauncherSession(report)))
                 {
                     return Fail(context, "Отчёт с сессией лаунчера можно отправить только на сервер из настроек приложения.",
                         string.Empty, 0, localPath);
                 }
+                if (rtl != null && string.IsNullOrWhiteSpace(_sessionId))
+                    return Fail(context, "Для отправки отчёта RTL нужна сессия лаунчера.", string.Empty, 0, localPath);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Fail(context, ex.Message, string.Empty, 0, localPath);
             }
-            var attempts = _retryCount + 1;
+            // A timed-out allocation may already have created the record on the server.
+            var attempts = rtl is { DeviceSerial: null } ? 1 : _retryCount + 1;
             string raw = string.Empty;
             string lastError = string.Empty;
 
@@ -147,13 +167,39 @@ namespace TestBuilder.Domain.Steps
                 {
                     using var client = _httpClientFactory();
                     client.Timeout = TimeSpan.FromMilliseconds(_timeoutMs);
-                    using var form = CreateLegacyMultipart(report);
+                    using var form = rtl?.CreateContent(_sessionId) ?? CreateLegacyMultipart(report);
 
                     using var response = await client.PostAsync(url, form, cancellationToken);
-                    raw = (await response.Content.ReadAsStringAsync(cancellationToken)).Trim();
+                    var responseBody = (await response.Content.ReadAsStringAsync(cancellationToken)).Trim();
+                    raw = rtl == null ? responseBody : responseBody.Replace(_sessionId, "<redacted>", StringComparison.Ordinal);
 
-                    if (response.IsSuccessStatusCode && raw.StartsWith("Ok", StringComparison.Ordinal))
+                    var assigned = 0;
+                    var accepted = rtl == null ? raw.StartsWith("Ok", StringComparison.Ordinal) :
+                        rtl.TryReadSerial(responseBody, out assigned) &&
+                        (context.IssuedSerialNumber == null || context.IssuedSerialNumber == assigned) &&
+                        model?.SerialSeries?.Check(assigned) == null;
+                    if (response.IsSuccessStatusCode && accepted)
                     {
+                        if (rtl != null)
+                        {
+                            context.SetVariable("SerialNumber", assigned);
+                            context.SetVariable("SerialNumber.Assigned", assigned);
+                            context.SetVariable("SendReport.SerialNumber", assigned);
+                            _logger.Info($"[OK] Серийный номер из ответа сервера: {assigned}.");
+                            if (rtl.DeviceSerial == null && localPath.Length > 0)
+                            {
+                                try
+                                {
+                                    var serialLine = $"serial_num=true={assigned.ToString(CultureInfo.InvariantCulture)}\r\n";
+                                    await File.AppendAllTextAsync(localPath, serialLine, Encoding.UTF8);
+                                }
+                                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                                {
+                                    context.SetVariable("SendReport.LocalCopyError", ex.Message);
+                                    _logger.Warning($"В локальную копию не записан номер: {ex.Message}");
+                                }
+                            }
+                        }
                         context.SetVariable("ReportDelivery.Status", "Sent");
                         context.SetVariable("ReportDelivery.Message", _saveLocalCopy && localPath.Length == 0
                             ? "Отчёт принят сервером. Локальная копия не сохранена."
@@ -164,7 +210,7 @@ namespace TestBuilder.Domain.Steps
                         context.SetVariable("SendReport.Url", url.AbsoluteUri);
                         context.SetVariable("SendReport.LocalPath", localPath);
                         context.SetVariable("SendReport.StatusCode", (int)response.StatusCode);
-                        context.SetVariable("SendReport.Format", "QTstand legacy multipart");
+                        context.SetVariable("SendReport.Format", ReportFormat);
                         context.SetVariable("SendReport.Error", string.Empty);
                         _logger.Info($"[OK] Отчёт отправлен: {url}");
                         return StepResult.True;
@@ -207,7 +253,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SendReport.Attempts", attempts);
             context.SetVariable("SendReport.Url", SafeBuildUrl());
             context.SetVariable("SendReport.LocalPath", localPath);
-            context.SetVariable("SendReport.Format", "QTstand legacy multipart");
+            context.SetVariable("SendReport.Format", ReportFormat);
             context.SetVariable("SendReport.Error", error);
             _logger.Warning($"[ОШИБКА] Отчёт не отправлен: {error}");
             return _failOnError ? StepResult.False : StepResult.True;
@@ -271,13 +317,14 @@ namespace TestBuilder.Domain.Steps
 
             var path = server.GetLeftPart(UriPartial.Path).TrimEnd('/');
             var endpoint = _endpoint;
-            if (string.Equals(endpoint.TrimStart('/'), DefaultEndpoint.TrimStart('/'), StringComparison.OrdinalIgnoreCase))
+            if (IsRtl || string.Equals(endpoint.TrimStart('/'), DefaultEndpoint.TrimStart('/'), StringComparison.OrdinalIgnoreCase))
             {
                 var basePath = server.AbsolutePath.TrimEnd('/');
+                var operation = IsRtl ? "SendTestResultUniverse" : "result.json";
                 if (basePath.EndsWith("/api.svc", StringComparison.OrdinalIgnoreCase))
-                    endpoint = "result.json";
+                    endpoint = operation;
                 else if (basePath.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
-                    endpoint = "Api.svc/result.json";
+                    endpoint = "Api.svc/" + operation;
             }
 
             return new Uri(path + "/" + endpoint.TrimStart('/'));

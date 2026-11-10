@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
@@ -55,11 +57,13 @@ namespace TestBuilder.Domain.Steps
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            context.Variables.Remove("BuildReport.RtlPayload");
 
             if (_template?.Validate() is { } error)
                 return Task.FromResult(Fail(context, error));
 
             var series = context.ProductionModel?.SerialSeries;
+            var rtl = context.ProductionModel?.RtlReport;
             if (series == null && SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
                 return Task.FromResult(Fail(context, prefixError));
 
@@ -70,27 +74,43 @@ namespace TestBuilder.Domain.Steps
                     "Stand ID не задан. Укажи его во вкладке Настройки."));
             }
 
+            var deviceIdent = rtl == null ? string.Empty : GetVariableText(context, rtl.DeviceIdentifierVariable).Trim();
+            if (rtl != null && string.IsNullOrEmpty(deviceIdent))
+                return Task.FromResult(Fail(context, $"Идентификатор платы не найден в переменной '{rtl.DeviceIdentifierVariable}'."));
+
             var serial = GetVariableText(context, _serialVariableName);
-            if (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out var serialNumber) ||
-                serialNumber <= 0)
+            var assignOnReport = rtl?.AssignSerialOnReport == true && !context.IssuedSerialNumber.HasValue;
+            long serialNumber = 0;
+            if (!assignOnReport &&
+                (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out serialNumber) || serialNumber <= 0))
             {
                 return Task.FromResult(Fail(
                     context,
                     $"Полный серийный номер не найден в переменной '{_serialVariableName}'."));
             }
 
-            var seriesError = series == null ? SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix)
-                : series.Check(serialNumber, context.IssuedSerialNumber);
-            if (seriesError != null)
-                return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
+            if (!assignOnReport)
+            {
+                var seriesError = series == null ? SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix)
+                    : series.Check(serialNumber, context.IssuedSerialNumber);
+                if (series == null && context.ProductionModel != null)
+                    seriesError ??= ModelSerialSeries.CheckAssigned(serialNumber, context.IssuedSerialNumber);
+                if (seriesError != null)
+                    return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
+                if (rtl != null && !context.IssuedSerialNumber.HasValue)
+                    return Task.FromResult(Fail(context, "Сервер ещё не выдал номер для платы в текущем прогоне."));
+            }
 
             var builder = new StringBuilder();
             var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
             var successful = !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
+            var reportEntries = new List<TestReportEntry>();
+            var serialText = assignOnReport ? null : serialNumber.ToString(CultureInfo.InvariantCulture);
 
             AppendEntry(builder, "test_result", true, successful ? "1" : "0");
             AppendEntry(builder, "stand_id", true, _standId);
-            AppendEntry(builder, SerialField, true, serialNumber.ToString(CultureInfo.InvariantCulture));
+            if (serialText != null)
+                AppendEntry(builder, SerialField, true, serialText);
 
             if (!string.IsNullOrWhiteSpace(_sessionId))
             {
@@ -103,23 +123,23 @@ namespace TestBuilder.Domain.Steps
                 foreach (var entry in selected)
                 {
                     if (!IsSerialField(entry.Name))
-                        AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+                        reportEntries.Add(entry);
                 }
 
                 if (!successful && selected.All(entry => entry.IsSuccess))
                 {
                     var failedEntry = entries.FirstOrDefault(entry => !entry.IsSuccess);
-                    AppendEntry(builder, ReportTemplate.FailureLabel, false, FailureReason(context, failedEntry));
+                    reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false, FailureReason(context, failedEntry)));
                 }
             }
             else
             {
-                AppendEntry(builder, ReportField.TestTypeLabel, true, _testType);
+                reportEntries.Add(new TestReportEntry(ReportField.TestTypeLabel, true, _testType));
 
                 foreach (var entry in entries)
                 {
                     if (!string.IsNullOrWhiteSpace(entry.Name) && !IsSerialField(entry.Name))
-                        AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+                        reportEntries.Add(entry);
                 }
 
                 if (_includeAllVariables)
@@ -128,32 +148,39 @@ namespace TestBuilder.Domain.Steps
                                  .Where(item => ReportTemplate.IsLegacyReportVariable(item.Key, _reportVariableName) && !IsSerialField(item.Key))
                                  .OrderBy(item => item.Key, StringComparer.Ordinal))
                     {
-                        AppendEntry(
-                            builder,
+                        reportEntries.Add(new TestReportEntry(
                             variable.Key,
                             true, // Diagnostic values are not independent pass/fail criteria.
-                            ReportField.FormatText(variable.Value));
+                            ReportField.FormatText(variable.Value)));
                     }
                 }
             }
 
+            foreach (var entry in reportEntries)
+                AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+
             var report = builder.ToString();
+            if (rtl != null)
+                context.SetVariable("BuildReport.RtlPayload", new RtlTestReport(
+                    report, rtl.DeviceType, deviceIdent, serialText, _standId, DateTime.UtcNow,
+                    !context.IsCleanup && !context.HasCriticalError, successful, reportEntries));
             context.SetVariable(_reportVariableName, report);
             context.SetVariable("BuildReport.Success", true);
             context.SetVariable("BuildReport.DevicePassed", successful);
             context.SetVariable("ReportDelivery.Status", "Pending");
             context.SetVariable("ReportDelivery.Message", "Отчёт сформирован, но не отправлен.");
             context.SetVariable("BuildReport.VariableName", _reportVariableName);
-            context.SetVariable("BuildReport.Format", "QTstand legacy text");
+            context.SetVariable("BuildReport.Format", rtl == null ? "QTstand legacy text" : "RTL JSON");
             context.SetVariable("BuildReport.StandId", _standId);
-            context.SetVariable("BuildReport.SerialNumber", serialNumber);
+            if (serialText == null) context.Variables.Remove("BuildReport.SerialNumber");
+            else context.SetVariable("BuildReport.SerialNumber", serialNumber);
             context.SetVariable("BuildReport.SessionIncluded", !string.IsNullOrWhiteSpace(_sessionId));
             context.SetVariable("BuildReport.TestType", _testType);
             context.SetVariable("BuildReport.Error", string.Empty);
 
             _logger.Info(
-                $"[OK] Отчёт QTstand собран в переменную {_reportVariableName}: " +
-                $"stand={_standId}, serial={serialNumber}.");
+                $"[OK] Отчёт собран в переменную {_reportVariableName}: " +
+                $"stand={_standId}, serial={serialText ?? "ожидается от сервера"}.");
             return Task.FromResult(StepResult.True);
         }
 

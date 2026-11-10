@@ -1,9 +1,9 @@
 {
-  "name": "PSW_UPS_Box_8x2Pro_parallel_start",
-  "updatedAt": "2026-11-09T11:21:41.829679+00:00",
+  "name": "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11",
+  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
   "deviceModelId": "psw-ups-box-8x2pro",
   "deviceModel": "PSW+UPS-Box 8x2Pro",
-  "configurationName": "параллельный старт · с проверкой SFP",
+  "configurationName": "Параллельная проверка с SFP · 10.11",
   "hardware": {
     "StandName": "АПК-03 · 8x2Pro",
     "PortName": "",
@@ -3219,7 +3219,7 @@
   "nodes": [
     {
       "id": "0",
-      "type": "Start (action state v1)",
+      "type": "Start (catalog serials v1)",
       "x": 80,
       "y": 120,
       "color": "blue",
@@ -8268,5 +8268,310 @@
       "targetNodeId": "11",
       "targetConnector": "In"
     }
-  ]
+  ],
+  "reportTemplate": {
+    "fields": [
+      {
+        "label": "самотестирование",
+        "key": "самотестирование",
+        "source": "Entry",
+        "format": "BooleanText"
+      },
+      {
+        "label": "Передача данных порт 0",
+        "key": "DataTest.Port0.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 1",
+        "key": "DataTest.Port1.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 2",
+        "key": "DataTest.Port2.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 3",
+        "key": "DataTest.Port3.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 4",
+        "key": "DataTestSfp.Port0.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "детекция ИБП",
+        "key": "Dut.ups_det",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "установка MAC адреса",
+        "key": "15. Запись и проверка MAC",
+        "source": "Entry",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Тип проверки",
+        "key": "",
+        "source": "TestType",
+        "format": "Text"
+      },
+      {
+        "label": "Версия прошивки",
+        "key": "Версия прошивки",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "Версия бутлоадера",
+        "key": "Версия бутлоадера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "MAC адрес",
+        "key": "MAC адрес",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_0",
+        "key": "link_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_0",
+        "key": "poe_a_st_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_0",
+        "key": "poe_a_v_0",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_0",
+        "key": "poe_a_c_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_1",
+        "key": "link_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_1",
+        "key": "poe_a_st_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_1",
+        "key": "poe_a_v_1",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_1",
+        "key": "poe_a_c_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_2",
+        "key": "link_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_2",
+        "key": "poe_a_st_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_2",
+        "key": "poe_a_v_2",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_2",
+        "key": "poe_a_c_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_3",
+        "key": "link_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_3",
+        "key": "poe_a_st_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_3",
+        "key": "poe_a_v_3",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_3",
+        "key": "poe_a_c_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_4",
+        "key": "link_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_4",
+        "key": "poe_a_st_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_4",
+        "key": "poe_a_v_4",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_4",
+        "key": "poe_a_c_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_5",
+        "key": "link_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_5",
+        "key": "poe_a_st_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_5",
+        "key": "poe_a_v_5",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_5",
+        "key": "poe_a_c_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_6",
+        "key": "link_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_6",
+        "key": "poe_a_st_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_6",
+        "key": "poe_a_v_6",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_6",
+        "key": "poe_a_c_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_7",
+        "key": "link_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_7",
+        "key": "poe_a_st_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_7",
+        "key": "poe_a_v_7",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_7",
+        "key": "poe_a_c_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "версия платы",
+        "key": "версия платы",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "ID микросхемы PoE контроллера",
+        "key": "ID микросхемы PoE контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "ID микросхемы Switch контроллера",
+        "key": "ID микросхемы Switch контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "присутствие SFP9",
+        "key": "присутствие SFP9",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "присутствие SFP10",
+        "key": "присутствие SFP10",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "напряжение АКБ",
+        "key": "напряжение АКБ",
+        "source": "Entry",
+        "format": "FixedSix"
+      }
+    ]
+  },
+  "useCatalogSerials": true
 }

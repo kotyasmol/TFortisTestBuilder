@@ -30,7 +30,7 @@ public class K5StateWaitingTests
         {
             using var uiBus = new ModbusService();
             using var vm = new TestViewModel(uiBus, new SlaveManager(uiBus));
-            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL_SW_board.json"));
+            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 10.11.json"));
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             Assert.Equal(1000, vm.RootGraph.Hardware!.PollIntervalMs);
             var k5 = BoardProfileTests.All(vm.RootGraph).OfType<SubtestNodeViewModel>().Where(n => n.Name.StartsWith("K5 ") && !n.Name.Contains("пять")).ToArray();

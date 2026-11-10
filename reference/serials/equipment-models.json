@@ -466,12 +466,22 @@
     {
       "id": "rtl-poe",
       "name": "RTL-POE",
-      "labelCode": 312
+      "labelCode": 312,
+      "serverDeviceType": "RTL-POE",
+      "rtlReport": {
+        "deviceType": 6,
+        "assignSerialOnReport": true
+      }
     },
     {
       "id": "rtl-sw",
       "name": "RTL-SW",
-      "labelCode": 313
+      "labelCode": 313,
+      "serverDeviceType": "RTL-SW",
+      "rtlReport": {
+        "deviceType": 5,
+        "assignSerialOnReport": false
+      }
     },
     {
       "id": "rkn-02",
