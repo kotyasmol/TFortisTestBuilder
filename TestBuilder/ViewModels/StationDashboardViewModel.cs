@@ -171,6 +171,15 @@ public partial class StationDashboardViewModel : ViewModelBase
         CurrentStage = succeeded ? "Готов к проверке" : "Подготовка не выполнена";
     }
 
+    internal void RejectRun(ExecutionFailure failure)
+    {
+        Headline = "Проверка не запущена";
+        Guidance = failure.Reason;
+        CurrentStage = "Ошибка графа";
+        ErrorCode = failure.Code;
+        NeedsAttention = true;
+    }
+
     public void NodeStarted(NodeViewModel node, TestContext context)
     {
         UpdateContext(context);

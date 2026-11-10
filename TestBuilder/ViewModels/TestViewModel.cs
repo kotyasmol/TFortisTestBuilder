@@ -1169,11 +1169,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
         if (!CanStartRun) return;
         TestingLogger.Clear();
-        await WithRunFileLogAsync(async () =>
-        {
-            if (ShouldPrepareForRun && !await PrepareProfileAsync(forTestRun: true)) return;
-            await ExecuteGraphAsync();
-        });
+        await WithRunFileLogAsync(() => ExecuteGraphAsync());
     }
 
     private async Task WithRunFileLogAsync(Func<Task> run)
@@ -1225,6 +1221,51 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             return;
         }
 
+        using var compiler = new GraphCompiler(_modbusService, TestingLogger)
+        {
+            ProfileHardware = RootGraph.Hardware,
+            ProfileReportTemplate = RootGraph.ReportTemplate,
+            ConnectedStandPort = IsConnected ? SelectedPort : null
+        };
+        CompiledGraph[] graphs;
+        (EquipmentModel? Production, EquipmentModel? Legacy) serialModels;
+        try
+        {
+            serialModels = ResolveRunSerialModels();
+            if (preparing)
+            {
+                // Validate every preparation step before the first action.
+                graphs = preparation!.Nodes.Select(node =>
+                {
+                    GraphCompiler.ValidateRunConnections(RootGraph, RootGraph.Hardware, SelectedPort, node, true);
+                    return compiler.Compile(RootGraph, node, singleNode: true);
+                }).ToArray();
+            }
+            else
+            {
+                GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
+                graphs = new[] { compiler.Compile(runWorkspace, runEntry, singleNode, slaveId is >= 1 and <= 247 ? (byte)slaveId.Value : null) };
+            }
+        }
+        catch (Exception ex)
+        {
+            const string step = "Проверка графа перед запуском";
+            var failure = new ExecutionFailure(step, ex.Message)
+            {
+                Code = TestErrorCodes.Resolve(ex, TestErrorCode.GraphInvalid)
+            };
+            DiagnosticLog.WriteException(step, ex);
+            TestingLogger.Error(failure.LogMessage, failure.Code);
+            Station.Prepare(RootGraph);
+            Station.RejectRun(failure);
+            StatusMessage = failure.Summary;
+            return;
+        }
+
+        // The main graph has already passed validation when automatic preparation starts.
+        if (!preparing && ShouldPrepareForRun &&
+            (!await PrepareProfileAsync(forTestRun: true) || !CanStartRun)) return;
+
         var profileName = CurrentProfileName;
         var profilePathForReportVariables = _currentProfilePath;
         var observedReportVariables = IsTraining || IsActionGraphEditor
@@ -1259,33 +1300,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         var executionStatus = ExecutionStatus.Failed;
         ExecutionFailure? runFailure = null;
         Dictionary<string, object>? preparedVariables = null;
-        (EquipmentModel? Production, EquipmentModel? Legacy) serialModels = default;
 
         try
         {
             if (partialRun) NavigateToGraph(runWorkspace);
             else ResetToRootGraph();
 
-            serialModels = ResolveRunSerialModels();
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
-
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger)
-            {
-                ProfileHardware = RootGraph.Hardware,
-                ProfileReportTemplate = RootGraph.ReportTemplate,
-                ConnectedStandPort = IsConnected ? SelectedPort : null
-            };
-            // Compile every preparation operation before performing the first hardware action.
-            var graphs = preparing ? preparation!.Nodes.Select(node =>
-            {
-                GraphCompiler.ValidateRunConnections(RootGraph, RootGraph.Hardware, SelectedPort, node, true);
-                return compiler.Compile(RootGraph, node, singleNode: true);
-            }).ToArray() : CompileRun();
-            CompiledGraph[] CompileRun()
-            {
-                GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
-                return new[] { compiler.Compile(runWorkspace, runEntry, singleNode, slaveId is >= 1 and <= 247 ? (byte)slaveId.Value : null) };
-            }
 
             var mainWindow = IsTraining ? TrainingDialogOwner?.Invoke() : Avalonia.Application.Current?.ApplicationLifetime
                 is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktopLife
@@ -1403,9 +1424,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         {
             runCleanup = true;
             runFailure = context?.CriticalFailure ?? context?.Failure ??
-                new ExecutionFailure(context == null ? "Подготовка графа" : "Выполнение графа", ex.Message)
+                new ExecutionFailure("Выполнение графа", ex.Message)
                 {
-                    Code = TestErrorCodes.Resolve(ex, context == null ? TestErrorCode.GraphInvalid : TestErrorCode.Unexpected)
+                    Code = TestErrorCodes.Resolve(ex, TestErrorCode.Unexpected)
                 };
             if (context != null)
             {

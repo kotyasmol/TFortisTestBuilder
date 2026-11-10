@@ -15,7 +15,7 @@ public class FailureShutdownViewTests
     [InlineData(true, false)]
     [InlineData(false, false)]
     [InlineData(false, true)]
-    public async Task PreparationFailureOrHandledCriticalFailure_StillRunsCleanup(bool malformedMain, bool cleanupFails)
+    public async Task PreparationFailureOrHandledCriticalFailure_StillRunsCleanup(bool duringPreparation, bool cleanupFails)
     {
         var marker = new StandInspectionStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".inspection"));
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
@@ -27,14 +27,16 @@ public class FailureShutdownViewTests
             var cleanup = MakeSubtest("Завершение", cleanupFails);
             cleanup.RunOnFailure = true;
             vm.RootGraph.Nodes.Add(cleanup);
-            if (!malformedMain)
-            {
-                var start = new StartNodeViewModel(); var fail = MakeSubtest("Основная проверка", true); var end = new EndNodeViewModel();
-                vm.RootGraph.Nodes.Add(start); vm.RootGraph.Nodes.Add(fail); vm.RootGraph.Nodes.Add(end);
-                vm.RootGraph.Connections.Add(new ConnectionViewModel(start.Output[0], fail.Input[0]));
-                // A graph can deliberately route a failed subtest to End. Critical failure still needs cleanup.
+            var start = new StartNodeViewModel();
+            var fail = MakeSubtest(duringPreparation ? "Настройка" : "Основная проверка", true);
+            fail.RunOnlyOnFirstRun = duringPreparation;
+            var end = new EndNodeViewModel();
+            vm.RootGraph.Nodes.Add(start); vm.RootGraph.Nodes.Add(fail); vm.RootGraph.Nodes.Add(end);
+            vm.RootGraph.Connections.Add(new ConnectionViewModel(start.Output[0], fail.Input[0]));
+            vm.RootGraph.Connections.Add(new ConnectionViewModel(fail.Output.Single(c => c.Title == "Success"), end.Input[0]));
+            // An explicit error route still needs cleanup when a subtest sets a critical failure.
+            if (!duringPreparation)
                 vm.RootGraph.Connections.Add(new ConnectionViewModel(fail.Output.Single(c => c.Title == "Error"), end.Input[0]));
-            }
             await vm.RunGraphCommand.ExecuteAsync(null);
             Assert.Contains(vm.TestingLogger.Entries, e => e.Message.Contains("Cleanup 'Завершение' начат"));
             Assert.False(vm.IsTestRunning); Assert.False(vm.Station.IsSuccessful);

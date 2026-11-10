@@ -24,7 +24,7 @@ namespace TestBuilder.Tests.Views;
 public class FailureCleanupOrderTests
 {
     [Fact]
-    public async Task GraphCompilationFailure_CanBuildReportWithCatalogServiceSerial()
+    public async Task EarlyRuntimeFailure_CanBuildReportWithCatalogServiceSerial()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(async () =>
@@ -36,24 +36,24 @@ public class FailureCleanupOrderTests
             vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-ups-box-8x2pro");
             Assert.True(vm.UseCatalogSerials);
             var start = new StartNodeViewModel();
-            var branch1 = new DelayNodeViewModel();
-            var branch2 = new DelayNodeViewModel();
+            var check = new CheckVariableEqualityNodeViewModel { VariableName = "missing-before-serial" };
+            var end = new EndNodeViewModel();
             var cleanup = new SubtestNodeViewModel { Name = "Отчёт при ошибке", RunOnFailure = true };
             var report = new BuildTestReportNodeViewModel();
             cleanup.BodyGraph.Nodes.Add(report);
             cleanup.BodyGraph.Connections.Add(new(cleanup.BodyGraph.Nodes.OfType<StartNodeViewModel>().Single().Output[0], report.In));
             cleanup.BodyGraph.Connections.Add(new(report.TrueOut, cleanup.BodyGraph.Nodes.OfType<EndNodeViewModel>().Single().Input[0]));
-            foreach (var node in new NodeViewModel[] { start, branch1, branch2, cleanup })
+            foreach (var node in new NodeViewModel[] { start, check, end, cleanup })
                 vm.RootGraph.Nodes.Add(node);
-            vm.RootGraph.Connections.Add(new(start.Output[0], branch1.Input[0]));
-            vm.RootGraph.Connections.Add(new(start.Output[0], branch2.Input[0]));
+            vm.RootGraph.Connections.Add(new(start.Output[0], check.Input[0]));
+            vm.RootGraph.Connections.Add(new(check.TrueOut, end.Input[0]));
             var settings = AppSettings.Instance;
             var stand = settings.StandId;
             settings.StandId = "TEST-STAND";
             try
             {
                 await vm.RunGraphCommand.ExecuteAsync(null);
-                Assert.Contains(vm.TestingLogger.Entries, entry => entry.Message.Contains("Подготовка графа"));
+                Assert.Contains(vm.TestingLogger.Entries, entry => entry.IsFailureSummary && entry.Message.Contains("missing-before-serial"));
                 Assert.Contains(vm.TestingLogger.Entries, entry => entry.Message.Contains("serial=3200001"));
                 Assert.False(vm.Station.IsSuccessful);
             }

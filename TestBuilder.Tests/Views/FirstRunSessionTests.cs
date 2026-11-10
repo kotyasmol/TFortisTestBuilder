@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
@@ -329,6 +330,42 @@ public class FirstRunSessionTests
             Assert.Equal(1, PreparationStarts(vm));
             Assert.True(vm.Station.IsSuccessful);
         }
+    });
+
+    [Fact]
+    public Task InvalidParallelSerialNode_BlocksAutomaticPreparationAndCleanup() => InSession(async () =>
+    {
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var prep = PreparationDelay();
+        var fork = new DelayNodeViewModel { Milliseconds = 0 };
+        Chain(vm.RootGraph, prep, fork);
+        var end = vm.RootGraph.Nodes.OfType<EndNodeViewModel>().Single();
+        var serial = new GetSerialNumberFromServerNodeViewModel();
+        var sibling = new DelayNodeViewModel { Milliseconds = 0 };
+        var cleanup = new SubtestNodeViewModel { Name = "Аварийное завершение", RunOnFailure = true };
+        Chain(cleanup.BodyGraph, new DelayNodeViewModel { Milliseconds = 0 });
+        foreach (var node in new NodeViewModel[] { serial, sibling, cleanup }) vm.RootGraph.Nodes.Add(node);
+        vm.RootGraph.Connections.Remove(vm.RootGraph.Connections.Single(c => ReferenceEquals(c.Source.Parent, fork)));
+        vm.RootGraph.Connections.Add(new(fork.Output[0], serial.Input[0]));
+        vm.RootGraph.Connections.Add(new(fork.Output[0], sibling.Input[0]));
+        vm.RootGraph.Connections.Add(new(serial.TrueOut, end.Input[0]));
+        vm.RootGraph.Connections.Add(new(sibling.Output[0], end.Input[0]));
+
+        await vm.RunGraphCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(0, PreparationStarts(vm));
+        Assert.False(prep.HasExecutionSucceeded);
+        Assert.False(vm.NeedsStandInspection);
+        Assert.True(vm.CanStartRun);
+        Assert.Equal("Проверка не запущена", vm.Station.Headline);
+        Assert.Equal(TestErrorCode.ParallelGraph, vm.Station.ErrorCode);
+        var error = Assert.Single(vm.TestingLogger.Entries.Where(entry => entry.IsFailureSummary));
+        Assert.Equal(TestErrorCode.ParallelGraph, error.Code);
+        Assert.Contains("Получение серийного номера", error.Message);
+        Assert.DoesNotContain(vm.TestingLogger.Entries, entry => entry.Message.StartsWith("[ШАГ] Cleanup '"));
+        Assert.DoesNotContain(vm.TestingLogger.Entries, entry => entry.Message.StartsWith("Запуск теста:"));
     });
 
     [Fact]

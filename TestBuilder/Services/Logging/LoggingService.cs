@@ -202,7 +202,7 @@ namespace TestBuilder.Services.Logging
         }
 
         private static string BuildHeaderLine(string? profileName)
-            => $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [INFO] [System] Запуск теста: {profileName ?? "Без имени профиля"}";
+            => $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [INFO] [System] Профиль проверки: {profileName ?? "Без имени профиля"}";
 
         private static string BuildLogLine(LogEntry entry)
             => $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.Level}] [{entry.Category}] {entry.DiagnosticText}";
