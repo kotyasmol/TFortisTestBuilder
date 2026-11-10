@@ -156,7 +156,9 @@ public class UsabilityTests
                     Assert.Equal(original, GraphSerializer.Serialize(vm.TestVM, "Исходный профиль"));
                 }
                 finally { hardware.Close(); Dispatcher.UIThread.RunJobs(); }
-                Assert.Equal(54, UserGuide.All.Count);
+                Assert.Equal(56, UserGuide.All.Count);
+                Assert.Equal("reference-catalog", Assert.Single(UserGuide.Search("Справочник изделий, плат и Modbus")).Id);
+                Assert.Equal("report-template", Assert.Single(UserGuide.Search("Выбрать строки и переменные отчёта")).Id);
                 foreach (var node in vm.TestVM.AvailableNodes.Concat(new[] { new BodyStartNodeViewModel(), (TestBuilder.ViewModels.NodifyVM.NodeViewModel)new BodyEndNodeViewModel() }))
                 {
                     var article = Assert.IsType<GuideArticle>(UserGuide.ForNode(node.GetType()));
@@ -174,7 +176,10 @@ public class UsabilityTests
                     Capture(guide, $"guide-node-{dark}");
                     search.Text = "нет-такой-статьи"; Layout(guide);
                     Assert.Contains(guide.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Ничего не найдено");
-                    File.WriteAllText(Path.Combine(Output(), "TFortis-инструкция.html"), UserGuide.ExportHtml());
+                    var exported = UserGuide.ExportHtml();
+                    Assert.Contains("id=\"reference-catalog\"", exported);
+                    Assert.Contains("id=\"report-template\"", exported);
+                    File.WriteAllText(Path.Combine(Output(), "TFortis-инструкция.html"), exported);
                 }
                 finally { guide.Close(); Dispatcher.UIThread.RunJobs(); }
                 foreach (var key in new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextMutedBrush" })
