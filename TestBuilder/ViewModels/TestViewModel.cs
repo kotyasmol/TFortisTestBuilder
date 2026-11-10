@@ -845,6 +845,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.Clear();
         RootGraph.QuickActions.Clear();
         RootGraph.RegisterIndicators.Clear();
+        RootGraph.ReportTemplate = null;
+        _reportVariableHistory.ClearDraft();
     }
 
     public void DeleteSelectedNodes()
@@ -1216,6 +1218,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         }
 
         var profileName = CurrentProfileName;
+        var profilePathForReportVariables = _currentProfilePath;
+        var observedReportVariables = IsTraining || IsActionGraphEditor
+            ? null : new System.Collections.Concurrent.ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+        void ObserveReportVariable(string name) => observedReportVariables?.TryAdd(name, 0);
         // Monotonic elapsed time includes pauses, operator actions and failure cleanup.
         var runTimer = System.Diagnostics.Stopwatch.StartNew();
 
@@ -1253,7 +1259,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             ClearExecutionHighlightsRecursive(RootGraph, clearResults: true);
 
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
+            using var compiler = new GraphCompiler(_modbusService, TestingLogger)
+            {
+                ProfileHardware = RootGraph.Hardware,
+                ProfileReportTemplate = RootGraph.ReportTemplate,
+                ConnectedStandPort = IsConnected ? SelectedPort : null
+            };
             // Compile every preparation operation before performing the first hardware action.
             var graphs = preparing ? preparation!.Nodes.Select(node =>
             {
@@ -1311,6 +1322,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 }
             };
 
+            if (observedReportVariables != null) context.Variables.ObserveAssignment = ObserveReportVariable;
             if (!preparing && !partialRun)
                 foreach (var pair in _profilePreparationVariables)
                     context.SetVariable(pair.Key, ParallelVariableSnapshot.Clone(pair.Value));
@@ -1397,6 +1409,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };
+                if (observedReportVariables != null) context.Variables.ObserveAssignment = ObserveReportVariable;
                 IsStopping = true;
                 IsTestPaused = false;
                 IsPauseEffective = false;
@@ -1447,6 +1460,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 }
             }
 
+            if (observedReportVariables is { IsEmpty: false })
+                _reportVariableHistory.Remember(profilePathForReportVariables, observedReportVariables.Keys);
             runTimer.Stop();
             if (preparing)
             {
@@ -1533,7 +1548,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         try
         {
-            using var compiler = new GraphCompiler(_modbusService, TestingLogger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null };
+            using var compiler = new GraphCompiler(_modbusService, TestingLogger)
+            {
+                ProfileHardware = RootGraph.Hardware,
+                ProfileReportTemplate = RootGraph.ReportTemplate,
+                ConnectedStandPort = IsConnected ? SelectedPort : null
+            };
 
             foreach (var cleanupNode in cleanupNodes)
             {
@@ -2057,6 +2077,11 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
             var revision = await ProfileFileStorage.WriteAsync(filePath, json, createNew, expectedRevision);
 
+            if (_currentProfilePath == null && !IsTraining)
+            {
+                _reportVariableHistory.Remember(filePath, _reportVariableHistory.Read(profilePath: null));
+                _reportVariableHistory.ClearDraft();
+            }
             _currentProfilePath = filePath;
             _savedProfileName = profileName;
             _savedProfileRevision = revision;

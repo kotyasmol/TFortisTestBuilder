@@ -32,8 +32,10 @@ namespace TestBuilder.Services
         private readonly HashSet<GraphWorkspaceViewModel> _compiling = new();
         private readonly List<string> _graphNames = new();
         public HardwareConfiguration? ProfileHardware { get; init; }
+        public ReportTemplate? ProfileReportTemplate { get; init; }
         public string? ConnectedStandPort { get; init; }
         private HardwareConfiguration? _activeHardware;
+        private ReportTemplate? _activeReportTemplate;
 
         public static void ValidateConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware)
         {
@@ -113,7 +115,13 @@ namespace TestBuilder.Services
         private CompiledGraph CompileGraph(GraphWorkspaceViewModel graph, NodeViewModel? entry, bool singleNode,
             IReadOnlyCollection<byte>? currentSlaves)
         {
-            if (_compiling.Count == 0) _activeHardware = ProfileHardware ?? graph.Hardware;
+            if (_compiling.Count == 0)
+            {
+                _activeHardware = ProfileHardware ?? graph.Hardware;
+                _activeReportTemplate = ProfileReportTemplate ?? graph.ReportTemplate;
+                if (_activeReportTemplate?.Validate() is { } error)
+                    throw new InvalidOperationException(error);
+            }
             if (!_compiling.Add(graph))
                 throw new InvalidOperationException($"Граф '{graph.Title}' содержит рекурсивное вложение.");
             _graphNames.Add(graph.Title);
@@ -248,7 +256,7 @@ namespace TestBuilder.Services
                 BuildMacFromSerialNodeViewModel buildMac => buildMac.CreateStep(_logger),
                 CompareVariablesNodeViewModel compareVariables => compareVariables.CreateStep(_logger),
                 WaitVariableUntilNodeViewModel waitVariable => waitVariable.CreateStep(_httpRequestService, _logger),
-                BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger),
+                BuildTestReportNodeViewModel buildReport => buildReport.CreateStep(_logger, _activeReportTemplate),
                 PrintLabelNodeViewModel printLabel => printLabel.CreateStep(_logger, LabelPrinter),
                 SendTestReportNodeViewModel report => report.CreateStep(_logger, ReportClientFactory),
                 SubtestNodeViewModel subtest => CreateSubtestStep(subtest, currentSlaves),

@@ -1015,7 +1015,8 @@ public class ProductionStepTests
             1,
             true,
             useBrowserForSelftest: false,
-            reportName: "напряжение АКБ");
+            reportName: "напряжение АКБ",
+            resultVariableName: "Report.BatteryVoltage");
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
@@ -1029,6 +1030,8 @@ public class ProductionStepTests
             1000, "DutAfterMac", "init_ok=1..1", failOnError: true, useBrowser: false);
         Assert.Equal(StepResult.True, await laterSnapshot.ExecuteAsync(context, CancellationToken.None));
         Assert.Equal("0.0", context.GetVariable<string>("DutAfterMac.akb_voltage"));
+        Assert.Equal(true, context.Variables["Report.BatteryVoltage.Passed"]);
+        Assert.Equal("24.5", context.Variables["Report.BatteryVoltage.Value"]);
 
         context.SetVariable("SerialNumber", 3200123);
         var reportStep = new BuildTestReportStep(NullLogger.Instance, "TestReportText", "APK03-01", "SerialNumber",

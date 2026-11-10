@@ -131,7 +131,13 @@ public partial class TestViewModel
             if (GraphConnectionRequirements.RequiresStandConnection(graph) && !IsConnected)
                 throw new InvalidOperationException("Подключитесь к стенду для выполнения этой кнопки.");
             logger.Info(turnOff ? "Выключение начато." : "Действие начато.");
-            using var compiler = new GraphCompiler(_modbusService, logger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null, LabelPrinter = ActionLabelPrinter };
+            using var compiler = new GraphCompiler(_modbusService, logger)
+            {
+                ProfileHardware = RootGraph.Hardware,
+                ProfileReportTemplate = RootGraph.ReportTemplate,
+                ConnectedStandPort = IsConnected ? SelectedPort : null,
+                LabelPrinter = ActionLabelPrinter
+            };
             GraphCompiler.ValidateRunConnections(graph, RootGraph.Hardware, IsConnected ? SelectedPort : null);
             var compiled = compiler.Compile(graph);
             var context = new TestContext(_registerState) {

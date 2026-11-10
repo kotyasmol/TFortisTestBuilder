@@ -24,6 +24,7 @@ namespace TestBuilder.Domain.Steps
         private readonly int _readIntervalMs;
         private readonly ILogger _logger;
         private readonly string _reportName;
+        private readonly string _resultVariableName;
 
         public CheckRegisterRangeStep(
             byte slaveId,
@@ -35,10 +36,12 @@ namespace TestBuilder.Domain.Steps
             IModbusService? modbusService = null,
             bool liveRead = false,
             int readAttempts = 1,
-            int readIntervalMs = 0, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding, string reportName = "")
+            int readIntervalMs = 0, TestBuilder.Domain.Modbus.ModbusArea area = TestBuilder.Domain.Modbus.ModbusArea.Holding,
+            string reportName = "", string resultVariableName = "")
         {
             _area = area;
             _reportName = reportName;
+            _resultVariableName = resultVariableName;
             _slaveId = slaveId;
             _address = address;
             _min = min;
@@ -57,9 +60,12 @@ namespace TestBuilder.Domain.Steps
         {
             var actualSlaveId = ResolveSlaveId(context);
             var registerAddress = context.ModbusRegisters.FormatAddress(actualSlaveId, _address, _area);
+            var resultName = CheckResultCapture.ResolveName(_resultVariableName, actualSlaveId);
+            CheckResultCapture.Clear(context, resultName);
 
             if (actualSlaveId == null)
             {
+                CheckResultCapture.Save(context, resultName, false, null);
                 _logger.Warning(
                     $"[ШАГ] Проверка диапазона → устройство не задано, адрес {registerAddress}, диапазон [{_min}..{_max}].");
 
@@ -67,6 +73,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             int? lastLoggedValue = null;
+            int? lastMeasuredValue = null;
             for (var attempt = 1; attempt <= _readAttempts; attempt++)
             {
                 // The old stand waits before each of its three PoE reads.
@@ -78,9 +85,11 @@ namespace TestBuilder.Domain.Steps
 
                 if (read.Success)
                 {
+                    lastMeasuredValue = read.Value;
                     var inRange = read.Value >= _min && read.Value <= _max;
                     if (inRange || attempt == _readAttempts)
                     {
+                        CheckResultCapture.Save(context, resultName, inRange, read.Value);
                         if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, inRange, $"{read.Value}; диапазон {_min}..{_max}; {registerAddress}");
                         SavePoeMeasurement(context, actualSlaveId.Value, inRange,
                             System.FormattableString.Invariant($"{read.Value / 1000.0:F3} В; допуск {_min / 1000.0:F3}..{_max / 1000.0:F3} В"));
@@ -104,6 +113,7 @@ namespace TestBuilder.Domain.Steps
                 }
                 else if (attempt == _readAttempts)
                 {
+                    CheckResultCapture.Save(context, resultName, false, lastMeasuredValue);
                     SavePoeMeasurement(context, actualSlaveId.Value, false, "Регистр не прочитан: " + read.Error);
                     if (!string.IsNullOrWhiteSpace(_reportName)) context.AddReportEntry(_reportName, false, read.Error);
                     _logger.Warning($"[ОШИБКА] Регистр не прочитан. Устройство {actualSlaveId}, адрес {registerAddress}: {read.Error}");

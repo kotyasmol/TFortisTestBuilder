@@ -12,6 +12,7 @@ using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 
 namespace TestBuilder.Services
@@ -44,6 +45,11 @@ namespace TestBuilder.Services
         private const string FirstRunPrefix = "First Run (v1): ";
         private const string ProfileOpenPrefix = "Profile Open (v2): ";
         private const string ReadSelftestFieldType = "Read Selftest Field (v1)";
+        private const string CaptureRegisterRangeType = "Check Register Range (capture v1)";
+        private const string CaptureVariableEqualityType = "Check Variable Equality (capture v1)";
+        private const string CaptureCompareVariablesType = "Compare Variables (capture v1)";
+        private const string CaptureWaitVariableType = "Wait Variable Until (capture v1)";
+        internal const string ReportStartType = "Start (report v1)";
         private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
             ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
                 ? type[FirstRunPrefix.Length..] : type ?? "";
@@ -63,12 +69,14 @@ namespace TestBuilder.Services
             DelayNodeViewModel => "Delay",
             LabelNodeViewModel => "Label",
             ModbusWriteNodeViewModel => "Write Register",
+            CheckRegisterRangeNodeViewModel check when !string.IsNullOrWhiteSpace(check.ResultVariableName) => CaptureRegisterRangeType,
             CheckRegisterRangeNodeViewModel => "Check Register Range",
             WaitUntilNodeViewModel => "Wait Until",
             OperatorActionNodeViewModel o => string.IsNullOrWhiteSpace(o.InputVariable) ? "Operator Action" : "Operator Input (v1)",
             SelfTestCheckNodeViewModel { IsReadingField: true } => ReadSelftestFieldType,
             SelfTestCheckNodeViewModel { RequiresTimingVersion: true } => "Selftest Check (timing v1)",
             SelfTestCheckNodeViewModel => "Selftest Check",
+            CheckVariableEqualityNodeViewModel check when !string.IsNullOrWhiteSpace(check.ResultVariableName) => CaptureVariableEqualityType,
             CheckVariableEqualityNodeViewModel => "Check Variable Equality",
             CheckVariableRangeNodeViewModel => "Check Variable Range",
             ClearArpCacheNodeViewModel => "Clear ARP Cache",
@@ -79,7 +87,9 @@ namespace TestBuilder.Services
             RunDataTestNodeViewModel => "Run Data Test",
             ReadHttpVariableNodeViewModel => "Read HTTP Variable",
             BuildMacFromSerialNodeViewModel => "Build MAC From Serial",
+            CompareVariablesNodeViewModel compare when !string.IsNullOrWhiteSpace(compare.ResultVariableName) => CaptureCompareVariablesType,
             CompareVariablesNodeViewModel => "Compare Variables",
+            WaitVariableUntilNodeViewModel wait when !string.IsNullOrWhiteSpace(wait.ResultVariableName) => CaptureWaitVariableType,
             WaitVariableUntilNodeViewModel wait when !string.IsNullOrWhiteSpace(wait.ReportName) => "Wait Variable Until (report v1)",
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
             BuildTestReportNodeViewModel => "Build Test Report",
@@ -130,10 +140,20 @@ namespace TestBuilder.Services
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (action state v1)";
             if (vm.RootGraph.QuickActions.Any(a => a.Labels != null))
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = "Start (action labels v1)";
+            dto.ReportTemplate = ValidateReportTemplate(vm.RootGraph.ReportTemplate);
+            if (dto.ReportTemplate != null)
+                foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = ReportStartType;
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
             return JsonSerializer.Serialize(dto, JsonOptions);
+        }
+
+        private static ReportTemplate? ValidateReportTemplate(ReportTemplate? template)
+        {
+            if (template?.Validate() is { } error)
+                throw new InvalidOperationException(error);
+            return template;
         }
 
         private static bool RequiresBoardRuntime(GraphWorkspaceViewModel graph) => graph.Nodes.Any(n =>
@@ -232,6 +252,7 @@ namespace TestBuilder.Services
                         n.ReadAttempts = c.ReadAttempts;
                         n.ReadIntervalMs = c.ReadIntervalMs;
                         n.ReportName = c.ReportName;
+                        n.ResultVariableName = string.IsNullOrWhiteSpace(c.ResultVariableName) ? null : c.ResultVariableName.Trim();
                         break;
 
                     case WaitUntilNodeViewModel w:
@@ -268,6 +289,7 @@ namespace TestBuilder.Services
                         n.ExpectedValue = v.ExpectedValue;
                         n.ComparisonType = v.ComparisonType.ToString();
                         n.FailMessage = v.FailMessage;
+                        n.ResultVariableName = string.IsNullOrWhiteSpace(v.ResultVariableName) ? null : v.ResultVariableName.Trim();
                         break;
 
                     case CheckVariableRangeNodeViewModel r:
@@ -371,6 +393,7 @@ namespace TestBuilder.Services
                         n.RightVariableName = cv.RightVariableName;
                         n.ComparisonType = cv.ComparisonType.ToString();
                         n.FailMessage = cv.FailMessage;
+                        n.ResultVariableName = string.IsNullOrWhiteSpace(cv.ResultVariableName) ? null : cv.ResultVariableName.Trim();
                         break;
 
                     case WaitVariableUntilNodeViewModel wait:
@@ -386,6 +409,7 @@ namespace TestBuilder.Services
                         n.IntervalMs = wait.IntervalMs;
                         n.FailOnTimeout = wait.FailOnTimeout;
                         n.ReportName = string.IsNullOrWhiteSpace(wait.ReportName) ? null : wait.ReportName.Trim();
+                        n.ResultVariableName = string.IsNullOrWhiteSpace(wait.ResultVariableName) ? null : wait.ResultVariableName.Trim();
                         break;
 
                     case BuildTestReportNodeViewModel br:
@@ -487,6 +511,7 @@ namespace TestBuilder.Services
             vm.DiscardRootGraphContents();
             SetExtensions(vm.RootGraph, dto.ExtensionData);
             vm.RootGraph.PingMonitor = dto.PingMonitor?.Copy();
+            vm.RootGraph.ReportTemplate = loaded.ReportTemplate;
             vm.RootGraph.Title = loaded.Title;
             vm.RootGraph.UpdatedAt = dto.UpdatedAt;
             vm.RootGraph.IsBodyGraph = false;
@@ -531,6 +556,7 @@ namespace TestBuilder.Services
             dto.Hardware?.Validate();
             dto.Board?.Validate();
             dto.PingMonitor?.Validate();
+            var reportTemplate = ValidateReportTemplate(dto.ReportTemplate);
             if (dto.ProductKind is not ("Switch" or "Board")) throw new InvalidOperationException("Неизвестный вид изделия.");
             RejectRemovedNodes(dto);
             // Parse the entire document before replacing the user's open graph.
@@ -540,6 +566,7 @@ namespace TestBuilder.Services
             {
                 DeserializeGraph(dto, loaded, isBodyGraph: false);
                 loaded.Hardware = dto.Hardware;
+                loaded.ReportTemplate = reportTemplate;
                 foreach (var indicator in dto.RegisterIndicators ?? new())
                 {
                     if (indicator == null) throw new InvalidOperationException("Некорректный индикатор регистра.");
@@ -569,13 +596,15 @@ namespace TestBuilder.Services
 
         internal static GraphDto ExportActionGraph(GraphWorkspaceViewModel graph)
         {
-            if (graph.QuickActions.Count != 0 || graph.RegisterIndicators.Count != 0 || graph.PingMonitor != null) throw new InvalidOperationException("Кнопки, индикаторы и пинг разрешены только в корневом профиле.");
+            if (graph.QuickActions.Count != 0 || graph.RegisterIndicators.Count != 0 || graph.PingMonitor != null || graph.ReportTemplate != null)
+                throw new InvalidOperationException("Кнопки, индикаторы, пинг и состав отчёта разрешены только в корневом профиле.");
             ValidateRegisterIndicators(graph);
             return SerializeGraph(graph, graph.Title);
         }
         internal static GraphWorkspaceViewModel ImportActionGraph(GraphDto dto, TestBuilder.Domain.Modbus.HardwareConfiguration? hardware = null)
         {
-            if (dto == null || dto.QuickActions?.Count > 0 || dto.RegisterIndicators?.Count > 0 || dto.PingMonitor != null) throw new InvalidOperationException("Некорректный граф кнопки.");
+            if (dto == null || dto.QuickActions?.Count > 0 || dto.RegisterIndicators?.Count > 0 || dto.PingMonitor != null || dto.ReportTemplate != null)
+                throw new InvalidOperationException("Некорректный граф кнопки.");
             RejectRemovedNodes(dto);
             var graph = new GraphWorkspaceViewModel();
             try { DeserializeGraph(dto, graph, false); graph.Hardware = hardware; GraphCompiler.ValidateConnections(graph, hardware); return graph; }
@@ -604,8 +633,8 @@ namespace TestBuilder.Services
             }
             foreach (var composite in graph.Nodes.OfType<ICompositeNodeViewModel>())
             {
-                if (composite.BodyGraph.RegisterIndicators.Count > 0 || composite.BodyGraph.PingMonitor != null)
-                    throw new InvalidOperationException("Индикаторы и пинг разрешены только в корневом профиле.");
+                if (composite.BodyGraph.RegisterIndicators.Count > 0 || composite.BodyGraph.PingMonitor != null || composite.BodyGraph.ReportTemplate != null)
+                    throw new InvalidOperationException("Индикаторы, пинг и состав отчёта разрешены только в корневом профиле.");
                 ValidateRegisterIndicators(composite.BodyGraph);
             }
         }
@@ -642,13 +671,14 @@ namespace TestBuilder.Services
                 };
                 if (replacement != null)
                     throw new InvalidOperationException($"Нода '{type}' удалена. Обновите профиль: используйте {replacement}.");
-                if ((type is "Wait Variable Until" or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
+                if ((type is "Wait Variable Until" or CaptureWaitVariableType or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной") &&
                     node.PollAction?.Trim().ToLowerInvariant() is "getupsstatus" or "getupsvoltage" or "getirpstatus")
                     throw new InvalidOperationException($"Режим опроса '{node.PollAction}' удалён. Обновите Wait Variable Until: используйте HttpGet с явно заданными endpoint и типом ответа.");
                 if (node.BodyGraph?.QuickActions?.Count > 0 || node.Body?.QuickActions?.Count > 0 ||
                     node.BodyGraph?.RegisterIndicators?.Count > 0 || node.Body?.RegisterIndicators?.Count > 0 ||
-                    node.BodyGraph?.PingMonitor != null || node.Body?.PingMonitor != null)
-                    throw new InvalidOperationException("Кнопки, индикаторы и пинг разрешены только в корневом профиле.");
+                    node.BodyGraph?.PingMonitor != null || node.Body?.PingMonitor != null ||
+                    node.BodyGraph?.ReportTemplate != null || node.Body?.ReportTemplate != null)
+                    throw new InvalidOperationException("Кнопки, индикаторы, пинг и состав отчёта разрешены только в корневом профиле.");
                 if (node.BodyGraph != null) RejectRemovedNodes(node.BodyGraph);
                 if (node.Body != null) RejectRemovedNodes(node.Body);
             }
@@ -675,7 +705,7 @@ namespace TestBuilder.Services
                 type = UnwrapNodeType(type);
                 NodeViewModel node = type switch
                 {
-                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" => new StartNodeViewModel { Location = location },
+                    "Start" or "Старт" or "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" or ReportStartType => new StartNodeViewModel { Location = location },
 
                     "End" or "Конец" => new EndNodeViewModel { Location = location },
 
@@ -699,7 +729,7 @@ namespace TestBuilder.Services
 
                     "Write Register" or "WriteRegister" or "Запись регистра" => CreateModbusWriteNode(n, location),
 
-                    "Check Register Range" or "Проверка диапазона" => CreateCheckRangeNode(n, location),
+                    "Check Register Range" or CaptureRegisterRangeType or "Проверка диапазона" => CreateCheckRangeNode(n, location),
 
                     ReadSelftestFieldType or "Selftest Check" or "Selftest Check (timing v1)" or "SELFTEST_CHECK" or "Проверка selftest" => new SelfTestCheckNodeViewModel
                     {
@@ -719,13 +749,14 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
-                    "Check Variable Equality" or "CheckVariableEquality" or "CHECK_VARIABLE_EQUALITY" or "Проверка переменной" => new CheckVariableEqualityNodeViewModel
+                    "Check Variable Equality" or CaptureVariableEqualityType or "CheckVariableEquality" or "CHECK_VARIABLE_EQUALITY" or "Проверка переменной" => new CheckVariableEqualityNodeViewModel
                     {
                         Location = location,
                         VariableName = n.VariableName ?? "Dut.init_ok",
                         ExpectedValue = GetExpectedValueAsString(n.ExpectedValue, "1"),
                         ComparisonType = ParseComparisonType(n.ComparisonType),
-                        FailMessage = n.FailMessage ?? string.Empty
+                        FailMessage = n.FailMessage ?? string.Empty,
+                        ResultVariableName = GetCaptureName(n, CaptureVariableEqualityType)
                     },
 
                     "Check Variable Range" or "CHECK_VARIABLE_RANGE" or "Проверка диапазона переменной" => new CheckVariableRangeNodeViewModel
@@ -841,16 +872,17 @@ namespace TestBuilder.Services
                         FailOnError = n.FailOnError ?? true
                     },
 
-                    "Compare Variables" or "COMPARE_VARIABLES" or "Сравнить переменные" => new CompareVariablesNodeViewModel
+                    "Compare Variables" or CaptureCompareVariablesType or "COMPARE_VARIABLES" or "Сравнить переменные" => new CompareVariablesNodeViewModel
                     {
                         Location = location,
                         LeftVariableName = n.LeftVariableName ?? "Dut.default_mac",
                         RightVariableName = n.RightVariableName ?? "Dut.NewMac",
                         ComparisonType = ParseComparisonType(n.ComparisonType),
-                        FailMessage = n.FailMessage ?? string.Empty
+                        FailMessage = n.FailMessage ?? string.Empty,
+                        ResultVariableName = GetCaptureName(n, CaptureCompareVariablesType)
                     },
 
-                    "Wait Variable Until" or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной" => new WaitVariableUntilNodeViewModel
+                    "Wait Variable Until" or CaptureWaitVariableType or "Wait Variable Until (report v1)" or "WAIT_VARIABLE_UNTIL" or "Ожидание переменной" => new WaitVariableUntilNodeViewModel
                     {
                         Location = location,
                         VariableName = n.VariableName ?? "Dut.ups_rez",
@@ -864,7 +896,8 @@ namespace TestBuilder.Services
                         TimeoutMs = n.TimeoutMs ?? 160000,
                         IntervalMs = n.IntervalMs ?? 5000,
                         FailOnTimeout = n.FailOnTimeout ?? true,
-                        ReportName = n.ReportName ?? string.Empty
+                        ReportName = n.ReportName ?? string.Empty,
+                        ResultVariableName = GetCaptureName(n, CaptureWaitVariableType)
                     },
 
                     "Build Test Report" or "BUILD_TEST_REPORT" or "Собрать отчёт" => new BuildTestReportNodeViewModel
@@ -1027,12 +1060,21 @@ namespace TestBuilder.Services
                 LiveRead = n.LiveRead ?? false,
                 ReadAttempts = n.ReadAttempts ?? 1,
                 ReadIntervalMs = n.ReadIntervalMs ?? 0,
-                ReportName = n.ReportName ?? ""
+                ReportName = n.ReportName ?? "",
+                ResultVariableName = GetCaptureName(n, CaptureRegisterRangeType)
             };
 
             node.RestoreSelections();
 
             return node;
+        }
+
+        private static string GetCaptureName(NodeDto node, string captureType)
+        {
+            if (!string.IsNullOrWhiteSpace(node.ResultVariableName)) return node.ResultVariableName.Trim();
+            if (UnwrapNodeType(string.IsNullOrWhiteSpace(node.Type) ? node.NodeType : node.Type) == captureType)
+                throw new InvalidOperationException($"Укажите переменную результата для ноды «{node.Name ?? node.Type}».");
+            return string.Empty;
         }
 
         private static WaitUntilNodeViewModel CreateWaitUntilNode(NodeDto n, Point location)

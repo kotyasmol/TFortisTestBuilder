@@ -23,6 +23,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int intervalMs = 5000;
         [ObservableProperty] private bool failOnTimeout = true;
         [ObservableProperty] private string reportName = "";
+        [ObservableProperty] private string resultVariableName = "";
 
         public IReadOnlyList<string> PollActions { get; } =
             Array.AsReadOnly(new[] { "HttpReachable", "SelftestSnapshot", "HttpGet", "None" });
@@ -62,7 +63,8 @@ namespace TestBuilder.ViewModels.StepVM
                 TimeoutMs,
                 IntervalMs,
                 FailOnTimeout,
-                reportName: ReportName);
+                reportName: ReportName,
+                resultVariableName: ResultVariableName);
 
         public override NodeViewModel Clone() => new WaitVariableUntilNodeViewModel
         {
@@ -77,7 +79,8 @@ namespace TestBuilder.ViewModels.StepVM
             TimeoutMs = TimeoutMs,
             IntervalMs = IntervalMs,
             FailOnTimeout = FailOnTimeout,
-            ReportName = ReportName
+            ReportName = ReportName,
+            ResultVariableName = ResultVariableName
         };
     }
 }

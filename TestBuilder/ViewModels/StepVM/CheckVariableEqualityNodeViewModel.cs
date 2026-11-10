@@ -20,6 +20,9 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty]
         private string failMessage = string.Empty;
 
+        [ObservableProperty]
+        private string resultVariableName = string.Empty;
+
         public ConnectorViewModel In { get; }
 
         public ConnectorViewModel TrueOut { get; }
@@ -60,7 +63,8 @@ namespace TestBuilder.ViewModels.StepVM
                 VariableName,
                 ExpectedValue,
                 ComparisonType,
-                FailMessage);
+                FailMessage,
+                ResultVariableName);
         }
 
         public override NodeViewModel Clone() => new CheckVariableEqualityNodeViewModel
@@ -68,7 +72,8 @@ namespace TestBuilder.ViewModels.StepVM
             VariableName = VariableName,
             ExpectedValue = ExpectedValue,
             ComparisonType = ComparisonType,
-            FailMessage = FailMessage
+            FailMessage = FailMessage,
+            ResultVariableName = ResultVariableName
         };
     }
 }

@@ -12,6 +12,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string rightVariableName = "Dut.NewMac";
         [ObservableProperty] private VariableComparisonType comparisonType = VariableComparisonType.MacAddress;
         [ObservableProperty] private string failMessage = string.Empty;
+        [ObservableProperty] private string resultVariableName = string.Empty;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -31,14 +32,15 @@ namespace TestBuilder.ViewModels.StepVM
         }
 
         public ITestStep CreateStep(ILogger logger) =>
-            new CompareVariablesStep(logger, LeftVariableName, RightVariableName, ComparisonType, FailMessage);
+            new CompareVariablesStep(logger, LeftVariableName, RightVariableName, ComparisonType, FailMessage, ResultVariableName);
 
         public override NodeViewModel Clone() => new CompareVariablesNodeViewModel
         {
             LeftVariableName = LeftVariableName,
             RightVariableName = RightVariableName,
             ComparisonType = ComparisonType,
-            FailMessage = FailMessage
+            FailMessage = FailMessage,
+            ResultVariableName = ResultVariableName
         };
     }
 }

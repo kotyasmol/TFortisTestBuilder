@@ -107,6 +107,25 @@ public class FullProfileSerializationTests
         Assert.NotNull(new GraphCompiler(modbus, NullLogger.Instance).Compile(vm.RootGraph));
     }
 
+    [Theory]
+    [InlineData("Check Register Range (capture v1)")]
+    [InlineData("Check Variable Equality (capture v1)")]
+    [InlineData("Compare Variables (capture v1)")]
+    [InlineData("Wait Variable Until (capture v1)")]
+    public void ResultCaptureTypeRequiresName(string type)
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            name = "capture",
+            nodes = new[] { new { id = "0", type, x = 0, y = 0 } },
+            connections = Array.Empty<object>()
+        });
+        using var modbus = new ModbusService();
+        using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
+        var error = Assert.Throws<InvalidOperationException>(() => GraphSerializer.Deserialize(json, vm));
+        Assert.Contains("Укажите переменную результата", error.Message);
+    }
+
     [Fact]
     public void CustomLabelTemplateTravelsWithProfileAndClone()
     {

@@ -91,6 +91,7 @@ namespace TestBuilder.Domain.Execution
                 WaitIfPausedAsync = WaitIfPausedAsync,
                 SelfTestPageState = SelfTestPageState
             };
+            branch.Variables.ObserveAssignment = Variables.ObserveAssignment;
             foreach (var pair in Variables)
             {
                 try { branch.Variables.Seed(pair.Key, ParallelVariableSnapshot.Clone(pair.Value)); }

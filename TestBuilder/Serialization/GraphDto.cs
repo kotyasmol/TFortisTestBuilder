@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 
 namespace TestBuilder.Serialization
@@ -45,6 +46,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("pingMonitor")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
+
+        [JsonPropertyName("reportTemplate")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ReportTemplate? ReportTemplate { get; set; }
 
         [JsonRequired, JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
@@ -170,6 +175,10 @@ namespace TestBuilder.Serialization
 
         [JsonPropertyName("reportName")]
         public string? ReportName { get; set; }
+
+        [JsonPropertyName("resultVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ResultVariableName { get; set; }
 
         [JsonPropertyName("readIntervalMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

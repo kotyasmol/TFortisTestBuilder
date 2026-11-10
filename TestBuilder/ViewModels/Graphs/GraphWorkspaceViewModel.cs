@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Graph;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -13,6 +14,7 @@ namespace TestBuilder.ViewModels.Graphs
         public ObservableCollection<TestBuilder.Models.ProfileActionDefinition> QuickActions { get; } = new();
         public ObservableCollection<TestBuilder.Models.RegisterIndicatorDefinition> RegisterIndicators { get; } = new();
         public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
+        public ReportTemplate? ReportTemplate { get; set; }
         public string Title { get; set; } = "Граф";
         public System.DateTimeOffset? UpdatedAt { get; set; }
 

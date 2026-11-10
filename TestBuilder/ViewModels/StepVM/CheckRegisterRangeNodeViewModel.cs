@@ -25,6 +25,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private int readAttempts = 1;
         [ObservableProperty] private int readIntervalMs;
         [ObservableProperty] private string reportName = "";
+        [ObservableProperty] private string resultVariableName = "";
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -134,7 +135,7 @@ namespace TestBuilder.ViewModels.StepVM
                 modbusService,
                 LiveRead,
                 ReadAttempts,
-                ReadIntervalMs, RegisterArea, ReportName);
+                ReadIntervalMs, RegisterArea, ReportName, ResultVariableName);
         }
 
         public override NodeViewModel Clone() => new CheckRegisterRangeNodeViewModel
@@ -148,7 +149,8 @@ namespace TestBuilder.ViewModels.StepVM
             LiveRead = LiveRead,
             ReadAttempts = ReadAttempts,
             ReadIntervalMs = ReadIntervalMs,
-            ReportName = ReportName
+            ReportName = ReportName,
+            ResultVariableName = ResultVariableName
         };
     }
 }

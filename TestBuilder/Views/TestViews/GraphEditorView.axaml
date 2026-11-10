@@ -242,6 +242,9 @@
           <Button Command="{Binding ClearGraphCommand}" Content="Очистить граф" ToolTip.Tip="Удалить все ноды графа" Padding="9,8" />
           <Button Content="Пинг" Click="OnConfigurePing" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
                   ToolTip.Tip="Адрес, период опроса и отображение в профиле" AutomationProperties.Name="Настройки пинга профиля" Padding="9,8" />
+          <Button Content="Состав отчёта…" Click="OnConfigureReportTemplate"
+                  IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
+                  ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" Padding="9,8" />
           <Button Content="Аварийные действия" Click="OnConfigureFailureCleanup"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
                   ToolTip.Tip="Порядок выполнения при ошибке и остановке" AutomationProperties.Name="Порядок аварийных действий" Padding="9,8" />
@@ -668,6 +671,8 @@
                       <TextBlock Grid.Column="0" Text="Сообщение об ошибке:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
                       <TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" />
                     </Grid>
+                    <TextBox Text="{Binding ResultVariableName}" Watermark="Переменная результата" FontSize="{StaticResource FontCaption}"
+                             ToolTip.Tip="Необязательно. Сохраняет значения .Passed и .Value для отчёта." />
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
@@ -795,6 +800,8 @@
                     </Grid>
                     <TextBlock Text="Измерение в отчёте (необязательно):" FontSize="{StaticResource FontCaption}" />
                     <TextBox Text="{Binding ReportName}" Watermark="Название измерения" FontSize="{StaticResource FontCaption}" />
+                    <TextBox Text="{Binding ResultVariableName}" Watermark="Переменная результата" FontSize="{StaticResource FontCaption}"
+                             ToolTip.Tip="Сохраняет .Passed и .Value. В цикле подставляет номер устройства вместо {slaveId}." />
 
                     <Grid ColumnDefinitions="108,*">
                       <TextBlock Grid.Column="0" Text="Пауза, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
@@ -1559,6 +1566,8 @@
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Вторая переменная:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding RightVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Тип сравнения:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><ComboBox Grid.Column="1" FontSize="{StaticResource FontCaption}"  ItemsSource="{x:Static presentation:RussianUiOptions.ComparisonTypes}" SelectedItem="{Binding ComparisonType, Mode=TwoWay}" ItemTemplate="{StaticResource RussianOptionTemplate}" HorizontalAlignment="Stretch" /></Grid>
                     <Grid ColumnDefinitions="104,*"><TextBlock Grid.Column="0" Text="Сообщение об ошибке:" VerticalAlignment="Top" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding FailMessage}" FontSize="{StaticResource FontCaption}" TextWrapping="Wrap" AcceptsReturn="True" Height="52" /></Grid>
+                    <TextBox Text="{Binding ResultVariableName}" Watermark="Переменная результата" FontSize="{StaticResource FontCaption}"
+                             ToolTip.Tip="Необязательно. Сохраняет значения .Passed и .Value для отчёта." />
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>
@@ -1582,6 +1591,8 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Таймаут, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TimeoutMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Интервал, мс:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding IntervalMs}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Строка отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportName}" Watermark="Название измерения" FontSize="{StaticResource FontCaption}" /></Grid>
+                    <TextBox Text="{Binding ResultVariableName}" Watermark="Переменная результата" FontSize="{StaticResource FontCaption}"
+                             ToolTip.Tip="Необязательно. Сохраняет итог сравнения и последнее полученное значение." />
                     <CheckBox  IsChecked="{Binding FailOnTimeout}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Таймаут ведёт по выходу «Нет»" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
@@ -1599,7 +1610,8 @@
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная отчёта:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ReportVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="128,*"><TextBlock Grid.Column="0" Text="Тип проверки:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding TestType, Converter={StaticResource ServerTestType}, Mode=TwoWay}" FontSize="{StaticResource FontCaption}" /></Grid>
-                    <CheckBox  IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}" ><TextBlock Text="Включать все переменные" TextWrapping="Wrap" /></CheckBox>
+                    <CheckBox IsChecked="{Binding IncludeAllVariables}" FontSize="{StaticResource FontCaption}"
+                              ToolTip.Tip="Действует при автоматическом составе отчёта"><TextBlock Text="Включать все переменные" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>

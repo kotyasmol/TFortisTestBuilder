@@ -30,6 +30,7 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _failOnTimeout;
         private readonly bool _useBrowserForSelftest;
         private readonly string _reportName;
+        private readonly string _resultVariableName;
 
         public WaitVariableUntilStep(
             IHttpRequestService httpRequestService,
@@ -46,7 +47,8 @@ namespace TestBuilder.Domain.Steps
             int intervalMs,
             bool failOnTimeout,
             bool useBrowserForSelftest = true,
-            string reportName = "")
+            string reportName = "",
+            string resultVariableName = "")
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -63,6 +65,7 @@ namespace TestBuilder.Domain.Steps
             _failOnTimeout = failOnTimeout;
             _useBrowserForSelftest = useBrowserForSelftest;
             _reportName = reportName?.Trim() ?? string.Empty;
+            _resultVariableName = resultVariableName;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -71,7 +74,10 @@ namespace TestBuilder.Domain.Steps
             var deadline = started.AddMilliseconds(_timeoutMs);
             var attempt = 0;
             var lastActual = string.Empty;
+            string? measuredValue = null;
             var lastError = string.Empty;
+            var resultName = CheckResultCapture.ResolveName(_resultVariableName, context.CurrentSlaveId);
+            CheckResultCapture.Clear(context, resultName);
 
             _logger.Info($"[ШАГ] Ожидание переменной {_variableName} == {_expectedValue}, poll={_pollAction}, timeout={_timeoutMs} мс.");
 
@@ -95,7 +101,7 @@ namespace TestBuilder.Domain.Steps
                 if (string.IsNullOrWhiteSpace(pollResult) &&
                     context.Variables.TryGetValue(_variableName, out var actual))
                 {
-                    lastActual = ToInvariantString(actual);
+                    measuredValue = lastActual = ToInvariantString(actual);
                     _logger.Info($"[INFO] Poll {_pollAction}, попытка {attempt}: {_variableName}='{lastActual}', ожидалось '{_expectedValue}'.");
 
                     try
@@ -103,6 +109,7 @@ namespace TestBuilder.Domain.Steps
                         if (Compare(actual, _expectedValue, _comparisonType))
                         {
                             SaveState(context, true, attempt, lastActual, string.Empty);
+                            CheckResultCapture.Save(context, resultName, true, measuredValue);
                             if (_reportName.Length != 0)
                                 context.AddReportEntry(_reportName, true, lastActual);
                             _logger.Info($"[OK] Переменная {_variableName} достигла значения {_expectedValue} за {attempt} попыток.");
@@ -131,6 +138,7 @@ namespace TestBuilder.Domain.Steps
 
             var error = $"Таймаут ожидания {_variableName} == {_expectedValue}. Последнее значение: '{lastActual}'. {lastError}".Trim();
             SaveState(context, false, attempt, lastActual, error);
+            CheckResultCapture.Save(context, resultName, false, measuredValue);
             var reportName = _reportName.Length != 0 ? _reportName : $"Ожидание значения: {_variableName}";
             context.AddReportEntry(reportName, false, error);
             _logger.Warning($"[ОШИБКА] {error}");

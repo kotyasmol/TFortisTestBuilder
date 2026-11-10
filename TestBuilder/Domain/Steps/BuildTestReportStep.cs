@@ -22,6 +22,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _sessionId;
         private readonly string _testType;
         private readonly bool _includeAllVariables;
+        private readonly ReportTemplate? _template;
 
         public BuildTestReportStep(
             ILogger logger,
@@ -30,7 +31,8 @@ namespace TestBuilder.Domain.Steps
             string serialVariableName,
             string sessionId,
             string testType,
-            bool includeAllVariables)
+            bool includeAllVariables,
+            ReportTemplate? template = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _reportVariableName = string.IsNullOrWhiteSpace(reportVariableName)
@@ -43,11 +45,15 @@ namespace TestBuilder.Domain.Steps
             _sessionId = sessionId?.Trim() ?? string.Empty;
             _testType = string.IsNullOrWhiteSpace(testType) ? "production" : testType.Trim();
             _includeAllVariables = includeAllVariables;
+            _template = template;
         }
 
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (_template?.Validate() is { } error)
+                return Task.FromResult(Fail(context, error));
 
             if (string.IsNullOrWhiteSpace(_standId))
             {
@@ -78,27 +84,42 @@ namespace TestBuilder.Domain.Steps
                 AppendEntry(builder, "session", true, _sessionId);
             }
 
-            AppendEntry(builder, "Тип проверки", true, _testType);
-
-            foreach (var entry in entries)
+            if (_template != null)
             {
-                if (!string.IsNullOrWhiteSpace(entry.Name))
+                var selected = _template.Project(context, entries, _testType, _reportVariableName);
+                foreach (var entry in selected)
                 {
                     AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
                 }
-            }
 
-            if (_includeAllVariables)
-            {
-                foreach (var variable in context.Variables
-                             .Where(item => ShouldIncludeVariable(item.Key))
-                             .OrderBy(item => item.Key, StringComparer.Ordinal))
+                if (!successful && selected.All(entry => entry.IsSuccess))
                 {
-                    AppendEntry(
-                        builder,
-                        variable.Key,
-                        true, // Diagnostic values are not independent pass/fail criteria.
-                        FormatValue(variable.Value));
+                    var failedEntry = entries.FirstOrDefault(entry => !entry.IsSuccess);
+                    AppendEntry(builder, ReportTemplate.FailureLabel, false, FailureReason(context, failedEntry));
+                }
+            }
+            else
+            {
+                AppendEntry(builder, ReportField.TestTypeLabel, true, _testType);
+
+                foreach (var entry in entries)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Name))
+                        AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+                }
+
+                if (_includeAllVariables)
+                {
+                    foreach (var variable in context.Variables
+                                 .Where(item => ReportTemplate.IsLegacyReportVariable(item.Key, _reportVariableName))
+                                 .OrderBy(item => item.Key, StringComparer.Ordinal))
+                    {
+                        AppendEntry(
+                            builder,
+                            variable.Key,
+                            true, // Diagnostic values are not independent pass/fail criteria.
+                            ReportField.FormatText(variable.Value));
+                    }
                 }
             }
 
@@ -132,11 +153,22 @@ namespace TestBuilder.Domain.Steps
             return StepResult.False;
         }
 
-        private bool ShouldIncludeVariable(string name)
+        private static string FailureReason(TestContext context, TestReportEntry? failedEntry)
         {
-            return !string.Equals(name, _reportVariableName, StringComparison.Ordinal) &&
-                   !name.StartsWith("BuildReport.", StringComparison.Ordinal) &&
-                   !name.StartsWith("SendReport.", StringComparison.Ordinal);
+            // Cleanup can update the transient node failure. Use the cause retained from the test first.
+            if (context.GetVariable<string>("Execution.Error") is { Length: > 0 } reason)
+                return reason;
+            if ((context.CriticalFailure ?? context.Failure) is { } failure)
+                return failure.Summary;
+            if (context.GetVariable<string>("Execution.Status") == nameof(ExecutionStatus.Cancelled))
+                return "Проверка остановлена до завершения.";
+
+            return failedEntry switch
+            {
+                { Name.Length: > 0, Value.Length: > 0 } => $"{failedEntry.Name}: {failedEntry.Value}",
+                { Name.Length: > 0 } => failedEntry.Name,
+                _ => "Проверка завершилась с ошибкой."
+            };
         }
 
         private static string GetVariableText(TestContext context, string variableName)
@@ -149,18 +181,7 @@ namespace TestBuilder.Domain.Steps
                     .Value;
             }
 
-            return FormatValue(value);
-        }
-
-        private static string FormatValue(object? value)
-        {
-            return value switch
-            {
-                null => string.Empty,
-                bool boolean => boolean ? "true" : "false",
-                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
-                _ => value.ToString() ?? string.Empty
-            };
+            return ReportField.FormatText(value);
         }
 
         private static void AppendEntry(
@@ -170,20 +191,12 @@ namespace TestBuilder.Domain.Steps
             string value)
         {
             builder
-                .Append(Sanitize(name))
+                .Append(ReportField.SanitizeWireText(name))
                 .Append('=')
                 .Append(isSuccess ? "true" : "false")
                 .Append('=')
-                .Append(Sanitize(value))
+                .Append(ReportField.SanitizeWireText(value))
                 .Append("\r\n");
-        }
-
-        private static string Sanitize(string value)
-        {
-            return (value ?? string.Empty)
-                .Replace('\r', ' ')
-                .Replace('\n', ' ')
-                .Replace('=', ':');
         }
     }
 }
