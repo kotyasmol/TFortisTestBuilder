@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-10",
+  "models": [
+    {
+      "id": "psw-2g",
+      "name": "PSW-2G",
+      "labelCode": 1
+    },
+    {
+      "id": "psw-2g-ups",
+      "name": "PSW-2G-UPS",
+      "labelCode": 2
+    },
+    {
+      "id": "psw-2g-plus",
+      "name": "PSW-2G+",
+      "labelCode": 3
+    },
+    {
+      "id": "psw-1g4f",
+      "name": "PSW-1G4F",
+      "labelCode": 4
+    },
+    {
+      "id": "psw-2g4f",
+      "name": "PSW-2G4F",
+      "labelCode": 5
+    },
+    {
+      "id": "psw-2g6f-plus",
+      "name": "PSW-2G6F+",
+      "aliases": [
+        "PSW 2G6F plus"
+      ],
+      "labelCode": 6,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+",
+        "firstSerialNumber": 600000,
+        "lastSerialNumber": 665535,
+        "serialOffset": 600000,
+        "macPrefix": "C0:11:A6:06"
+      }
+    },
+    {
+      "id": "psw-2g8f-plus",
+      "name": "PSW-2G8F+",
+      "labelCode": 7
+    },
+    {
+      "id": "psw-1g4f-ups",
+      "name": "PSW-1G4F-UPS",
+      "labelCode": 8
+    },
+    {
+      "id": "psw-2g4f-ups",
+      "name": "PSW-2G4F-UPS",
+      "labelCode": 9
+    },
+    {
+      "id": "psw-2g-plus-ups-box",
+      "name": "PSW-2G+UPS-Box",
+      "labelCode": 10,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g2f-plus-ups",
+      "name": "PSW-2G2F+UPS",
+      "labelCode": 11
+    },
+    {
+      "id": "psw-2g8f-plus-ups-box",
+      "name": "PSW-2G8F+UPS-Box",
+      "labelCode": 12,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g4f-ex",
+      "name": "PSW-2G4F-Ex",
+      "labelCode": 13,
+      "labelVariants": {
+        "1": "K1",
+        "2": "DIN"
+      }
+    },
+    {
+      "id": "psw-1g4f-ex",
+      "name": "PSW-1G4F-Ex",
+      "labelCode": 15,
+      "labelVariants": {
+        "1": "K1",
+        "2": "DIN"
+      }
+    },
+    {
+      "id": "psw-2g-plus-ex",
+      "name": "PSW-2G+Ex",
+      "labelCode": 17,
+      "labelVariants": {
+        "1": "K1",
+        "2": "DIN"
+      }
+    },
+    {
+      "id": "psw-2g-plus-hot",
+      "name": "PSW-2G+Hot",
+      "labelCode": 19
+    },
+    {
+      "id": "psw-2g8f-plus-hot",
+      "name": "PSW-2G8F+Hot",
+      "labelCode": 20
+    },
+    {
+      "id": "psw-2g4f-box",
+      "name": "PSW-2G4F-Box",
+      "labelCode": 21,
+      "labelVariants": {
+        "0": "Fibox",
+        "1": "Plastim"
+      }
+    },
+    {
+      "id": "psw-1g4f-box",
+      "name": "PSW-1G4F-Box",
+      "labelCode": 22,
+      "labelVariants": {
+        "0": "Fibox",
+        "1": "Plastim"
+      }
+    },
+    {
+      "id": "psw-2g6f-plus-ups-box",
+      "name": "PSW-2G6F+UPS-Box",
+      "labelCode": 23,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g-plus-box",
+      "name": "PSW-2G+Box",
+      "labelCode": 24,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g6f-plus-box",
+      "name": "PSW-2G6F+Box",
+      "labelCode": 25,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g8f-plus-box",
+      "name": "PSW-2G8F+Box",
+      "labelCode": 26,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      }
+    },
+    {
+      "id": "psw-2g6f-plus-ex",
+      "name": "PSW-2G6F+Ex",
+      "labelCode": 27
+    },
+    {
+      "id": "psw-2g8f-plus-ex",
+      "name": "PSW-2G8F+Ex",
+      "labelCode": 28
+    },
+    {
+      "id": "psw-2g8f-plus-ups-ex",
+      "name": "PSW-2G8F+UPS-Ex",
+      "labelCode": 29
+    },
+    {
+      "id": "psw-2g-plus-ups-ex",
+      "name": "PSW-2G+UPS-Ex",
+      "labelCode": 30
+    },
+    {
+      "id": "psw-2g6f-plus-ups-ex",
+      "name": "PSW-2G6F+UPS-Ex",
+      "labelCode": 31
+    },
+    {
+      "id": "psw-ups-box-8x2pro",
+      "name": "PSW+UPS-Box 8x2Pro",
+      "aliases": [
+        "PSW UPS Box 8x2Pro",
+        "PSW-UPS-Box 8x2 Pro"
+      ],
+      "labelCode": 32,
+      "serialSeries": {
+        "serverDeviceType": "PSW+UPS-Box 8x2Pro",
+        "firstSerialNumber": 3200001,
+        "lastSerialNumber": 3265535,
+        "serialOffset": 3200000,
+        "macPrefix": "C0:11:A6:20",
+        "boardVersion": "PSW+UPS-Box 8x2Pro"
+      }
+    },
+    {
+      "id": "psw-plus-box-8x2pro",
+      "name": "PSW+Box 8x2Pro",
+      "labelCode": 33,
+      "serialSeries": {
+        "serverDeviceType": "PSW+Box 8x2Pro",
+        "firstSerialNumber": 3300001,
+        "lastSerialNumber": 3365535,
+        "serialOffset": 3300000,
+        "macPrefix": "C0:11:A6:21",
+        "boardVersion": "PSW+Box 8x2Pro"
+      }
+    },
+    {
+      "id": "psw-plus-ups-ex-8x2pro",
+      "name": "PSW+UPS-Ex 8x2Pro",
+      "labelCode": 34
+    },
+    {
+      "id": "psw-plus-ex-8x2pro",
+      "name": "PSW+Ex 8x2Pro",
+      "labelCode": 35
+    },
+    {
+      "id": "din-l2-plus-8x4pro",
+      "name": "DIN-L2+ 8x4Pro",
+      "labelCode": 36
+    },
+    {
+      "id": "psw-1",
+      "name": "PSW-1",
+      "labelCode": 100
+    },
+    {
+      "id": "psw-1-45",
+      "name": "PSW-1-45",
+      "labelCode": 101
+    },
+    {
+      "id": "psw-11",
+      "name": "PSW-11",
+      "labelCode": 102
+    },
+    {
+      "id": "fc-1",
+      "name": "FC-1",
+      "labelCode": 103
+    },
+    {
+      "id": "fc-1g",
+      "name": "FC-1G",
+      "labelCode": 104
+    },
+    {
+      "id": "fse-2g",
+      "name": "FSE-2G",
+      "labelCode": 105
+    },
+    {
+      "id": "fse-2c",
+      "name": "FSE-2C",
+      "labelCode": 106
+    },
+    {
+      "id": "fse-4b",
+      "name": "FSE-4B",
+      "labelCode": 107
+    },
+    {
+      "id": "fd-1h",
+      "name": "FD-1H",
+      "labelCode": 108
+    },
+    {
+      "id": "psw-1-45-wifi",
+      "name": "PSW-1-45-WiFi",
+      "labelCode": 109
+    },
+    {
+      "id": "swd-1",
+      "name": "SWD-1",
+      "labelCode": 110
+    },
+    {
+      "id": "pwr-48d",
+      "name": "PWR-48D",
+      "labelCode": 111
+    },
+    {
+      "id": "fc-2",
+      "name": "FC-2",
+      "labelCode": 112
+    },
+    {
+      "id": "sg-switch",
+      "name": "SG-Switch",
+      "labelCode": 113
+    },
+    {
+      "id": "pwr-24",
+      "name": "PWR-24",
+      "labelCode": 114
+    },
+    {
+      "id": "sg-cam",
+      "name": "SG-Cam",
+      "labelCode": 115
+    },
+    {
+      "id": "sht-01",
+      "name": "SHT-01",
+      "labelCode": 116
+    },
+    {
+      "id": "sg-din",
+      "name": "SG-DIN",
+      "labelCode": 117
+    },
+    {
+      "id": "tfortis-tms",
+      "name": "TFortis TMS",
+      "labelCode": 171
+    },
+    {
+      "id": "swu-16",
+      "name": "SWU-16",
+      "labelCode": 200
+    },
+    {
+      "id": "teleport-1",
+      "name": "Teleport-1",
+      "labelCode": 201
+    },
+    {
+      "id": "teleport-2",
+      "name": "Teleport-2",
+      "labelCode": 202
+    },
+    {
+      "id": "swu-16t",
+      "name": "SWU-16T",
+      "labelCode": 203
+    },
+    {
+      "id": "sw-2g-plus",
+      "name": "SW-2G+",
+      "labelCode": 204
+    },
+    {
+      "id": "sw-2g4f",
+      "name": "SW-2G4F",
+      "labelCode": 205
+    },
+    {
+      "id": "sw-1g4f",
+      "name": "SW-1G4F",
+      "labelCode": 206
+    },
+    {
+      "id": "sw-2g6f-plus",
+      "name": "SW-2G6F+",
+      "labelCode": 207
+    },
+    {
+      "id": "sw-2g8f-plus",
+      "name": "SW-2G8F+",
+      "labelCode": 208
+    },
+    {
+      "id": "sw-2g2f-plus",
+      "name": "SW-2G2F+",
+      "labelCode": 209
+    },
+    {
+      "id": "swu-16m",
+      "name": "SWU-16M",
+      "labelCode": 210
+    },
+    {
+      "id": "pwr-48m",
+      "name": "PWR-48M",
+      "labelCode": 300
+    },
+    {
+      "id": "pwr-50",
+      "name": "PWR-50",
+      "labelCode": 301
+    },
+    {
+      "id": "pwr-160m",
+      "name": "PWR-160M",
+      "labelCode": 302
+    },
+    {
+      "id": "pwr-180",
+      "name": "PWR-180",
+      "labelCode": 303
+    },
+    {
+      "id": "irp-01",
+      "name": "IRP-01",
+      "labelCode": 304
+    },
+    {
+      "id": "irp-02",
+      "name": "IRP-02",
+      "labelCode": 305
+    },
+    {
+      "id": "rkn-01",
+      "name": "RKN-01",
+      "labelCode": 306
+    },
+    {
+      "id": "vr-02",
+      "name": "VR-02",
+      "labelCode": 307
+    },
+    {
+      "id": "rps-01",
+      "name": "RPS-01",
+      "labelCode": 308
+    },
+    {
+      "id": "pwr-2452",
+      "name": "PWR-2452",
+      "labelCode": 309
+    },
+    {
+      "id": "k5",
+      "name": "K5",
+      "labelCode": 310
+    },
+    {
+      "id": "pwr-300",
+      "name": "PWR-300",
+      "labelCode": 311
+    },
+    {
+      "id": "rtl-poe",
+      "name": "RTL-POE",
+      "labelCode": 312,
+      "serverDeviceType": "RTL-POE",
+      "rtlReport": {
+        "deviceType": 6,
+        "assignSerialOnReport": true,
+        "failureDeviceIdentifier": "413148580e5939514c53698b"
+      }
+    },
+    {
+      "id": "rtl-sw",
+      "name": "RTL-SW",
+      "labelCode": 313,
+      "serverDeviceType": "RTL-SW",
+      "rtlReport": {
+        "deviceType": 5,
+        "assignSerialOnReport": false,
+        "failureDeviceIdentifier": "default"
+      }
+    },
+    {
+      "id": "rkn-02",
+      "name": "RKN-02",
+      "labelCode": 314
+    },
+    {
+      "id": "rkn-03",
+      "name": "RKN-03",
+      "labelCode": 315
+    }
+  ]
+}

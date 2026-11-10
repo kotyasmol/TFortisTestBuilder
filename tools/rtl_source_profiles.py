@@ -48,7 +48,7 @@ def apply_original(graph, board):
             flags = sw_flags if board == 'SW' else poe_flags
             if name in flags:
                 node['isEnabled'] = source[flags[name]]
-            if name.startswith('Отчёт'):
+            if name == 'Отчёт TestBuilder':
                 node['isEnabled'] = source['6. отправка отчёта' if board == 'SW' else 'server_report']
             if name.startswith('Этикетка') and board == 'SW':
                 node['isEnabled'] = source['7. печать этикетки']

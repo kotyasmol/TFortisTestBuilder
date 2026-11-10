@@ -1,8 +1,8 @@
 {
-  "name": "RTL-POE · Проверка платы · параметры RTL_v1",
+  "name": "RTL-POE · Проверка платы · 10.11",
   "nodes": [
     {
-      "type": "Start (connections v1)",
+      "type": "Start (catalog serials v1)",
       "id": "0",
       "x": 80,
       "y": 80,
@@ -408,8 +408,8 @@
     {
       "type": "Subtest",
       "name": "Серийный номер",
-      "description": "",
-      "isEnabled": true,
+      "description": "В штатной проверке номер возвращается сервером после отправки отчёта.",
+      "isEnabled": false,
       "stopOnError": true,
       "boardElements": "",
       "bodyGraph": {
@@ -6725,12 +6725,12 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Send Test Report",
+            "type": "Send Test Report (RTL v1)",
             "serverBaseUrl": "",
             "reportVariableName": "TestReportText",
-            "endpoint": "/api/Api.svc/result.json",
+            "endpoint": "/api/Api.svc/SendTestResultUniverse",
             "timeoutMs": 10000,
-            "retryCount": 2,
+            "retryCount": 0,
             "retryDelayMs": 1000,
             "saveLocalCopy": true,
             "localReportsDirectory": "reports",
@@ -7497,13 +7497,13 @@
     },
     {
       "type": "Subtest",
-      "name": "Отчёт при отказе — если есть серийный номер",
-      "description": "После снятия питания. Без серийного номера сохраняется журнал; уже отправленный отчёт повторно не отправляется.",
-      "isEnabled": false,
+      "name": "Отчёт при отказе",
+      "description": "После снятия питания. Если плата не получила номер, отчёт отправляется на служебную запись.",
+      "isEnabled": true,
       "stopOnError": true,
       "boardElements": "",
       "bodyGraph": {
-        "name": "Отчёт при отказе — если есть серийный номер",
+        "name": "Отчёт при отказе",
         "nodes": [
           {
             "type": "Start",
@@ -7513,11 +7513,10 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Check Variable Range",
-            "variableName": "SerialNumber",
-            "min": 1,
-            "max": 2147483647,
-            "inclusive": true,
+            "type": "Check Variable Equality",
+            "variableName": "Execution.SendFailureReport",
+            "expectedValue": "true",
+            "comparisonType": "Boolean",
             "id": "1",
             "x": 320,
             "y": 80,
@@ -7545,12 +7544,12 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "type": "Send Test Report",
+            "type": "Send Test Report (RTL v1)",
             "serverBaseUrl": "",
             "reportVariableName": "TestReportText",
-            "endpoint": "/api/Api.svc/result.json",
+            "endpoint": "/api/Api.svc/SendTestResultUniverse",
             "timeoutMs": 10000,
-            "retryCount": 2,
+            "retryCount": 0,
             "retryDelayMs": 1000,
             "saveLocalCopy": true,
             "localReportsDirectory": "reports",
@@ -7594,12 +7593,6 @@
             "targetConnector": "Вход"
           },
           {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
             "sourceNodeId": "2",
             "sourceConnector": "True",
             "targetNodeId": "5",
@@ -7610,6 +7603,12 @@
             "sourceConnector": "False",
             "targetNodeId": "3",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
           }
         ]
       },
@@ -7714,7 +7713,7 @@
   ],
   "productKind": "Board",
   "deviceModel": "RTL-POE",
-  "configurationName": "Проверка платы · параметры RTL_v1",
+  "configurationName": "Проверка платы · 10.11",
   "hardware": {
     "BaudRate": 9600,
     "Parity": 0,
@@ -11636,5 +11635,8 @@
         "Height": 0.04494989290833473
       }
     ]
-  }
+  },
+  "deviceModelId": "rtl-poe",
+  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
+  "useCatalogSerials": true
 }

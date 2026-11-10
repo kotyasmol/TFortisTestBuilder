@@ -10,7 +10,7 @@ namespace TestBuilder.Services.Http;
 
 public sealed record LabelData(int Kind, string Serial, string Mac);
 
-public sealed class LabelLookupService(IHttpRequestService http)
+public sealed class LabelLookupService(IHttpRequestService http, List<LabelTemplateDefinition>? workstationTemplates = null)
 {
     public static string NormalizeMac(string value)
     {
@@ -42,10 +42,10 @@ public sealed class LabelLookupService(IHttpRequestService http)
             throw new InvalidOperationException("Сервер отклонил авторизацию. Запустите программу через лаунчер.");
         if (!result.IsSuccessStatusCode)
             throw new InvalidOperationException(result.StatusCode is { } status ? $"Ошибка сервера этикеток (HTTP {status})." : result.ErrorMessage);
-        return Parse(result.Body, query, byMac);
+        return Parse(result.Body, query, byMac, workstationTemplates);
     }
 
-    internal static LabelData Parse(string body, string query, bool byMac)
+    internal static LabelData Parse(string body, string query, bool byMac, List<LabelTemplateDefinition>? workstationTemplates = null)
     {
         if (body.Trim().Trim('"').Equals("NoAuth", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Сервер требует авторизацию. Запустите программу через лаунчер.");
@@ -54,7 +54,7 @@ public sealed class LabelLookupService(IHttpRequestService http)
             throw new InvalidOperationException("Сервер вернул неизвестный формат истории изделия.");
         if (document.RootElement.GetArrayLength() == 0)
             throw new InvalidOperationException("Сервер не нашёл изделие. Проверьте серийный номер или MAC.");
-        var templates = AppSettings.Instance.LabelTemplates;
+        var templates = workstationTemplates ?? AppSettings.Instance.LabelTemplates;
         LabelTemplateCatalog.Validate(templates);
         var match = byMac ? NormalizeMac(query) : query.TrimStart('0');
         var matches = new List<LabelData>();

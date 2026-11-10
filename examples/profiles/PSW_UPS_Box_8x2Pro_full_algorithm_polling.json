@@ -782,27 +782,27 @@
       "x": 2448,
       "y": 128,
       "color": "purple",
-      "name": "06. Ожидание загрузки DUT и selftest",
-      "description": "Проверка готовности DUT каждые 5s, общий timeout 180s, затем чтение selftest",
+      "name": "06. Загрузка DUT и получение серийника",
+      "description": "Дождаться CPU ID на странице DUT и получить серийный номер до проверок",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "06. Ожидание загрузки DUT и selftest",
+        "name": "06. Загрузка DUT и получение серийника",
         "nodes": [
           {
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120,
+            "y": 80,
             "color": "blue",
             "runOnlyOnFirstRun": false
           },
           {
             "id": "1",
             "type": "Delay",
-            "x": 540,
-            "y": 120,
+            "x": 320,
+            "y": 80,
             "color": "blue",
             "milliseconds": 5000,
             "runOnlyOnFirstRun": false
@@ -810,8 +810,8 @@
           {
             "id": "2",
             "type": "Clear ARP Cache",
-            "x": 1460,
-            "y": 120,
+            "x": 800,
+            "y": 80,
             "color": "blue",
             "timeoutMs": 5000,
             "failOnError": false,
@@ -823,23 +823,54 @@
           },
           {
             "id": "3",
-            "type": "Selftest Check",
-            "x": 1920,
-            "y": 120,
+            "type": "Read Selftest Field (v1)",
+            "x": 1392,
+            "y": 80,
             "color": "blue",
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 300000,
             "pollIntervalMs": 5000,
-            "validationRules": "",
             "failOnError": true,
             "outputPrefix": "Dut",
+            "runOnlyOnFirstRun": false,
+            "readField": "cpu_id",
+            "customName": "Дождаться CPU ID"
+          },
+          {
+            "id": "6",
+            "type": "Get Serial Number",
+            "x": 1984,
+            "y": 80,
+            "color": "blue",
+            "timeoutMs": 30000,
+            "outputVariableName": "SerialNumber",
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "deviceType": "PSW+UPS-Box 8x2Pro",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": false,
+            "runOnlyOnFirstRun": false
+          },
+          {
+            "id": "7",
+            "type": "Check Variable Range",
+            "x": 2592,
+            "y": 80,
+            "color": "blue",
+            "min": 3200000,
+            "max": 3299999,
+            "variableName": "SerialNumber",
+            "failMessage": "Серийный номер должен попадать в диапазон 3200000..3299999",
+            "inclusive": true,
             "runOnlyOnFirstRun": false
           },
           {
             "id": "4",
             "type": "Delay",
-            "x": 2380,
-            "y": 120,
+            "x": 3168,
+            "y": 80,
             "color": "blue",
             "milliseconds": 2000,
             "runOnlyOnFirstRun": false
@@ -847,8 +878,8 @@
           {
             "id": "5",
             "type": "End",
-            "x": 2840,
-            "y": 120,
+            "x": 3648,
+            "y": 80,
             "color": "blue",
             "runOnlyOnFirstRun": false
           }
@@ -869,8 +900,8 @@
           {
             "sourceNodeId": "3",
             "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
+            "targetNodeId": "6",
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "4",
@@ -883,6 +914,18 @@
             "sourceConnector": "Выход",
             "targetNodeId": "2",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
           }
         ]
       },
@@ -1540,7 +1583,7 @@
           },
           {
             "id": "4",
-            "type": "Wait Variable Until",
+            "type": "Wait Variable Until (report v1)",
             "x": 1920,
             "y": 120,
             "color": "blue",
@@ -1555,7 +1598,8 @@
             "intervalMs": 5000,
             "failOnTimeout": true,
             "endpoint": "/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "runOnlyOnFirstRun": false
+            "runOnlyOnFirstRun": false,
+            "reportName": "напряжение АКБ"
           },
           {
             "id": "5",
@@ -1670,13 +1714,13 @@
       "x": 5424,
       "y": 480,
       "color": "red",
-      "name": "15. Получение серийника и запись MAC",
-      "description": "Получить serial, вычислить MAC, записать его через set_mac_pro.bat, перезагрузить DUT и проверить MAC",
+      "name": "15. Запись и проверка MAC",
+      "description": "Вычислить MAC из серийного номера, записать его, перезапустить DUT и сверить MAC",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "15. Получение серийника и запись MAC",
+        "name": "15. Запись и проверка MAC",
         "nodes": [
           {
             "id": "0",
@@ -1684,36 +1728,6 @@
             "x": 80,
             "y": 120,
             "color": "blue",
-            "runOnlyOnFirstRun": false
-          },
-          {
-            "id": "1",
-            "type": "Get Serial Number",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "timeoutMs": 30000,
-            "outputVariableName": "SerialNumber",
-            "retryCount": 1,
-            "retryDelayMs": 1000,
-            "failOnError": true,
-            "serverBaseUrl": "https://iccid.fort-telecom.ru",
-            "deviceType": "PSW+UPS-Box 8x2Pro",
-            "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false,
-            "runOnlyOnFirstRun": false
-          },
-          {
-            "id": "2",
-            "type": "Check Variable Range",
-            "x": 1008,
-            "y": 592,
-            "color": "blue",
-            "min": 3200000,
-            "max": 3299999,
-            "variableName": "SerialNumber",
-            "failMessage": "Серийный номер должен попадать в диапазон 3200000..3299999",
-            "inclusive": true,
             "runOnlyOnFirstRun": false
           },
           {
@@ -1862,18 +1876,6 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "In"
           },
@@ -2020,13 +2022,13 @@
       "x": 6288,
       "y": 480,
       "color": "red",
-      "name": "17. Финальная статистика и отчет",
-      "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
+      "name": "17. Отчёт о проверке",
+      "description": "Собрать и отправить отчёт по результатам выполненных проверок",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "17. Финальная статистика и отчет",
+        "name": "17. Отчёт о проверке",
         "nodes": [
           {
             "id": "0",
@@ -2034,20 +2036,6 @@
             "x": 80,
             "y": 120,
             "color": "blue",
-            "runOnlyOnFirstRun": false
-          },
-          {
-            "id": "1",
-            "type": "Selftest Check",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 180000,
-            "pollIntervalMs": 5000,
-            "validationRules": "",
-            "failOnError": false,
-            "outputPrefix": "DutFinal",
             "runOnlyOnFirstRun": false
           },
           {
@@ -2060,15 +2048,6 @@
             "reportVariableName": "TestReportText",
             "includeAllVariables": true,
             "testType": "production",
-            "runOnlyOnFirstRun": false
-          },
-          {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "text": "Проверь данные перед отправкой отчёта на сервер.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
             "runOnlyOnFirstRun": false
           },
           {
@@ -2101,38 +2080,14 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
           },
           {
             "sourceNodeId": "4",
@@ -2545,15 +2500,6 @@
             "runOnlyOnFirstRun": false
           },
           {
-            "id": "3",
-            "type": "Operator Action",
-            "x": 1460,
-            "y": 120,
-            "color": "blue",
-            "text": "Тест завершился с ошибкой. Проверь данные перед отправкой аварийного отчёта.\n\nСерийный номер коммутатора: {SerialNumber}\nMAC коммутатора: {Dut.default_mac}\nРассчитанный MAC: {Dut.NewMac}\n\nПродолжить отправку?",
-            "runOnlyOnFirstRun": false
-          },
-          {
             "id": "4",
             "type": "Send Test Report",
             "x": 1920,
@@ -2601,24 +2547,12 @@
           {
             "sourceNodeId": "2",
             "sourceConnector": "True",
-            "targetNodeId": "3",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "False",
-            "targetNodeId": "5",
-            "targetConnector": "Вход"
-          },
-          {
-            "sourceNodeId": "3",
-            "sourceConnector": "Продолжить",
             "targetNodeId": "4",
             "targetConnector": "In"
           },
           {
-            "sourceNodeId": "3",
-            "sourceConnector": "Отмена",
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
             "targetNodeId": "5",
             "targetConnector": "Вход"
           },
@@ -4930,5 +4864,6 @@
         "IdentificationAddress": 0
       }
     ]
-  }
+  },
+  "updatedAt": "2026-11-09T11:29:49.347435+00:00"
 }

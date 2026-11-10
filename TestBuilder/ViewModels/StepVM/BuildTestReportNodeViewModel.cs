@@ -11,6 +11,7 @@ namespace TestBuilder.ViewModels.StepVM
     {
         [ObservableProperty] private string reportVariableName = "TestReportText";
         [ObservableProperty] private string serialVariableName = "SerialNumber";
+        [ObservableProperty] private string expectedSerialPrefix = string.Empty;
         [ObservableProperty] private string testType = "production";
         [ObservableProperty] private bool includeAllVariables;
 
@@ -31,7 +32,7 @@ namespace TestBuilder.ViewModels.StepVM
             Output.Add(FalseOut);
         }
 
-        public ITestStep CreateStep(ILogger logger) =>
+        public ITestStep CreateStep(ILogger logger, ReportTemplate? template = null) =>
             new BuildTestReportStep(
                 logger,
                 ReportVariableName,
@@ -39,12 +40,15 @@ namespace TestBuilder.ViewModels.StepVM
                 SerialVariableName,
                 App.StartupSessionId,
                 TestType,
-                IncludeAllVariables);
+                IncludeAllVariables,
+                template,
+                ExpectedSerialPrefix);
 
         public override NodeViewModel Clone() => new BuildTestReportNodeViewModel
         {
             ReportVariableName = ReportVariableName,
             SerialVariableName = SerialVariableName,
+            ExpectedSerialPrefix = ExpectedSerialPrefix,
             TestType = TestType,
             IncludeAllVariables = IncludeAllVariables
         };

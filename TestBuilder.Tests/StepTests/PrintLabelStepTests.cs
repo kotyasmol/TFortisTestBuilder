@@ -2,6 +2,7 @@ using System.Text;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
+using TestBuilder.Services;
 using TestBuilder.Tests.Support;
 
 namespace TestBuilder.Tests.StepTests;
@@ -46,6 +47,7 @@ public class PrintLabelStepTests
             .ExecuteAsync(context, CancellationToken.None));
         Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.False(Assert.Single(context.ReportEntries).IsSuccess);
+        Assert.Equal("Unknown", context.GetVariable<string>("PrintLabel.CompletionStatus"));
     }
 
     [Fact]
@@ -59,6 +61,49 @@ public class PrintLabelStepTests
         stop.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
         Assert.True(await printer.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    [Fact]
+    public async Task RetryCannotSubmitToQueueWhileTimedOutDriverIsStillRunning()
+    {
+        using var printer = new BlockedPrinter();
+        var first = new TestContext(new RegisterState());
+        var pending = CreateStep(printer, 1, 50, manualSerial: "612447").ExecuteAsync(first, default);
+        try
+        {
+            await printer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(StepResult.False, await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.Equal("Unknown", first.GetVariable<string>("PrintLabel.CompletionStatus"));
+
+            var retry = new TestContext(new RegisterState());
+            Assert.Equal(StepResult.False, await CreateStep(printer, 1, manualSerial: "612447").ExecuteAsync(retry, default));
+            Assert.Equal("Pending", retry.GetVariable<string>("PrintLabel.CompletionStatus"));
+            Assert.Equal(1, printer.Calls);
+        }
+        finally
+        {
+            printer.Release.Set();
+            await printer.Exited.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    private sealed class BlockedPrinter : IRawLabelPrinter, IDisposable
+    {
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Exited { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public ManualResetEventSlim Release { get; } = new();
+        public int Calls { get; private set; }
+
+        public RawLabelPrintResult Print(string name, byte[] bytes, CancellationToken token)
+        {
+            Calls++;
+            Entered.SetResult(true);
+            try { Release.Wait(); }
+            finally { Exited.SetResult(true); }
+            return RawLabelPrintResult.Ok();
+        }
+
+        public void Dispose() => Release.Dispose();
     }
 
     private sealed class CancellablePrinter : IRawLabelPrinter
@@ -144,8 +189,8 @@ public class PrintLabelStepTests
         const string singleLabel =
             "^XA^MD10^FO494,35^A0,36,25^FDPSW+UPS-Box 8x2Pro^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
-            "^FO510,117^BY2^BCN,50,N,N,N^FD>:03200428^FS^XZ ";
+            "^FO510,95^A0,25,20^FDSN: 3200428^FS^FO668,98^A0,17,10^FD^FS" +
+            "^FO510,117^BY2^BCN,50,N,N,N^FD>:003200428^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
@@ -155,7 +200,7 @@ public class PrintLabelStepTests
         Assert.Equal(3200428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(428, context.GetVariable<int>("PrintLabel.SerialShort"));
         Assert.Equal("C0:11:A6:20:01:AC", context.GetVariable<string>("PrintLabel.Mac"));
-        Assert.Equal("03200428", context.GetVariable<string>("PrintLabel.Barcode"));
+        Assert.Equal("003200428", context.GetVariable<string>("PrintLabel.Barcode"));
         Assert.Equal(string.Empty, context.GetVariable<string>("PrintLabel.Epl"));
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), context.GetVariable<string>("PrintLabel.Zpl"));
     }
@@ -175,7 +220,7 @@ public class PrintLabelStepTests
 
         Assert.Equal(StepResult.True, result);
         Assert.Contains("MAC: C0:11:A6:20:01:AC", printer.GetText());
-        Assert.Contains("SN: 00428", printer.GetText());
+        Assert.Contains("SN: 3200428", printer.GetText());
         Assert.Equal("Dut.default_mac", context.GetVariable<string>("PrintLabel.MacSource"));
         Assert.Equal("SerialShort", context.GetVariable<string>("PrintLabel.SerialShortSource"));
         Assert.DoesNotContain("1790000123", printer.GetText());
@@ -280,7 +325,7 @@ public class PrintLabelStepTests
     [Theory]
     [InlineData("600428")]
     [InlineData("00428")]
-    public async Task Psw2G6FPlusPrintsExactLegacyLabel(string serial)
+    public async Task Psw2G6FPlusPrintsFullSerialAndDocumentedBarcode(string serial)
     {
         var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
         var context = new TestContext(new RegisterState());
@@ -289,12 +334,43 @@ public class PrintLabelStepTests
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
         const string expected = "^XA^MD10^FO559,35^A0,36,25^FDPSW-2G6F+^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
-            "^FO510,117^BY2^BCN,50,N,N,N^FD00600428^FS^XZ ";
+            "^FO510,95^A0,25,20^FDSN: 600428^FS^FO668,98^A0,17,10^FD^FS" +
+            "^FO510,117^BY2^BCN,50,N,N,N^FD000600428^FS^XZ ";
         Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
         Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));
         Assert.Equal("Psw2G6FPlus", context.GetVariable<string>("PrintLabel.Template"));
+    }
+
+    [Theory]
+    [InlineData(3300579, "C0:11:A6:21:02:43", true)]
+    [InlineData(3200579, "C0:11:A6:20:02:43", false)]
+    [InlineData(3300579, "C0:11:A6:21:02:44", false)]
+    public async Task CatalogLabelUsesSelectedModelInsteadOfCopiedUpsTemplate(int serial, string mac, bool prints)
+    {
+        var model = new EquipmentModel("box-pro", "PSW+Box 8x2Pro")
+        {
+            LabelCode = 33,
+            LabelVariants = new() { [1] = "DIN" },
+            SerialSeries = new() { ServerDeviceType = "Box", FirstSerialNumber = 3300001,
+                LastSerialNumber = 3365535, SerialOffset = 3300000, MacPrefix = "C0:11:A6:21" }
+        };
+        var context = new TestContext(new RegisterState()) { ProductionModel = model, LabelVariant = 1 };
+        context.SetVariable("SerialNumber", serial);
+        context.SetVariable("SerialShort", 42);
+        context.SetVariable("Dut.default_mac", mac);
+        var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
+        var step = CreateStep(printer, copies: 1, useQtProZplFormat: true);
+
+        Assert.Equal(prints ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal(prints ? 1 : 0, printer.Calls);
+        if (prints)
+        {
+            Assert.Contains("^FDPSW+Box 8x2Pro^FS", printer.GetText());
+            Assert.Contains("^FDSN: 3300579^FS", printer.GetText());
+            Assert.Contains("^FDTYPE: DIN^FS", printer.GetText());
+            Assert.Contains("^FD>:103300579^FS", printer.GetText());
+        }
     }
 
     [Theory]

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
-using Avalonia.Platform;
 
 namespace TestBuilder.Domain.Modbus;
 
@@ -11,8 +11,18 @@ public static class HardwarePresets
     // Return fresh definitions so editing a preset cannot change later discovery.
     public static List<DeviceDefinition> Load()
     {
-        using var resource = AssetLoader.Open(new Uri("avares://TestBuilder/Assets/hardware-presets.json"));
-        return JsonSerializer.Deserialize<List<DeviceDefinition>>(resource)
-            ?? throw new InvalidOperationException("Не удалось прочитать встроенные карты оборудования.");
+        var path = Path.Combine(AppContext.BaseDirectory, "reference", "modbus", "hardware-presets.json");
+        if (File.Exists(path))
+        {
+            using var file = File.OpenRead(path);
+            return Read(file);
+        }
+        using var resource = typeof(HardwarePresets).Assembly.GetManifestResourceStream("TestBuilder.hardware-presets.json")
+            ?? throw new InvalidOperationException("Встроенные карты оборудования отсутствуют.");
+        return Read(resource);
     }
+
+    private static List<DeviceDefinition> Read(Stream source) =>
+        JsonSerializer.Deserialize<List<DeviceDefinition>>(source)
+        ?? throw new InvalidOperationException("Не удалось прочитать карты оборудования.");
 }

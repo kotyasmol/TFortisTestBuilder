@@ -27,19 +27,22 @@ namespace TestBuilder.Domain.Steps
         private readonly string _expectedValue;
         private readonly VariableComparisonType _comparisonType;
         private readonly string _failMessage;
+        private readonly string _resultVariableName;
 
         public CheckVariableEqualityStep(
             ILogger logger,
             string variableName,
             string expectedValue,
             VariableComparisonType comparisonType,
-            string failMessage)
+            string failMessage,
+            string resultVariableName = "")
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _variableName = variableName?.Trim() ?? string.Empty;
             _expectedValue = expectedValue ?? string.Empty;
             _comparisonType = comparisonType;
             _failMessage = failMessage ?? string.Empty;
+            _resultVariableName = resultVariableName;
         }
 
         public Task<StepResult> ExecuteAsync(
@@ -52,15 +55,17 @@ namespace TestBuilder.Domain.Steps
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            var resultName = CheckResultCapture.ResolveName(_resultVariableName, context.CurrentSlaveId);
+            CheckResultCapture.Clear(context, resultName);
 
             if (string.IsNullOrWhiteSpace(_variableName))
             {
-                return Task.FromResult(Fail(context, string.Empty, "Имя переменной не задано."));
+                return Task.FromResult(Fail(context, resultName, "Имя переменной не задано."));
             }
 
             if (!context.Variables.TryGetValue(_variableName, out var actual))
             {
-                return Task.FromResult(Fail(context, string.Empty, $"VariableNotFound: переменная '{_variableName}' не найдена."));
+                return Task.FromResult(Fail(context, resultName, $"VariableNotFound: переменная '{_variableName}' не найдена."));
             }
 
             var actualText = ToInvariantString(actual);
@@ -81,6 +86,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             SaveLastCheck(context, actualText, _expectedValue, passed);
+            CheckResultCapture.Save(context, resultName, passed, actualText);
 
             _logger.Info(
                 $"[ШАГ] Проверка переменной → {_variableName}, факт '{actualText}', ожидалось '{_expectedValue}', тип {_comparisonType}.");
@@ -119,10 +125,11 @@ namespace TestBuilder.Domain.Steps
 
         private StepResult Fail(
             TestContext context,
-            string actual,
+            string resultName,
             string error)
         {
-            SaveLastCheck(context, actual, _expectedValue, false);
+            SaveLastCheck(context, string.Empty, _expectedValue, false);
+            CheckResultCapture.Save(context, resultName, false, null);
             _logger.Warning($"[ОШИБКА] {error}");
             return StepResult.False;
         }

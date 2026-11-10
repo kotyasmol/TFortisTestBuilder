@@ -50,18 +50,26 @@ namespace TestBuilder.Domain.Steps
                 return Task.FromResult(Fail(context, $"Серийный номер '{rawSerial}' не является целым числом."));
             }
 
-            var serialShort = serial - _serialOffset;
+            var series = context.ProductionModel?.SerialSeries;
+            if (context.ProductionModel != null && series == null)
+                return Task.FromResult(Fail(context, "Для расчёта MAC укажите серию изделия в справочнике."));
+            if (series?.Check(serial, context.IssuedSerialNumber) is { } seriesError)
+                return Task.FromResult(Fail(context, seriesError));
+            if (series is { MacPrefix: null })
+                return Task.FromResult(Fail(context, "Укажите префикс MAC изделия в справочнике."));
+            var serialOffset = series?.SerialOffset ?? _serialOffset;
+            var serialShort = serial - serialOffset;
             if (serialShort < 0 || serialShort > 0xFFFF)
             {
                 return Task.FromResult(Fail(
                     context,
-                    $"Короткий серийный номер {serialShort} вне диапазона 0..65535. Serial={serial}, offset={_serialOffset}."));
+                    $"Короткий серийный номер {serialShort} вне диапазона 0..65535. Serial={serial}, offset={serialOffset}."));
             }
 
             string normalizedPrefix;
             try
             {
-                normalizedPrefix = NormalizeMacPrefix(_macPrefix);
+                normalizedPrefix = NormalizeMacPrefix(series?.MacPrefix ?? _macPrefix);
             }
             catch (FormatException ex)
             {
@@ -75,7 +83,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable(_serialShortVariableName, serialShort);
             context.SetVariable(_macVariableName, mac);
             context.SetVariable("BuildMac.SerialNumber", serial);
-            context.SetVariable("BuildMac.SerialOffset", _serialOffset);
+            context.SetVariable("BuildMac.SerialOffset", serialOffset);
             context.SetVariable("BuildMac.SerialShort", serialShort);
             context.SetVariable("BuildMac.Mac", mac);
             context.SetVariable("BuildMac.Success", true);

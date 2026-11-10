@@ -6,6 +6,7 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Center">
     <StackPanel Margin="16" Spacing="16" MaxWidth="800" HorizontalAlignment="Stretch">
       <TextBlock Text="Настройки" Classes="pageTitle" />
+      <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" TextWrapping="Wrap" />
       <TextBlock Text="{Binding ProfileContext}" TextWrapping="Wrap" />
       <Button Content="Полная инструкция" Click="OnOpenUserGuide" AutomationProperties.Name="Открыть полную инструкцию" />
       <Button Content="Интерактивное обучение" Click="OnOpenTutorial" IsEnabled="{Binding CanStartTutorial}" AutomationProperties.Name="Пройти интерактивное обучение" />

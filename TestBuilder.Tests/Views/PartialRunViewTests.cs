@@ -58,6 +58,7 @@ public class PartialRunViewTests
                 Assert.False(node.IsRunStart);
                 vm.RedoCommand.Execute(null);
                 vm.ConfigureNodeRun(node, false);
+                vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
                 vm.NewProfileCommand.Execute(null);
                 Assert.False(vm.HasPartialRun);
             }
@@ -88,6 +89,7 @@ public class PartialRunViewTests
             vm.ConfigureNodeRun(node, true);
             await vm.RunGraphCommand.ExecuteAsync(null);
             Assert.True(node.HasExecutionError); // the previous slaveId must not leak into another run
+            Assert.False(vm.NeedsStandInspection); // an unexecuted Modbus node cannot leave an output enabled
             vm.ConfigureNodeRun(node, true);
             vm.IsOperatorView = true;
             Assert.False(vm.HasPartialRun);

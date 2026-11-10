@@ -1,11 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
+using TestBuilder.Services.Logging;
 
 namespace TestBuilder.ViewModels;
 
@@ -141,14 +143,57 @@ public partial class TestViewModel
     public bool CanEditGraph => !HasRunningQuickActions && _allowEditing && !IsOperatorView && !IsTestRunning && !IsConnecting;
     public bool CanChooseProfile => !HasRunningQuickActions && !IsTestRunning && !IsConnecting;
     [ObservableProperty] private bool needsStandInspection;
+    private StandInspectionStore? _standInspectionStore;
     public string StandInspectionMessage => "Отключение стенда не подтверждено. Выключите питание стенда и обратитесь к инженеру перед следующим запуском.";
     partial void OnNeedsStandInspectionChanged(bool value) => RefreshStationAvailability();
     [RelayCommand]
     private void ConfirmStandInspection()
     {
-        if (!NeedsStandInspection || IsOperatorView || IsTestRunning || IsConnecting || IsConnected) return;
-        NeedsStandInspection = false;
+        if (!NeedsStandInspection || !_allowEditing || IsOperatorView || IsTestRunning || IsConnecting || IsConnected) return;
+        if (!ClearStandInspection()) return;
         TestingLogger.Warning("Инженер подтвердил проверку и ручное обесточивание стенда. Перед запуском подключитесь заново.");
+    }
+
+    private bool RestoreStandInspection()
+    {
+        try { return _standInspectionStore?.IsRequired() == true; }
+        catch (Exception error)
+        {
+            DiagnosticLog.WriteException("Проверка блокировки стенда", error);
+            TestingLogger.Error("Не удалось прочитать отметку проверки стенда. Запуск заблокирован.");
+            return true;
+        }
+    }
+
+    internal void EnableStandInspectionPersistence(StandInspectionStore store)
+    {
+        if (IsTraining) return;
+        _standInspectionStore = store;
+        NeedsStandInspection = RestoreStandInspection();
+    }
+
+    private void RequireStandInspection()
+    {
+        NeedsStandInspection = true;
+        try { _standInspectionStore?.Require(); }
+        catch (Exception error)
+        {
+            DiagnosticLog.WriteException("Сохранение блокировки стенда", error);
+            TestingLogger.Error("Не удалось сохранить блокировку стенда на диске. Выключите питание стенда.");
+        }
+    }
+
+    private bool ClearStandInspection()
+    {
+        try { _standInspectionStore?.Clear(); }
+        catch (Exception error)
+        {
+            DiagnosticLog.WriteException("Снятие блокировки стенда", error);
+            TestingLogger.Error("Не удалось снять блокировку стенда. Проверьте доступ к локальным данным приложения.");
+            return false;
+        }
+        NeedsStandInspection = false;
+        return true;
     }
     [ObservableProperty] private bool isLabelToolBusy;
     partial void OnIsLabelToolBusyChanged(bool value) => RefreshStationAvailability();
@@ -156,7 +201,7 @@ public partial class TestViewModel
     partial void OnIsNetworkSetupBusyChanged(bool value) => RefreshStationAvailability();
     public bool CanStartRun => !IsActionGraphEditor && !IsNetworkSetupBusy && !IsLabelToolBusy && !NeedsStandInspection && !IsTestRunning && !IsConnecting && App.StartupOptions.IsValid &&
         _profileLoadError.Length == 0 && (!ShouldPrepareForRun || !HasRunningQuickActions) &&
-        (!ProfileRequiresHardware || (IsConnected && IsMonitoringActive)) &&
+        (!(HasPartialRun ? PartialRunRequiresStand() : ProfileRequiresHardware) || (IsConnected && IsMonitoringActive)) &&
         (!IsOperatorView || (_selectedProfile != null && _currentProfilePath != null &&
             (!GraphConnectionRequirements.RequiresStandConnection(RootGraph) || (IsConnected && IsMonitoringActive))));
     public string StationReadiness => !App.StartupOptions.IsValid ? App.StartupOptions.Error :

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Services;
 
 namespace TestBuilder.Domain.Execution
 {
@@ -38,6 +39,10 @@ namespace TestBuilder.Domain.Execution
 
         public string? ProfileName { get; set; }
         public string? DeviceModel { get; set; }
+        public EquipmentModel? ProductionModel { get; init; }
+        internal EquipmentModel? LegacySerialModel { get; init; }
+        public int LabelVariant { get; init; }
+        internal int? IssuedSerialNumber => Variables.TryGetValue("SerialNumber.Assigned", out var value) && value is int serial ? serial : null;
         public LabelPrintCapture LabelPrinting { get; private init; } = new();
         // Frozen at the start of an action; independent of its own print diagnostics.
         public PreparedLabel? LastTestLabel { get; init; }
@@ -81,6 +86,9 @@ namespace TestBuilder.Domain.Execution
                 HasExecutionException = HasExecutionException,
                 ProfileName = ProfileName,
                 DeviceModel = DeviceModel,
+                ProductionModel = ProductionModel,
+                LegacySerialModel = LegacySerialModel,
+                LabelVariant = LabelVariant,
                 LabelPrinting = LabelPrinting,
                 LastTestLabel = LastTestLabel?.Copy(),
                 HasCriticalError = HasCriticalError,
@@ -91,6 +99,7 @@ namespace TestBuilder.Domain.Execution
                 WaitIfPausedAsync = WaitIfPausedAsync,
                 SelfTestPageState = SelfTestPageState
             };
+            branch.Variables.ObserveAssignment = Variables.ObserveAssignment;
             foreach (var pair in Variables)
             {
                 try { branch.Variables.Seed(pair.Key, ParallelVariableSnapshot.Clone(pair.Value)); }

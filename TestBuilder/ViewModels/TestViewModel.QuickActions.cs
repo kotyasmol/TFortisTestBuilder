@@ -131,11 +131,19 @@ public partial class TestViewModel
             if (GraphConnectionRequirements.RequiresStandConnection(graph) && !IsConnected)
                 throw new InvalidOperationException("Подключитесь к стенду для выполнения этой кнопки.");
             logger.Info(turnOff ? "Выключение начато." : "Действие начато.");
-            using var compiler = new GraphCompiler(_modbusService, logger) { ProfileHardware = RootGraph.Hardware, ConnectedStandPort = IsConnected ? SelectedPort : null, LabelPrinter = ActionLabelPrinter };
+            using var compiler = new GraphCompiler(_modbusService, logger)
+            {
+                ProfileHardware = RootGraph.Hardware,
+                ProfileReportTemplate = RootGraph.ReportTemplate,
+                ConnectedStandPort = IsConnected ? SelectedPort : null,
+                LabelPrinter = ActionLabelPrinter
+            };
             GraphCompiler.ValidateRunConnections(graph, RootGraph.Hardware, IsConnected ? SelectedPort : null);
             var compiled = compiler.Compile(graph);
+            var serialModels = ResolveRunSerialModels();
             var context = new TestContext(_registerState) {
                 CancellationToken = token, IsConnected = IsConnected, ProfileName = action.Name, DeviceModel = RootGraph.DeviceModel,
+                ProductionModel = serialModels.Production, LegacySerialModel = serialModels.Legacy, LabelVariant = RootGraph.LabelVariant,
                 LastTestLabel = _lastCompletedTest?.Label?.Copy(),
                 RegisterMonitor = _registerMonitor, RequireFreshMonitoring = RootGraph.Hardware != null,
                 MaxRegisterAgeMs = Math.Max(10000, (RootGraph.Hardware?.PollIntervalMs ?? 1000) * 3),

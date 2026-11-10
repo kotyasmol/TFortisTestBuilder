@@ -1,0 +1,201 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels" xmlns:report="using:TestBuilder.Domain.Execution"
+        x:Class="TestBuilder.Views.ReportTemplateWindow" x:DataType="vm:ReportTemplateEditorViewModel"
+        Title="Состав отчёта" Width="1040" Height="720" MinWidth="760" MinHeight="560"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource AppBackgroundBrush}">
+  <Window.Styles>
+    <Style Selector="ListBox.reportFields ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="8,3" />
+    </Style>
+    <Style Selector="ListBox.reportPreview ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="8,6" />
+    </Style>
+    <Style Selector="ListBox.reportVariables ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="8,0" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <StackPanel Spacing="4" Margin="0,0,0,14">
+      <CheckBox Content="Выбирать строки отчёта вручную" IsChecked="{Binding UseTemplate}" Click="OnToggleTemplate" />
+      <TextBlock Text="Состав общий для штатного и аварийного отчётов. Выбор строк не меняет итог проверки."
+                 Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+      <CheckBox Content="Сохранять обычные строки проверок" IsChecked="{Binding IncludeAutomaticEntries}"
+                IsVisible="{Binding UseTemplate}"
+                ToolTip.Tip="Оставлять результаты проверок и данные устройства в дополнение к выбранным переменным" />
+    </StackPanel>
+
+    <Border Grid.Row="1" IsVisible="{Binding !UseTemplate}" Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+      <TextBlock Text="Сейчас состав определяется настройками нод «Собрать отчёт»."
+                 Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,16,*" IsVisible="{Binding UseTemplate}">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <TextBlock Text="Строки отчёта" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"
+                Background="{DynamicResource SurfaceBrush}" ClipToBounds="True">
+          <ListBox x:Name="FieldList" Classes="reportFields" ItemsSource="{Binding Rows}"
+                   SelectedItem="{Binding SelectedRow, Mode=TwoWay}" AutomationProperties.Name="Строки отчёта"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ReportFieldEditorViewModel">
+                <Grid ColumnDefinitions="38,42,*">
+                  <TextBlock Text="{Binding Position}" VerticalAlignment="Center"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanToggle}"
+                            AutomationProperties.Name="{Binding DisplayLabel}" ToolTip.Tip="Включить строку в отчёт"
+                            VerticalAlignment="Center" HorizontalAlignment="Left" />
+                  <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DisplayLabel}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+        <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+          <Button Content="Добавить строку" Click="OnAddRow" Margin="0,0,6,6" />
+          <Button Content="Разместить тип проверки" Click="OnAddTestType" Margin="0,0,6,6"
+                  IsVisible="{Binding CanAddTestType}" ToolTip.Tip="Добавить обязательную строку в список, чтобы менять её порядок" />
+          <Button Content="↑" Click="OnMoveUp" IsEnabled="{Binding CanMoveUp}" Margin="0,0,6,6"
+                  ToolTip.Tip="Переместить выше" AutomationProperties.Name="Переместить выше" />
+          <Button Content="↓" Click="OnMoveDown" IsEnabled="{Binding CanMoveDown}" Margin="0,0,6,6"
+                  ToolTip.Tip="Переместить ниже" AutomationProperties.Name="Переместить ниже" />
+          <Button Content="Удалить" Click="OnDeleteRow" IsEnabled="{Binding CanDelete}" Margin="0,0,6,6" />
+        </WrapPanel>
+      </Grid>
+
+      <TabControl x:Name="DetailsTabs" Grid.Column="2">
+        <TabItem Header="Настройка строки">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+              <TextBlock Text="Добавьте строку или выберите её в списке." IsVisible="{Binding !HasSelection}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,12" TextWrapping="Wrap" />
+              <ContentControl Content="{Binding SelectedRow}" HorizontalContentAlignment="Stretch" Margin="4,12,4,4">
+                <ContentControl.ContentTemplate>
+                  <DataTemplate x:DataType="vm:ReportFieldEditorViewModel">
+                    <StackPanel Spacing="10">
+                      <StackPanel IsVisible="{Binding IsTestType}" Spacing="6">
+                        <TextBlock Text="Тип проверки" FontWeight="SemiBold" />
+                        <TextBlock Text="Обязательная строка. Можно менять её место в отчёте."
+                                   Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel IsVisible="{Binding !IsTestType}" Spacing="10">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="Подпись в отчёте" />
+                          <TextBox Text="{Binding Label}" Watermark="Оставьте пустой, чтобы использовать ключ"
+                                   AutomationProperties.Name="Подпись в отчёте" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="Источник" />
+                          <ComboBox ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch" AutomationProperties.Name="Источник строки" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding KeyCaption}" TextWrapping="Wrap" />
+                          <ComboBox ItemsSource="{Binding KnownKeys}" SelectedItem="{Binding PickedKey, Mode=TwoWay}"
+                                    IsVisible="{Binding HasKnownKeys}" PlaceholderText="Выбрать из профиля"
+                                    HorizontalAlignment="Stretch" AutomationProperties.Name="Выбрать источник из профиля" />
+                          <TextBox Text="{Binding Key}" AutomationProperties.Name="Ключ источника" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="Формат значения" />
+                          <ComboBox ItemsSource="{Binding FormatOptions}" SelectedItem="{Binding SelectedFormat, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch" AutomationProperties.Name="Формат значения" />
+                          <TextBlock IsVisible="{Binding IsPoeFormat}" Text="Например: «Тест PoE B на линии 0». Исходное значение задаётся в мВ, а программа добавляет к подписи результат и напряжение в вольтах."
+                                     Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding CanSetStatus}" Spacing="4">
+                          <TextBlock Text="{Binding StatusCaption}" />
+                          <AutoCompleteBox Text="{Binding StatusKey, Mode=TwoWay}" ItemsSource="{Binding KnownStatusKeys}"
+                                           MinimumPrefixLength="1" FilterMode="ContainsOrdinal"
+                                           IsTextCompletionEnabled="False" HorizontalAlignment="Stretch"
+                                           AutomationProperties.Name="Ключ результата проверки" />
+                        </StackPanel>
+                      </StackPanel>
+                    </StackPanel>
+                  </DataTemplate>
+                </ContentControl.ContentTemplate>
+              </ContentControl>
+            </Grid>
+          </ScrollViewer>
+        </TabItem>
+        <TabItem x:Name="VariablesTab" Header="Переменные">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="4,12,4,4">
+            <TextBox x:Name="VariableSearchBox" Text="{Binding VariableSearch}"
+                     Watermark="Поиск по имени переменной" AutomationProperties.Name="Поиск переменной" />
+            <TextBlock Grid.Row="1" Text="{Binding VariableSummary}" Margin="0,8,0,8"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+              <Grid>
+                <ListBox x:Name="VariableList" ItemsSource="{Binding VisibleVariables}" Classes="reportVariables"
+                         IsVisible="{Binding HasVisibleVariables}" AutomationProperties.Name="Переменные отчёта"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReportVariableChoiceViewModel">
+                      <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                AutomationProperties.Name="{Binding Key}" ToolTip.Tip="{Binding Key}">
+                        <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis" />
+                      </CheckBox>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="Нет доступных переменных. Запустите проверку, чтобы заполнить список."
+                           IsVisible="{Binding !HasVariables}" Margin="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Text="Поиск не дал результатов." IsVisible="{Binding HasNoVariableMatches}"
+                           Margin="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+              </Grid>
+            </Border>
+            <WrapPanel Grid.Row="3" Margin="0,8,0,0">
+              <Button Content="Отметить найденные" Click="OnIncludeVisibleVariables"
+                      IsEnabled="{Binding HasVisibleVariables}" Margin="0,0,6,0" />
+              <Button Content="Снять найденные" Click="OnExcludeVisibleVariables"
+                      IsEnabled="{Binding HasVisibleVariables}" />
+            </WrapPanel>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Предпросмотр">
+          <Grid RowDefinitions="Auto,*" Margin="4,12,4,4">
+            <StackPanel Spacing="4" Margin="0,0,0,8">
+              <TextBlock Text="Пример значений. Серийный номер, стенд, итог и сессия добавляются автоматически."
+                         Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="Обычные строки проверок появятся в отчёте по итогам запуска."
+                         IsVisible="{Binding IncludeAutomaticEntries}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+              <ListBox ItemsSource="{Binding Preview}" Classes="reportPreview" AutomationProperties.Name="Предпросмотр отчёта"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="report:TestReportEntry">
+                    <Grid ColumnDefinitions="*,110">
+                      <TextBlock Text="{Binding Name}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Border>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </Grid>
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+      <TextBlock Text="{Binding Error}" Foreground="{DynamicResource DangerTextBrush}"
+                 TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Отмена" IsCancel="True" Click="OnCancel" />
+        <Button Content="Применить к профилю" Classes="primary" Click="OnApply" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

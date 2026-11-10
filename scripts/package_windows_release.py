@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging" / "windows"
+STANDARD_PROFILES = Path("profiles") / "standard"
 PROFILE_UI_TEST_FILTER = (
     "FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
     "FullyQualifiedName~DataTestModeTests"
@@ -118,11 +119,11 @@ def select_profiles(names=None):
 def stage_profiles(bundle, profiles):
     # Only filter the fresh publish output. Repository profiles and catalog stay intact.
     selected = {p.name for p in profiles}
-    for path in (bundle / "profiles").glob("*.json"):
+    for path in (bundle / STANDARD_PROFILES).glob("*.json"):
         if path.name not in selected:
             path.unlink()
     for source in profiles:
-        shutil.copy2(source, bundle / "profiles" / source.name)
+        shutil.copy2(source, bundle / STANDARD_PROFILES / source.name)
 
 
 def validate_bundle(bundle, profiles):
@@ -137,17 +138,25 @@ def validate_bundle(bundle, profiles):
     config = json.loads((bundle / "TestBuilder.runtimeconfig.json").read_text())["runtimeOptions"]
     if "framework" in config or "frameworks" in config or not config.get("includedFrameworks"):
         raise RuntimeError("The publish output is not self-contained")
-    actual = sorted(p.name for p in (bundle / "profiles").glob("*.json"))
+    if (bundle / "profile-templates").exists() or (bundle / "testbuilder.settings").exists() or any(
+            child.name != "standard" for child in (bundle / "profiles").iterdir()):
+        raise RuntimeError("A release must not include working profiles or settings")
+    actual = sorted(p.name for p in (bundle / STANDARD_PROFILES).glob("*.json"))
     if actual != sorted(p.name for p in profiles):
         raise RuntimeError("Profile inventory does not match the selected release profiles")
     for profile in profiles:
-        if sha256(profile) != sha256(bundle / "profiles" / profile.name):
+        if sha256(profile) != sha256(bundle / STANDARD_PROFILES / profile.name):
             raise RuntimeError(f"Profile content changed: {profile.name}")
         data = json.loads(profile.read_text(encoding="utf-8-sig"))
         if data.get("productKind") == "Board":
             picture = base64.b64decode(data.get("board", {}).get("ImageBase64", ""), validate=True)
             if not picture:
                 raise RuntimeError(f"Board picture missing: {profile.name}")
+    for reference in (ROOT / "reference").rglob("*"):
+        if reference.is_file():
+            path = reference.relative_to(ROOT)
+            if not (bundle / path).is_file() or sha256(reference) != sha256(bundle / path):
+                raise RuntimeError(f"Reference file missing or changed: {path}")
     # Check the apphost architecture without requiring Windows on the build host.
     binary = (bundle / "TestBuilder.exe").read_bytes()
     pe_offset = int.from_bytes(binary[60:64], "little")
@@ -236,7 +245,7 @@ def main():
                 destination = bundle / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
-        write_json(bundle / "testbuilder.settings", {
+        write_json(bundle / "testbuilder.defaults.json", {
             "graphsFolder": "", "serverBaseUrl": "https://iccid.fort-telecom.ru", "standId": "тест",
             "theme": "Light", "engineerMode": False, "enableFileLogging": True,
             "logFolder": "", "dataTestAdapterIds": {}})

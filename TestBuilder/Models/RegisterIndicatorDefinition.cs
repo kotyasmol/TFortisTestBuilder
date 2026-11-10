@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -7,6 +9,9 @@ namespace TestBuilder.Models;
 
 public sealed class RegisterIndicatorDefinition
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("id")] public string Id { get; set; } = Guid.NewGuid().ToString("N");
     [JsonPropertyName("name")] public string Name { get; set; } = "Регистр";
     [JsonPropertyName("slaveId")] public byte SlaveId { get; set; } = 1;

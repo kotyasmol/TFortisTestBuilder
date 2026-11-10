@@ -2,9 +2,11 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using System.Text;
+using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
 using TestBuilder.Services.Http;
+using TestBuilder.Services.Modbus;
 using TestBuilder.Tests.Support;
 using TestBuilder.ViewModels;
 using TestBuilder.Views;
@@ -15,8 +17,8 @@ namespace TestBuilder.Tests.Views;
 public class LabelPrintingTests
 {
     [Theory]
-    [InlineData(0, "3200428", "03200428")]
-    [InlineData(0, "612447", "00612447")]
+    [InlineData(0, "3200428", "003200428")]
+    [InlineData(0, "612447", "000612447")]
     [InlineData(1, "12345678", "12345678")]
     public async Task PrintsSelectedTemplate_RepeatKeepsSnapshot_AndFailureDoesNotReplaceIt(int kind, string serial, string barcode)
     {
@@ -49,6 +51,27 @@ public class LabelPrintingTests
     }
 
     [Fact]
+    public async Task FindsAndPrintsCatalogModelWithoutWorkstationTemplate()
+    {
+        var printer = new Printer();
+        var http = new Http
+        {
+            Response = """[{"device":{"serial":3300579,"mac":"C0:11:A6:21:02:43"}}]"""
+        };
+        using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, http, printer,
+            profiles: () => Array.Empty<GraphProfile>())
+        { SerialNumber = "3300579", PrinterName = "Label printer" };
+
+        await vm.FindBySerialCommand.ExecuteAsync(null);
+        Assert.Equal("PSW+Box 8x2Pro", vm.SelectedProductName);
+        Assert.Equal("C0:11:A6:21:02:43", vm.MacAddress);
+        await vm.PrintCommand.ExecuteAsync(null);
+        var job = Assert.Single(printer.Jobs);
+        Assert.Contains("^FDSN: 3300579^FS", job);
+        Assert.Contains("^FD>:003300579^FS", job);
+    }
+
+    [Fact]
     public async Task FormatsUseProfileNameAndModelParameters_RepeatKeepsOriginalProfile()
     {
         var device = "PSW-2G6F+";
@@ -58,7 +81,7 @@ public class LabelPrintingTests
         Assert.Equal(2, vm.LabelOptions.Count);
         Assert.Contains(vm.Preview!.Elements, e => e.Text == device);
         await vm.PrintCommand.ExecuteAsync(null);
-        Assert.Contains("00612447", Assert.Single(printer.Jobs));
+        Assert.Contains("000612447", Assert.Single(printer.Jobs));
         Assert.Contains("^FDPSW-2G6F+", printer.Jobs[0]);
         device = "PSW+UPS-Box 8x2Pro";
         vm.RefreshTemplates();
@@ -66,7 +89,7 @@ public class LabelPrintingTests
         Assert.Equal(printer.Jobs[0], printer.Jobs[1]);
         vm.SerialNumber = "428";
         await vm.PrintCommand.ExecuteAsync(null);
-        Assert.Contains("03200428", printer.Jobs[2]);
+        Assert.Contains("003200428", printer.Jobs[2]);
         Assert.Contains("^FDPSW+UPS-Box 8x2Pro", printer.Jobs[2]);
     }
 
@@ -143,8 +166,9 @@ public class LabelPrintingTests
             AppSettings.Instance.DefaultPrinterName = "Workstation printer";
 
             await vm.PrintTestLabelCommand.ExecuteAsync(null);
-            var expected = kind == 0
-                ? PrintLabelStep.BuildPswUpsBox8x2ProZpl(0, "00:00:00:00:00:00")
+            var template = LabelTemplateCatalog.Defaults()[0];
+            template.BarcodePrefix = "0000";
+            var expected = kind == 0 ? template.Render("00000000", 0, "00:00:00:00:00:00")
                 : PrintLabelStep.BuildEpl("00000000");
             Assert.Equal(expected, Assert.Single(printer.Jobs));
             Assert.Equal("Workstation printer", Assert.Single(printer.Names));
@@ -231,7 +255,10 @@ public class LabelPrintingTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            foreach (var window in new Window[] { new DiscoverySettingsWindow(), new NetworkPlanWindow(), new LabelTemplatesWindow() })
+            using var modbus = new ModbusService();
+            using var profile = new TestViewModel(modbus, new SlaveManager(modbus));
+            foreach (var window in new Window[] { new DiscoverySettingsWindow(), new NetworkPlanWindow(), new LabelTemplatesWindow(),
+                new CatalogSerialsWindow(profile, new EquipmentModel("sample", "PSW+Box 8x2Pro")) })
             {
                 try {
                     window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -246,11 +273,11 @@ public class LabelPrintingTests
     private sealed class Http : IHttpRequestService
     {
         public string Url = "";
+        public string Response = "[{\"device\":{\"serial\":3200428,\"mac\":\"C0:11:A6:20:01:AC\"}}]";
         public Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken token)
         {
             Url = url;
-            return Task.FromResult(HttpRequestResult.Success(200,
-                "[{\"device\":{\"serial\":3200428,\"mac\":\"C0:11:A6:20:01:AC\"}}]", TimeSpan.Zero));
+            return Task.FromResult(HttpRequestResult.Success(200, Response, TimeSpan.Zero));
         }
     }
     private sealed class Printer : IRawLabelPrinter

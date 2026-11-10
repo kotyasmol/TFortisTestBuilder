@@ -33,7 +33,7 @@ public class RtlOriginalSettingsTests
     public void SwPreparationWritesOriginalRawDelaysAndEveryLimit()
     {
         using var original = Read("tools/RtlProfileMigration/SourceProfiles/RTL_SW_v1.json");
-        using var profile = Read("profiles/RTL_SW_board.json");
+        using var profile = Read("profiles/RTL-SW · Проверка платы · 10.11.json");
         var source = original.RootElement;
         var nodes = Nodes(profile.RootElement).ToArray();
         var writes = nodes.Where(n => Text(n, "type") == "Write Register").ToArray();
@@ -62,7 +62,7 @@ public class RtlOriginalSettingsTests
     public void PoeUsesOriginalRevisionColorPortSelectionAndVoltageLimits()
     {
         using var original = Read("tools/RtlProfileMigration/SourceProfiles/RTL_POE_v1.json");
-        using var profile = Read("profiles/RTL_POE_board.json");
+        using var profile = Read("profiles/RTL-POE · Проверка платы · 10.11.json");
         var source = original.RootElement;
         var nodes = Nodes(profile.RootElement).ToArray();
         foreach (var node in nodes.Where(n => Text(n,"type") == "Check Register Range"))
@@ -85,11 +85,12 @@ public class RtlOriginalSettingsTests
 
     [Theory]
     [InlineData("SW"), InlineData("POE")]
-    public void OriginalProfilesDoNotEnableReportsPrintingOrAutomaticFlashing(string board)
+    public void StandardProfilesEnableFailureReportsAndKeepOrdinaryReportsPrintingAndFlashingDisabled(string board)
     {
-        using var profile = Read($"profiles/RTL_{board}_board.json");
+        using var profile = Read($"profiles/RTL-{board} · Проверка платы · 10.11.json");
         var nodes = Nodes(profile.RootElement).ToArray();
-        Assert.All(nodes.Where(n => Text(n,"name").StartsWith("Отчёт") || Text(n,"name").StartsWith("Этикетка")),
+        Assert.True(Assert.Single(nodes.Where(n => Text(n,"id") == "failure-report")).GetProperty("isEnabled").GetBoolean());
+        Assert.All(nodes.Where(n => Text(n,"name") == "Отчёт TestBuilder" || Text(n,"name").StartsWith("Этикетка")),
             n => Assert.False(n.GetProperty("isEnabled").GetBoolean()));
         Assert.DoesNotContain(EnabledNodes(profile.RootElement), n => Text(n, "type") == "Run Program");
         Assert.DoesNotContain(nodes, n => Text(n,"type") == "Run Program" && !n.GetProperty("runProgram").GetProperty("programPath").GetString()!.StartsWith("read_"));

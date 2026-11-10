@@ -23,6 +23,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public ObservableCollection<string> ProductNames { get; } = new();
     [ObservableProperty] private string? selectedProductName;
     private readonly Func<IReadOnlyList<GraphProfile>>? _profiles;
+    private List<LabelTemplateDefinition> _workstationTemplates = new();
     private readonly Action? _refreshProfiles;
     private bool _refreshingProducts;
     private string? _lookupProductName;
@@ -78,7 +79,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public LabelPrintingViewModel(ILogger logger, Func<bool> canUse, Func<string?>? deviceModel = null,
         Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
         : this(logger, canUse, LauncherServerClient.Create(App.StartupSessionId, () => AppSettings.Instance.ServerBaseUrl),
-            new WindowsRawLabelPrinter(), deviceModel, profiles, refreshProfiles) { }
+            WindowsRawLabelPrinter.Shared, deviceModel, profiles, refreshProfiles) { }
 
     internal LabelPrintingViewModel(ILogger logger, Func<bool> canUse, IHttpRequestService http, IRawLabelPrinter printer,
         Func<string?>? deviceModel = null, Func<IReadOnlyList<GraphProfile>>? profiles = null, Action? refreshProfiles = null)
@@ -115,34 +116,36 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     {
         _lastTest = snapshot?.Copy();
         LastTestPreview = _lastTest?.Label is { } label
-            ? LabelPreview.FromInput(label.Template, label.Serial, label.Mac) : null;
+            ? LabelPreview.FromInput(label.Template.CopyUpgraded(), label.Serial, label.Mac) : null;
         foreach (var property in new[] { nameof(HasLastTest), nameof(HasLastTestLabel), nameof(LastTestDescription), nameof(LastTestResult), nameof(LastTestMessage) })
             OnPropertyChanged(property);
         RefreshAvailability();
     }
 
     private static bool IsDeviceTemplate(LabelTemplateDefinition t) =>
-        t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" && t.Language == "ZPL";
+        t.Language == "ZPL" && (t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" ||
+            t.Id.StartsWith("catalog:", StringComparison.Ordinal));
     private static string OptionId(LabelTemplateDefinition t) => IsDeviceTemplate(t) ? "DeviceZpl" : t.Id;
     private LabelTemplateDefinition? SelectedTemplate => ResolveSelectedTemplate(SerialNumber);
 
     private LabelTemplateDefinition? ResolveSelectedTemplate(string serialNumber)
     {
         var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-        var candidates = AppSettings.Instance.LabelTemplates.Where(t => OptionId(t) == id).ToArray();
+        var candidates = _workstationTemplates.Where(t => OptionId(t) == id).ToArray();
         return candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
             ?? candidates.FirstOrDefault(t => int.TryParse(serialNumber, out var serial)
-                && serial >= t.SerialOffset && (long)serial <= (long)t.SerialOffset + t.ShortSerialMax)
+                && t.MatchesServerSerial(serial))
             ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(serialNumber) ? candidates.FirstOrDefault() : null);
     }
 
     internal void RefreshTemplates(string? selectedId = null)
     {
         selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-        var selected = AppSettings.Instance.LabelTemplates.FirstOrDefault(t => t.Id == selectedId);
+        _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates();
+        var selected = _workstationTemplates.FirstOrDefault(t => t.Id == selectedId);
         if (selected != null) selectedId = OptionId(selected);
         LabelOptions.Clear();
-        foreach (var group in AppSettings.Instance.LabelTemplates.GroupBy(OptionId))
+        foreach (var group in _workstationTemplates.GroupBy(OptionId))
         {
             var template = group.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase)) ?? group.First();
             var name = group.Key == "DeviceZpl" ? "ZPL · Изделие, MAC, SN" :
@@ -196,8 +199,9 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     {
         var query = byMac ? MacAddress : ResolveSerialForLookup();
         Status = "Получение данных с сервера…";
-        var data = await new LabelLookupService(_http).FindAsync(AppSettings.Instance.ServerBaseUrl, query, byMac, token);
-        var foundTemplate = AppSettings.Instance.LabelTemplates[data.Kind];
+        var templates = _workstationTemplates;
+        var data = await new LabelLookupService(_http, templates).FindAsync(AppSettings.Instance.ServerBaseUrl, query, byMac, token);
+        var foundTemplate = templates[data.Kind];
         if (_profiles == null) SelectedProductName = foundTemplate.Name;
         else
         {
@@ -214,7 +218,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     {
         var query = SerialNumber.Trim();
         if (!int.TryParse(query, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) return query;
-        var templates = AppSettings.Instance.LabelTemplates;
+        var templates = _workstationTemplates;
         if (templates.Any(template => template.MatchesServerSerial(number))) return query;
         var selected = SelectedTemplate;
         if (selected is { MatchServerSerial: true } && number <= selected.ShortSerialMax)
@@ -240,8 +244,15 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         if (!testPrint && _profiles != null && selected?.Language == "ZPL" &&
             (SelectedProductName == null || !ProductNames.Contains(SelectedProductName)))
             throw new InvalidOperationException("Выберите изделие из профилей. Название изделия задаётся в редакторе профиля.");
-        var template = savedTemplate?.Copy() ?? LabelPrintContent.ForDevice(
+        var template = savedTemplate?.CopyUpgraded() ?? LabelPrintContent.ForDevice(
             selected ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
+        if (testPrint && template.UseShortSerial)
+        {
+            template.SerialOffset = 0;
+            template.FirstSerialNumber = null;
+            template.BarcodePrefix = "0000";
+            template.VariantName = null;
+        }
         template.Validate();
         var count = testPrint ? 1 : Copies;
         if (count is < 1 or > 100) throw new InvalidOperationException("Количество этикеток должно быть от 1 до 100.");
@@ -271,6 +282,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         using var operation = new CancellationTokenSource();
         _operation = operation; IsBusy = true;
         try { await action(operation.Token); }
+        catch (PrintCancellationException ex) { Status = ex.Message; }
         catch (OperationCanceledException) { Status = "Операция отменена."; }
         catch (JsonException) { Status = "Сервер вернул ответ, который не удалось прочитать как историю изделия."; }
         catch (Exception ex) { Status = ex.Message; _logger.Warning("Проверка печати: " + ex.Message); }

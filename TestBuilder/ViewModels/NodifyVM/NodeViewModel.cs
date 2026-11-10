@@ -3,7 +3,6 @@ using Avalonia.Media;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -150,19 +149,16 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         protected NodeViewModel()
         {
-            SlaveRegistry.Instance.PropertyChanged += OnSlaveRegistryPropertyChanged;
+            SlaveRegistry.Instance.ObserveConnection(this, OnSlaveRegistryConnectionChanged);
 
             if (SlaveRegistry.Instance.Slaves.Count > 0)
                 SyncSlaves();
         }
 
-        private void OnSlaveRegistryPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnSlaveRegistryConnectionChanged()
         {
-            if (e.PropertyName == nameof(SlaveRegistry.IsConnected))
-            {
-                OnPropertyChanged(nameof(IsConnected));
-                SyncSlaves();
-            }
+            OnPropertyChanged(nameof(IsConnected));
+            SyncSlaves();
         }
 
         public void SyncSlaves()
@@ -194,7 +190,8 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         public void Dispose()
         {
-            SlaveRegistry.Instance.PropertyChanged -= OnSlaveRegistryPropertyChanged;
+            SlaveRegistry.Instance.StopObservingConnection(this);
+            if (this is ICompositeNodeViewModel composite) composite.BodyGraph.DisposeNodes();
         }
     }
 

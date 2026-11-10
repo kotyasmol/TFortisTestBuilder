@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.Versioning;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
@@ -70,7 +72,7 @@ public static class DataTestNetworkConfigurator
         IReadOnlyDictionary<string, string>? managedAddresses = null)
     {
         plan ??= AppSettings.Instance.NetworkPlan;
-        managedAddresses ??= AppSettings.Instance.DataTestAdapterIds;
+        managedAddresses ??= AppSettings.Instance.AppliedDataTestAdapterIds ?? AppSettings.Instance.DataTestAdapterIds;
         try { plan.Validate(); } catch (InvalidOperationException ex) { return ex.Message; }
         var benchIps = plan.Addresses.Select(a => a.Ip).ToArray();
         if (assignments.Count != benchIps.Length ||
@@ -115,7 +117,8 @@ public static class DataTestNetworkConfigurator
         return null;
     }
 
-    public static async Task<string?> ApplyAsync(IReadOnlyList<AdapterAssignment> assignments,
+    internal static async Task<string?> ApplyAsync(IReadOnlyList<AdapterAssignment> assignments,
+        IReadOnlyDictionary<string, string> managedAddresses, Action saveBindings,
         IProgress<string> progress, CancellationToken cancellationToken = default)
     {
         if (!OperatingSystem.IsWindows())
@@ -124,7 +127,7 @@ public static class DataTestNetworkConfigurator
         var plan = System.Text.Json.JsonSerializer.Deserialize<BenchNetworkPlan>(System.Text.Json.JsonSerializer.Serialize(AppSettings.Instance.NetworkPlan))!;
         var benchIps = plan.Addresses.Select(a => a.Ip).ToArray();
         var adapters = GetAdapters();
-        var error = ValidateAssignments(assignments, adapters, plan);
+        var error = ValidateAssignments(assignments, adapters, plan, managedAddresses);
         if (error != null) return error;
 
         using var identity = WindowsIdentity.GetCurrent();
@@ -146,58 +149,136 @@ public static class DataTestNetworkConfigurator
         if (occupiedTemporaryIp.Ip != null)
             return $"Временный адрес {occupiedTemporaryIp.Ip} уже используется. Освободите его перед настройкой карт.";
 
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+        var changes = new List<AdapterAddressChange>();
         foreach (var assignment in assignments)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var adapter = adapters.Single(item =>
                 string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
-            if (!adapter.Ipv4.Split(", ").Any(ip => benchIps.Contains(ip) && ip != assignment.Ip))
-                continue;
-
-            var temporaryIp = TemporaryIpFor(assignment.Ip, plan);
-            progress.Report($"Освобождение прежнего адреса на {adapter.Name}...");
-            var releaseError = await RunNetshAsync(["interface", "ipv4", "set", "address",
-                $"name={adapter.Name}", "source=static", $"address={temporaryIp}",
-                $"mask={plan.Mask}", "gateway=none", "store=persistent"], cancellationToken);
-            if (releaseError != null)
-                return $"Не удалось освободить адрес на {adapter.Name}: {releaseError}";
-            if (!await WaitForAddressAsync(adapter.Id, temporaryIp, cancellationToken))
-                return $"netsh завершился без ошибки, но временный адрес {temporaryIp} " +
-                    $"на карте {adapter.Name} не появился. Адреса не были назначены.";
+            var networkInterface = interfaces.SingleOrDefault(item => string.Equals(item.Id, adapter.Id, StringComparison.OrdinalIgnoreCase));
+            if (networkInterface == null) return $"Карта {adapter.Name} больше не найдена. Обновите список.";
+            var properties = networkInterface.GetIPProperties();
+            var ipv4 = properties.GetIPv4Properties();
+            if (ipv4 == null || properties.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any)))
+                return $"Не удалось безопасно сохранить настройки IPv4 карты {adapter.Name}. Используйте карту стенда без шлюза IPv4.";
+            var addresses = properties.UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(a => new AdapterAddress(a.Address.ToString(), a.IPv4Mask.ToString())).ToArray();
+            if (!addresses.Select(a => a.Ip).ToHashSet().SetEquals(adapter.Ipv4.Split(", ", StringSplitOptions.RemoveEmptyEntries)))
+                return $"Адреса карты {adapter.Name} изменились. Обновите список.";
+            changes.Add(new AdapterAddressChange(adapter, assignment.Ip, TemporaryIpFor(assignment.Ip, plan),
+                ipv4.IsDhcpEnabled, addresses));
         }
 
-        foreach (var assignment in assignments)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var adapter = adapters.Single(item =>
-                string.Equals(item.Id, assignment.AdapterId, StringComparison.OrdinalIgnoreCase));
-            progress.Report($"Настройка {adapter.Name}: {assignment.Ip}, маска {plan.Mask}...");
-
-            var setError = await RunNetshAsync(["interface", "ipv4", "set", "address",
-                $"name={adapter.Name}", "source=static", $"address={assignment.Ip}",
-                $"mask={plan.Mask}", "gateway=none", "store=persistent"], cancellationToken);
-            if (setError != null)
-                return $"Не удалось настроить {adapter.Name} ({assignment.Ip}): {setError}";
-
-            if (!await WaitForAddressAsync(adapter.Id, assignment.Ip, cancellationToken))
-                return $"netsh завершился без ошибки, но адрес {assignment.Ip} на карте {adapter.Name} не появился.";
-
-            progress.Report($"Настроено: {adapter.Name} → {assignment.Ip}, маска {plan.Mask}");
-        }
-
-        return null;
+        return await ApplyAddressChangesAsync(changes, plan.Mask, benchIps, saveBindings, progress,
+            RunNetshAsync, WaitForAddressStateAsync, cancellationToken);
     }
 
-    private static async Task<bool> WaitForAddressAsync(string adapterId, string ip,
+    internal sealed record AdapterAddress(string Ip, string Mask);
+    internal sealed record AdapterAddressChange(BenchAdapter Adapter, string TargetIp, string TemporaryIp,
+        bool WasDhcp, IReadOnlyList<AdapterAddress> PreviousAddresses);
+
+    internal static async Task<string?> ApplyAddressChangesAsync(IReadOnlyList<AdapterAddressChange> changes,
+        string mask, IReadOnlyCollection<string> benchIps, Action saveBindings, IProgress<string> progress,
+        Func<string[], CancellationToken, Task<string?>> run,
+        Func<string, AdapterAddress?, bool, CancellationToken, Task<bool>> waitForAddressState,
+        CancellationToken cancellationToken)
+    {
+        var touched = new HashSet<AdapterAddressChange>();
+        try
+        {
+            foreach (var change in changes.Where(change => change.PreviousAddresses.Any(a => benchIps.Contains(a.Ip) && a.Ip != change.TargetIp)))
+                await SetCheckedAsync(change, change.TemporaryIp, mask, cancellationToken);
+            foreach (var change in changes)
+                await SetCheckedAsync(change, change.TargetIp, mask, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            saveBindings();
+            return null;
+        }
+        catch (Exception error)
+        {
+            if (touched.Count == 0) return error.Message;
+            progress.Report("Восстановление прежних настроек IPv4…");
+            var rollbackErrors = new List<string>();
+            // Release newly assigned addresses first, otherwise a swap may leave
+            // the other adapter occupying the address we are about to restore.
+            foreach (var change in changes.Where(touched.Contains))
+                await RestoreAsync(change, () => SetCheckedAsync(change, change.TemporaryIp, mask, CancellationToken.None));
+            foreach (var change in changes.Where(touched.Contains))
+                await RestoreAsync(change, () => RestoreOriginalAsync(change));
+            return error.Message + (rollbackErrors.Count == 0
+                ? " Прежние настройки IPv4 восстановлены."
+                : " Восстановление IPv4 не подтверждено: " + string.Join("; ", rollbackErrors));
+
+            async Task RestoreAsync(AdapterAddressChange change, Func<Task> restore)
+            {
+                try { await restore(); }
+                catch (Exception restoreError) { rollbackErrors.Add($"{change.Adapter.Name}: {restoreError.Message}"); }
+            }
+        }
+
+        async Task SetCheckedAsync(AdapterAddressChange change, string ip, string addressMask, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            progress.Report($"Настройка {change.Adapter.Name}: {ip}, маска {addressMask}…");
+            touched.Add(change); // netsh can change the address even if verification later fails.
+            await RunCheckedAsync(change, "set", ["source=static", $"address={ip}", $"mask={addressMask}", "gateway=none"], token);
+            await ConfirmAddressAsync(change, new(ip, addressMask), false, token);
+        }
+
+        async Task RestoreOriginalAsync(AdapterAddressChange change)
+        {
+            if (change.WasDhcp)
+            {
+                await RunCheckedAsync(change, "set", ["source=dhcp"], CancellationToken.None);
+                await ConfirmAddressAsync(change, null, true, CancellationToken.None);
+                return;
+            }
+            if (change.PreviousAddresses.Count == 0)
+            {
+                await RunCheckedAsync(change, "delete", [$"address={change.TemporaryIp}"], CancellationToken.None);
+                await ConfirmAddressAsync(change, null, false, CancellationToken.None);
+                return;
+            }
+            var original = change.PreviousAddresses[0];
+            await SetCheckedAsync(change, original.Ip, original.Mask, CancellationToken.None);
+            foreach (var address in change.PreviousAddresses.Skip(1))
+            {
+                await RunCheckedAsync(change, "add", [$"address={address.Ip}", $"mask={address.Mask}"], CancellationToken.None);
+                await ConfirmAddressAsync(change, address, false, CancellationToken.None);
+            }
+        }
+
+        async Task ConfirmAddressAsync(AdapterAddressChange change, AdapterAddress? address, bool dhcp, CancellationToken token)
+        {
+            if (!await waitForAddressState(change.Adapter.Id, address, dhcp, token))
+                throw new InvalidOperationException($"Карта {change.Adapter.Name}: изменение IPv4 " +
+                    (address != null ? $"на {address.Ip} с маской {address.Mask}" : dhcp ? "на DHCP" : "без статических адресов") + " не подтверждено.");
+        }
+
+        async Task RunCheckedAsync(AdapterAddressChange change, string verb, string[] arguments, CancellationToken token)
+        {
+            var error = await run(["interface", "ipv4", verb, "address", $"name={change.Adapter.Name}", ..arguments,
+                "store=persistent"], token);
+            if (error != null) throw new InvalidOperationException($"Карта {change.Adapter.Name}: {error}");
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static async Task<bool> WaitForAddressStateAsync(string adapterId, AdapterAddress? address, bool dhcp,
         CancellationToken cancellationToken)
     {
         // Windows can publish a new address shortly after netsh exits.
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            if (GetAdapters().Any(item =>
-                string.Equals(item.Id, adapterId, StringComparison.OrdinalIgnoreCase) &&
-                item.Ipv4.Split(", ").Contains(ip)))
-                return true;
+            var properties = NetworkInterface.GetAllNetworkInterfaces()
+                .SingleOrDefault(item => string.Equals(item.Id, adapterId, StringComparison.OrdinalIgnoreCase))?.GetIPProperties();
+            if (properties?.GetIPv4Properties()?.IsDhcpEnabled == dhcp)
+            {
+                if (dhcp) return true;
+                var addresses = properties.UnicastAddresses.Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork);
+                if (address == null ? !addresses.Any() : addresses.Any(a => a.Address.ToString() == address.Ip && a.IPv4Mask.ToString() == address.Mask))
+                    return true;
+            }
             await Task.Delay(200, cancellationToken);
         }
         return false;
@@ -228,6 +309,8 @@ public static class DataTestNetworkConfigurator
         {
             try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
             catch (InvalidOperationException) { }
+            await process.WaitForExitAsync(CancellationToken.None);
+            await Task.WhenAll(stdout, stderr);
             cancellationToken.ThrowIfCancellationRequested();
             return "netsh не завершился за 30 секунд. Обновите состояние карт перед повторным применением.";
         }

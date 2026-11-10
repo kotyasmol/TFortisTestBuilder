@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Steps;
 using TestBuilder.Services;
+using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.Graphs;
@@ -20,6 +21,44 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class FirstRunSessionTests
 {
+    [Fact]
+    public Task FirstRun_WritesPreparationAndCheckToOneFile_AndNextRunUsesAnotherFile() => InSession(async () =>
+    {
+        using var bus = new ModbusService();
+        using var vm = CreateViewModel(bus);
+        var settings = AppSettings.Instance;
+        var oldEnabled = settings.EnableFileLogging;
+        var oldFolder = settings.LogFolder;
+        var folder = Path.Combine(Path.GetTempPath(), "first-run-log-" + Guid.NewGuid().ToString("N"));
+        settings.EnableFileLogging = true;
+        settings.LogFolder = folder;
+        try
+        {
+            Chain(vm.RootGraph, PreparationDelay(), new DelayNodeViewModel { Milliseconds = 0 });
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            Assert.True(vm.Station.IsSuccessful);
+            var firstPath = Assert.Single(Directory.GetFiles(folder));
+            var firstLog = File.ReadAllText(firstPath);
+            Assert.Contains("[Testing] Подготовка стенда:", firstLog);
+            Assert.Contains("[Testing] Запуск теста:", firstLog);
+            Assert.Null(LoggingService.Instance.CurrentLogFilePath);
+
+            await vm.RunGraphCommand.ExecuteAsync(null);
+            var secondPath = Assert.Single(Directory.GetFiles(folder).Where(path => path != firstPath));
+            var secondLog = File.ReadAllText(secondPath);
+            Assert.Contains("[Testing] Запуск теста:", secondLog);
+            Assert.DoesNotContain("[Testing] Подготовка стенда:", secondLog);
+            Assert.Equal(firstLog, File.ReadAllText(firstPath));
+        }
+        finally
+        {
+            LoggingService.Instance.StopFileLogForRun();
+            settings.EnableFileLogging = oldEnabled;
+            settings.LogFolder = oldFolder;
+            if (Directory.Exists(folder)) Directory.Delete(folder, true);
+        }
+    });
+
     [Fact]
     public Task OpeningProfile_LeavesGraphEditable_FirstRunPrepares_AndReopenDefersAgain() => InSession(async () =>
     {

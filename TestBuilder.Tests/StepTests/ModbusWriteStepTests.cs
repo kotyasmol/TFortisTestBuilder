@@ -15,6 +15,21 @@ namespace TestBuilder.Tests.StepTests;
 
 public class ModbusWriteStepTests
 {
+    [Fact]
+    public async Task DynamicSlave_DoesNotWriteReadOnlyRegisterFromLiveCatalogue()
+    {
+        var bus = new FakeModbusService();
+        var step = new ModbusWriteStep(bus, NullLogger.Instance, 99, 1216, 1, useCurrentSlaveId: true);
+        var context = new TestContext(new RegisterState())
+        {
+            CurrentSlaveId = 23,
+            ModbusRegisters = new ModbusRegisterCatalog(new[] { new Ps3Model(23, bus) })
+        };
+
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(0, bus.WriteCount);
+    }
+
     [Theory]
     [InlineData((byte)21, "Реле нагревателя")]
     [InlineData((byte)23, "Реле нагревателя 1")]

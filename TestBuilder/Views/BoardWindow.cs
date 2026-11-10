@@ -83,6 +83,24 @@ public sealed class BoardWindow : Window
                     _draft.ImageBase64 = Convert.ToBase64String(bytes.ToArray()); Refresh();
                 } catch (Exception ex) { _status.Text = "Изображение не загружено: " + ex.Message; }
             }));
+            buttons.Children.Add(Button("Шаблон платы…", async () =>
+            {
+                try
+                {
+                    var directory = Path.Combine(AppContext.BaseDirectory, "reference", "boards");
+                    var start = Directory.Exists(directory) ? await StorageProvider.TryGetFolderFromPathAsync(directory) : null;
+                    var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                    {
+                        Title = "Шаблон платы", SuggestedStartLocation = start, AllowMultiple = false,
+                        FileTypeFilter = new[] { new FilePickerFileType("JSON платы") { Patterns = new[] { "*.json" } } }
+                    });
+                    if (files.Count == 0) return;
+                    var path = files[0].TryGetLocalPath() ?? throw new InvalidOperationException("Выберите JSON из доступной файловой папки.");
+                    _draft = BoardDesign.ReadReference(path);
+                    Refresh();
+                }
+                catch (Exception ex) { _status.Text = "Шаблон не загружен: " + ex.Message; }
+            }));
             buttons.Children.Add(Button("Добавить область", () => { _draft.Regions.Add(new BoardRegion { Id = Guid.NewGuid().ToString("N")[..8], X = .1, Y = .1 }); Refresh(); }));
             buttons.Children.Add(Button("Удалить область", DeleteSelectedRegion));
             buttons.Children.Add(Button("Применить к профилю", () => { try { if (!_regions.CommitEdit()) throw new InvalidOperationException("Исправьте координаты области."); _vm.ApplyBoard(_draft, _board.IsChecked == true); Close(); } catch (Exception ex) { _status.Text = ex.Message; } }));

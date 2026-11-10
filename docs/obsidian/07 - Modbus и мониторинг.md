@@ -75,6 +75,9 @@ DeviceDefinition содержит имя, SlaveId 1–247, IdentificationAddress
 RegisterDefinition: Address, Name, Area, Writable, Unit, Category.
 Области Holding/Input/Coil/Discrete используют FC3/4/1/2; запись Holding/Coil —
 FC6/5, Coil принимает 0/1. Адреса — протокольные смещения с нуля.
+Нода записи проверяет `Writable` по карте профиля и карте подключённого устройства.
+В цикле проверяется фактический slave текущей итерации. Неописанный адрес Holding
+или Coil остаётся доступен для ручной настройки последовательного шага.
 ConfiguredSlaveModel объединяет соседние адреса одной области в блоки,
 не захватывая пропуски. Не нужна новая ветка C# для каждой модели.
 

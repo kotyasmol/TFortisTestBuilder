@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -25,9 +26,13 @@ namespace TestBuilder.Domain.Steps
         RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken cancellationToken);
     }
 
+    internal sealed class PrintCancellationException(string message, CancellationToken token)
+        : OperationCanceledException(message, token);
+
     public sealed class PrintLabelStep : ITestStep
     {
         private const int DefaultPrinterTimeoutMs = 30000;
+        private static readonly ConcurrentDictionary<(IRawLabelPrinter Driver, string Queue), byte> ActiveQueues = new();
         private readonly ILogger _logger;
         private readonly string _printerName;
         private readonly string _serialVariableName;
@@ -37,7 +42,6 @@ namespace TestBuilder.Domain.Steps
         private readonly string _manualSerialNumber;
         private readonly string _manualMacAddress;
         private readonly int _copies;
-        private readonly bool _useQtProZplFormat;
         private readonly bool _failOnPrinterError;
         private readonly IRawLabelPrinter _printer;
         private readonly int _printerTimeoutMs;
@@ -45,8 +49,6 @@ namespace TestBuilder.Domain.Steps
         private readonly LabelTemplateDefinition _template;
         private readonly bool _useLastTestLabel;
         private string DeviceName => _template.Name;
-        private int DeviceType => _template.DeviceCode;
-        private int SerialOffset => _template.SerialOffset;
 
         public PrintLabelStep(
             ILogger logger,
@@ -74,7 +76,7 @@ namespace TestBuilder.Domain.Steps
                 copies,
                 useQtProZplFormat,
                 failOnPrinterError,
-                new WindowsRawLabelPrinter(),
+                WindowsRawLabelPrinter.Shared,
                 DefaultPrinterTimeoutMs,
                 labelModel, template, useLastTestLabel)
         {
@@ -114,9 +116,8 @@ namespace TestBuilder.Domain.Steps
             _copies = Math.Max(1, copies);
             _useLastTestLabel = useLastTestLabel;
             _template = (useLastTestLabel ? new LabelTemplateDefinition() :
-                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).Copy();
+                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).CopyUpgraded();
             _template.Validate();
-            _useQtProZplFormat = _template.UseShortSerial;
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
             _printerTimeoutMs = Math.Max(1, printerTimeoutMs);
@@ -190,14 +191,22 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
+            var model = preserveTemplateName ? null : context.ProductionModel;
+            var series = model?.SerialSeries;
             LabelTemplateDefinition printTemplate;
-            try { printTemplate = preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel); }
+            try
+            {
+                printTemplate = model != null ? LabelPrintContent.ForModel(_template, model, context.LabelVariant)
+                    : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
+            }
             catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
             string singleLabel;
             string language;
             string logDescription;
 
-            if (_useQtProZplFormat)
+            var printedSerial = serial;
+            var printedMac = "";
+            if (printTemplate.UseShortSerial)
             {
                 int fullSerial;
                 int shortSerial;
@@ -207,12 +216,12 @@ namespace TestBuilder.Domain.Steps
 
                 if (_useManualSerialNumber)
                 {
-                    if (!LabelPrintContent.TryResolveSerial(_template, serial, out fullSerial, out shortSerial, out var serialError))
+                    if (!LabelPrintContent.TryResolveSerial(printTemplate, serial, out fullSerial, out shortSerial, out var serialError))
                     {
                         return Fail(context, 6, serialError);
                     }
 
-                    if (_template.RequiresMac && !LabelPrintContent.TryNormalizeMac(_manualMacAddress, out mac))
+                    if (printTemplate.RequiresMac && !LabelPrintContent.TryNormalizeMac(_manualMacAddress, out mac))
                     {
                         return Fail(
                             context,
@@ -230,7 +239,9 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, 6, $"Серийный номер '{serial}' слишком большой или имеет неверный формат.");
                     }
 
-                    if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
+                    if (series != null)
+                        shortSerial = fullSerial - printTemplate.SerialOffset;
+                    else if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
                     {
                         return Fail(
                             context,
@@ -238,12 +249,12 @@ namespace TestBuilder.Domain.Steps
                             $"Переменная короткого серийного номера '{_serialShortVariableName}' не найдена или не является целым числом.");
                     }
 
-                    if (shortSerial < 0 || shortSerial > _template.ShortSerialMax)
+                    if (shortSerial < 0 || shortSerial > printTemplate.ShortSerialMax)
                     {
-                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..{_template.ShortSerialMax}.");
+                        return Fail(context, 6, $"Короткий серийный номер {shortSerial} вне диапазона 0..{printTemplate.ShortSerialMax}.");
                     }
 
-                    if (fullSerial != SerialOffset + shortSerial)
+                    if (fullSerial != printTemplate.SerialOffset + shortSerial)
                     {
                         return Fail(
                             context,
@@ -252,7 +263,7 @@ namespace TestBuilder.Domain.Steps
                             $"{_serialShortVariableName}={shortSerial}.");
                     }
 
-                    if (_template.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
+                    if (printTemplate.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
                         !LabelPrintContent.TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
                     {
                         return Fail(
@@ -261,21 +272,27 @@ namespace TestBuilder.Domain.Steps
                             $"Переменная MAC '{_macVariableName}' не найдена или содержит некорректный адрес.");
                     }
 
-                    shortSerialSource = _serialShortVariableName;
+                    shortSerialSource = series == null ? _serialShortVariableName : "Catalog";
                     macSource = _macVariableName;
                 }
 
-                var barcode = _template.Barcode(shortSerial);
-                singleLabel = LabelPrintContent.Render(printTemplate, fullSerial.ToString(CultureInfo.InvariantCulture), shortSerial, mac);
-                language = _template.Language;
+                if (series?.Check(fullSerial, context.IssuedSerialNumber) is { } seriesError)
+                    return Fail(context, 6, seriesError);
+                if (printTemplate.RequiresMac && series?.CheckMac(mac, fullSerial) is { } macError)
+                    return Fail(context, 6, macError);
+                var barcode = printTemplate.Barcode(shortSerial);
+                printedSerial = fullSerial == 0 ? serial : fullSerial.ToString(CultureInfo.InvariantCulture);
+                printedMac = mac;
+                singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, shortSerial, mac);
+                language = printTemplate.Language;
                 logDescription =
-                    $"этикеток {printTemplate.Name}: serial={fullSerial}, SN={shortSerial:D5}, MAC={mac}, barcode={barcode}";
+                    $"этикеток {printTemplate.Name}: SN={printedSerial}, MAC={mac}, barcode={barcode}";
 
                 context.SetVariable("PrintLabel.Template", _template.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
                 context.SetVariable("PrintLabel.DeviceName", printTemplate.Name);
-                context.SetVariable("PrintLabel.DeviceType", DeviceType);
+                context.SetVariable("PrintLabel.DeviceType", printTemplate.DeviceCode);
                 context.SetVariable("PrintLabel.Mac", mac);
                 context.SetVariable("PrintLabel.MacSource", macSource);
                 context.SetVariable("PrintLabel.SerialShortSource", shortSerialSource);
@@ -283,8 +300,19 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
+                if (model != null)
+                {
+                    if (model.RtlReport != null && !context.IssuedSerialNumber.HasValue)
+                        return Fail(context, 6, "Сервер ещё не выдал номер для платы в текущем прогоне.");
+                    if (!long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var fullSerial) || fullSerial <= 0)
+                        return Fail(context, 6, "Введите полный серийный номер изделия.");
+                    var seriesError = series == null ? ModelSerialSeries.CheckAssigned(fullSerial, context.IssuedSerialNumber)
+                        : series.Check(fullSerial, context.IssuedSerialNumber);
+                    if (seriesError != null)
+                        return Fail(context, 6, seriesError);
+                }
                 singleLabel = LabelPrintContent.Render(printTemplate, serial, 0, "");
-                language = _template.Language;
+                language = printTemplate.Language;
                 logDescription = $"серийного номера {serial}";
             }
 
@@ -303,46 +331,61 @@ namespace TestBuilder.Domain.Steps
             // A printer failure must not discard the validated product identity/template.
             if (!context.IsCleanup)
                 context.LabelPrinting.Set(new PreparedLabel(printTemplate,
-                    _useQtProZplFormat ? context.GetVariable<int>("PrintLabel.FullSerial").ToString(CultureInfo.InvariantCulture) : serial,
-                    _useQtProZplFormat ? context.GetVariable<string>("PrintLabel.Mac") ?? "" : "",
-                    _printerName, _copies));
+                    printedSerial, printedMac, _printerName, _copies));
             if (string.IsNullOrWhiteSpace(_printerName))
                 return Fail(context, 3, "Имя принтера не задано.");
 
-            _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
-
-            using var printCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var printTask = Task.Run(
-                () => _printer.Print(_printerName, bytes, printCts.Token),
-                CancellationToken.None);
-            var timeoutTask = Task.Delay(_printerTimeoutMs, cancellationToken);
-            var completed = await Task.WhenAny(printTask, timeoutTask).ConfigureAwait(false);
-
-            if (completed != printTask)
+            var queue = (_printer, _printerName.ToUpperInvariant());
+            if (!ActiveQueues.TryAdd(queue, 0))
             {
-                printCts.Cancel();
-                ObserveLatePrintTask(printTask);
-                cancellationToken.ThrowIfCancellationRequested();
-                context.SetVariable("PrintLabel.TimedOut", true);
-                return Fail(context, 5, $"Задание печати не завершено за {_printerTimeoutMs} мс; запрошена отмена задания.");
+                context.SetVariable("PrintLabel.CompletionStatus", "Pending");
+                return Fail(context, 7, $"Предыдущее задание на «{_printerName}» ещё выполняется или отменяется. Новое задание не добавлено.");
             }
 
+            _logger.Info($"[ШАГ] Печать {logDescription} на '{_printerName}', экземпляров: {_copies}.");
+            var printCts = new CancellationTokenSource();
+            var printTask = Task.Run(() =>
+            {
+                try { return _printer.Print(_printerName, bytes, printCts.Token); }
+                finally { ActiveQueues.TryRemove(queue, out _); }
+            });
+
             RawLabelPrintResult printResult;
+            var waitEndedEarly = false;
             try
             {
-                printResult = await printTask.ConfigureAwait(false);
+                printResult = await printTask.WaitAsync(TimeSpan.FromMilliseconds(_printerTimeoutMs), cancellationToken).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                waitEndedEarly = true;
+                printCts.Cancel();
+                context.SetVariable("PrintLabel.TimedOut", true);
+                context.SetVariable("PrintLabel.CompletionStatus", "Unknown");
+                return Fail(context, 5, $"За {_printerTimeoutMs} мс статус печати не подтвердился. Запрошена отмена. Перед повтором проверьте очередь и этикетку.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                throw;
+                waitEndedEarly = true;
+                printCts.Cancel();
+                context.SetVariable("PrintLabel.CompletionStatus", "Unknown");
+                const string message = "Запрошена отмена печати. Перед повтором проверьте очередь и этикетку.";
+                _logger.Warning(message);
+                throw new PrintCancellationException(message, cancellationToken);
             }
             catch (Exception ex)
             {
                 return Fail(context, 3, ex.Message);
             }
+            finally
+            {
+                if (waitEndedEarly) _ = ObserveLatePrintTaskAsync(printTask, printCts);
+                else printCts.Dispose();
+            }
 
             context.SetVariable("PrintLabel.JobId", printResult.JobId);
-            context.SetVariable("PrintLabel.CompletionStatus", printResult.Success ? printResult.CompletionStatus : string.Empty);
+            if (printResult.Success || printResult.CompletionStatus == "Unknown")
+                context.SetVariable("PrintLabel.CompletionStatus", printResult.CompletionStatus);
             if (!printResult.Success)
             {
                 return Fail(context, printResult.ErrorCode, printResult.Error);
@@ -456,13 +499,11 @@ namespace TestBuilder.Domain.Steps
             return Encoding.GetEncoding(1251);
         }
 
-        private static void ObserveLatePrintTask(Task<RawLabelPrintResult> task)
+        private static async Task ObserveLatePrintTaskAsync(Task<RawLabelPrintResult> task, CancellationTokenSource printCts)
         {
-            _ = task.ContinueWith(
-                completed => _ = completed.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            try { await task.ConfigureAwait(false); }
+            catch { /* The caller has already reported uncertainty; do not log into a later run. */ }
+            finally { printCts.Dispose(); }
         }
     }
 

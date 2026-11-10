@@ -143,7 +143,7 @@ public class ConfiguredHardwareTests
     [Fact]
     public void Apk03PresetsPreserveAllLegacyRegisterAddressesAndAccessModes()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TestBuilder/Assets/hardware-presets.json"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../reference/modbus/hardware-presets.json"));
         var presets = System.Text.Json.JsonSerializer.Deserialize<List<DeviceDefinition>>(File.ReadAllText(path))!;
         var bus = new RecordingBus();
         SlaveModelBase[] legacy = {new El60Model(1,bus),new PS1Model(1,bus),new PS2Model(1,bus),

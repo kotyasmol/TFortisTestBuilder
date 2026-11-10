@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System;
 using System.ComponentModel;
 using System.IO.Ports;
@@ -10,6 +12,9 @@ namespace TestBuilder.Domain.Modbus;
 /// <summary>A named UART endpoint, opened only when a console step uses it.</summary>
 public sealed record ConsoleDeviceDefinition : INotifyPropertyChanged
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     private string _name = "Консоль устройства";
     public string Name

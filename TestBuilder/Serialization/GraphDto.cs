@@ -1,11 +1,15 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Steps;
 
 namespace TestBuilder.Serialization
 {
     public class GraphDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = "Новый профиль";
 
@@ -20,6 +24,14 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("deviceModel")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? DeviceModel { get; set; }
+
+        [JsonPropertyName("useCatalogSerials")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool UseCatalogSerials { get; set; }
+
+        [JsonPropertyName("labelVariant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int LabelVariant { get; set; }
 
         [JsonPropertyName("configurationName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -43,7 +55,11 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
 
-        [JsonPropertyName("nodes")]
+        [JsonPropertyName("reportTemplate")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ReportTemplate? ReportTemplate { get; set; }
+
+        [JsonRequired, JsonPropertyName("nodes")]
         public List<NodeDto> Nodes { get; set; } = new();
 
         [JsonPropertyName("connections")]
@@ -52,6 +68,8 @@ namespace TestBuilder.Serialization
 
     public sealed class ProfileActionDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("labels")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Models.ProfileActionLabels? Labels { get; set; }
@@ -68,6 +86,8 @@ namespace TestBuilder.Serialization
 
     public class NodeDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("id")]
         public string Id { get; set; } = "";
 
@@ -164,6 +184,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("reportName")]
         public string? ReportName { get; set; }
 
+        [JsonPropertyName("resultVariableName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ResultVariableName { get; set; }
+
         [JsonPropertyName("readIntervalMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? ReadIntervalMs { get; set; }
@@ -229,6 +253,18 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("pollIntervalMs")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? PollIntervalMs { get; set; }
+
+        [JsonPropertyName("selfTestUseLegacyTimeout")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? SelfTestUseLegacyTimeout { get; set; }
+
+        [JsonPropertyName("selfTestBrowserSettleDelayMs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SelfTestBrowserSettleDelayMs { get; set; }
+
+        [JsonPropertyName("readField")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ReadField { get; set; }
 
         [JsonPropertyName("outputVariableName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -359,6 +395,10 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("fixedSerialNumber")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? FixedSerialNumber { get; set; }
+
+        [JsonPropertyName("expectedSerialPrefix")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ExpectedSerialPrefix { get; set; }
 
         // --- Set Pro MAC / Build MAC / Print Label ---
         [JsonPropertyName("macVariableName")]
@@ -553,6 +593,8 @@ namespace TestBuilder.Serialization
 
     public class DataTestPortDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = "";
 
@@ -569,6 +611,8 @@ namespace TestBuilder.Serialization
 
     public class ConnectionDto
     {
+        [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         [JsonPropertyName("sourceNodeId")]
         public string SourceNodeId { get; set; } = "";
 

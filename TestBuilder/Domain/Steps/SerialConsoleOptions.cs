@@ -1,7 +1,12 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace TestBuilder.Domain.Steps;
 public sealed record SerialConsoleOptions
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("connectOnly")] public bool ConnectOnly { get; init; }
     [JsonPropertyName("deviceId")] public string DeviceId { get; init; } = "";
     [JsonPropertyName("portName")] public string PortName { get; init; } = "";

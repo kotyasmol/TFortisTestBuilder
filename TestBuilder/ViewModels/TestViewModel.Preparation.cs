@@ -48,7 +48,7 @@ public partial class TestViewModel
             }
             finally { IsConnecting = false; }
         }
-        await PrepareProfileAsync();
+        await WithRunFileLogAsync(PrepareProfileAsync);
     }
 
     private string CurrentPreparationKey() =>

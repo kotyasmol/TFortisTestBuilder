@@ -116,6 +116,25 @@ public class CompareStepTests
         Assert.Equal(3, modbus.ReadCount);
     }
 
+    [Fact]
+    public async Task NamedRegisterResultDoesNotReuseAnEarlierMeasurementWhenReadingFails()
+    {
+        var context = new TestContext(new RegisterState()) { CurrentSlaveId = 3 };
+        var modbus = new FakeModbusService(55163);
+        var read = new CheckRegisterRangeStep(0, 1403, 53000, 56000, NullLogger.Instance,
+            useCurrentSlaveId: true, modbusService: modbus, liveRead: true, resultVariableName: "Report.Poe.{slaveId}.B");
+        Assert.Equal(StepResult.True, await read.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(true, context.Variables["Report.Poe.3.B.Passed"]);
+        Assert.Equal(55163, context.Variables["Report.Poe.3.B.Value"]);
+
+        var failedRead = new CheckRegisterRangeStep(0, 1403, 53000, 56000, NullLogger.Instance,
+            useCurrentSlaveId: true, modbusService: new FakeModbusService(), liveRead: true,
+            resultVariableName: "Report.Poe.{slaveId}.B");
+        Assert.Equal(StepResult.False, await failedRead.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(false, context.Variables["Report.Poe.3.B.Passed"]);
+        Assert.False(context.Variables.ContainsKey("Report.Poe.3.B.Value"));
+    }
+
     private sealed class FakeModbusService : IModbusService
     {
         private readonly ushort[] _values;

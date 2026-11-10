@@ -29,7 +29,7 @@ return await session.Dispatch(async () =>
     using var vm = new TestViewModel(bus, slaves);
     GraphSerializer.Deserialize(File.ReadAllText(args[0]), vm);
     var root = vm.RootGraph;
-    if (Path.GetFileName(args[0]) != "PSW_UPS_Box_8x2Pro_parallel_start.json" || root.Hardware == null)
+    if (Path.GetFileName(args[0]) != "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json" || root.Hardware == null)
         throw new InvalidOperationException("Requires the stock 8x2Pro parallel_start profile.");
     SubtestNodeViewModel Stage(string prefix) => root.Nodes.OfType<SubtestNodeViewModel>()
         .Single(n => n.Name.StartsWith(prefix, StringComparison.Ordinal));

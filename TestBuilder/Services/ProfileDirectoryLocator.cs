@@ -8,11 +8,61 @@ namespace TestBuilder.Services
         private const string SolutionFileName = "TestBuilder.slnx";
         private const string ProfilesFolderName = "profiles";
 
-        public static string Resolve()
+        internal static string Resolve(string installation, string? configuredFolder)
         {
-            return FindProjectProfilesDirectory(AppContext.BaseDirectory)
-                ?? FindProjectProfilesDirectory(Environment.CurrentDirectory)
-                ?? Path.Combine(AppContext.BaseDirectory, ProfilesFolderName);
+            if (string.IsNullOrWhiteSpace(configuredFolder))
+                return FindProjectProfilesDirectory(installation) ?? ResolvePortableDirectory(installation);
+
+            // Earlier releases could save the portable default as an explicit path.
+            if (IsPortableProfilesFolder(installation, configuredFolder))
+                return ResolvePortableDirectory(installation);
+
+            return configuredFolder;
+        }
+
+        private static bool IsPortableProfilesFolder(string installation, string configuredFolder)
+        {
+            try
+            {
+                var portableFolder = Path.GetFullPath(Path.Combine(installation, ProfilesFolderName));
+                var savedFolder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredFolder));
+                return string.Equals(portableFolder, savedFolder,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
+        }
+
+        internal static string ResolvePortableDirectory(string installation)
+        {
+            var workingFolder = Path.Combine(installation, ProfilesFolderName);
+            var templates = Path.Combine(workingFolder, "standard");
+            try
+            {
+                if (!Directory.Exists(templates)) return workingFolder;
+                foreach (var source in Directory.EnumerateFiles(templates, "*.json", SearchOption.TopDirectoryOnly))
+                {
+                    var destination = Path.Combine(workingFolder, Path.GetFileName(source));
+                    if (File.Exists(destination)) continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    try
+                    {
+                        File.Copy(source, temporary);
+                        File.SetLastWriteTimeUtc(temporary, File.GetLastWriteTimeUtc(source));
+                        File.Move(temporary, destination, overwrite: false);
+                    }
+                    catch (IOException) when (File.Exists(destination)) { }
+                    finally { File.Delete(temporary); }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Logging.DiagnosticLog.WriteException("Подготовка папки профилей", ex);
+            }
+            return workingFolder;
         }
 
         internal static string? FindProjectProfilesDirectory(string startPath)

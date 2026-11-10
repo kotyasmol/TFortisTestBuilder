@@ -1,9 +1,9 @@
 {
-  "name": "PSW_UPS_Box_8x2Pro_parallel_start",
-  "updatedAt": "2026-11-02T04:42:34.480119+00:00",
+  "name": "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11",
+  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
   "deviceModelId": "psw-ups-box-8x2pro",
   "deviceModel": "PSW+UPS-Box 8x2Pro",
-  "configurationName": "параллельный старт · с проверкой SFP",
+  "configurationName": "Параллельная проверка с SFP · 10.11",
   "hardware": {
     "StandName": "АПК-03 · 8x2Pro",
     "PortName": "",
@@ -2655,13 +2655,25 @@
         "on": {
           "match": "All",
           "conditions": [
-            { "slaveId": 23, "area": "Holding", "address": 1200, "comparison": "Equal", "value": 1 }
+            {
+              "slaveId": 23,
+              "area": "Holding",
+              "address": 1200,
+              "comparison": "Equal",
+              "value": 1
+            }
           ]
         },
         "off": {
           "match": "All",
           "conditions": [
-            { "slaveId": 23, "area": "Holding", "address": 1200, "comparison": "Equal", "value": 0 }
+            {
+              "slaveId": 23,
+              "area": "Holding",
+              "address": 1200,
+              "comparison": "Equal",
+              "value": 0
+            }
           ]
         }
       },
@@ -2853,13 +2865,25 @@
         "on": {
           "match": "All",
           "conditions": [
-            { "slaveId": 17, "area": "Holding", "address": 1706, "comparison": "Equal", "value": 1 }
+            {
+              "slaveId": 17,
+              "area": "Holding",
+              "address": 1706,
+              "comparison": "Equal",
+              "value": 1
+            }
           ]
         },
         "off": {
           "match": "All",
           "conditions": [
-            { "slaveId": 17, "area": "Holding", "address": 1706, "comparison": "Equal", "value": 0 }
+            {
+              "slaveId": 17,
+              "area": "Holding",
+              "address": 1706,
+              "comparison": "Equal",
+              "value": 0
+            }
           ]
         }
       },
@@ -3195,7 +3219,7 @@
   "nodes": [
     {
       "id": "0",
-      "type": "Start (action state v1)",
+      "type": "Start (catalog serials v1)",
       "x": 80,
       "y": 120,
       "color": "blue",
@@ -4601,22 +4625,22 @@
       "runProgram": null,
       "parseResponse": null,
       "checkLedColor": null,
-      "name": "06. Ожидание загрузки DUT и selftest",
-      "description": "Проверка готовности DUT каждые 5s, общий timeout 180s, затем чтение selftest",
+      "name": "06. Загрузка DUT и получение серийника",
+      "description": "Дождаться CPU ID на странице DUT и получить серийный номер до проверок",
       "isEnabled": true,
       "reportName": null,
       "DisabledPortsText": null,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "06. Ожидание загрузки DUT и selftest",
+        "name": "06. Загрузка DUT и получение серийника",
         "productKind": "Switch",
         "nodes": [
           {
             "id": "0",
             "type": "Start",
             "x": 80,
-            "y": 120,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4636,8 +4660,8 @@
           {
             "id": "1",
             "type": "Delay",
-            "x": 540,
-            "y": 120,
+            "x": 320,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4658,8 +4682,8 @@
           {
             "id": "2",
             "type": "Clear ARP Cache",
-            "x": 1460,
-            "y": 120,
+            "x": 800,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4684,9 +4708,9 @@
           },
           {
             "id": "3",
-            "type": "Selftest Check",
-            "x": 1920,
-            "y": 120,
+            "type": "Read Selftest Field (v1)",
+            "x": 1392,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4704,17 +4728,75 @@
             "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
             "timeoutMs": 250000,
             "pollIntervalMs": 5000,
-            "validationRules": "",
             "psw2G6FHardwareChecks": false,
             "failOnError": true,
             "outputPrefix": "Dut",
+            "DisabledPortsText": null,
+            "readField": "cpu_id",
+            "customName": "Дождаться CPU ID"
+          },
+          {
+            "id": "6",
+            "type": "Get Serial Number",
+            "x": 1984,
+            "y": 80,
+            "color": "blue",
+            "repeatOnSameSlave": null,
+            "repeatCount": null,
+            "indexVariable": null,
+            "untilSuccess": null,
+            "repeatDelayMs": null,
+            "registerArea": null,
+            "runOnlyOnFirstRun": false,
+            "boardElements": "",
+            "serialConsole": null,
+            "runProgram": null,
+            "parseResponse": null,
+            "checkLedColor": null,
+            "reportName": null,
+            "timeoutMs": 30000,
+            "outputVariableName": "SerialNumber",
+            "retryCount": 1,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "serverBaseUrl": "https://iccid.fort-telecom.ru",
+            "deviceType": "PSW+UPS-Box 8x2Pro",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "useFixedSerialNumber": false,
+            "fixedSerialNumber": 3200428,
+            "DisabledPortsText": null
+          },
+          {
+            "id": "7",
+            "type": "Check Variable Range",
+            "x": 2592,
+            "y": 80,
+            "color": "blue",
+            "repeatOnSameSlave": null,
+            "repeatCount": null,
+            "indexVariable": null,
+            "untilSuccess": null,
+            "repeatDelayMs": null,
+            "registerArea": null,
+            "runOnlyOnFirstRun": false,
+            "boardElements": "",
+            "serialConsole": null,
+            "runProgram": null,
+            "parseResponse": null,
+            "checkLedColor": null,
+            "reportName": null,
+            "min": 3200000,
+            "max": 3299999,
+            "variableName": "SerialNumber",
+            "failMessage": "Серийный номер должен попадать в диапазон 3200000..3299999",
+            "inclusive": true,
             "DisabledPortsText": null
           },
           {
             "id": "4",
             "type": "Delay",
-            "x": 2380,
-            "y": 120,
+            "x": 3168,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4735,8 +4817,8 @@
           {
             "id": "5",
             "type": "End",
-            "x": 2840,
-            "y": 120,
+            "x": 3648,
+            "y": 80,
             "color": "blue",
             "repeatOnSameSlave": null,
             "repeatCount": null,
@@ -4770,8 +4852,8 @@
           {
             "sourceNodeId": "3",
             "sourceConnector": "True",
-            "targetNodeId": "4",
-            "targetConnector": "Вход"
+            "targetNodeId": "6",
+            "targetConnector": "In"
           },
           {
             "sourceNodeId": "4",
@@ -4784,6 +4866,18 @@
             "sourceConnector": "Выход",
             "targetNodeId": "2",
             "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "6",
+            "sourceConnector": "True",
+            "targetNodeId": "7",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "7",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
           }
         ]
       }
@@ -6097,7 +6191,7 @@
           },
           {
             "id": "4",
-            "type": "Wait Variable Until",
+            "type": "Wait Variable Until (report v1)",
             "x": 1920,
             "y": 120,
             "color": "blue",
@@ -6113,7 +6207,7 @@
             "runProgram": null,
             "parseResponse": null,
             "checkLedColor": null,
-            "reportName": null,
+            "reportName": "напряжение АКБ",
             "expectedValue": "20..27",
             "timeoutMs": 160000,
             "baseUrl": "http://192.168.0.1",
@@ -6303,15 +6397,15 @@
       "runProgram": null,
       "parseResponse": null,
       "checkLedColor": null,
-      "name": "15. Получение серийника и запись MAC",
-      "description": "Получить serial, вычислить MAC, записать его через set_mac_pro.bat, перезагрузить DUT и проверить MAC",
+      "name": "15. Запись и проверка MAC",
+      "description": "Вычислить MAC из серийного номера, записать его, перезапустить DUT и сверить MAC",
       "isEnabled": true,
       "reportName": null,
       "DisabledPortsText": null,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "15. Получение серийника и запись MAC",
+        "name": "15. Запись и проверка MAC",
         "productKind": "Switch",
         "nodes": [
           {
@@ -6333,63 +6427,6 @@
             "parseResponse": null,
             "checkLedColor": null,
             "reportName": null,
-            "DisabledPortsText": null
-          },
-          {
-            "id": "1",
-            "type": "Get Serial Number",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "reportName": null,
-            "timeoutMs": 30000,
-            "outputVariableName": "SerialNumber",
-            "retryCount": 1,
-            "retryDelayMs": 1000,
-            "failOnError": true,
-            "serverBaseUrl": "https://iccid.fort-telecom.ru",
-            "deviceType": "PSW+UPS-Box 8x2Pro",
-            "cpuIdVariableName": "Dut.cpu_id",
-            "useFixedSerialNumber": false,
-            "fixedSerialNumber": 3200428,
-            "DisabledPortsText": null
-          },
-          {
-            "id": "2",
-            "type": "Check Variable Range",
-            "x": 1008,
-            "y": 592,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "reportName": null,
-            "min": 3200000,
-            "max": 3299999,
-            "variableName": "SerialNumber",
-            "failMessage": "Серийный номер должен попадать в диапазон 3200000..3299999",
-            "inclusive": true,
             "DisabledPortsText": null
           },
           {
@@ -6695,18 +6732,6 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "2",
-            "sourceConnector": "True",
             "targetNodeId": "3",
             "targetConnector": "In"
           },
@@ -6918,15 +6943,15 @@
       "runProgram": null,
       "parseResponse": null,
       "checkLedColor": null,
-      "name": "17. Финальная статистика и отчет",
-      "description": "Финальный selftest, сбор отчета QTstand, отправка на сервер и локальная копия",
+      "name": "17. Отчёт о проверке",
+      "description": "Собрать и отправить отчёт по результатам выполненных проверок",
       "isEnabled": true,
       "reportName": null,
       "DisabledPortsText": null,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
-        "name": "17. Финальная статистика и отчет",
+        "name": "17. Отчёт о проверке",
         "productKind": "Switch",
         "nodes": [
           {
@@ -6948,34 +6973,6 @@
             "parseResponse": null,
             "checkLedColor": null,
             "reportName": null,
-            "DisabledPortsText": null
-          },
-          {
-            "id": "1",
-            "type": "Selftest Check",
-            "x": 540,
-            "y": 120,
-            "color": "blue",
-            "repeatOnSameSlave": null,
-            "repeatCount": null,
-            "indexVariable": null,
-            "untilSuccess": null,
-            "repeatDelayMs": null,
-            "registerArea": null,
-            "runOnlyOnFirstRun": false,
-            "boardElements": "",
-            "serialConsole": null,
-            "runProgram": null,
-            "parseResponse": null,
-            "checkLedColor": null,
-            "reportName": null,
-            "url": "http://192.168.0.1/cgi-bin/luci/admin/statistics/deviceinfo?luci_username=admin&luci_password=admin",
-            "timeoutMs": 180000,
-            "pollIntervalMs": 5000,
-            "validationRules": "",
-            "psw2G6FHardwareChecks": false,
-            "failOnError": false,
-            "outputPrefix": "DutFinal",
             "DisabledPortsText": null
           },
           {
@@ -7059,18 +7056,6 @@
           {
             "sourceNodeId": "0",
             "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "False",
             "targetNodeId": "2",
             "targetConnector": "In"
           },
@@ -8206,15 +8191,15 @@
       "targetConnector": "In"
     },
     {
-      "sourceNodeId": "4",
+      "sourceNodeId": "5",
       "sourceConnector": "Success",
-      "targetNodeId": "7",
+      "targetNodeId": "6",
       "targetConnector": "In"
     },
     {
       "sourceNodeId": "5",
       "sourceConnector": "Success",
-      "targetNodeId": "6",
+      "targetNodeId": "7",
       "targetConnector": "In"
     },
     {
@@ -8283,5 +8268,310 @@
       "targetNodeId": "11",
       "targetConnector": "In"
     }
-  ]
+  ],
+  "reportTemplate": {
+    "fields": [
+      {
+        "label": "самотестирование",
+        "key": "самотестирование",
+        "source": "Entry",
+        "format": "BooleanText"
+      },
+      {
+        "label": "Передача данных порт 0",
+        "key": "DataTest.Port0.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 1",
+        "key": "DataTest.Port1.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 2",
+        "key": "DataTest.Port2.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 3",
+        "key": "DataTest.Port3.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Передача данных порт 4",
+        "key": "DataTestSfp.Port0.Passed",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "детекция ИБП",
+        "key": "Dut.ups_det",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "установка MAC адреса",
+        "key": "15. Запись и проверка MAC",
+        "source": "Entry",
+        "format": "BooleanNumber"
+      },
+      {
+        "label": "Тип проверки",
+        "key": "",
+        "source": "TestType",
+        "format": "Text"
+      },
+      {
+        "label": "Версия прошивки",
+        "key": "Версия прошивки",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "Версия бутлоадера",
+        "key": "Версия бутлоадера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "MAC адрес",
+        "key": "MAC адрес",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_0",
+        "key": "link_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_0",
+        "key": "poe_a_st_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_0",
+        "key": "poe_a_v_0",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_0",
+        "key": "poe_a_c_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_1",
+        "key": "link_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_1",
+        "key": "poe_a_st_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_1",
+        "key": "poe_a_v_1",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_1",
+        "key": "poe_a_c_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_2",
+        "key": "link_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_2",
+        "key": "poe_a_st_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_2",
+        "key": "poe_a_v_2",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_2",
+        "key": "poe_a_c_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_3",
+        "key": "link_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_3",
+        "key": "poe_a_st_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_3",
+        "key": "poe_a_v_3",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_3",
+        "key": "poe_a_c_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_4",
+        "key": "link_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_4",
+        "key": "poe_a_st_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_4",
+        "key": "poe_a_v_4",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_4",
+        "key": "poe_a_c_4",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_5",
+        "key": "link_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_5",
+        "key": "poe_a_st_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_5",
+        "key": "poe_a_v_5",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_5",
+        "key": "poe_a_c_5",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_6",
+        "key": "link_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_6",
+        "key": "poe_a_st_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_6",
+        "key": "poe_a_v_6",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_6",
+        "key": "poe_a_c_6",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "link_7",
+        "key": "link_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_st_7",
+        "key": "poe_a_st_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "poe_a_v_7",
+        "key": "poe_a_v_7",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "label": "poe_a_c_7",
+        "key": "poe_a_c_7",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "версия платы",
+        "key": "версия платы",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "ID микросхемы PoE контроллера",
+        "key": "ID микросхемы PoE контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "ID микросхемы Switch контроллера",
+        "key": "ID микросхемы Switch контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "присутствие SFP9",
+        "key": "присутствие SFP9",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "присутствие SFP10",
+        "key": "присутствие SFP10",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "label": "напряжение АКБ",
+        "key": "напряжение АКБ",
+        "source": "Entry",
+        "format": "FixedSix"
+      }
+    ]
+  },
+  "useCatalogSerials": true
 }

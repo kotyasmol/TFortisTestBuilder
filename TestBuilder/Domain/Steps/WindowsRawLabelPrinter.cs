@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -12,6 +13,7 @@ internal interface IRawPrinterSession : IDisposable
 {
     PrinterQueueState ReadPrinter();
     uint StartDocument();
+    void RetainJob(uint jobId);
     void Write(byte[] bytes);
     void EndDocument();
     PrinterJobState? ReadJob(uint jobId);
@@ -21,6 +23,11 @@ internal interface IRawPrinterSession : IDisposable
 
 internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
 {
+    internal static WindowsRawLabelPrinter Shared { get; } = new();
+    private const uint Completed = 0x80 | 0x1000;
+    private const uint Deleted = 0x100;
+    private readonly ConcurrentDictionary<string, UncertainJob> _uncertainJobs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly record struct UncertainJob(uint Id, string CleanupError);
     private readonly Func<string, IRawPrinterSession> _open;
     private readonly int _pollMs;
     public WindowsRawLabelPrinter() : this(name => new NativePrinterSession(name)) { }
@@ -34,13 +41,25 @@ internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
     {
         IRawPrinterSession? session = null;
         uint jobId = 0;
+        _uncertainJobs.TryGetValue(printerName, out var previous);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             session = _open(printerName);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (previous.Id != 0)
+            {
+                var previousStatus = session.ReadJob(previous.Id);
+                if (previousStatus != null && (previousStatus.Value.Status & (Completed | Deleted)) == 0)
+                    return new(false, 7, $"{previous.CleanupError}. Проверьте очередь печати.", previous.Id, "Unknown");
+                _uncertainJobs.TryRemove(printerName, out _);
+                previous = default;
+            }
             CheckPrinter(session.ReadPrinter());
             cancellationToken.ThrowIfCancellationRequested();
             jobId = session.StartDocument();
+            cancellationToken.ThrowIfCancellationRequested();
+            session.RetainJob(jobId);
             cancellationToken.ThrowIfCancellationRequested();
             session.Write(bytes);
             cancellationToken.ThrowIfCancellationRequested();
@@ -56,7 +75,7 @@ internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
                 const uint failures = 0x1 | 0x2 | 0x4 | 0x20 | 0x40 | 0x100 | 0x200;
                 if ((job.Value.Status & failures) != 0)
                     throw new InvalidOperationException($"Задание {jobId}: ошибка/пауза/отмена (0x{job.Value.Status:X}); {job.Value.Description}");
-                if ((job.Value.Status & (0x80 | 0x1000)) != 0)
+                if ((job.Value.Status & Completed) != 0)
                 {
                     // TSC's port monitor reports COMPLETE (sent), not PRINTED.
                     // Keep this distinction visible; neither is an optical check of a label.
@@ -64,28 +83,52 @@ internal sealed class WindowsRawLabelPrinter : IRawLabelPrinter
                     session.ReleaseJob(jobId);
                     return new RawLabelPrintResult(true, 0, string.Empty, jobId, completion);
                 }
-                Thread.Sleep(_pollMs);
+                cancellationToken.WaitHandle.WaitOne(_pollMs);
             }
         }
         catch (OperationCanceledException)
         {
             if (session != null && jobId != 0)
             {
-                try { session.DeleteJob(jobId); } catch { /* Caller already reports cancellation/timeout. */ }
+                var cleanup = TryDeleteJob(printerName, session, jobId);
+                if (cleanup != null)
+                    throw new OperationCanceledException(cleanup.Message, cleanup, cancellationToken);
             }
             throw;
         }
         catch (Exception ex)
         {
             var message = ex.Message;
+            if (previous.Id != 0)
+                return new(false, 7, $"Не удалось проверить прежнее задание {previous.Id}: {message}", previous.Id, "Unknown");
+            var status = string.Empty;
             if (session != null && jobId != 0)
             {
-                try { session.DeleteJob(jobId); }
-                catch (Exception cleanup) { message += $" Не удалось отменить задание {jobId}: {cleanup.Message}"; }
+                var cleanup = TryDeleteJob(printerName, session, jobId);
+                if (cleanup != null)
+                {
+                    message += $" {cleanup.Message}";
+                    status = "Unknown";
+                }
             }
-            return new RawLabelPrintResult(false, 3, message, jobId);
+            return new RawLabelPrintResult(false, 3, message, jobId, status);
         }
         finally { session?.Dispose(); }
+    }
+
+    private Exception? TryDeleteJob(string printerName, IRawPrinterSession session, uint jobId)
+    {
+        try
+        {
+            session.DeleteJob(jobId);
+            return null;
+        }
+        catch (Exception error)
+        {
+            var message = $"Не удалось подтвердить отмену задания {jobId}: {error.Message}";
+            _uncertainJobs[printerName] = new(jobId, message);
+            return new InvalidOperationException(message, error);
+        }
     }
 
     private static void CheckPrinter(PrinterQueueState state)
@@ -127,11 +170,10 @@ internal sealed class NativePrinterSession : IRawPrinterSession
         var id = StartDocPrinter(_handle, 1, new DocInfo1 { DocumentName = "TFortis labels", DataType = "RAW" });
         if (id == 0) throw Error("StartDocPrinter");
         _documentOpen = true;
-        // JOB_CONTROL_RETAIN: keep this job after printing so polling can observe
-        // PRINTED. This changes neither the printer nor any other queued job.
-        Check(SetJob(_handle, id, 0, IntPtr.Zero, 8), "SetJob(RETAIN)");
         return id;
     }
+
+    public void RetainJob(uint id) => Check(SetJob(_handle, id, 0, IntPtr.Zero, 8), "SetJob(RETAIN)");
 
     public void Write(byte[] bytes)
     {
@@ -172,11 +214,25 @@ internal sealed class NativePrinterSession : IRawPrinterSession
     public void ReleaseJob(uint id) => Check(SetJob(_handle, id, 0, IntPtr.Zero, 9), "SetJob(RELEASE)");
     public void DeleteJob(uint id)
     {
-        Check(SetJob(_handle, id, 0, IntPtr.Zero, 5), "SetJob(DELETE)");
+        if (_documentOpen && AbortPrinter(_handle)) _documentOpen = false;
+        if (!SetJob(_handle, id, 0, IntPtr.Zero, 5))
+        {
+            var deleteError = Error("SetJob(DELETE)");
+            if (deleteError.NativeErrorCode == 87 && ReadJob(id) == null) return;
+            throw deleteError;
+        }
         // A retained completed job can stay in DELETING until retention is released.
         // Cancel first, so releasing cannot restart a pending print job.
         if (!SetJob(_handle, id, 0, IntPtr.Zero, 9) && Marshal.GetLastWin32Error() != 87)
             throw Error("SetJob(RELEASE after DELETE)");
+
+        var deadline = Environment.TickCount64 + 2000;
+        while (ReadJob(id) is { } state && (state.Status & 0x100) == 0)
+        {
+            if (Environment.TickCount64 >= deadline)
+                throw new InvalidOperationException($"Задание {id} всё ещё в очереди Windows.");
+            Thread.Sleep(100);
+        }
     }
     public void Dispose()
     {
@@ -186,7 +242,7 @@ internal sealed class NativePrinterSession : IRawPrinterSession
         _handle = IntPtr.Zero;
     }
     private static void Check(bool success, string operation) { if (!success) throw Error(operation); }
-    private static Exception Error(string operation)
+    private static Win32Exception Error(string operation)
     {
         var code = Marshal.GetLastWin32Error();
         return new Win32Exception(code, $"{operation}: Win32 {code}: {new Win32Exception(code).Message}");

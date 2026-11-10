@@ -139,7 +139,8 @@ public class TutorialTests
                 await vm.SaveGraphToPathAsync(external); Assert.False(File.Exists(external));
                 vm.Nodes.Add(new ModbusWriteNodeViewModel());
                 await vm.RunGraphCommand.ExecuteAsync(null); Assert.Contains("В обучении", vm.StatusMessage); Assert.False(vm.IsTestRunning);
-                vm.NewProfileCommand.Execute(null);
+                vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
+                await vm.NewProfileCommand.ExecuteAsync(null);
                 var start = new StartNodeViewModel(); var end = new EndNodeViewModel();
                 vm.Nodes.Add(start); vm.Nodes.Add(end); vm.Connections.Add(new(start.Output[0], end.Input[0]));
                 settings.LogFolder = logFolder; settings.EnableFileLogging = true;

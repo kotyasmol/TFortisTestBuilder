@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Services;
 
@@ -11,16 +10,50 @@ namespace TestBuilder.ViewModels;
 public partial class TestViewModel
 {
     private string? _savedProfileSnapshot;
+    private string? _savedProfileRevision;
+    private bool _confirmingProfileDiscard;
     public bool CanReloadProfile => CanChooseProfile && !IsActionGraphEditor && !IsNetworkSetupBusy &&
         !IsLabelToolBusy && !SaveGraphCommand.IsRunning && _currentProfilePath != null;
 
-    internal Func<Task<bool>> ConfirmReloadProfileAsync { get; set; } = async () =>
+    internal Func<Task<bool>> ConfirmReloadProfileAsync { get; set; } = () => ShowDiscardProfileDialogAsync(() => new());
+    internal Func<Task<bool>> ConfirmDiscardProfileAsync { get; set; } = () => ShowDiscardProfileDialogAsync(() => new(
+        "Закрыть профиль?", "Закрыть без сохранения",
+        "В профиле есть несохранённые изменения. Закрыть его без сохранения?"));
+
+    private static async Task<bool> ShowDiscardProfileDialogAsync(Func<Views.ReloadProfileDialog> createDialog)
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
-            return await new Views.ReloadProfileDialog().ShowDialog<bool>(owner);
+            return await createDialog().ShowDialog<bool>(owner);
         return false;
-    };
+    }
+
+    private bool HasUnsavedProfileChanges()
+    {
+        if (_savedProfileSnapshot == null) return _history.Manager.CanUndo;
+        return !MatchesCurrentProfile(_savedProfileSnapshot);
+    }
+
+    private bool MatchesCurrentProfile(string snapshot)
+    {
+        try { return snapshot == GraphSerializer.Serialize(this, CurrentProfileName); }
+        catch (Exception error) when (error is InvalidOperationException or ArgumentException or System.Text.Json.JsonException)
+        { return false; }
+    }
+
+    private async Task<bool> CanDiscardProfileChangesAsync(Func<Task<bool>> confirm)
+    {
+        if (_confirmingProfileDiscard) return false;
+        if (!HasUnsavedProfileChanges()) return true;
+        _confirmingProfileDiscard = true;
+        try { return await confirm(); }
+        catch (InvalidOperationException error)
+        {
+            LogUiException("Подтверждение закрытия профиля", error);
+            return false;
+        }
+        finally { _confirmingProfileDiscard = false; }
+    }
 
     [RelayCommand(CanExecute = nameof(CanReloadProfile))]
     private async Task ReloadProfileAsync()
@@ -29,8 +62,7 @@ public partial class TestViewModel
         var path = _currentProfilePath!;
         try
         {
-            if (_savedProfileSnapshot != GraphSerializer.Serialize(this, CurrentProfileName) &&
-                !await ConfirmReloadProfileAsync()) return;
+            if (!await CanDiscardProfileChangesAsync(ConfirmReloadProfileAsync)) return;
             if (!CanReloadProfile || _currentProfilePath != path) return;
             await SelectProfileAsync(GraphSerializer.ReadProfile(path), reload: true);
             RefreshProfiles();
@@ -44,7 +76,7 @@ public partial class TestViewModel
     }
 
     private bool CanManageProfile(GraphProfile? profile) => profile != null && CanEditGraph && CanChooseProfile &&
-        !IsActionGraphEditor && !IsTraining && !IsNetworkSetupBusy && !IsLabelToolBusy;
+        !IsActionGraphEditor && !IsTraining && !IsNetworkSetupBusy && !IsLabelToolBusy && !SaveGraphCommand.IsRunning;
 
     internal Func<GraphProfile, bool, string, Func<string, string?>, Task<string?>> PromptProfileNameAsync { get; set; } =
         async (profile, copy, suggested, validate) =>
@@ -100,8 +132,8 @@ public partial class TestViewModel
             var copy = _profileCatalog.FirstOrDefault(p => p.FilePath == copyPath);
             // Keep another edited document and any connected stand untouched.
             var canOpen = !IsConnected && CanManageProfile(profile) && _currentProfilePath == currentPath &&
-                (copyCurrent || !_history.Manager.CanUndo);
-            if (copy != null && canOpen) await SelectProfileAsync(copy);
+                (copyCurrent ? MatchesCurrentProfile(json) : !HasUnsavedProfileChanges());
+            if (copy != null && canOpen) await SelectProfileAsync(copy, discardChangesConfirmed: copyCurrent);
             StatusMessage = canOpen ? $"Создана копия профиля: {copy?.DisplayName ?? description}" :
                 $"Создана копия профиля: {copy?.DisplayName ?? description}. Выберите её в списке для редактирования.";
         }
@@ -118,17 +150,30 @@ public partial class TestViewModel
             if (description == null || !CanManageProfile(profile)) return;
             description = DescriptionFromTitle(description, profile.DeviceModel);
             if (ValidateProfileDescription(profile, description, false) is { } error) { StatusMessage = error; return; }
-            var json = await File.ReadAllTextAsync(profile.FilePath);
-            await ProfileFileStorage.WriteAsync(profile.FilePath, ProfileFileStorage.WithName(json, profile, description), createNew: false);
-            var renamed = GraphSerializer.ReadProfile(profile.FilePath);
-            if (IsCurrentProfile(profile))
+            var target = ProfileFileStorage.DisplayPath(Path.GetDirectoryName(profile.FilePath)!, GraphProfile.ComposeName(profile.DeviceModel, description));
+            var moving = !string.Equals(profile.FilePath, target, StringComparison.Ordinal);
+            if (!moving && description.Equals(profile.ConfigurationName, StringComparison.Ordinal)) return;
+            var (json, revision) = ProfileFileStorage.Read(profile.FilePath);
+            if (IsCurrentProfile(profile) && _savedProfileRevision != null && revision != _savedProfileRevision)
+                ProfileFileStorage.CheckRevision(profile.FilePath, _savedProfileRevision);
+            var updated = ProfileFileStorage.WithName(json, profile, description);
+            var newRevision = moving ? await ProfileFileStorage.RenameAsync(profile.FilePath, target, updated, revision)
+                : await ProfileFileStorage.WriteAsync(profile.FilePath, updated, createNew: false, expectedRevision: revision);
+            if (moving) _reportVariableHistory.Remember(target, _reportVariableHistory.Read(profile.FilePath));
+            var renamed = GraphSerializer.ReadProfile(moving ? target : profile.FilePath);
+            var isCurrent = IsCurrentProfile(profile);
+            if (isCurrent)
             {
+                _currentProfilePath = renamed.FilePath;
                 SetProfileIdentity(renamed.Name, renamed.ConfigurationName);
                 _savedProfileName = renamed.Name;
                 RootGraph.UpdatedAt = renamed.UpdatedAt;
+                _savedProfileRevision = newRevision;
+                if (_savedProfileSnapshot != null)
+                    _savedProfileSnapshot = GraphSerializer.UpdateSnapshotIdentity(_savedProfileSnapshot, renamed);
             }
-            RevealProfileFile(profile.FilePath);
-            if (IsCurrentProfile(profile)) SelectProfileByPath(profile.FilePath);
+            RevealProfileFile(renamed.FilePath);
+            if (isCurrent) SelectProfileByPath(renamed.FilePath);
             StatusMessage = $"Профиль переименован: {renamed.DisplayName}";
         }
         catch (Exception ex) { StatusMessage = $"Не удалось переименовать профиль: {ex.Message}"; LogUiException("Переименование профиля", ex); }

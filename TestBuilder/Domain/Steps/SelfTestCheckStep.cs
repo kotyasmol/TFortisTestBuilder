@@ -29,6 +29,7 @@ namespace TestBuilder.Domain.Steps
 
         public const int DefaultTimeoutMs = 180000;
         public const int DefaultPollIntervalMs = 5000;
+        public const int DefaultBrowserSettleDelayMs = 10000;
         public const string DefaultOutputPrefix = "Dut";
         public const string DefaultOutputVariableName = "SelfTestRaw";
         public const string DefaultValidationRules =
@@ -42,7 +43,6 @@ namespace TestBuilder.Domain.Steps
         private const int MinimumDeviceReadyTimeoutMs = 180000;
         private const int MaxEndpointProbeTimeoutMs = 1000;
         private const int MaxPageAttemptTimeoutMs = 30000;
-        private const int BrowserDomSettleDelayMs = 10000;
         private const int MaxExtractionCandidates = 64;
         private static readonly BrowserAttemptCoordinator BrowserAttempts = new();
 
@@ -56,6 +56,8 @@ namespace TestBuilder.Domain.Steps
         private readonly bool _psw2G6FHardwareChecks;
         private readonly bool _useBrowser;
         private readonly int _pollIntervalMs;
+        private readonly int _browserSettleDelayMs;
+        private readonly string _readField;
         private readonly Func<string, TimeSpan, CancellationToken, Task<bool>> _endpointProbe;
         private readonly Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>> _browserPageLoader;
 
@@ -70,7 +72,9 @@ namespace TestBuilder.Domain.Steps
             bool useBrowser = true,
             int pollIntervalMs = DefaultPollIntervalMs,
             bool enforceMinimumDeviceReadyTimeout = true,
-            bool psw2G6FHardwareChecks = false)
+            bool psw2G6FHardwareChecks = false,
+            int browserSettleDelayMs = DefaultBrowserSettleDelayMs,
+            string? readField = null)
             : this(
                 httpRequestService,
                 logger,
@@ -84,7 +88,9 @@ namespace TestBuilder.Domain.Steps
                 enforceMinimumDeviceReadyTimeout,
                 ProbeWebEndpointAsync,
                 browserPageLoader: null,
-                psw2G6FHardwareChecks: psw2G6FHardwareChecks)
+                psw2G6FHardwareChecks: psw2G6FHardwareChecks,
+                browserSettleDelayMs: browserSettleDelayMs,
+                readField: readField)
         {
         }
 
@@ -101,14 +107,14 @@ namespace TestBuilder.Domain.Steps
             bool enforceMinimumDeviceReadyTimeout,
             Func<string, TimeSpan, CancellationToken, Task<bool>> endpointProbe,
             Func<string, TimeSpan, CancellationToken, Task<HttpRequestResult>>? browserPageLoader,
-            bool psw2G6FHardwareChecks = false)
+            bool psw2G6FHardwareChecks = false,
+            int browserSettleDelayMs = DefaultBrowserSettleDelayMs,
+            string? readField = null)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
-            _timeoutMs = enforceMinimumDeviceReadyTimeout
-                ? NormalizeSelfTestTimeout(_url, timeoutMs)
-                : Math.Max(1, timeoutMs);
+            _timeoutMs = EffectiveTimeout(_url, timeoutMs, enforceMinimumDeviceReadyTimeout);
             _outputPrefix = string.IsNullOrWhiteSpace(outputPrefix)
                 ? DefaultOutputPrefix
                 : outputPrefix.Trim().TrimEnd('.');
@@ -119,14 +125,18 @@ namespace TestBuilder.Domain.Steps
             _psw2G6FHardwareChecks = psw2G6FHardwareChecks;
             _useBrowser = useBrowser;
             _pollIntervalMs = NormalizePollInterval(pollIntervalMs);
+            _browserSettleDelayMs = Math.Max(0, browserSettleDelayMs);
+            _readField = readField?.Trim() ?? string.Empty;
             _endpointProbe = endpointProbe ?? throw new ArgumentNullException(nameof(endpointProbe));
             _browserPageLoader = browserPageLoader ?? LoadPageWithBrowserAsync;
         }
 
-        private static int NormalizeSelfTestTimeout(string url, int timeoutMs)
+        internal static int EffectiveTimeout(string? url, int timeoutMs, bool legacyTimeout)
         {
+            if (!legacyTimeout) return Math.Max(1, timeoutMs);
             var normalized = timeoutMs <= 0 ? DefaultTimeoutMs : timeoutMs;
-            return normalized <= LegacyShortTimeoutMs && IsDeviceSelfTestUrl(url)
+            var address = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url.Trim();
+            return normalized <= LegacyShortTimeoutMs && IsDeviceSelfTestUrl(address)
                 ? MinimumDeviceReadyTimeoutMs
                 : normalized;
         }
@@ -149,6 +159,9 @@ namespace TestBuilder.Domain.Steps
             {
                 throw new ArgumentNullException(nameof(context));
             }
+
+            if (_readField.Length > 0)
+                return await ReadFieldAsync(context, cancellationToken);
 
             _logger.Info($"[STEP] Selftest request: {_url}, timeout {_timeoutMs} ms, poll every {_pollIntervalMs} ms.");
             context.SetVariable("SelfTest.OutputPrefix", _outputPrefix);
@@ -182,6 +195,8 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.Attempts", fetch.Attempts);
             context.SetVariable("SelfTest.ProbeAttempts", fetch.ProbeAttempts);
             context.SetVariable("SelfTest.PollIntervalMs", _pollIntervalMs);
+            context.SetVariable("SelfTest.TimeoutMs", _timeoutMs);
+            context.SetVariable("SelfTest.BrowserSettleDelayMs", _browserSettleDelayMs);
 
             if (!string.IsNullOrWhiteSpace(fetch.ErrorMessage))
             {
@@ -244,6 +259,26 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SelfTest.Error", string.Empty);
             _logger.Info($"[OK] Selftest passed: {values.Count} fields, {checks.Count} rules.");
             return StepResult.True;
+        }
+
+        private async Task<StepResult> ReadFieldAsync(TestContext context, CancellationToken cancellationToken)
+        {
+            var variable = BuildContextName(_readField);
+            context.Variables.Remove(variable);
+            _logger.Info($"[ШАГ] Чтение поля {_readField} со страницы устройства, таймаут {_timeoutMs} мс.");
+            var fetch = await WaitForSelfTestXmlAsync(_url, TimeSpan.FromMilliseconds(_timeoutMs), cancellationToken);
+            if (fetch.FieldValue is { } value)
+            {
+                context.SetVariable(variable, value);
+                _logger.Info($"[OK] Получено поле {variable}.");
+                return StepResult.True;
+            }
+
+            var name = $"Чтение поля {variable}";
+            context.AddReportEntry(name, false, fetch.ErrorMessage);
+            if (_failOnError) context.HasCriticalError = true;
+            _logger.Warning($"[ОШИБКА] {name}: {fetch.ErrorMessage}");
+            return _failOnError ? StepResult.False : StepResult.True;
         }
 
         private StepResult Fail(TestContext context, string error)
@@ -611,11 +646,7 @@ namespace TestBuilder.Domain.Steps
                 {
                     lastError = "Response does not contain <selftest>...</selftest> or <settings>...</settings>.";
                 }
-                else if (!raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase))
-                {
-                    lastError = "Selftest XML does not contain default_mac.";
-                }
-                else
+                else if (IsSnapshotReady(raw, out var fieldValue, out lastError))
                 {
                     _logger.Info($"[INFO] Selftest XML found: {raw.Length} characters; parsing fields.");
                     return new SelfTestFetchResult(
@@ -624,7 +655,8 @@ namespace TestBuilder.Domain.Steps
                         attempts,
                         probeAttempts,
                         stopwatch.Elapsed,
-                        string.Empty);
+                        string.Empty,
+                        fieldValue);
                 }
 
                 _logger.Warning(
@@ -650,6 +682,26 @@ namespace TestBuilder.Domain.Steps
                 $"elapsed: {(int)stopwatch.Elapsed.TotalMilliseconds} ms.");
         }
 
+        private bool IsSnapshotReady(string raw, out string? fieldValue, out string error)
+        {
+            fieldValue = null;
+            if (_readField.Length == 0)
+            {
+                var ready = raw.Contains("default_mac", StringComparison.OrdinalIgnoreCase);
+                error = ready ? string.Empty : "Selftest XML does not contain default_mac.";
+                return ready;
+            }
+
+            if (!TryParseSelfTest(raw, out var document, out error)) return false;
+            if (ExtractValues(document).TryGetValue(_readField, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                fieldValue = value;
+                return true;
+            }
+            error = $"Поле '{_readField}' ещё не появилось на странице устройства.";
+            return false;
+        }
+
         private static bool IsDeviceSelfTestUrl(string url)
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
@@ -662,10 +714,13 @@ namespace TestBuilder.Domain.Steps
                    uri.AbsolutePath.Contains("deviceinfo", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static TimeSpan GetAttemptTimeout(TimeSpan remaining)
+        private TimeSpan GetAttemptTimeout(TimeSpan remaining)
         {
             var remainingMs = Math.Max(1, (int)remaining.TotalMilliseconds);
-            return TimeSpan.FromMilliseconds(Math.Min(remainingMs, MaxPageAttemptTimeoutMs));
+            var attemptMs = _useBrowser
+                ? Math.Max(MaxPageAttemptTimeoutMs, _browserSettleDelayMs + 5000L)
+                : MaxPageAttemptTimeoutMs;
+            return TimeSpan.FromMilliseconds(Math.Min(remainingMs, attemptMs));
         }
 
         private static TimeSpan GetEndpointProbeTimeout(TimeSpan remaining)
@@ -712,11 +767,11 @@ namespace TestBuilder.Domain.Steps
             }
 
             _logger.Info(
-                $"[INFO] Selftest opens one headless browser, waits for page load and then waits {BrowserDomSettleDelayMs} ms before one PageSource snapshot.");
+                $"[INFO] Selftest opens one headless browser, waits for page load and then waits {_browserSettleDelayMs} ms before one PageSource snapshot.");
 
             var work = Task.Run(
                 () => GetPageWithBrowserAsync(browserPath, url, timeout, cancellationToken,
-                    stage => _logger.Info($"[INFO] Selftest browser: {stage}")),
+                    stage => _logger.Info($"[INFO] Selftest browser: {stage}"), _browserSettleDelayMs),
                 CancellationToken.None);
 
             // Cancellation also waits for GetPageWithBrowserAsync's bounded process cleanup.
@@ -774,14 +829,15 @@ namespace TestBuilder.Domain.Steps
             string url,
             TimeSpan timeout,
             CancellationToken cancellationToken,
-            Action<string>? reportStage = null)
+            Action<string>? reportStage = null,
+            int browserSettleDelayMs = DefaultBrowserSettleDelayMs)
         {
             var waiting = Stopwatch.StartNew();
             try
             {
                 return await BrowserAttempts.RunAsync(timeout, cancellationToken,
                     remaining => GetPageWithBrowserCoreAsync(browserPath, url, remaining,
-                        cancellationToken, reportStage)).ConfigureAwait(false);
+                        cancellationToken, reportStage, browserSettleDelayMs)).ConfigureAwait(false);
             }
             catch (TimeoutException ex)
             {
@@ -791,7 +847,7 @@ namespace TestBuilder.Domain.Steps
 
         private static async Task<HttpRequestResult> GetPageWithBrowserCoreAsync(
             string browserPath, string url, TimeSpan timeout, CancellationToken cancellationToken,
-            Action<string>? reportStage)
+            Action<string>? reportStage, int browserSettleDelayMs)
         {
             var stopwatch = Stopwatch.StartNew();
             var userDataDir = Path.Combine(Path.GetTempPath(), "TestBuilderHeadlessChrome_" + Guid.NewGuid().ToString("N"));
@@ -844,7 +900,7 @@ namespace TestBuilder.Domain.Steps
                     webSocketUrl,
                     url,
                     timeoutCts.Token,
-                    Stage);
+                    Stage, browserSettleDelayMs);
                 Stage($"DOM received: {pageSource.Length} characters");
                 return HttpRequestResult.Success(0, pageSource, stopwatch.Elapsed);
             }
@@ -1041,7 +1097,7 @@ namespace TestBuilder.Domain.Steps
         private static async Task<string> ReadPageSourceLikeLegacyHelperAsync(
             string webSocketUrl, string requestedUrl,
             CancellationToken cancellationToken,
-            Action<string> reportStage)
+            Action<string> reportStage, int browserSettleDelayMs)
         {
             using var socket = new ClientWebSocket();
             reportStage("connecting to DevTools WebSocket");
@@ -1090,9 +1146,9 @@ namespace TestBuilder.Domain.Steps
                         if (settled == null)
                         {
                             settled = Stopwatch.StartNew();
-                            reportStage($"requested page loaded; waiting {BrowserDomSettleDelayMs} ms before snapshot");
+                            reportStage($"requested page loaded; waiting {browserSettleDelayMs} ms before snapshot");
                         }
-                        if (settled.ElapsedMilliseconds >= BrowserDomSettleDelayMs) return html;
+                        if (settled.ElapsedMilliseconds >= browserSettleDelayMs) return html;
                     }
                     else settled = null;
                 }
@@ -1498,7 +1554,8 @@ namespace TestBuilder.Domain.Steps
             int Attempts,
             int ProbeAttempts,
             TimeSpan Elapsed,
-            string ErrorMessage);
+            string ErrorMessage,
+            string? FieldValue = null);
 
         private sealed record ValidationRule(string FieldName, double Min, double Max)
         {

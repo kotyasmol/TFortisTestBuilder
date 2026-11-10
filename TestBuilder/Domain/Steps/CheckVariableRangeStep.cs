@@ -54,6 +54,20 @@ namespace TestBuilder.Domain.Steps
             }
 
             var actualText = ToInvariantString(rawValue);
+            if (_variableName.Equals("SerialNumber", StringComparison.OrdinalIgnoreCase) &&
+                context.ProductionModel?.SerialSeries is { } series)
+            {
+                var expected = $"{series.FirstSerialNumber}..{series.LastSerialNumber}";
+                var error = long.TryParse(actualText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var serial)
+                    ? series.Check(serial, context.IssuedSerialNumber)
+                    : $"Переменная '{_variableName}' должна содержать полный целочисленный серийный номер.";
+                SaveLastCheck(context, actualText, expected, error == null);
+                if (error != null)
+                    _logger.Warning($"[ОШИБКА] {error}");
+                else
+                    _logger.Info($"[OK] Серийный номер {serial} входит в диапазон изделия {expected}.");
+                return Task.FromResult(error == null ? StepResult.True : StepResult.False);
+            }
             double actual;
 
             try

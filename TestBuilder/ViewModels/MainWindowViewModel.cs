@@ -110,7 +110,8 @@ namespace TestBuilder.ViewModels
         {
             if (e.PropertyName != nameof(SettingsVM.IsEngineerMode)) return;
             TestVM.IsOperatorView = !IsEngineerWorkspace;
-            if (!IsEngineerWorkspace && !TestVM.IsTestRunning) TestVM.Station.Prepare(TestVM.RootGraph);
+            if (!IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.Station.HasResult)
+                TestVM.Station.Prepare(TestVM.RootGraph);
             OnPropertyChanged(nameof(IsEngineerWorkspace));
             OnPropertyChanged(nameof(ShowBoardEditor));
             OnPropertyChanged(nameof(WorkspaceTitle));

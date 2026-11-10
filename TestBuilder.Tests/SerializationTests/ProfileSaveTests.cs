@@ -16,6 +16,148 @@ public class ProfileSaveTests
         """;
 
     [Fact]
+    public async Task SavingUnchangedLegacyProfileKeepsItsExactBytesAndDate()
+    {
+        using var files = new ProfileFolder();
+        var path = files.Write("original.json", OriginalJson);
+        var bytes = File.ReadAllBytes(path);
+        File.SetLastWriteTimeUtc(path, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var date = File.GetLastWriteTimeUtc(path);
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+
+        Assert.Equal(bytes, File.ReadAllBytes(path));
+        Assert.Equal(date, File.GetLastWriteTimeUtc(path));
+    }
+
+    [Fact]
+    public async Task SavingAnEditedProfileRefusesExternalChangesAndKeepsTheEditsInMemory()
+    {
+        using var files = new ProfileFolder();
+        var path = files.Write("original.json", OriginalJson);
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        var delay = Assert.IsType<DelayNodeViewModel>(Assert.Single(vm.Nodes));
+        delay.Milliseconds = 20;
+        var external = OriginalJson.Replace("milliseconds\":10", "milliseconds\":30");
+        File.WriteAllText(path, external);
+
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+
+        Assert.Contains("Файл изменился на диске", vm.StatusMessage);
+        Assert.Equal(external, File.ReadAllText(path));
+        Assert.Equal(20, delay.Milliseconds);
+        Assert.Empty(Directory.GetFiles(files.Path, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task ProfileSwitchAndNewDraftRespectDiscardConfirmation()
+    {
+        using var files = new ProfileFolder();
+        var original = files.Write("original.json", OriginalJson);
+        var other = files.Write("other.json", OriginalJson.Replace("Исходный профиль", "Другой профиль"));
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(original));
+        var delay = Assert.IsType<DelayNodeViewModel>(Assert.Single(vm.Nodes));
+        delay.Milliseconds = 20;
+        int prompts = 0;
+        vm.ConfirmDiscardProfileAsync = () => { prompts++; return Task.FromResult(false); };
+
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(other));
+        await vm.NewProfileCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, prompts);
+        Assert.Equal(original, vm.SelectedProfile!.FilePath);
+        Assert.Same(delay, Assert.Single(vm.Nodes));
+        vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(other));
+        Assert.Equal(other, vm.SelectedProfile!.FilePath);
+    }
+
+    [Fact]
+    public async Task EditedSavePreservesUnknownFieldsAndExistingNodeIds()
+    {
+        using var files = new ProfileFolder();
+        var path = files.Write("original.json", """
+            {"name":"Профиль","vendorData":{"revision":3},"nodes":[
+              {"id":"remove-me","type":"Delay"},
+              {"id":"serial-node","type":"Serial Console","vendorNode":{"tags":["a"]},"serialConsole":{"extension":42}},
+              {"id":"end-node","type":"End"}],"connections":[
+              {"sourceNodeId":"serial-node","sourceConnector":"True","targetNodeId":"end-node","targetConnector":"Вход","vendorLink":true}]}
+            """);
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        await vm.SelectProfileAsync(GraphSerializer.ReadProfile(path));
+        Assert.DoesNotContain("Ошибка", vm.StatusMessage);
+        vm.Nodes.Remove(Assert.IsType<DelayNodeViewModel>(vm.Nodes[0]));
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+
+        Assert.False(File.Exists(path));
+        Assert.Equal("Профиль.json", Path.GetFileName(vm.SelectedProfile!.FilePath));
+        using var saved = JsonDocument.Parse(File.ReadAllText(vm.SelectedProfile.FilePath));
+        var root = saved.RootElement;
+        Assert.Equal(3, root.GetProperty("vendorData").GetProperty("revision").GetInt32());
+        var serial = root.GetProperty("nodes")[0];
+        Assert.Equal("serial-node", serial.GetProperty("id").GetString());
+        Assert.Equal("a", serial.GetProperty("vendorNode").GetProperty("tags")[0].GetString());
+        Assert.Equal(42, serial.GetProperty("serialConsole").GetProperty("extension").GetInt32());
+        Assert.True(root.GetProperty("connections")[0].GetProperty("vendorLink").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ImportDoesNotPublishInvalidProfilesOrOverwriteExistingFiles()
+    {
+        using var files = new ProfileFolder();
+        var path = files.Write("Модель А · Полная проверка.json", OriginalJson);
+        using var source = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson));
+        await Assert.ThrowsAsync<IOException>(() => ProfileFileStorage.ImportAsync(source, files.Path, "existing.json"));
+        Assert.Equal(OriginalJson, File.ReadAllText(path));
+        using var invalid = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson.Replace("Delay", "Unknown node")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ProfileFileStorage.ImportAsync(invalid, files.Path, "broken.json"));
+        Assert.Single(Directory.GetFiles(files.Path));
+    }
+
+    [Fact]
+    public async Task ImportUsesProfileDisplayNameInsteadOfSourceFilename()
+    {
+        using var files = new ProfileFolder();
+        using var source = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(OriginalJson));
+        await ProfileFileStorage.ImportAsync(source, files.Path, "external_name.json");
+        Assert.Equal("Модель А · Полная проверка.json", Path.GetFileName(Assert.Single(Directory.GetFiles(files.Path))));
+    }
+
+    [Fact]
+    public async Task RenameDoesNotReplaceAnotherProfile()
+    {
+        using var files = new ProfileFolder();
+        var source = files.Write("old.json", OriginalJson);
+        var occupied = files.Write("Новое имя.json", "another profile");
+        var snapshot = ProfileFileStorage.Read(source);
+        await Assert.ThrowsAsync<IOException>(() =>
+            ProfileFileStorage.RenameAsync(source, occupied, snapshot.Json, snapshot.Revision));
+        Assert.Equal(OriginalJson, File.ReadAllText(source));
+        Assert.Equal("another profile", File.ReadAllText(occupied));
+    }
+
+    [Fact]
+    public void LatestBadgeSkipsProfilesThatCannotBeOpened()
+    {
+        using var files = new ProfileFolder();
+        var original = files.Write("original.json", OriginalJson);
+        var invalid = files.Write("future.json", OriginalJson.Replace("2025-01-02", "2026-01-02").Replace("Delay", "Unknown node"));
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+
+        Assert.True(vm.Profiles.Single(p => p.FilePath == original).IsLatest);
+        Assert.False(vm.Profiles.Single(p => p.FilePath == invalid).IsLatest);
+    }
+
+    [Fact]
     public async Task TwoNameParts_PreserveLegacyOnOpen_AndComposeCopyWithUndo()
     {
         using var files = new ProfileFolder();
@@ -89,7 +231,7 @@ public class ProfileSaveTests
     public async Task SameNameSave_UpdatesDateWithoutReplacingCatalogItem_AndBlankNameWritesNothing()
     {
         using var files = new ProfileFolder();
-        var path = files.Write("original.json", OriginalJson);
+        var path = files.Write("Модель А · Полная проверка.json", OriginalJson);
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
         vm.RefreshProfiles(); vm.SelectedProfile = Assert.Single(vm.Profiles);
@@ -114,13 +256,13 @@ public class ProfileSaveTests
     {
         using var files = new ProfileFolder();
         var original = files.Write("original.json", OriginalJson);
-        var existing = files.Write("Копия.json", "occupied");
+        var existing = files.Write("Модель А · Копия.json", "occupied");
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
         vm.SelectedProfile = GraphSerializer.ReadProfile(original);
         vm.CurrentProfileName = "Копия";
         await vm.SaveGraphCommand.ExecuteAsync(null);
-        Assert.Equal("Копия (2).json", System.IO.Path.GetFileName(vm.SelectedProfile!.FilePath));
+        Assert.Equal("Модель А · Копия (2).json", System.IO.Path.GetFileName(vm.SelectedProfile!.FilePath));
         Assert.Equal("occupied", File.ReadAllText(existing));
         Assert.Equal(OriginalJson, File.ReadAllText(original));
         var selected = vm.SelectedProfile;

@@ -17,12 +17,10 @@ public static class LauncherServerClient
         if (string.IsNullOrWhiteSpace(sessionId)) return;
         var validated = LauncherOptions.Parse(new[] { sessionId });
         if (!validated.IsValid) return;
-        var normalized = ServerBaseUrlResolver.NormalizeForHttp(serverBaseUrl);
-        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var server) || request.RequestUri is not { } target)
+        if (request.RequestUri is not { IsAbsoluteUri: true } target)
             return;
         // Never send launcher credentials to the DUT or to an alternative server from a profile.
-        if (!string.Equals(target.GetLeftPart(UriPartial.Authority), server.GetLeftPart(UriPartial.Authority),
-                StringComparison.OrdinalIgnoreCase) ||
+        if (!ServerBaseUrlResolver.IsSameHttpOrigin(target, serverBaseUrl) ||
             !(target.AbsolutePath.TrimEnd('/').EndsWith("/getSerialNum", StringComparison.OrdinalIgnoreCase) ||
               target.AbsolutePath.TrimEnd('/').EndsWith("/getdevicehistorylist", StringComparison.OrdinalIgnoreCase))) return;
         request.Headers.TryAddWithoutValidation("User-Agent", "ftstand");

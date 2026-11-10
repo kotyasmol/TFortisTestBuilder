@@ -11,6 +11,19 @@ namespace TestBuilder.Domain.Steps;
 // remain in TestContext/logs; they are not inferred to be manufacturing checks.
 internal static class ProductionReportFields
 {
+    private static readonly IReadOnlyDictionary<string, string> DeviceFieldNames = new Dictionary<string, string>
+    {
+        ["cpu_id"] = "cpu_id", ["firmvare_vers"] = "Версия прошивки",
+        ["boot_vers"] = "Версия бутлоадера", ["default_mac"] = "MAC адрес",
+        ["board_version"] = "версия платы", ["poe_controller"] = "ID микросхемы PoE контроллера",
+        ["marvell_id"] = "ID микросхемы Switch контроллера"
+    };
+
+    internal static IEnumerable<string> SourceNames => DeviceFieldNames.Values.Concat(new[]
+    {
+        "Проверки тестовой страницы", "Загрузка тестовой страницы", "самотестирование", "напряжение АКБ"
+    });
+
     internal static IEnumerable<TestReportEntry> GetEntries(TestContext context)
     {
         var prefix = context.GetVariable<string>("SelfTest.OutputPrefix");
@@ -31,20 +44,14 @@ internal static class ProductionReportFields
             yield return new TestReportEntry("Проверки тестовой страницы",
                 context.GetVariable<int>("SelfTest.FailedRuleCount") == 0,
                 context.GetVariable<string>("SelfTest.ValidationSummary") ?? string.Empty);
-        var names = new Dictionary<string, string>
-        {
-            ["cpu_id"] = "cpu_id", ["firmvare_vers"] = "Версия прошивки",
-            ["boot_vers"] = "Версия бутлоадера", ["default_mac"] = "MAC адрес",
-            ["board_version"] = "версия платы", ["poe_controller"] = "ID микросхемы PoE контроллера",
-            ["marvell_id"] = "ID микросхемы Switch контроллера"
-        };
-        foreach (var field in names)
+        foreach (var field in DeviceFieldNames)
             if (fields.TryGetValue(field.Key, out var value))
                 yield return new TestReportEntry(field.Value, true, value);
         if (fields.TryGetValue("init_ok", out var init))
             yield return new TestReportEntry("самотестирование", init == "1", init);
         if (fields.TryGetValue("ups_det", out var ups) && ups == "1" &&
-            fields.TryGetValue("akb_voltage", out var voltage))
+            fields.TryGetValue("akb_voltage", out var voltage) &&
+            !context.ReportEntries.Any(entry => string.Equals(entry.Name, "напряжение АКБ", StringComparison.OrdinalIgnoreCase)))
             yield return new TestReportEntry("напряжение АКБ", true, voltage);
 
         // Canonical aliases use zero-based port indexes, while the XML names

@@ -24,6 +24,7 @@ namespace TestBuilder.Domain.Steps
         private readonly string _outputVariableName;
         private readonly bool _failOnError;
         private readonly int? _fixedSerialNumber;
+        private readonly string _expectedSerialPrefix;
 
         public GetSerialNumberFromServerStep(
             IHttpRequestService httpRequestService,
@@ -36,7 +37,8 @@ namespace TestBuilder.Domain.Steps
             int retryDelayMs,
             string outputVariableName,
             bool failOnError,
-            int? fixedSerialNumber = null)
+            int? fixedSerialNumber = null,
+            string? expectedSerialPrefix = null)
         {
             _httpRequestService = httpRequestService ?? throw new ArgumentNullException(nameof(httpRequestService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -49,6 +51,7 @@ namespace TestBuilder.Domain.Steps
             _outputVariableName = string.IsNullOrWhiteSpace(outputVariableName) ? "SerialNumber" : outputVariableName.Trim();
             _failOnError = failOnError;
             _fixedSerialNumber = fixedSerialNumber;
+            _expectedSerialPrefix = expectedSerialPrefix?.Trim() ?? string.Empty;
         }
 
         public async Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
@@ -58,25 +61,46 @@ namespace TestBuilder.Domain.Steps
                 throw new ArgumentNullException(nameof(context));
             }
 
-            ResetResult(context);
+            var model = context.ProductionModel;
+            var series = model?.SerialSeries;
+            var legacyModel = context.LegacySerialModel;
+            var deviceType = model == null ? _deviceType : model.EffectiveServerDeviceType ?? string.Empty;
+            ResetResult(context, deviceType);
+
+            if (model?.RtlReport?.AssignSerialOnReport == true)
+                return Fail(context, "Сервер выдаёт номер этой платы при отправке отчёта.", string.Empty, string.Empty);
+
+            if (series == null && SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
+                return Fail(context, prefixError, string.Empty, string.Empty);
 
             if (_fixedSerialNumber.HasValue)
             {
+                if (model != null)
+                    return Fail(context, "Отключите фиксированный отладочный номер в профиле со справочником.", string.Empty, string.Empty);
+                if (legacyModel?.SerialSeries?.Check(_fixedSerialNumber.Value) is { } fixedError)
+                    return Fail(context, fixedError, string.Empty, string.Empty);
                 return UseFixedSerialNumber(context, _fixedSerialNumber.Value);
             }
+
+            if (legacyModel?.EffectiveServerDeviceType is { Length: > 0 } expectedType &&
+                !string.Equals(deviceType, expectedType, StringComparison.OrdinalIgnoreCase))
+                return Fail(context, $"Для изделия «{legacyModel.Name}» в ноде указан серверный тип «{deviceType}», " +
+                    $"а в справочнике «{expectedType}». Включите «Серийники из справочника» в профиле.",
+                    string.Empty, string.Empty);
 
             string url;
             string cpuId;
             try
             {
-                url = BuildUrl(context, out cpuId);
+                url = BuildUrl(context, deviceType, out cpuId);
+                if (model != null && string.IsNullOrEmpty(cpuId))
+                    return Fail(context, "Для выдачи номера по справочнику нужен идентификатор устройства.", string.Empty, string.Empty);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is UriFormatException)
             {
                 return Fail(context, ex.Message, string.Empty, string.Empty);
             }
 
-            context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", cpuId);
             context.SetVariable("SerialNumberRequestUrl", url);
             context.SetVariable("SerialNumberSource", "Server");
@@ -87,7 +111,7 @@ namespace TestBuilder.Domain.Steps
             string raw = string.Empty;
 
             _logger.Info(
-                $"[ШАГ] Запрос серийного номера: device={_deviceType}, cpuId={cpuId}, " +
+                $"[ШАГ] Запрос серийного номера: device={deviceType}, cpuId={cpuId}, " +
                 $"timeout={_timeoutMs} мс, попыток={attempts}, url={url}");
 
             for (var attempt = 1; attempt <= attempts; attempt++)
@@ -100,7 +124,14 @@ namespace TestBuilder.Domain.Steps
                     string.IsNullOrWhiteSpace(result.ErrorMessage) &&
                     result.IsSuccessStatusCode)
                 {
+                    var seriesError = series == null ? SerialNumberPrefix.Check(serial, _expectedSerialPrefix) : series.Check(serial);
+                    seriesError ??= legacyModel?.SerialSeries?.Check(serial);
+                    if (seriesError != null)
+                        return Fail(context, seriesError, raw, url);
+
                     SaveSerial(context, serial, raw, url);
+                    if (model != null)
+                        context.SetVariable("SerialNumber.Assigned", serial);
                     _logger.Info($"[OK] Serial number received: {serial}.");
                     return StepResult.True;
                 }
@@ -136,6 +167,9 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberDeviceType", _deviceType);
             context.SetVariable("SerialNumberCpuId", cpuId);
             context.SetVariable("SerialNumberSource", "FixedDebug");
+            if (SerialNumberPrefix.Check(serial, _expectedSerialPrefix) is { } seriesError)
+                return Fail(context, seriesError, raw, string.Empty);
+
             SaveSerial(context, serial, raw, string.Empty);
 
             _logger.Info(
@@ -173,12 +207,13 @@ namespace TestBuilder.Domain.Steps
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
-        private void ResetResult(TestContext context)
+        private void ResetResult(TestContext context, string deviceType)
         {
             context.Variables.Remove(_outputVariableName);
             context.Variables.Remove("SerialNumber");
             context.Variables.Remove("NetTest.SerialNumber");
             context.Variables.Remove("SerialNumberText");
+            context.Variables.Remove("SerialNumber.Assigned");
 
             context.SetVariable("SerialNumberReceived", false);
             context.SetVariable("SerialNumberRawResponse", string.Empty);
@@ -187,7 +222,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberAttempts", 0);
             context.SetVariable("SerialNumberStatusCode", 0);
             context.SetVariable("SerialNumberElapsedMs", 0);
-            context.SetVariable("SerialNumberDeviceType", _deviceType);
+            context.SetVariable("SerialNumberDeviceType", deviceType);
             context.SetVariable("SerialNumberCpuId", string.Empty);
             context.SetVariable("SerialNumberSource", string.Empty);
         }
@@ -222,7 +257,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("SerialNumberRawResponse", raw);
         }
 
-        private string BuildUrl(TestContext context, out string cpuId)
+        private string BuildUrl(TestContext context, string deviceType, out string cpuId)
         {
             var baseUrl = NormalizeServerBaseUrl(_serverBaseUrl);
 
@@ -232,9 +267,9 @@ namespace TestBuilder.Domain.Steps
                     "ServerBaseUrl не задан. Укажи адрес сервера серийников в ноде или во вкладке Настройки.");
             }
 
-            if (string.IsNullOrWhiteSpace(_deviceType))
+            if (string.IsNullOrWhiteSpace(deviceType))
             {
-                throw new InvalidOperationException("DeviceType не задан для запроса серийного номера.");
+                throw new InvalidOperationException("Укажите тип изделия на сервере в ноде получения серийного номера.");
             }
 
             cpuId = ResolveCpuId(context);
@@ -245,7 +280,7 @@ namespace TestBuilder.Domain.Steps
                 var endpointBuilder = new UriBuilder(endpointUri)
                 {
                     Path = endpointUri.AbsolutePath.TrimEnd('/'),
-                    Query = BuildQuery(cpuId)
+                    Query = BuildQuery(deviceType, cpuId)
                 };
 
                 return endpointBuilder.Uri.AbsoluteUri;
@@ -255,7 +290,7 @@ namespace TestBuilder.Domain.Steps
             var builder = new UriBuilder(baseUri)
             {
                 Path = BuildEndpointPath(baseUri.AbsolutePath),
-                Query = BuildQuery(cpuId)
+                Query = BuildQuery(deviceType, cpuId)
             };
 
             return builder.Uri.AbsoluteUri;
@@ -281,15 +316,15 @@ namespace TestBuilder.Domain.Steps
             {
                 throw new InvalidOperationException(
                     $"CPU ID не найден в переменной '{_cpuIdVariableName}'. " +
-                    "Сначала выполни Selftest Check или очисти поле CPU var, если сервер допускает запрос без CPU ID.");
+                    "Проверьте, что предыдущий шаг прочитал идентификатор процессора устройства.");
             }
 
             return cpuId;
         }
 
-        private string BuildQuery(string cpuId)
+        private static string BuildQuery(string deviceType, string cpuId)
         {
-            var query = $"devType={Uri.EscapeDataString(_deviceType)}";
+            var query = $"devType={Uri.EscapeDataString(deviceType)}";
 
             if (!string.IsNullOrWhiteSpace(cpuId))
             {

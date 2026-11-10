@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
+using TestBuilder.Services;
 using TestBuilder.Services.Logging;
 
 namespace TestBuilder.Domain.Steps
@@ -15,6 +17,7 @@ namespace TestBuilder.Domain.Steps
     /// </summary>
     public sealed class BuildTestReportStep : ITestStep
     {
+        private const string SerialField = "serial_num";
         private readonly ILogger _logger;
         private readonly string _reportVariableName;
         private readonly string _standId;
@@ -22,6 +25,8 @@ namespace TestBuilder.Domain.Steps
         private readonly string _sessionId;
         private readonly string _testType;
         private readonly bool _includeAllVariables;
+        private readonly ReportTemplate? _template;
+        private readonly string _expectedSerialPrefix;
 
         public BuildTestReportStep(
             ILogger logger,
@@ -30,7 +35,9 @@ namespace TestBuilder.Domain.Steps
             string serialVariableName,
             string sessionId,
             string testType,
-            bool includeAllVariables)
+            bool includeAllVariables,
+            ReportTemplate? template = null,
+            string? expectedSerialPrefix = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _reportVariableName = string.IsNullOrWhiteSpace(reportVariableName)
@@ -43,11 +50,22 @@ namespace TestBuilder.Domain.Steps
             _sessionId = sessionId?.Trim() ?? string.Empty;
             _testType = string.IsNullOrWhiteSpace(testType) ? "production" : testType.Trim();
             _includeAllVariables = includeAllVariables;
+            _template = template;
+            _expectedSerialPrefix = expectedSerialPrefix?.Trim() ?? string.Empty;
         }
 
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            context.Variables.Remove("BuildReport.RtlPayload");
+
+            if (_template?.Validate() is { } error)
+                return Task.FromResult(Fail(context, error));
+
+            var series = context.ProductionModel?.SerialSeries;
+            var rtl = context.ProductionModel?.RtlReport;
+            if (series == null && SerialNumberPrefix.Validate(_expectedSerialPrefix) is { } prefixError)
+                return Task.FromResult(Fail(context, prefixError));
 
             if (string.IsNullOrWhiteSpace(_standId))
             {
@@ -56,75 +74,133 @@ namespace TestBuilder.Domain.Steps
                     "Stand ID не задан. Укажи его во вкладке Настройки."));
             }
 
+            var actualDeviceIdent = rtl == null ? string.Empty : GetVariableText(context, rtl.DeviceIdentifierVariable).Trim();
+            var usesFailureRoute = rtl != null && context.IsCleanup && context.GetVariable<bool>("Execution.SendFailureReport") &&
+                !context.IssuedSerialNumber.HasValue;
+            var deviceIdent = usesFailureRoute ? rtl?.FailureDeviceIdentifier?.Trim() ?? string.Empty : actualDeviceIdent;
+            if (usesFailureRoute && deviceIdent.Length == 0)
+                return Task.FromResult(Fail(context, "В справочнике изделия не задан серверный идентификатор для отчётов об отказах."));
+            if (rtl != null && string.IsNullOrEmpty(deviceIdent))
+                return Task.FromResult(Fail(context, $"Идентификатор платы не найден в переменной '{rtl.DeviceIdentifierVariable}'."));
+
             var serial = GetVariableText(context, _serialVariableName);
-            if (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out var serialNumber) ||
-                serialNumber <= 0)
+            var assignOnReport = usesFailureRoute || (rtl?.AssignSerialOnReport == true && !context.IssuedSerialNumber.HasValue);
+            long serialNumber = 0;
+            if (!assignOnReport &&
+                (!long.TryParse(serial, NumberStyles.Integer, CultureInfo.InvariantCulture, out serialNumber) || serialNumber <= 0))
             {
                 return Task.FromResult(Fail(
                     context,
                     $"Полный серийный номер не найден в переменной '{_serialVariableName}'."));
             }
 
+            if (!assignOnReport)
+            {
+                var seriesError = series == null ? SerialNumberPrefix.Check(serialNumber, _expectedSerialPrefix)
+                    : series.Check(serialNumber, context.IssuedSerialNumber);
+                if (series == null && context.ProductionModel != null)
+                    seriesError ??= ModelSerialSeries.CheckAssigned(serialNumber, context.IssuedSerialNumber);
+                if (seriesError != null)
+                    return Task.FromResult(Fail(context, $"Переменная '{_serialVariableName}': {seriesError}"));
+                if (rtl != null && !context.IssuedSerialNumber.HasValue)
+                    return Task.FromResult(Fail(context, "Сервер ещё не выдал номер для платы в текущем прогоне."));
+            }
+
             var builder = new StringBuilder();
             var entries = context.ReportEntries.Concat(ProductionReportFields.GetEntries(context)).ToList();
-            var successful = !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
+            var successful = !usesFailureRoute && !context.HasCriticalError && entries.All(entry => entry.IsSuccess);
+            var reportEntries = new List<TestReportEntry>();
+            var serialText = assignOnReport ? null : serialNumber.ToString(CultureInfo.InvariantCulture);
 
             AppendEntry(builder, "test_result", true, successful ? "1" : "0");
             AppendEntry(builder, "stand_id", true, _standId);
-            AppendEntry(builder, "serial_num", true, serialNumber.ToString(CultureInfo.InvariantCulture));
+            if (serialText != null)
+                AppendEntry(builder, SerialField, true, serialText);
 
             if (!string.IsNullOrWhiteSpace(_sessionId))
             {
                 AppendEntry(builder, "session", true, _sessionId);
             }
 
-            AppendEntry(builder, "Тип проверки", true, _testType);
-
-            foreach (var entry in entries)
+            if (_template != null)
             {
-                if (!string.IsNullOrWhiteSpace(entry.Name))
+                var selected = _template.Project(context, entries, _testType, _reportVariableName);
+                foreach (var entry in selected)
                 {
-                    AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
+                    if (!IsSerialField(entry.Name))
+                        reportEntries.Add(entry);
+                }
+
+                if (!successful && selected.All(entry => entry.IsSuccess))
+                {
+                    var failedEntry = entries.FirstOrDefault(entry => !entry.IsSuccess);
+                    reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false, FailureReason(context, failedEntry)));
+                }
+            }
+            else
+            {
+                reportEntries.Add(new TestReportEntry(ReportField.TestTypeLabel, true, _testType));
+
+                foreach (var entry in entries)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Name) && !IsSerialField(entry.Name))
+                        reportEntries.Add(entry);
+                }
+
+                if (_includeAllVariables)
+                {
+                    foreach (var variable in context.Variables
+                                 .Where(item => ReportTemplate.IsLegacyReportVariable(item.Key, _reportVariableName) && !IsSerialField(item.Key))
+                                 .OrderBy(item => item.Key, StringComparer.Ordinal))
+                    {
+                        reportEntries.Add(new TestReportEntry(
+                            variable.Key,
+                            true, // Diagnostic values are not independent pass/fail criteria.
+                            ReportField.FormatText(variable.Value)));
+                    }
                 }
             }
 
-            if (_includeAllVariables)
+            if (usesFailureRoute)
             {
-                foreach (var variable in context.Variables
-                             .Where(item => ShouldIncludeVariable(item.Key))
-                             .OrderBy(item => item.Key, StringComparer.Ordinal))
-                {
-                    AppendEntry(
-                        builder,
-                        variable.Key,
-                        true, // Diagnostic values are not independent pass/fail criteria.
-                        FormatValue(variable.Value));
-                }
+                if (actualDeviceIdent.Length > 0)
+                    reportEntries.Add(new TestReportEntry("Идентификатор проверенной платы", true, actualDeviceIdent));
+                if (!reportEntries.Any(entry => entry.Name == ReportTemplate.FailureLabel))
+                    reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false,
+                        FailureReason(context, entries.FirstOrDefault(entry => !entry.IsSuccess))));
             }
+            foreach (var entry in reportEntries)
+                AppendEntry(builder, entry.Name, entry.IsSuccess, entry.Value);
 
             var report = builder.ToString();
+            if (rtl != null)
+                context.SetVariable("BuildReport.RtlPayload", new RtlTestReport(
+                    report, rtl.DeviceType, deviceIdent, serialText, _standId, DateTime.UtcNow,
+                    !context.IsCleanup && !context.HasCriticalError, successful, usesFailureRoute, reportEntries));
             context.SetVariable(_reportVariableName, report);
             context.SetVariable("BuildReport.Success", true);
             context.SetVariable("BuildReport.DevicePassed", successful);
             context.SetVariable("ReportDelivery.Status", "Pending");
             context.SetVariable("ReportDelivery.Message", "Отчёт сформирован, но не отправлен.");
             context.SetVariable("BuildReport.VariableName", _reportVariableName);
-            context.SetVariable("BuildReport.Format", "QTstand legacy text");
+            context.SetVariable("BuildReport.Format", rtl == null ? "QTstand legacy text" : "RTL JSON");
             context.SetVariable("BuildReport.StandId", _standId);
-            context.SetVariable("BuildReport.SerialNumber", serialNumber);
+            if (serialText == null) context.Variables.Remove("BuildReport.SerialNumber");
+            else context.SetVariable("BuildReport.SerialNumber", serialNumber);
             context.SetVariable("BuildReport.SessionIncluded", !string.IsNullOrWhiteSpace(_sessionId));
             context.SetVariable("BuildReport.TestType", _testType);
             context.SetVariable("BuildReport.Error", string.Empty);
 
             _logger.Info(
-                $"[OK] Отчёт QTstand собран в переменную {_reportVariableName}: " +
-                $"stand={_standId}, serial={serialNumber}.");
+                $"[OK] Отчёт собран в переменную {_reportVariableName}: " +
+                $"stand={_standId}, serial={serialText ?? "ожидается от сервера"}.");
             return Task.FromResult(StepResult.True);
         }
 
         private StepResult Fail(TestContext context, string error)
         {
             context.Variables.Remove(_reportVariableName);
+            context.Variables.Remove("BuildReport.SerialNumber");
             context.SetVariable("BuildReport.Success", false);
             context.SetVariable("BuildReport.VariableName", _reportVariableName);
             context.SetVariable("BuildReport.Error", error);
@@ -132,11 +208,22 @@ namespace TestBuilder.Domain.Steps
             return StepResult.False;
         }
 
-        private bool ShouldIncludeVariable(string name)
+        private static string FailureReason(TestContext context, TestReportEntry? failedEntry)
         {
-            return !string.Equals(name, _reportVariableName, StringComparison.Ordinal) &&
-                   !name.StartsWith("BuildReport.", StringComparison.Ordinal) &&
-                   !name.StartsWith("SendReport.", StringComparison.Ordinal);
+            // Cleanup can update the transient node failure. Use the cause retained from the test first.
+            if (context.GetVariable<string>("Execution.Error") is { Length: > 0 } reason)
+                return reason;
+            if ((context.CriticalFailure ?? context.Failure) is { } failure)
+                return failure.Summary;
+            if (context.GetVariable<string>("Execution.Status") == nameof(ExecutionStatus.Cancelled))
+                return "Проверка остановлена до завершения.";
+
+            return failedEntry switch
+            {
+                { Name.Length: > 0, Value.Length: > 0 } => $"{failedEntry.Name}: {failedEntry.Value}",
+                { Name.Length: > 0 } => failedEntry.Name,
+                _ => "Проверка завершилась с ошибкой."
+            };
         }
 
         private static string GetVariableText(TestContext context, string variableName)
@@ -149,19 +236,11 @@ namespace TestBuilder.Domain.Steps
                     .Value;
             }
 
-            return FormatValue(value);
+            return ReportField.FormatText(value);
         }
 
-        private static string FormatValue(object? value)
-        {
-            return value switch
-            {
-                null => string.Empty,
-                bool boolean => boolean ? "true" : "false",
-                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
-                _ => value.ToString() ?? string.Empty
-            };
-        }
+        private static bool IsSerialField(string name) =>
+            string.Equals(name.Trim(), SerialField, StringComparison.OrdinalIgnoreCase);
 
         private static void AppendEntry(
             StringBuilder builder,
@@ -170,20 +249,12 @@ namespace TestBuilder.Domain.Steps
             string value)
         {
             builder
-                .Append(Sanitize(name))
+                .Append(ReportField.SanitizeWireText(name))
                 .Append('=')
                 .Append(isSuccess ? "true" : "false")
                 .Append('=')
-                .Append(Sanitize(value))
+                .Append(ReportField.SanitizeWireText(value))
                 .Append("\r\n");
-        }
-
-        private static string Sanitize(string value)
-        {
-            return (value ?? string.Empty)
-                .Replace('\r', ' ')
-                .Replace('\n', ' ')
-                .Replace('=', ':');
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TestBuilder.Domain.Modbus.Models;
@@ -9,6 +10,12 @@ namespace TestBuilder.Services
     {
         public static readonly SlaveRegistry Instance = new();
         private SlaveRegistry() { }
+
+        // A node's callback survives only while the node is owned by a graph or its history.
+        private readonly ConditionalWeakTable<object, Action> _connectionObservers = new();
+
+        internal void ObserveConnection(object owner, Action onChanged) => _connectionObservers.Add(owner, onChanged);
+        internal void StopObservingConnection(object owner) => _connectionObservers.Remove(owner);
 
         public ObservableCollection<SlaveModelBase> Slaves { get; } = new();
 
@@ -21,6 +28,8 @@ namespace TestBuilder.Services
                 if (_isConnected == value) return;
                 _isConnected = value;
                 OnPropertyChanged();
+                foreach (var observer in _connectionObservers)
+                    observer.Value();
             }
         }
 

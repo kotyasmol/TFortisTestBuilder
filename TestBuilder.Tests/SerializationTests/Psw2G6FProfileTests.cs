@@ -13,7 +13,7 @@ namespace TestBuilder.Tests.SerializationTests;
 public class Psw2G6FProfileTests
 {
     [Theory]
-    [InlineData("PSW_2G6F_plus_full_algorithm.json")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json")]
     public void PoeLoopMatchesModelLimitsAndQtReadTiming(string file)
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
@@ -50,11 +50,11 @@ public class Psw2G6FProfileTests
     public void FullProfileCompilesAndRoundTripsWithFirmwareUpdate()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-            "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+            "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
         using var modbus = new ModbusService();
         var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         var name = GraphSerializer.Deserialize(File.ReadAllText(path), vm);
-        Assert.Equal("PSW_2G6F_plus_full_algorithm", name);
+        Assert.Equal("PSW-2G6F+ · Полная проверка · 10.11", name);
         AssertProfile(vm, modbus);
         var json = GraphSerializer.Serialize(vm, name);
         GraphSerializer.Deserialize(json, vm);
@@ -203,7 +203,7 @@ public class Psw2G6FProfileTests
     public void FailureRecoveryRequiresModelAndValidServerSerialBeforeBuildingReport()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-            "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+            "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
         using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
         var graph = json.RootElement.GetProperty("nodes").EnumerateArray()
             .Single(n => n.GetProperty("id").GetString() == "13").GetProperty("bodyGraph");

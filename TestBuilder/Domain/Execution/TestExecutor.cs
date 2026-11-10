@@ -53,18 +53,21 @@ namespace TestBuilder.Domain.Execution
                 }
                 else
                 {
-                    current = result switch
+                    var next = result switch
                     {
                         StepResult.Next => current.Next,
                         StepResult.True => current.OnTrue,
                         StepResult.False => current.OnFalse,
                         _ => throw new InvalidOperationException($"Неизвестный результат шага: {result}.")
                     };
-                    if (current == null && result == StepResult.False)
+                    if (next == null && (result == StepResult.False || current.RequiresSuccessTransition))
                     {
-                        context.Failure = failure;
+                        context.Failure = failure ?? new ExecutionFailure(current.DisplayName,
+                            "Нет перехода после успешного выполнения. Соедините выход ноды со следующим шагом или нодой «Конец».",
+                            context.CurrentSlaveId);
                         return ExecutionStatus.Failed;
                     }
+                    current = next;
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();

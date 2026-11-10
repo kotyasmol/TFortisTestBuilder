@@ -10,6 +10,25 @@ namespace TestBuilder.Tests.StepTests;
 [Collection("Browser process lifecycle")]
 public class SelfTestCheckStepTests
 {
+    [Fact]
+    public async Task ReadFieldWaitsForCpuIdWithoutRunningSelftestChecks()
+    {
+        var service = new QueueHttpRequestService(
+            HttpRequestResult.Success(200, "<selftest><cpu_id> </cpu_id><default_mac>00:11:22:33:44:55</default_mac></selftest>", TimeSpan.Zero),
+            HttpRequestResult.Success(200, "<selftest><cpu_id>ABC123</cpu_id><init_ok>0</init_ok></selftest>", TimeSpan.Zero));
+        var step = new SelfTestCheckStep(service, NullLogger.Instance, SelfTestCheckStep.DefaultUrl, 2000,
+            "Dut", "init_ok=1..1", failOnError: true, useBrowser: false, pollIntervalMs: 100,
+            enforceMinimumDeviceReadyTimeout: false, readField: "cpu_id");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "stale");
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal("ABC123", context.GetVariable<string>("Dut.cpu_id"));
+        Assert.Equal(2, service.Calls);
+        Assert.Empty(context.ReportEntries);
+        Assert.DoesNotContain("SelfTest.Ok", context.Variables.Keys);
+    }
+
     [Theory]
     [InlineData("20d", "105", "525..525", true)]
     [InlineData("208", "105", "520..520", true)]
@@ -175,6 +194,8 @@ public class SelfTestCheckStepTests
         Assert.Equal(1, browserCalls);
         Assert.Equal(3, context.GetVariable<int>("SelfTest.ProbeAttempts"));
         Assert.Equal(1, context.GetVariable<int>("SelfTest.Attempts"));
+        Assert.Equal(2000, context.GetVariable<int>("SelfTest.TimeoutMs"));
+        Assert.Equal(10000, context.GetVariable<int>("SelfTest.BrowserSettleDelayMs"));
     }
 
     [Fact]

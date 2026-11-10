@@ -62,7 +62,8 @@ public class ConnectionEditorTests
             try
             {
             equipment.Show(); Layout(equipment);
-            equipment.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = 2;
+            var tabs = equipment.GetVisualDescendants().OfType<TabControl>().Single();
+            tabs.SelectedItem = tabs.Items.OfType<TabItem>().Single(tab => Equals(tab.Header, "Консоли"));
             Layout(equipment);
             Assert.False(equipment.GetVisualDescendants().OfType<Expander>().Single(e => Equals(e.Header, "Дополнительные параметры")).IsExpanded);
             Click(equipment, "Добавить консоль"); Layout(equipment);

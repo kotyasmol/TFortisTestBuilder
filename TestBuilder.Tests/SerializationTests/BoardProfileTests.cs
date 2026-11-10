@@ -1,4 +1,6 @@
 using TestBuilder.Domain.Modbus;
+using TestBuilder.Domain.Steps;
+using TestBuilder.Models;
 using TestBuilder.Services;
 using TestBuilder.Services.Graph;
 using TestBuilder.Services.Modbus;
@@ -12,17 +14,31 @@ public class BoardProfileTests
 {
     static string Profiles=>Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../profiles"));
     [Theory]
-    [InlineData("RTL_SW_board.json")][InlineData("RTL_POE_board.json")][InlineData("RTL_LED_color_template.json")][InlineData("board_manual_label.json")]
+    [InlineData("RTL-SW")]
+    [InlineData("RTL-POE")]
+    public void ReferenceBoardLoadsTheSamePngAndRegionsAsTheProfile(string model)
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "reference", "boards", "RTL", model + ".json");
+        var board = BoardDesign.ReadReference(source);
+        using var profile = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(Profiles, model + " · Проверка платы · 10.11.json")));
+        var expected = profile.RootElement.GetProperty("board");
+        Assert.Equal(expected.GetProperty("ImageBase64").GetString(), board.ImageBase64);
+        Assert.Equal(expected.GetProperty("Regions").GetArrayLength(), board.Regions.Count);
+    }
+    [Theory]
+    [InlineData("RTL-SW · Проверка платы · 10.11.json")][InlineData("RTL-POE · Проверка платы · 10.11.json")][InlineData("RTL_LED_color_template.json")][InlineData("board_manual_label.json")]
     public void BoardProfile_LoadSaveLoadCompile_PreservesHardwareLayoutAndOperations(string file)
     {
         using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));
         var name=GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find(file)),vm);Assert.Equal("Board",vm.RootGraph.ProductKind);
         var nodeCount=All(vm.RootGraph).Count();var regions=vm.RootGraph.Board?.Regions.Count;
         using var compiler=new GraphCompiler(bus,NullLogger.Instance);Assert.NotNull(compiler.Compile(vm.RootGraph));
-        var saved=GraphSerializer.Serialize(vm,name);Assert.Contains(vm.RootGraph.Hardware?.PortName != null ? "Start (connections v1)" : "Start (board v1)",saved);
+        var saved=GraphSerializer.Serialize(vm,name);
+        Assert.Contains(vm.RootGraph.UseCatalogSerials ? GraphSerializer.CatalogSerialsStartType :
+            vm.RootGraph.Hardware?.PortName != null ? "Start (connections v1)" : "Start (board v1)", saved);
         GraphSerializer.Deserialize(saved,vm);Assert.Equal(nodeCount,All(vm.RootGraph).Count());Assert.Equal(regions,vm.RootGraph.Board?.Regions.Count);
         Assert.NotNull(compiler.Compile(vm.RootGraph));
-        if(file is "RTL_SW_board.json" or "RTL_POE_board.json")
+        if(file is "RTL-SW · Проверка платы · 10.11.json" or "RTL-POE · Проверка платы · 10.11.json")
         {
             Assert.NotEmpty(vm.RootGraph.Board!.Regions);Assert.Single(vm.RootGraph.Hardware!.Devices);Assert.Contains(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>(),s=>s.RunOnFailure);
             var ids=vm.RootGraph.Board.Regions.Select(r=>r.Id).ToHashSet();
@@ -31,11 +47,14 @@ public class BoardProfileTests
             var bound = All(vm.RootGraph).SelectMany(n => n.BoardElements.Split(',', StringSplitOptions.RemoveEmptyEntries)).ToHashSet();
             Assert.True(ids.SetEquals(bound), "Every source board region must be associated with a test stage.");
             Assert.All(All(vm.RootGraph).OfType<SendTestReportNodeViewModel>(), n => Assert.False(n.FailOnError));
+            Assert.All(All(vm.RootGraph).OfType<SendTestReportNodeViewModel>(), n => Assert.Equal(RtlTestReport.Endpoint, n.Endpoint));
+            if (file.StartsWith("RTL-POE", StringComparison.Ordinal))
+                Assert.False(vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.Name == "Серийный номер").IsEnabled);
         }
     }
     [Fact] public void PoE_HasExactly16ColorChecks_AndOriginalAddresses()
     {
-        using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,"RTL_POE_board.json")),vm);
+        using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,"RTL-POE · Проверка платы · 10.11.json")),vm);
         var leds=All(vm.RootGraph).OfType<CheckLedColorNodeViewModel>().ToArray();Assert.Equal(16,leds.Length);
         Assert.Equal(Enumerable.Range(2437,16).Select(x=>(ushort)x),leds.Select(x=>x.RedAddress));
         Assert.Equal(Enumerable.Range(2421,16).Select(x=>(ushort)x),leds.Select(x=>x.WhiteAddress));
@@ -43,7 +62,7 @@ public class BoardProfileTests
     }
     [Fact] public void SW_PreservesK5StageOrder_AndNeverProgramsCalibrationRegisters()
     {
-        using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,"RTL_SW_board.json")),vm);
+        using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus));GraphSerializer.Deserialize(File.ReadAllText(Path.Combine(Profiles,"RTL-SW · Проверка платы · 10.11.json")),vm);
         var writes=All(vm.RootGraph).OfType<ModbusWriteNodeViewModel>().ToArray();
         Assert.Equal(new ushort[]{2323,2325,2327,2325,2323},writes.Where(x=>new[]{2323,2325,2327}.Contains(x.Address)).Select(x=>x.Address));
         Assert.DoesNotContain(writes,w=>new[]{2335,2338,2343,2346,2349,2352,2355,2358,2361,2364,2367,2370}.Contains(w.Address));

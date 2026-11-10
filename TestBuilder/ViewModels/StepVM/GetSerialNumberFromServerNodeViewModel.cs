@@ -11,7 +11,8 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class GetSerialNumberFromServerNodeViewModel : NodeViewModel
     {
         [ObservableProperty] private string serverBaseUrl = string.Empty;
-        [ObservableProperty] private string deviceType = "PSW+UPS-Box 8x2Pro";
+        [ObservableProperty] private string deviceType = string.Empty;
+        [ObservableProperty] private string expectedSerialPrefix = string.Empty;
         [ObservableProperty] private string cpuIdVariableName = "Dut.cpu_id";
         [ObservableProperty] private int timeoutMs = 30000;
         [ObservableProperty] private int retryCount = 1;
@@ -19,7 +20,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private string outputVariableName = "SerialNumber";
         [ObservableProperty] private bool failOnError = true;
         [ObservableProperty] private bool useFixedSerialNumber;
-        [ObservableProperty] private int fixedSerialNumber = 3200428;
+        [ObservableProperty] private int fixedSerialNumber;
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }
@@ -48,12 +49,14 @@ namespace TestBuilder.ViewModels.StepVM
                 RetryDelayMs,
                 OutputVariableName,
                 FailOnError,
-                UseFixedSerialNumber ? FixedSerialNumber : null);
+                UseFixedSerialNumber ? FixedSerialNumber : null,
+                ExpectedSerialPrefix);
 
         public override NodeViewModel Clone() => new GetSerialNumberFromServerNodeViewModel
         {
             ServerBaseUrl = ServerBaseUrl,
             DeviceType = DeviceType,
+            ExpectedSerialPrefix = ExpectedSerialPrefix,
             CpuIdVariableName = CpuIdVariableName,
             TimeoutMs = TimeoutMs,
             RetryCount = RetryCount,

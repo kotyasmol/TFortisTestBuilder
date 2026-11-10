@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +10,16 @@ public sealed class ContextVariables : IDictionary<string, object>, IReadOnlyDic
 {
     private readonly Dictionary<string, object> _values = new();
     internal HashSet<string> WrittenKeys { get; } = new();
+    internal Action<string>? ObserveAssignment { get; set; }
 
     public object this[string key]
     {
         get => _values[key];
-        set { _values[key] = value; WrittenKeys.Add(key); }
+        set
+        {
+            _values[key] = value;
+            RecordAssignment(key);
+        }
     }
 
     public ICollection<string> Keys => _values.Keys;
@@ -24,7 +30,17 @@ public sealed class ContextVariables : IDictionary<string, object>, IReadOnlyDic
     public bool IsReadOnly => false;
 
     internal void Seed(string key, object value) => _values.Add(key, value);
-    public void Add(string key, object value) { _values.Add(key, value); WrittenKeys.Add(key); }
+    public void Add(string key, object value)
+    {
+        _values.Add(key, value);
+        RecordAssignment(key);
+    }
+
+    private void RecordAssignment(string key)
+    {
+        WrittenKeys.Add(key);
+        ObserveAssignment?.Invoke(key);
+    }
     public void Add(KeyValuePair<string, object> item) => Add(item.Key, item.Value);
     public bool ContainsKey(string key) => _values.ContainsKey(key);
     public bool TryGetValue(string key, out object value) => _values.TryGetValue(key, out value!);

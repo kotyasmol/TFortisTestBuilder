@@ -37,12 +37,7 @@ try {
         }
         $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
         if ($hash -ne $file.sha256) {
-            # These files are intentionally editable in the application.
-            if ($file.path -eq 'testbuilder.settings' -or $file.path.StartsWith('profiles/')) {
-                Result 'WARN' ("Локально изменён профиль/настройки: $($file.path)")
-            } else {
-                Result 'ERROR' ("Файл отличается от релиза: $($file.path)")
-            }
+            Result 'ERROR' ("Файл отличается от релиза: $($file.path)")
         }
     }
     if ($script:bundleErrors -eq 0) {
@@ -80,7 +75,11 @@ try {
         }
     }
 
-    $settings = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'testbuilder.settings') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $settingsPath = Join-Path $PSScriptRoot 'testbuilder.settings'
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        $settingsPath = Join-Path $PSScriptRoot 'testbuilder.defaults.json'
+    }
+    $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($settings.standId -in @('123', 'тест') -or [string]::IsNullOrWhiteSpace($settings.standId)) {
         Result 'WARN' 'Stand ID оставлен исходным. Перед отправкой производственных отчётов укажите фактический номер стенда.'
     }

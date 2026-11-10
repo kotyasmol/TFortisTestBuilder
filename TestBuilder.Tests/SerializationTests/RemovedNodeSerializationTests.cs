@@ -81,9 +81,9 @@ public class RemovedNodeSerializationTests
     }
 
     [Theory]
-    [InlineData("PSW_2G6F_plus_full_algorithm.json")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json")]
-    [InlineData("PSW_UPS_Box_8x2Pro_parallel_start.json")]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json")]
     [InlineData("manual_label_printing.json")]
     [InlineData("station_dashboard_demo.json")]
     public void CurrentProfilesLoadAndCompile(string file)

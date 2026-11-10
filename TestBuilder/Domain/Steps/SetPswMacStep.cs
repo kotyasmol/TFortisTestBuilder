@@ -62,6 +62,10 @@ public sealed class SetPswMacStep : ITestStep
         if (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
             !SetProMacStep.TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out var mac))
             return Fail(context, $"Некорректный MAC в переменной '{_macVariableName}'.");
+        if (context.ProductionModel is { SerialSeries: null })
+            return Fail(context, "Для записи MAC укажите серию изделия в справочнике.");
+        if (context.ProductionModel?.SerialSeries?.CheckMac(mac, context.IssuedSerialNumber) is { } macError)
+            return Fail(context, macError);
 
         var macBytes = Convert.FromHexString(mac.Replace(":", string.Empty));
         if ((macBytes[0] & 1) != 0 || Array.TrueForAll(macBytes, b => b == 0))

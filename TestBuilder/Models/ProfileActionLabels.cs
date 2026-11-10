@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using System;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -7,6 +9,9 @@ namespace TestBuilder.Models;
 /// <summary>Presentation only. Empty labels never change execution or feedback availability.</summary>
 public sealed class ProfileActionLabels
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonPropertyName("showStatus")] public bool ShowStatus { get; set; } = true;
     [JsonPropertyName("ready")] public string Ready { get; set; } = "Готово";
     [JsonPropertyName("unknown")] public string Unknown { get; set; } = "Неизвестно";

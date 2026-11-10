@@ -6,7 +6,6 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Threading.Tasks;
 using TestBuilder.Services;
-using TestBuilder.Services.Logging;
 
 namespace TestBuilder.ViewModels
 {
@@ -77,22 +76,26 @@ namespace TestBuilder.ViewModels
         public SettingsViewModel(Func<bool>? canStartTutorial = null)
         {
             this.canStartTutorial = canStartTutorial;
-            isEngineerMode = AppSettings.Instance.EngineerMode;
-            StandPort = AppSettings.Instance.StandPort;
-            ConsolePort = AppSettings.Instance.ConsolePort;
-            GraphsFolder = AppSettings.Instance.GraphsFolder;
-            ServerBaseUrl = AppSettings.Instance.ServerBaseUrl;
-            StandId = AppSettings.Instance.StandId;
-            defaultPrinterName = AppSettings.Instance.DefaultPrinterName ?? string.Empty;
-            EnableFileLogging = AppSettings.Instance.EnableFileLogging;
-            LogFolder = AppSettings.Instance.LogFolder;
-            IsDarkTheme = AppSettings.Instance.Theme == "Dark";
+            var settings = AppSettings.Instance;
+            isEngineerMode = settings.EngineerMode;
+            standPort = settings.StandPort;
+            consolePort = settings.ConsolePort;
+            graphsFolder = settings.ResolvedGraphsFolder;
+            serverBaseUrl = settings.ServerBaseUrl;
+            standId = settings.StandId;
+            defaultPrinterName = settings.DefaultPrinterName ?? string.Empty;
+            enableFileLogging = settings.EnableFileLogging;
+            logFolder = settings.LogFolder;
+            isDarkTheme = settings.Theme == "Dark";
 
             SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
             SelectLogFolderCommand = new AsyncRelayCommand(SelectLogFolderAsync);
 
             ApplyTheme(IsDarkTheme);
         }
+
+        public string LoadError => AppSettings.Instance.LoadError;
+        public bool HasLoadError => LoadError.Length > 0;
 
         partial void OnIsDarkThemeChanged(bool value)
         {
@@ -127,8 +130,6 @@ namespace TestBuilder.ViewModels
             if (folders.Count == 0) return;
 
             GraphsFolder = folders[0].Path.LocalPath;
-            AppSettings.Instance.GraphsFolder = GraphsFolder;
-            AppSettings.Instance.Save();
         }
 
         private async Task SelectLogFolderAsync()
@@ -150,8 +151,6 @@ namespace TestBuilder.ViewModels
             if (folders.Count == 0) return;
 
             LogFolder = folders[0].Path.LocalPath;
-            AppSettings.Instance.LogFolder = LogFolder;
-            AppSettings.Instance.Save();
         }
 
         partial void OnGraphsFolderChanged(string value)
@@ -182,9 +181,6 @@ namespace TestBuilder.ViewModels
         {
             AppSettings.Instance.EnableFileLogging = value;
             AppSettings.Instance.Save();
-
-            if (!value)
-                LoggingService.Instance.StopFileLogForRun();
         }
 
         partial void OnLogFolderChanged(string value)

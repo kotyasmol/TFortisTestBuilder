@@ -16,38 +16,43 @@ namespace TestBuilder.Domain.Steps
         private readonly string _rightVariableName;
         private readonly VariableComparisonType _comparisonType;
         private readonly string _failMessage;
+        private readonly string _resultVariableName;
 
         public CompareVariablesStep(
             ILogger logger,
             string leftVariableName,
             string rightVariableName,
             VariableComparisonType comparisonType,
-            string failMessage)
+            string failMessage,
+            string resultVariableName = "")
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _leftVariableName = leftVariableName?.Trim() ?? string.Empty;
             _rightVariableName = rightVariableName?.Trim() ?? string.Empty;
             _comparisonType = comparisonType;
             _failMessage = failMessage ?? string.Empty;
+            _resultVariableName = resultVariableName;
         }
 
         public Task<StepResult> ExecuteAsync(TestContext context, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var resultName = CheckResultCapture.ResolveName(_resultVariableName, context.CurrentSlaveId);
+            CheckResultCapture.Clear(context, resultName);
 
             if (string.IsNullOrWhiteSpace(_leftVariableName) || string.IsNullOrWhiteSpace(_rightVariableName))
             {
-                return Task.FromResult(Fail(context, string.Empty, string.Empty, "Имена переменных для сравнения не заданы."));
+                return Task.FromResult(Fail(context, resultName, null, string.Empty, "Имена переменных для сравнения не заданы."));
             }
 
             if (!context.Variables.TryGetValue(_leftVariableName, out var left))
             {
-                return Task.FromResult(Fail(context, string.Empty, string.Empty, $"Переменная '{_leftVariableName}' не найдена."));
+                return Task.FromResult(Fail(context, resultName, null, string.Empty, $"Переменная '{_leftVariableName}' не найдена."));
             }
 
             if (!context.Variables.TryGetValue(_rightVariableName, out var right))
             {
-                return Task.FromResult(Fail(context, ToInvariantString(left), string.Empty, $"Переменная '{_rightVariableName}' не найдена."));
+                return Task.FromResult(Fail(context, resultName, ToInvariantString(left), string.Empty, $"Переменная '{_rightVariableName}' не найдена."));
             }
 
             var leftText = ToInvariantString(left);
@@ -60,13 +65,14 @@ namespace TestBuilder.Domain.Steps
             }
             catch (FormatException ex)
             {
-                return Task.FromResult(Fail(context, leftText, rightText, ex.Message));
+                return Task.FromResult(Fail(context, resultName, leftText, rightText, ex.Message));
             }
 
             context.SetVariable("LastCheck.VariableName", _leftVariableName);
             context.SetVariable("LastCheck.ActualValue", leftText);
             context.SetVariable("LastCheck.ExpectedValue", rightText);
             context.SetVariable("LastCheck.Passed", passed);
+            CheckResultCapture.Save(context, resultName, passed, leftText);
 
             _logger.Info($"[ШАГ] Сравнение переменных: {_leftVariableName}='{leftText}', {_rightVariableName}='{rightText}', тип {_comparisonType}.");
 
@@ -84,12 +90,13 @@ namespace TestBuilder.Domain.Steps
             return Task.FromResult(StepResult.True);
         }
 
-        private StepResult Fail(TestContext context, string left, string right, string error)
+        private StepResult Fail(TestContext context, string resultName, string? left, string right, string error)
         {
             context.SetVariable("LastCheck.VariableName", _leftVariableName);
-            context.SetVariable("LastCheck.ActualValue", left);
+            context.SetVariable("LastCheck.ActualValue", left ?? string.Empty);
             context.SetVariable("LastCheck.ExpectedValue", right);
             context.SetVariable("LastCheck.Passed", false);
+            CheckResultCapture.Save(context, resultName, false, left);
             _logger.Warning($"[ОШИБКА] {error}");
             return StepResult.False;
         }

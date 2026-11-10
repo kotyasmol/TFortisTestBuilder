@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Services;
+using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
 
@@ -66,16 +68,22 @@ public partial class TestViewModel
             var newTitle = ComposeProfileName(name, description);
             var oldKind = RootGraph.ProductKind;
             var kind = saved?.ProductKind ?? oldKind;
-            void Set(string? modelId, string? modelName, string title, string? detail, string productKind)
+            var oldUseCatalog = RootGraph.UseCatalogSerials;
+            var useCatalog = UseCatalogAfterModelChange(known);
+            var oldVariant = RootGraph.LabelVariant;
+            void Set(string? modelId, string? modelName, string title, string? detail, string productKind, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = modelId; RootGraph.DeviceModel = modelName;
                 RootGraph.ProductKind = productKind;
+                RootGraph.UseCatalogSerials = useSeries;
+                RootGraph.LabelVariant = variant;
                 SetProfileIdentity(title, detail);
                 NotifyDeviceNameChanged();
                 NotifyProfileMetadataChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(id, name, newTitle, description, kind), () => Set(oldId, oldName, oldTitle, oldDescription, oldKind)));
+                () => Set(id, name, newTitle, description, kind, useCatalog, 0),
+                () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
         }
     }
 
@@ -85,7 +93,97 @@ public partial class TestViewModel
         OnPropertyChanged(nameof(ProfileDescription));
         OnPropertyChanged(nameof(DeviceName));
         OnPropertyChanged(nameof(SelectedEquipmentModel));
+        NotifyCatalogSerialSettingsChanged();
         RefreshNameSuggestions();
+    }
+
+    public bool UseCatalogSerials
+    {
+        get => RootGraph.UseCatalogSerials;
+        set
+        {
+            var old = RootGraph.UseCatalogSerials;
+            if (!CanEditGraph || old == value) return;
+            void Set(bool enabled)
+            {
+                RootGraph.UseCatalogSerials = enabled;
+                NotifyCatalogSerialSettingsChanged();
+            }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(value), () => Set(old)));
+        }
+    }
+
+    public int ProfileLabelVariant
+    {
+        get => RootGraph.LabelVariant;
+        set
+        {
+            var old = RootGraph.LabelVariant;
+            if (!CanEditGraph || value is < 0 or > 9 || old == value) return;
+            void Set(int variant)
+            {
+                RootGraph.LabelVariant = variant;
+                NotifyCatalogSerialSettingsChanged();
+            }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(value), () => Set(old)));
+        }
+    }
+
+    public string CatalogSerialSeriesSummary
+    {
+        get
+        {
+            var model = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+            if (model?.SerialSeries is { } series)
+                return $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}";
+            return model?.EffectiveServerDeviceType is { Length: > 0 } serverType
+                ? $"{serverType} · " + (model.RtlReport?.AssignSerialOnReport == true
+                    ? "номер возвращается в ответе на отчёт" : "номер выдаёт сервер")
+                : "Для модели не настроен серверный тип в справочнике";
+        }
+    }
+
+    private void NotifyCatalogSerialSettingsChanged()
+    {
+        OnPropertyChanged(nameof(UseCatalogSerials));
+        OnPropertyChanged(nameof(ProfileLabelVariant));
+        OnPropertyChanged(nameof(CatalogSerialSeriesSummary));
+    }
+
+    private bool UseCatalogAfterModelChange(EquipmentModel? model) =>
+        RootGraph.UseCatalogSerials || !string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ||
+        BoardNodes(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel);
+
+    private (EquipmentModel? Production, EquipmentModel? Legacy) ResolveRunSerialModels()
+    {
+        if (!RootGraph.UseCatalogSerials)
+            return (null, _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel));
+        // Read once at the start. All nodes, including failure cleanup, use the same model.
+        var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+        if (model == null || string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
+            throw new InvalidOperationException("Выберите изделие с настроенным серверным типом в справочнике.");
+        if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
+            model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
+            throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");
+        return (model, null);
+    }
+
+    internal EquipmentModel ReadCatalogModelForEditing()
+    {
+        var name = DeviceName.Trim();
+        if (name.Length == 0) throw new InvalidOperationException("Сначала укажите изделие в шапке профиля.");
+        var catalog = EquipmentCatalog.Load(ProfilesFolder);
+        return catalog.Resolve(RootGraph.DeviceModelId, name) ?? catalog.Resolve(null, name)
+            ?? new EquipmentModel(Guid.NewGuid().ToString("N"), name);
+    }
+
+    internal void SaveCatalogModel(EquipmentModel model)
+    {
+        if (!CanEditGraph) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
+        EquipmentCatalog.SaveModel(ProfilesFolder, model);
+        LoadEquipmentCatalog(ProfilesFolder);
+        SelectedEquipmentModel = EquipmentModels.Single(item => item.Id == model.Id);
+        UseCatalogSerials = true;
     }
 
     private void RefreshNameSuggestions()
@@ -117,26 +215,75 @@ public partial class TestViewModel
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
             var name = value.Id.Length == 0 ? null : value.Name;
-            void Set(string? id, string? model, string title, string? detail)
+            var oldUseCatalog = RootGraph.UseCatalogSerials;
+            var useCatalog = UseCatalogAfterModelChange(value);
+            var oldVariant = RootGraph.LabelVariant;
+            void Set(string? id, string? model, string title, string? detail, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = id; RootGraph.DeviceModel = model;
+                RootGraph.UseCatalogSerials = useSeries;
+                RootGraph.LabelVariant = variant;
                 SetProfileIdentity(title, detail); NotifyDeviceNameChanged();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(value.Id.Length == 0 ? null : value.Id, name, ComposeProfileName(name, description), description),
-                () => Set(oldId, oldName, oldTitle, oldDescription)));
+                () => Set(value.Id.Length == 0 ? null : value.Id, name, ComposeProfileName(name, description), description, useCatalog, 0),
+                () => Set(oldId, oldName, oldTitle, oldDescription, oldUseCatalog, oldVariant)));
         }
     }
     private void LoadEquipmentCatalog(string folder)
     {
-        try { _equipmentCatalog = EquipmentCatalog.Load(folder); CatalogStatus = ""; }
-        catch (Exception ex) { CatalogStatus = "Каталог изделий недоступен: " + ex.Message; }
+        try
+        {
+            _equipmentCatalog = EquipmentCatalog.Load(folder);
+            SetCatalogStatus(Directory.Exists(folder) ? "" : $"Папка профилей недоступна: {folder}");
+        }
+        catch (Exception ex) { SetCatalogStatus("Каталог изделий недоступен: " + ex.Message); }
         EquipmentModels.Clear();
         EquipmentModels.Add(new EquipmentModel("", "Без модели"));
         foreach (var model in _equipmentCatalog.Models.OrderBy(m => m.Name)) EquipmentModels.Add(model);
         RefreshSelectedEquipmentModel();
+    }
+
+    private void SetCatalogStatus(string status)
+    {
+        if (CatalogStatus == status) return;
+        CatalogStatus = status;
         OnPropertyChanged(nameof(CatalogStatus));
         OnPropertyChanged(nameof(HasCatalogStatus));
+    }
+
+    private static readonly object CatalogCacheLock = new();
+    private static readonly Dictionary<string, (long Length, DateTime LastWriteUtc, GraphProfile Profile)> CatalogProfileCache = new();
+
+    private string[] ReadProfileCatalogFiles(string folder)
+    {
+        try { return Directory.GetFiles(folder, "*.json").OrderBy(path => path, StringComparer.Ordinal).ToArray(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SetCatalogStatus("Папка профилей недоступна: " + ex.Message);
+            return Array.Empty<string>();
+        }
+    }
+
+    private GraphProfile ReadCatalogProfile(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            var length = file.Length;
+            var written = file.LastWriteTimeUtc;
+            lock (CatalogCacheLock)
+            {
+                if (CatalogProfileCache.TryGetValue(path, out var cached) && cached.Length == length && cached.LastWriteUtc == written)
+                    return cached.Profile;
+                var profile = GraphSerializer.ReadProfile(path, validateContents: true);
+                if (CatalogProfileCache.Count >= 128) CatalogProfileCache.Clear();
+                CatalogProfileCache[path] = (length, written, profile);
+                return profile;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { return GraphSerializer.ReadProfile(path, validateContents: true); }
     }
     private void RefreshSelectedEquipmentModel()
     {

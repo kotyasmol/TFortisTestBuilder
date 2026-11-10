@@ -53,10 +53,12 @@ public class FailureCleanupOrderTests
     [InlineData(false)] [InlineData(true)]
     public async Task FailureAndStop_RunExplicitOrder_AndContinueAfterFailedCleanup(bool cancel)
     {
+        var marker = new StandInspectionStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".inspection"));
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch<bool>(async () =>
+        try { await session.Dispatch<bool>(async () =>
         {
-            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus), true, null, marker);
             vm.NewProfileCommand.Execute(null);
             var first = Cleanup("Первый", fails: true); first.FailureOrder = 1;
             var second = Cleanup("Второй"); second.FailureOrder = 2;
@@ -80,7 +82,8 @@ public class FailureCleanupOrderTests
             Assert.False(vm.IsTestRunning);
             Assert.True(vm.NeedsStandInspection); // The failed first action is not concealed by later success.
             return true;
-        }, CancellationToken.None);
+        }, CancellationToken.None); }
+        finally { marker.Clear(); }
     }
 
     [Fact]

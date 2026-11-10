@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Domain.Steps;
@@ -12,6 +13,49 @@ namespace TestBuilder.Tests.StepTests;
 [Collection(AppSettingsTestCollection.Name)]
 public class ProductionStepTests
 {
+    [Theory]
+    [InlineData(3300579, true)]
+    [InlineData(3200579, false)]
+    [InlineData(3300000, false)]
+    public async Task CatalogModelControlsAllocationMacAndReportOfCopiedProfile(int serverSerial, bool accepted)
+    {
+        var model = new EquipmentModel("box", "PSW+Box 8x2Pro")
+        {
+            SerialSeries = new() { ServerDeviceType = "PSW+Box 8x2Pro", FirstSerialNumber = 3300001,
+                LastSerialNumber = 3365535, SerialOffset = 3300000, MacPrefix = "C0:11:A6:21" }
+        };
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, serverSerial.ToString(), TimeSpan.Zero));
+        var context = new TestContext(new RegisterState()) { ProductionModel = model };
+        context.SetVariable("Dut.cpu_id", "CPU-33");
+        var serial = new GetSerialNumberFromServerStep(service, NullLogger.Instance, "http://server", "Old UPS type",
+            "Dut.cpu_id", 1000, 1, 0, "SerialNumber", true, expectedSerialPrefix: "32");
+        var range = new CheckVariableRangeStep(NullLogger.Instance, "SerialNumber", 3200000, 3299999, true, "Old UPS range");
+        var mac = new BuildMacFromSerialStep(NullLogger.Instance, "SerialNumber", 3200000, "C0:11:A6:20", "SerialShort", "Mac", true);
+        var report = new BuildTestReportStep(NullLogger.Instance, "Report", "Stand", "SerialNumber", "", "production",
+            false, expectedSerialPrefix: "32");
+        using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var send = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "Report", "/api/Api.svc/result.json",
+            1000, 0, 0, false, "reports", true, () => new HttpClient(handler, disposeHandler: false));
+
+        var expected = accepted ? StepResult.True : StepResult.False;
+        Assert.Equal(expected, await serial.ExecuteAsync(context, default));
+        Assert.Equal(1, service.Calls);
+        Assert.Contains("devType=PSW%2BBox%208x2Pro&cpuId=CPU-33", service.LastUrl);
+        Assert.Equal(expected, await range.ExecuteAsync(context, default));
+        Assert.Equal(expected, await mac.ExecuteAsync(context, default));
+        Assert.Equal(expected, await report.ExecuteAsync(context, default));
+        if (!accepted) context.SetVariable("Report", $"serial_num=true={serverSerial}\r\n");
+        Assert.Equal(expected, await send.ExecuteAsync(context, default));
+        if (accepted)
+        {
+            Assert.Equal("C0:11:A6:21:02:43", context.GetVariable<string>("Mac"));
+            Assert.Contains("serial_num=true=3300579\r\n", handler.Body);
+            context.SetVariable("Report", "serial_num=true=3300580\r\n");
+            Assert.Equal(StepResult.False, await send.ExecuteAsync(context, default));
+        }
+        else Assert.Null(handler.Method);
+    }
+
     [Fact]
     public async Task GetSerialNumberFromServerStep_EncodesDeviceTypeAndSavesSerial()
     {
@@ -43,6 +87,248 @@ public class ProductionStepTests
         Assert.Equal("CPU 1", context.GetVariable<string>("SerialNumberCpuId"));
         Assert.Contains("devType=PSW%2BUPS-Box%208x2Pro", service.LastUrl);
         Assert.Contains("cpuId=CPU%201", service.LastUrl);
+    }
+
+    [Theory]
+    [InlineData("PSW+UPS-Box 8x2Pro", 3200579, 0, false)]
+    [InlineData("PSW+Box 8x2Pro", 3200579, 1, false)]
+    [InlineData("PSW+Box 8x2Pro", 3300579, 1, true)]
+    public async Task LegacyProfileRejectsARequestOrSerialForAnotherProduct(
+        string nodeType, int serverSerial, int requests, bool accepted)
+    {
+        var model = EquipmentCatalog.Load(Path.GetTempPath()).Resolve(null, "PSW+Box 8x2Pro");
+        Assert.NotNull(model?.SerialSeries);
+        var context = new TestContext(new RegisterState()) { LegacySerialModel = model };
+        context.SetVariable("Dut.cpu_id", "CPU-test");
+        context.SetVariable("SerialNumber", 3200579);
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, serverSerial.ToString(), TimeSpan.Zero));
+        var step = new GetSerialNumberFromServerStep(service, NullLogger.Instance, "http://server",
+            nodeType, "Dut.cpu_id", 1000, 0, 0, "SerialNumber", true);
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal(requests, service.Calls);
+        if (accepted)
+            Assert.Equal(serverSerial, context.GetVariable<int>("SerialNumber"));
+        else
+            Assert.False(context.Variables.ContainsKey("SerialNumber"));
+        if (requests == 0)
+            Assert.Contains("Серийники из справочника", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Theory]
+    [InlineData("RTL-SW", 5, false, 31300002, 5, true)]
+    [InlineData("RTL-SW", 5, false, 31300003, 5, false)]
+    [InlineData("RTL-POE", 6, true, 31200002, 6, true)]
+    [InlineData("RTL-POE", 6, true, 31300002, 5, false)]
+    [InlineData("RTL-POE", 6, true, 0, 6, false)]
+    public async Task RtlBoardsUseDirectJsonAndTheExpectedSerialFlow(
+        string serverType, int deviceType, bool assignOnReport, int returnedSerial, int returnedType, bool accepted)
+    {
+        const string server = "https://report-server.local/api";
+        const string session = "test-session";
+        const string cpu = "413148580E5939514C53698A";
+        const int swSerial = 31300002;
+        var model = new EquipmentModel("board", serverType)
+        {
+            ServerDeviceType = serverType,
+            RtlReport = new RtlReportSettings(deviceType, assignOnReport) { FailureDeviceIdentifier = "test-failure-route" }
+        };
+        var context = new TestContext(new RegisterState()) { ProductionModel = model };
+        context.SetVariable("CpuId", cpu);
+        context.AddReportEntry("Питание 3,3 В", true, "3,3 В");
+        if (!assignOnReport)
+        {
+            var http = new CapturingHttpService(HttpRequestResult.Success(200, swSerial.ToString(), TimeSpan.Zero));
+            var serial = new GetSerialNumberFromServerStep(http, NullLogger.Instance, server, "Old type",
+                "CpuId", 1000, 0, 0, "SerialNumber", true);
+            Assert.Equal(StepResult.True, await serial.ExecuteAsync(context, default));
+            Assert.Contains($"devType={serverType}&cpuId={cpu}", http.LastUrl);
+        }
+        else context.SetVariable("SerialNumber", 3200579);
+
+        var build = new BuildTestReportStep(NullLogger.Instance, "Report", "Стенд", "SerialNumber",
+            session, "production", false);
+        Assert.Equal(StepResult.True, await build.ExecuteAsync(context, default));
+        using var handler = new RecordingReportHandler(HttpStatusCode.OK,
+            JsonSerializer.Serialize(new { id = 10, serialNumber = returnedSerial, deviceType = returnedType }));
+        var send = new SendTestReportStep(NullLogger.Instance, server, "Report", RtlTestReport.Endpoint,
+            1000, 3, 0, false, "reports", true, () => new HttpClient(handler, disposeHandler: false), server, session);
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, await send.ExecuteAsync(context, default));
+        Assert.Equal(HttpMethod.Post, handler.Method);
+        Assert.Equal("https://report-server.local/api/Api.svc/SendTestResultUniverse", handler.Url);
+        Assert.StartsWith("application/json", handler.ContentType);
+        using var request = JsonDocument.Parse(handler.Body);
+        var root = request.RootElement;
+        Assert.True(root.GetProperty("isPswDevice").GetBoolean());
+        Assert.Equal(session, root.GetProperty("sessId").GetString());
+        var result = root.GetProperty("result");
+        Assert.Equal(deviceType, result.GetProperty("deviceType").GetInt32());
+        Assert.Equal(cpu, result.GetProperty("deviceIdent").GetString());
+        Assert.Equal(assignOnReport ? null : swSerial.ToString(), result.GetProperty("deviceSerial").GetString());
+        Assert.True(result.GetProperty("isFull").GetBoolean());
+        Assert.True(result.GetProperty("isSuccess").GetBoolean());
+        Assert.Contains(result.GetProperty("subTests").EnumerateArray(), item =>
+            item.GetProperty("name").GetString() == "Питание 3,3 В" &&
+            item.GetProperty("additionalInfo").GetString() == "3,3 В");
+        Assert.Equal(accepted ? returnedSerial : assignOnReport ? null : swSerial, context.IssuedSerialNumber);
+        if (assignOnReport) Assert.Equal(1, context.GetVariable<int>("SendReport.Attempts"));
+    }
+
+    [Theory]
+    [InlineData("RTL-SW", null, null, true, false)]
+    [InlineData("RTL-POE", null, null, true, false)]
+    [InlineData("RTL-POE", "413148580E5939514C53698A", null, true, false)]
+    [InlineData("RTL-SW", "413148580E5939514C53698A", 31300002, true, false)]
+    [InlineData("RTL-POE", null, null, false, false)]
+    [InlineData("RTL-POE", "413148580E5939514C53698A", 31200002, true, true)]
+    public async Task RtlFailureProfileRoutesReportsAndKeepsTheFallbackSerialOutOfTheDeviceContext(
+        string board, string? cpuId, int? issued, bool eligible, bool alreadySent)
+    {
+        var settings = AppSettings.Instance;
+        var previousStand = settings.StandId;
+        var previousServer = settings.ServerBaseUrl;
+        var directory = Directory.CreateTempSubdirectory("tfortis-rtl-report-");
+        try
+        {
+            const string server = "https://rtl-test.example";
+            App.ConfigureStartupArguments(new[] { "rtl-test-session", "Оператор" });
+            settings.StandId = "TEST-STAND";
+            settings.ServerBaseUrl = server;
+            var model = EquipmentCatalog.Load(directory.FullName).Resolve(null, board);
+            var reportSettings = Assert.IsType<RtlReportSettings>(model?.RtlReport);
+            var fallbackSerial = board == "RTL-SW" ? 9912345 : 9912346;
+            var returnedSerial = issued ?? fallbackSerial;
+            using var handler = new RecordingReportHandler(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new { id = 10, serialNumber = returnedSerial, deviceType = reportSettings.DeviceType }));
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"{board} · Проверка платы · 10.11.json")), vm);
+            var cleanup = TestBuilder.Services.Graph.FailureCleanupOrder.GetNodes(vm.RootGraph);
+            Assert.StartsWith("Снятие питания", cleanup[0].Name);
+            var recovery = cleanup[^1];
+            Assert.Equal("Отчёт при отказе", recovery.Name);
+            recovery.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single().LocalReportsDirectory = directory.FullName;
+            using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
+            {
+                ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
+            };
+            var graph = compiler.Compile(recovery.BodyGraph);
+            var context = new TestContext(new RegisterState()) { ProductionModel = model, IsCleanup = true, HasCriticalError = true };
+            context.SetVariable("Execution.SendFailureReport", eligible);
+            context.SetVariable("Execution.Error", "Проверка питания не пройдена");
+            context.SetVariable("ReportDelivery.Status", alreadySent ? "Sent" : "Pending");
+            if (cpuId != null) context.SetVariable("CpuId", cpuId);
+            if (issued.HasValue)
+            {
+                context.SetVariable("SerialNumber", issued.Value);
+                context.SetVariable("SerialNumber.Assigned", issued.Value);
+            }
+
+            Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(graph.StartNode, context, default));
+            if (!eligible || alreadySent)
+            {
+                Assert.Null(handler.Method);
+                Assert.Empty(directory.GetFiles());
+                return;
+            }
+
+            Assert.Equal(HttpMethod.Post, handler.Method);
+            using var payload = JsonDocument.Parse(handler.Body);
+            var result = payload.RootElement.GetProperty("result");
+            Assert.Equal(reportSettings.DeviceType, result.GetProperty("deviceType").GetInt32());
+            Assert.Equal(issued.HasValue ? cpuId : reportSettings.FailureDeviceIdentifier, result.GetProperty("deviceIdent").GetString());
+            Assert.Equal(issued?.ToString(), result.GetProperty("deviceSerial").GetString());
+            Assert.False(result.GetProperty("isSuccess").GetBoolean());
+            Assert.False(result.GetProperty("isFull").GetBoolean());
+            Assert.Equal(issued, context.IssuedSerialNumber);
+            Assert.Equal(issued ?? 0, context.GetVariable<int>("SerialNumber"));
+            Assert.Equal(returnedSerial, context.GetVariable<int>("SendReport.SerialNumber"));
+            Assert.Contains($"serial_num=true={returnedSerial}", File.ReadAllText(Assert.Single(directory.GetFiles()).FullName));
+            Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
+            if (!issued.HasValue)
+            {
+                var subTests = result.GetProperty("subTests").EnumerateArray().ToArray();
+                Assert.Contains(subTests, item => item.GetProperty("additionalInfo").GetString() == "Проверка питания не пройдена");
+                if (cpuId != null)
+                    Assert.Contains(subTests, item => item.GetProperty("additionalInfo").GetString() == cpuId);
+            }
+        }
+        finally
+        {
+            App.ConfigureStartupArguments(Array.Empty<string>());
+            settings.StandId = previousStand;
+            settings.ServerBaseUrl = previousServer;
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("33", "3300579", true, 1)]
+    [InlineData("33", "3200579", false, 1)]
+    [InlineData("33", "33", false, 1)]
+    [InlineData("33*", "3300579", false, 0)]
+    public async Task GetSerialNumberFromServerStep_EnforcesConfiguredPrefix(
+        string prefix, string response, bool accepted, int requests)
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, response, TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-33");
+        context.SetVariable("SerialNumber", 3200579);
+        var step = new GetSerialNumberFromServerStep(
+            service, NullLogger.Instance, "http://server", "new-model", "Dut.cpu_id",
+            1000, 2, 0, "SerialNumber", failOnError: true, expectedSerialPrefix: prefix);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.Equal(accepted ? StepResult.True : StepResult.False, result);
+        Assert.Equal(requests, service.Calls);
+        Assert.Equal(accepted, context.GetVariable<bool>("SerialNumberReceived"));
+        if (accepted)
+        {
+            Assert.Equal(3300579, context.GetVariable<int>("SerialNumber"));
+            Assert.Contains("devType=new-model&cpuId=CPU-33", service.LastUrl);
+        }
+        else
+        {
+            Assert.False(context.Variables.ContainsKey("SerialNumber"));
+            Assert.False(context.Variables.ContainsKey("NetTest.SerialNumber"));
+            Assert.Contains("префикс", context.GetVariable<string>("SerialNumberError"), StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public async Task GetSerialNumberFromServerStep_RejectsFixedSerialFromAnotherSeries()
+    {
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "3300579", TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        var step = new GetSerialNumberFromServerStep(
+            service, NullLogger.Instance, "http://server", "new-model", "Dut.cpu_id",
+            1000, 0, 0, "SerialNumber", failOnError: true, fixedSerialNumber: 3200579, expectedSerialPrefix: "33");
+
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(0, service.Calls);
+        Assert.False(context.Variables.ContainsKey("SerialNumber"));
+        Assert.Contains("3200579", context.GetVariable<string>("SerialNumberError"));
+    }
+
+    [Fact]
+    public async Task NewSerialNumberNode_RequiresExplicitProductTypeAndDebugNumber()
+    {
+        var node = new GetSerialNumberFromServerNodeViewModel { ServerBaseUrl = "http://server" };
+        var service = new CapturingHttpService(HttpRequestResult.Success(200, "3200579", TimeSpan.Zero));
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("Dut.cpu_id", "CPU-42");
+
+        var result = await node.CreateStep(service, NullLogger.Instance).ExecuteAsync(context, CancellationToken.None);
+        Assert.Equal(StepResult.False, result);
+        Assert.Contains("тип изделия", context.GetVariable<string>("SerialNumberError"));
+
+        node.UseFixedSerialNumber = true;
+        result = await node.CreateStep(service, NullLogger.Instance).ExecuteAsync(context, CancellationToken.None);
+        Assert.Equal(StepResult.False, result);
+        Assert.Equal(0, service.Calls);
+        Assert.False(context.Variables.ContainsKey("SerialNumber"));
     }
 
     [Fact]
@@ -252,6 +538,7 @@ public class ProductionStepTests
             var node = new GetSerialNumberFromServerNodeViewModel
             {
                 ServerBaseUrl = "http://SERVER_BASE_URL",
+                DeviceType = "PSW+UPS-Box 8x2Pro",
                 RetryCount = 0
             };
 
@@ -286,6 +573,7 @@ public class ProductionStepTests
         var node = new GetSerialNumberFromServerNodeViewModel
         {
             ServerBaseUrl = "http://serial-server.local/api/Api.svc",
+            DeviceType = "PSW+UPS-Box 8x2Pro",
             RetryCount = 0
         };
 
@@ -325,6 +613,8 @@ public class ProductionStepTests
         context.SetVariable("SerialShort", 123);
         context.SetVariable("Dut.akb_voltage", 24.5);
         context.SetVariable("LastCheck.Passed", false);
+        context.SetVariable("serial_num", 3200579);
+        context.AddReportEntry(" Serial_Num ", true, "3200579");
         context.AddReportEntry("самотестирование", true, "true");
 
         var step = new BuildTestReportStep(
@@ -352,6 +642,7 @@ public class ProductionStepTests
         Assert.Contains("Dut.akb_voltage=true=24.5\r\n", report);
         Assert.Contains("LastCheck.Passed=true=false\r\n", report);
         Assert.DoesNotContain("serial_num=true=123\r\n", report);
+        Assert.DoesNotContain("3200579", report);
         Assert.True(context.GetVariable<bool>("BuildReport.Success"));
     }
 
@@ -376,6 +667,47 @@ public class ProductionStepTests
         Assert.False(context.Variables.ContainsKey("TestReportText"));
         Assert.False(context.GetVariable<bool>("BuildReport.Success"));
         Assert.Contains("Stand ID", context.GetVariable<string>("BuildReport.Error"));
+    }
+
+    [Theory]
+    [InlineData(3300042, 3200579, true)]
+    [InlineData(3200579, 3300042, false)]
+    [InlineData(null, 3300042, false)]
+    public async Task ReportUsesOnlyConfiguredSerialSourceAndDoesNotPostWrongSeries(
+        int? readSerial, int serverSerial, bool expectedToSend)
+    {
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("SerialNumber", serverSerial);
+        if (readSerial.HasValue)
+            context.SetVariable("Dut.SerialNumber", readSerial.Value);
+        context.SetVariable("TestReportText", "serial_num=true=3200579\r\n");
+        var build = new BuildTestReportStep(
+            NullLogger.Instance, "TestReportText", "APK03-01", "Dut.SerialNumber", "", "production",
+            includeAllVariables: false, expectedSerialPrefix: "33");
+        using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok saved");
+        var send = new SendTestReportStep(
+            NullLogger.Instance, "http://report-server.local", "TestReportText", "/api/Api.svc/result.json",
+            1000, 0, 0, false, "reports", true, () => new HttpClient(handler, disposeHandler: false));
+
+        var buildResult = await build.ExecuteAsync(context, CancellationToken.None);
+        var sendResult = await send.ExecuteAsync(context, CancellationToken.None);
+
+        if (expectedToSend)
+        {
+            Assert.Equal(StepResult.True, buildResult);
+            Assert.Equal(StepResult.True, sendResult);
+            Assert.Equal(HttpMethod.Post, handler.Method);
+            Assert.Contains("serial_num=true=3300042\r\n", handler.Body);
+            Assert.DoesNotContain("3200579", handler.Body);
+        }
+        else
+        {
+            Assert.Equal(StepResult.False, buildResult);
+            Assert.Equal(StepResult.False, sendResult);
+            Assert.Null(handler.Method);
+            Assert.False(context.Variables.ContainsKey("TestReportText"));
+            Assert.Contains("Dut.SerialNumber", context.GetVariable<string>("BuildReport.Error"));
+        }
     }
 
     [Fact]
@@ -498,7 +830,8 @@ public class ProductionStepTests
             const string report = "session=true=fixture-session-secret\r\nserial_num=true=612447\r\n";
             context.SetVariable("TestReportText", report);
             var step = new SendTestReportStep(NullLogger.Instance,"http://report-server.local","TestReportText",
-                "/api/Api.svc/result.json",1000,0,0,true,directory,true,()=>new HttpClient(handler,false));
+                "/api/Api.svc/result.json",1000,0,0,true,directory,true,()=>new HttpClient(handler,false),
+                trustedServerBaseUrl: "http://report-server.local");
             Assert.Equal(StepResult.True,await step.ExecuteAsync(context,default));
             var saved = await File.ReadAllTextAsync(context.GetVariable<string>("SendReport.LocalPath")!);
             Assert.DoesNotContain("fixture-session-secret",saved);Assert.Contains("serial_num=true=612447",saved);
@@ -508,7 +841,7 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public async Task ReportLocalWriteFailureIsReportedWithoutPostingOrThrowing()
+    public async Task ReportLocalWriteFailureDoesNotPreventDelivery()
     {
         var path = Path.GetTempFileName();
         try
@@ -519,13 +852,51 @@ public class ProductionStepTests
             var step = new SendTestReportStep(NullLogger.Instance, "http://report-server.local", "TestReportText",
                 "/api/Api.svc/result.json", 1000, 0, 0, true, path, true,
                 () => new HttpClient(handler, disposeHandler: false));
-            Assert.Equal(StepResult.False, await step.ExecuteAsync(context, CancellationToken.None));
-            Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
-            Assert.Equal(0, context.GetVariable<int>("SendReport.Attempts"));
+            Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+            Assert.Equal(HttpMethod.Post, handler.Method);
+            Assert.Equal("Sent", context.GetVariable<string>("ReportDelivery.Status"));
+            Assert.Equal(1, context.GetVariable<int>("SendReport.Attempts"));
             Assert.False(context.HasCriticalError);
             Assert.Contains("не сохранена", context.GetVariable<string>("ReportDelivery.Message"));
+            Assert.NotEmpty(context.GetVariable<string>("SendReport.LocalCopyError")!);
         }
         finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("https://other.local")]
+    [InlineData("http://report-server.local")]
+    [InlineData("https://report-server.local:8443")]
+    public async Task ReportWithLauncherSessionCannotLeaveConfiguredOrigin(string target)
+    {
+        var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "serial_num=true=612447\r\nsession=true=fixture-session-secret\r\n");
+        var step = new SendTestReportStep(NullLogger.Instance, target, "TestReportText", "", 1000, 0, 0,
+            false, "reports", true, () => new HttpClient(handler, false),
+            trustedServerBaseUrl: "https://report-server.local/api");
+
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal("Failed", context.GetVariable<string>("ReportDelivery.Status"));
+        Assert.Equal(0, context.GetVariable<int>("SendReport.Attempts"));
+        Assert.Empty(handler.Body);
+    }
+
+    [Theory]
+    [InlineData("https://report-server.local/api/", "https://report-server.local/api/Api.svc/result.json")]
+    [InlineData("https://report-server.local/bench/api/Api.svc", "https://report-server.local/bench/api/Api.svc/result.json")]
+    public async Task ReportAcceptsConfiguredApiBasePath(string address, string expected)
+    {
+        var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+        var context = new TestContext(new RegisterState());
+        context.SetVariable("TestReportText", "serial_num=true=612447\r\nsession=true=fixture-session-secret\r\n");
+        var step = new SendTestReportStep(NullLogger.Instance, address, "TestReportText", "/api/Api.svc/result.json",
+            1000, 0, 0, false, "reports", true, () => new HttpClient(handler, false),
+            trustedServerBaseUrl: "https://report-server.local");
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, default));
+        Assert.Equal(expected, handler.Url);
+        Assert.Contains("fixture-session-secret", handler.Body);
     }
 
     [Theory]
@@ -548,7 +919,7 @@ public class ProductionStepTests
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
             var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "profiles", "PSW_2G6F_plus_full_algorithm.json"));
+                "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
                 .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
@@ -602,6 +973,60 @@ public class ProductionStepTests
         Assert.True(context.GetVariable<bool>("HttpRead.Success"));
         Assert.Equal("Integer", context.GetVariable<string>("HttpRead.ResponseType"));
         Assert.Equal(200, context.GetVariable<int>("HttpRead.StatusCode"));
+    }
+
+    [Theory]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", null, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3300000, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3200123, true)]
+    [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", 3200123, true)]
+    [InlineData("PSW_UPS_Box_8x2Pro_parallel_el60.json", 3200123, true)]
+    public async Task ProFailureReportRequiresAValidSerial(string variant, int? serial, bool sendsReport)
+    {
+        var settings = AppSettings.Instance;
+        var previousStandId = settings.StandId;
+        var previousServer = settings.ServerBaseUrl;
+        var directory = Directory.CreateTempSubdirectory("tfortis-pro-report-");
+        try
+        {
+            settings.StandId = "TEST-STAND";
+            settings.ServerBaseUrl = AppSettings.DefaultServerBaseUrl;
+            using var modbus = new TestBuilder.Services.Modbus.ModbusService();
+            using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
+            var path = TestProfilePaths.Find(variant);
+            GraphSerializer.Deserialize(File.ReadAllText(path), vm);
+            var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
+                .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
+            recovery.BodyGraph.Nodes.OfType<SendTestReportNodeViewModel>().Single().LocalReportsDirectory = directory.FullName;
+            using var handler = new RecordingReportHandler(HttpStatusCode.OK, "Ok");
+            using var compiler = new GraphCompiler(modbus, NullLogger.Instance)
+            {
+                ProfileReportTemplate = vm.RootGraph.ReportTemplate,
+                ReportClientFactory = () => new HttpClient(handler, disposeHandler: false)
+            };
+            var graph = compiler.Compile(recovery.BodyGraph);
+            var context = new TestContext(new RegisterState()) { HasCriticalError = true, IsCleanup = true };
+            context.SetVariable("Dut.cpu_id", "CPU-test");
+            if (serial.HasValue) context.SetVariable("SerialNumber", serial.Value);
+            context.AddReportEntry("Самопроверка", false, "Проверка не пройдена");
+
+            Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(graph.StartNode, context, default));
+            Assert.Equal(sendsReport, handler.Method == HttpMethod.Post);
+            Assert.Equal(sendsReport, context.GetVariable<bool>("BuildReport.Success"));
+            if (sendsReport)
+            {
+                Assert.Contains("test_result=true=0", handler.Body);
+                Assert.Contains("serial_num=true=3200123", handler.Body);
+                Assert.Single(directory.GetFiles());
+            }
+            else Assert.Empty(directory.GetFiles());
+        }
+        finally
+        {
+            settings.StandId = previousStandId;
+            settings.ServerBaseUrl = previousServer;
+            directory.Delete(recursive: true);
+        }
     }
 
     [Fact]
@@ -888,7 +1313,7 @@ public class ProductionStepTests
     }
 
     [Fact]
-    public async Task WaitVariableUntilStep_SelftestSnapshotWaitsUntilNumberEntersRange()
+    public async Task WaitVariableUntilStep_ReportsVoltageFromMatchingSnapshotAfterLaterReads()
     {
         static string Snapshot(string batteryVoltage) => $"""
             <selftest>
@@ -897,13 +1322,15 @@ public class ProductionStepTests
               <dev_type>0</dev_type>
               <firmvare_vers>1119</firmvare_vers>
               <boot_vers>0</boot_vers>
+              <ups_det>1</ups_det>
               <akb_voltage>{batteryVoltage}</akb_voltage>
             </selftest>
             """;
 
         var service = new QueueHttpService(
             HttpRequestResult.Success(200, Snapshot("19.9"), TimeSpan.FromMilliseconds(1)),
-            HttpRequestResult.Success(200, Snapshot("24.5"), TimeSpan.FromMilliseconds(1)));
+            HttpRequestResult.Success(200, Snapshot("24.5"), TimeSpan.FromMilliseconds(1)),
+            HttpRequestResult.Success(200, Snapshot("0.0"), TimeSpan.FromMilliseconds(1)));
         var context = new TestContext(new RegisterState());
         var step = new WaitVariableUntilStep(
             service,
@@ -919,7 +1346,9 @@ public class ProductionStepTests
             1000,
             1,
             true,
-            useBrowserForSelftest: false);
+            useBrowserForSelftest: false,
+            reportName: "напряжение АКБ",
+            resultVariableName: "Report.BatteryVoltage");
 
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
@@ -928,6 +1357,21 @@ public class ProductionStepTests
         Assert.Equal(2, context.GetVariable<int>("WaitVariable.Attempts"));
         Assert.Equal("24.5", context.GetVariable<string>("Dut.akb_voltage"));
         Assert.True(context.GetVariable<bool>("WaitVariable.Passed"));
+
+        var laterSnapshot = new SelfTestCheckStep(service, NullLogger.Instance, SelfTestCheckStep.DefaultUrl,
+            1000, "DutAfterMac", "init_ok=1..1", failOnError: true, useBrowser: false);
+        Assert.Equal(StepResult.True, await laterSnapshot.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal("0.0", context.GetVariable<string>("DutAfterMac.akb_voltage"));
+        Assert.Equal(true, context.Variables["Report.BatteryVoltage.Passed"]);
+        Assert.Equal("24.5", context.Variables["Report.BatteryVoltage.Value"]);
+
+        context.SetVariable("SerialNumber", 3200123);
+        var reportStep = new BuildTestReportStep(NullLogger.Instance, "TestReportText", "APK03-01", "SerialNumber",
+            string.Empty, "production", includeAllVariables: false);
+        Assert.Equal(StepResult.True, await reportStep.ExecuteAsync(context, CancellationToken.None));
+        var batteryRow = Assert.Single(context.GetVariable<string>("TestReportText")!
+            .Split("\r\n").Where(line => line.StartsWith("напряжение АКБ=", StringComparison.Ordinal)));
+        Assert.Equal("напряжение АКБ=true=24.5", batteryRow);
     }
 
     [Fact]

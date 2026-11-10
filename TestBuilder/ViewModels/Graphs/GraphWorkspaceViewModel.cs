@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using TestBuilder.Domain.Execution;
 using TestBuilder.Services.Graph;
 using TestBuilder.ViewModels.NodifyVM;
 
@@ -13,6 +14,7 @@ namespace TestBuilder.ViewModels.Graphs
         public ObservableCollection<TestBuilder.Models.ProfileActionDefinition> QuickActions { get; } = new();
         public ObservableCollection<TestBuilder.Models.RegisterIndicatorDefinition> RegisterIndicators { get; } = new();
         public TestBuilder.Models.PingMonitorSettings? PingMonitor { get; set; }
+        public ReportTemplate? ReportTemplate { get; set; }
         public string Title { get; set; } = "Граф";
         public System.DateTimeOffset? UpdatedAt { get; set; }
 
@@ -54,6 +56,8 @@ namespace TestBuilder.ViewModels.Graphs
         public string ProductKind { get; set; } = "Switch";
         public string? DeviceModel { get; set; }
         public string? DeviceModelId { get; set; }
+        public bool UseCatalogSerials { get; set; }
+        public int LabelVariant { get; set; }
 
         public string? ConfigurationName { get; set; }
 
@@ -68,6 +72,16 @@ namespace TestBuilder.ViewModels.Graphs
         public ObservableCollection<ConnectionViewModel> Connections { get; } = new();
 
         public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new();
+
+        internal void DisposeNodes()
+        {
+            foreach (var action in QuickActions)
+            {
+                action.Graph.DisposeNodes();
+                action.OffGraph.DisposeNodes();
+            }
+            foreach (var node in Nodes) node.Dispose();
+        }
 
         public void Clear()
         {

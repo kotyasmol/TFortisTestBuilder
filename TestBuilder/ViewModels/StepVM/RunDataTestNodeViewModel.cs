@@ -152,7 +152,7 @@ namespace TestBuilder.ViewModels.StepVM
             FailOnError = FailOnError
         };
 
-        private IEnumerable<DataTestPortConfig> ParsePorts()
+        internal IEnumerable<DataTestPortConfig> ParsePorts()
         {
             return PortsText
                 .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using TestBuilder.Services;
+using System.Text;
 
 namespace TestBuilder.Services.Logging
 {
@@ -103,10 +103,9 @@ namespace TestBuilder.Services.Logging
         /// </summary>
         public static LoggingService Instance { get; } = new LoggingService();
 
-        private static readonly object ActiveLogFilePathLock = new();
-        private static readonly object WriteFileLock = new();
-
-        private static string? _activeLogFilePath;
+        private static readonly object FileLogLock = new();
+        private static FileLog? _activeFileLog;
+        private sealed record FileLog(string Path, Action<string>? ReportFailure);
 
         private LoggingService()
         {
@@ -116,9 +115,9 @@ namespace TestBuilder.Services.Logging
         {
             get
             {
-                lock (ActiveLogFilePathLock)
+                lock (FileLogLock)
                 {
-                    return _activeLogFilePath;
+                    return _activeFileLog?.Path;
                 }
             }
         }
@@ -126,7 +125,9 @@ namespace TestBuilder.Services.Logging
         /// <summary>
         /// Возвращает путь к файлу текущего прогона или null, если файл не инициализирован.
         /// </summary>
-        public string? StartFileLogForRun(string? profileName)
+        public string? StartFileLogForRun(string? profileName) => StartFileLogForRun(profileName, null);
+
+        internal string? StartFileLogForRun(string? profileName, Action<string>? reportFailure)
         {
             if (!AppSettings.Instance.EnableFileLogging)
             {
@@ -139,35 +140,40 @@ namespace TestBuilder.Services.Logging
                 folder = Path.Combine(AppContext.BaseDirectory, AppSettings.DefaultLogFolder);
             }
 
-            try
+            string failure;
+            lock (FileLogLock)
             {
-                Directory.CreateDirectory(folder);
-            }
-            catch
-            {
-                return null;
+                try
+                {
+                    Directory.CreateDirectory(folder);
+                    var filePath = Path.Combine(folder, BuildRunLogFileName(profileName));
+                    using (var file = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
+                    using (var writer = new StreamWriter(file))
+                        writer.WriteLine(BuildHeaderLine(profileName));
+                    _activeFileLog = new FileLog(filePath, reportFailure);
+                    return filePath;
+                }
+                catch (Exception ex) when (IsFileError(ex))
+                {
+                    failure = $"Не удалось создать файл журнала в папке «{folder}»: {ex.Message}";
+                }
             }
 
-            var fileName = BuildRunLogFileName(profileName);
-            var filePath = Path.Combine(folder, fileName);
-
-            lock (ActiveLogFilePathLock)
-            {
-                _activeLogFilePath = filePath;
-            }
-
-            WriteLogLine(filePath, BuildHeaderLine(profileName));
-            return filePath;
+            reportFailure?.Invoke(failure);
+            return null;
         }
 
         /// <summary>
         /// Закрывает текущий логовый файл прогона.
         /// </summary>
-        public void StopFileLogForRun()
+        public void StopFileLogForRun() => StopFileLogForRun(null);
+
+        internal void StopFileLogForRun(string? expectedPath)
         {
-            lock (ActiveLogFilePathLock)
+            lock (FileLogLock)
             {
-                _activeLogFilePath = null;
+                if (expectedPath == null || _activeFileLog?.Path == expectedPath)
+                    _activeFileLog = null;
             }
         }
 
@@ -179,7 +185,7 @@ namespace TestBuilder.Services.Logging
         private static string BuildRunLogFileName(string? profileName)
         {
             var safeProfile = NormalizeProfileName(profileName);
-            return $"test-run_{DateTime.Now:yyyyMMdd_HHmmss}_{safeProfile}.txt";
+            return $"test-run_{DateTime.Now:yyyyMMdd_HHmmss}_{safeProfile}_{Guid.NewGuid():N}.txt";
         }
 
         private static string BuildHeaderLine(string? profileName)
@@ -188,20 +194,8 @@ namespace TestBuilder.Services.Logging
         private static string BuildLogLine(LogEntry entry)
             => $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.Level}] [{entry.Category}] {entry.Message}";
 
-        private static void WriteLogLine(string path, string line)
-        {
-            try
-            {
-                lock (WriteFileLock)
-                {
-                    File.AppendAllText(path, line + Environment.NewLine);
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки записи лога: не влияют на выполнение теста.
-            }
-        }
+        private static bool IsFileError(Exception ex) =>
+            ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException;
 
         private static string NormalizeProfileName(string? profileName)
         {
@@ -215,26 +209,35 @@ namespace TestBuilder.Services.Logging
                     .ToArray());
 
             normalized = normalized.Replace(' ', '_');
-            return string.IsNullOrWhiteSpace(normalized)
-                ? "NoProfile"
-                : normalized;
+            // Leave room for the timestamp and run ID on filesystems with a byte limit.
+            return string.Concat(normalized.EnumerateRunes().Take(40));
         }
 
         private static void WriteLogEntry(LogEntry entry)
         {
-            if (!AppSettings.Instance.EnableFileLogging)
-                return;
-
-            string? path;
-            lock (ActiveLogFilePathLock)
+            FileLog log;
+            string failure;
+            lock (FileLogLock)
             {
-                path = _activeLogFilePath;
+                if (_activeFileLog is not { } activeLog) return;
+                log = activeLog;
+                try
+                {
+                    // Open the existing file so deletion is reported instead of silently dropping its history.
+                    using var file = new FileStream(log.Path, FileMode.Open, FileAccess.Write, FileShare.Read);
+                    file.Seek(0, SeekOrigin.End);
+                    using var writer = new StreamWriter(file);
+                    writer.WriteLine(BuildLogLine(entry));
+                    return;
+                }
+                catch (Exception ex) when (IsFileError(ex))
+                {
+                    _activeFileLog = null;
+                    failure = $"Запись в файл журнала «{log.Path}» остановлена: {ex.Message}";
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(path))
-                return;
-
-            WriteLogLine(path, BuildLogLine(entry));
+            log.ReportFailure?.Invoke(failure);
         }
 
         /// <summary>
