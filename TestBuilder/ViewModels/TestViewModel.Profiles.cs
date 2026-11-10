@@ -121,13 +121,28 @@ public partial class TestViewModel
 
     public bool ShowCatalogLabelVariants => UseCatalogSerials && CatalogLabelVariants.Count > 1;
 
+    public string CatalogSerialSeriesCaption
+    {
+        get
+        {
+            var model = SelectedEquipmentModel;
+            if (model?.SerialSeries is { } series)
+                return $"{series.FirstSerialNumber}–{series.LastSerialNumber}";
+            if (!UseCatalogSerials) return "";
+            return string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ? "Серия не задана" : "Диапазон задаёт сервер";
+        }
+    }
+
     public string CatalogSerialSeriesSummary
     {
         get
         {
-            var model = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+            var model = SelectedEquipmentModel;
             if (model?.SerialSeries is { } series)
-                return $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}";
+            {
+                var summary = $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}";
+                return UseCatalogSerials ? summary : summary + "\nПрофиль использует настройки нод.";
+            }
             return model?.EffectiveServerDeviceType is { Length: > 0 } serverType
                 ? $"{serverType} · " + (model.RtlReport?.AssignSerialOnReport == true
                     ? "номер возвращается в ответе на отчёт" : "номер выдаёт сервер")
@@ -139,6 +154,7 @@ public partial class TestViewModel
     {
         OnPropertyChanged(nameof(UseCatalogSerials));
         OnPropertyChanged(nameof(ProfileLabelVariant));
+        OnPropertyChanged(nameof(CatalogSerialSeriesCaption));
         OnPropertyChanged(nameof(CatalogSerialSeriesSummary));
         OnPropertyChanged(nameof(CatalogLabelVariants));
         OnPropertyChanged(nameof(SelectedCatalogLabelVariant));

@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
+using TestBuilder.Tests.SerializationTests;
 using TestBuilder.ViewModels;
 using TestBuilder.Views;
 using TestBuilder.Views.TestViews;
@@ -171,6 +172,74 @@ public class DeviceProfileTests
                 Assert.False(variants.IsEffectivelyVisible);
             }
             finally { window.Close(); }
+
+            void Layout()
+            {
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+                Dispatcher.UIThread.RunJobs();
+            }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task SeriesBadgeShowsFullRangeAndRefreshesWhenModelOrRangeChanges()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var folder = new ProfileCopyTests.ProfileFolder();
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 780, Height = 600, Content = view };
+            try
+            {
+                window.Show();
+                var badge = view.FindControl<TextBlock>("CatalogSerialSeriesBadge")!;
+                Layout();
+                Assert.False(badge.IsEffectivelyVisible);
+
+                SelectModel("psw-plus-ex-8x2pro");
+                Assert.True(badge.IsEffectivelyVisible);
+                Assert.Equal("3500001–3565535", badge.Text);
+                Assert.Equal("PSW+Ex 8x2Pro · 3500001–3565535", ToolTip.GetTip(Assert.IsType<Border>(badge.Parent)));
+                var artifacts = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
+                if (artifacts != null)
+                {
+                    Directory.CreateDirectory(artifacts);
+                    using var frame = window.CaptureRenderedFrame();
+                    frame?.Save(Path.Combine(artifacts, "graph-serial-series.png"));
+                }
+                Assert.InRange(view.FindControl<AutoCompleteBox>("ProfileNameInput")!.Bounds.Width, 130, window.ClientSize.Width);
+
+                vm.UseCatalogSerials = false;
+                Layout();
+                Assert.Equal("3500001–3565535", badge.Text);
+                Assert.Contains("Профиль использует настройки нод.", Assert.IsType<string>(ToolTip.GetTip((Border)badge.Parent!)));
+                SelectModel("psw-plus-box-8x2pro");
+                Assert.Equal("3300001–3365535", badge.Text);
+                SelectModel("rtl-sw");
+                Assert.Equal("Диапазон задаёт сервер", badge.Text);
+                SelectModel("psw-plus-ups-ex-8x2pro");
+                Assert.Equal("Серия не задана", badge.Text);
+
+                SelectModel("psw-plus-ex-8x2pro");
+                var model = vm.SelectedEquipmentModel!;
+                var series = model.SerialSeries! with { FirstSerialNumber = 3500020, LastSerialNumber = 3565500 };
+                vm.SaveCatalogModel(model with { SerialSeries = series }, createNew: false);
+                Layout();
+                Assert.Equal("3500020–3565500", badge.Text);
+            }
+            finally { window.Close(); }
+
+            void SelectModel(string id)
+            {
+                var picker = view.FindControl<ComboBox>("DeviceModelPicker")!;
+                picker.SelectedItem = picker.Items.OfType<EquipmentModel>().Single(model => model.Id == id);
+                Layout();
+            }
 
             void Layout()
             {
