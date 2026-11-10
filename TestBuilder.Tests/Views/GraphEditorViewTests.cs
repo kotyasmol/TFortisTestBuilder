@@ -329,12 +329,21 @@ public class GraphEditorViewTests
                 vm.Nodes.Add(wait);
                 window.Show();
                 Layout(window);
-                registry.Slaves.Add(slave);
+                var picker = view.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "WriteDevicePicker");
+                var input = view.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "WriteDeviceAddressInput");
                 for (var i = 0; i < 2; i++)
                 {
+                    registry.SyncSlaves(new());
                     registry.NotifyConnected(true);
                     Layout(window);
+                    Assert.False(picker.IsEffectivelyVisible);
+                    Assert.True(input.IsEffectivelyVisible);
+                    registry.SyncSlaves(new() { slave });
+                    Layout(window);
                     AssertGraphVisible(view, 3);
+                    Assert.True(picker.IsEffectivelyVisible);
+                    Assert.Equal((byte)21, Assert.IsType<ModbusDeviceChoice>(picker.SelectedItem).SlaveId);
+                    Assert.Equal("21", input.Text);
                     Assert.Same(slave, write.SelectedSlave);
                     Assert.Same(slave, check.SelectedSlave);
                     Assert.Same(slave, wait.SelectedSlave);

@@ -151,13 +151,13 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         protected NodeViewModel()
         {
-            SlaveRegistry.Instance.ObserveConnection(this, OnSlaveRegistryConnectionChanged);
+            SlaveRegistry.Instance.Observe(this, OnSlaveRegistryChanged);
 
             if (SlaveRegistry.Instance.Slaves.Count > 0)
                 SyncSlaves();
         }
 
-        private void OnSlaveRegistryConnectionChanged()
+        private void OnSlaveRegistryChanged()
         {
             OnPropertyChanged(nameof(IsConnected));
             SyncSlaves();
@@ -192,7 +192,7 @@ namespace TestBuilder.ViewModels.NodifyVM
 
         public void Dispose()
         {
-            SlaveRegistry.Instance.StopObservingConnection(this);
+            SlaveRegistry.Instance.StopObserving(this);
             if (this is ICompositeNodeViewModel composite) composite.BodyGraph.DisposeNodes();
         }
     }

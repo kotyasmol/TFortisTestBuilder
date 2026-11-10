@@ -132,6 +132,59 @@ public class OfflineRegisterDictionaryTests
         void Layout() { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
     });
 
+    [Fact]
+    public Task WriteNodeSelectsConfiguredDevicesOffline_AndKeepsReadOnlyAreaUntilEdited() => InSession(() =>
+    {
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus));
+        var hardware = Map("Контроллер");
+        hardware.Devices.Add(new DeviceDefinition { SlaveId = 11, Name = "Модуль выходов", Registers =
+            { new RegisterDefinition { Address = 8, Area = ModbusArea.Coil, Name = "Выход 1", Writable = true } } });
+        vm.RootGraph.Hardware = hardware;
+        var node = new ModbusWriteNodeViewModel { SlaveId = 7, Address = 10, RegisterArea = ModbusArea.Input };
+        vm.Nodes.Add(node);
+        using var view = new GraphEditorView { DataContext = vm };
+        var window = new Window { Width = 1100, Height = 850, Content = view };
+        try
+        {
+            window.Show(); Layout();
+            var picker = view.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "WriteDevicePicker");
+            var area = view.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "WriteRegisterAreaInput");
+            var input = view.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "WriteDeviceAddressInput");
+            Assert.True(picker.IsEffectivelyVisible);
+            Assert.Equal("7 — Контроллер", picker.SelectedItem?.ToString());
+            Assert.Equal(new[] { ModbusArea.Holding, ModbusArea.Coil }, area.Items.OfType<ModbusArea>());
+            Assert.Null(area.SelectedItem);
+            Assert.Equal(ModbusArea.Input, node.RegisterArea);
+
+            picker.SelectedItem = picker.Items.OfType<ModbusDeviceChoice>().Single(c => c.SlaveId == 11);
+            Layout();
+            Assert.Equal((byte)11, node.SlaveId);
+            Assert.Equal("11", input.Text);
+            Assert.Equal((ushort)10, node.Address);
+            Assert.Equal(ModbusArea.Input, node.RegisterArea);
+
+            area.SelectedItem = ModbusArea.Coil;
+            Layout();
+            Assert.Equal(ModbusArea.Coil, node.RegisterArea);
+            Assert.Equal(8, Assert.Single(node.AvailableRegisters).Address);
+            input.Text = "7";
+            Layout();
+            Assert.Equal((byte)7, node.SlaveId);
+            Assert.Equal("7 — Контроллер", picker.SelectedItem?.ToString());
+            Assert.Empty(node.AvailableRegisters);
+
+            node.UseCurrentSlaveId = true;
+            Layout();
+            Assert.False(picker.IsEffectivelyEnabled);
+            Assert.False(input.IsEffectivelyEnabled);
+            Assert.Equal((byte)7, node.SlaveId);
+            Assert.False(bus.IsConnected);
+        }
+        finally { window.Close(); }
+        void Layout() { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
+    });
+
     private static HardwareConfiguration Map(string name) => new()
     {
         Devices = new() { new() { Name = name, SlaveId = 7, Registers = new()

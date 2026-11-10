@@ -457,62 +457,55 @@
                   </nodify:Node.OutputConnectorTemplate>
 
                   <StackPanel Margin="12" Spacing="8" Width="280">
-                    <TextBlock Text="Область Modbus" />
-                    <ComboBox ItemsSource="{Binding RegisterAreas}" ItemTemplate="{StaticResource RussianOptionTemplate}" SelectedItem="{Binding RegisterArea}" HorizontalAlignment="Stretch" />
-                    <Grid ColumnDefinitions="108,*,Auto">
+                    <TextBlock Text="Тип регистра" />
+                    <ComboBox x:Name="WriteRegisterAreaInput" ItemsSource="{Binding RegisterAreas}" ItemTemplate="{StaticResource RussianOptionTemplate}"
+                              SelectedItem="{Binding SelectedWritableArea, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                              PlaceholderText="Выберите тип для записи" AutomationProperties.Name="Тип регистра"
+                              ToolTip.Tip="Регистры хранения (Holding) принимают числа 0–65535. Дискретные выходы (Coil) принимают 0 или 1. Выбирайте тип по карте оборудования." />
+                    <TextBlock IsVisible="{Binding HasReadOnlyArea}" Text="Сохранённый тип доступен только для чтения. Выберите тип для записи."
+                               TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource DangerTextBrush}" />
+                    <Grid ColumnDefinitions="108,64,*">
                       <TextBlock Grid.Column="0" Text="Адрес устройства:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
-                      <ComboBox Grid.Column="1"
-                                IsVisible="{Binding IsConnected}"
-                                ItemsSource="{Binding AvailableSlaves}"
-                                SelectedItem="{Binding SelectedSlave}"
-                                FontSize="{StaticResource FontCaption}"
-                                HorizontalAlignment="Stretch">
+                      <TextBox Grid.Column="1" x:Name="WriteDeviceAddressInput" Text="{Binding SlaveIdText}"
+                               IsEnabled="{Binding !UseCurrentSlaveId}" FontSize="{StaticResource FontCaption}"
+                               AutomationProperties.Name="Адрес устройства"
+                               ToolTip.Tip="Числовой адрес устройства на линии Modbus. Список берётся из оборудования профиля или подключённого стенда." />
+                      <ComboBox Grid.Column="2" x:Name="WriteDevicePicker" Margin="4,0,0,0"
+                                IsVisible="{Binding ShowDeviceSelector}" IsEnabled="{Binding !UseCurrentSlaveId}"
+                                ItemsSource="{Binding DeviceChoices}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                                PlaceholderText="Из списка"
+                                FontSize="{StaticResource FontCaption}" HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="Выбрать устройство Modbus">
                         <ComboBox.ItemTemplate>
-                          <DataTemplate>
-                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontCaption}" />
+                          <DataTemplate x:DataType="stepvm:ModbusDeviceChoice">
+                            <TextBlock Text="{Binding}" ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="1"
-                               IsVisible="{Binding !IsConnected}"
-                               Text="{Binding SlaveIdText}"
-                               FontSize="{StaticResource FontCaption}" />
-                      <StackPanel Grid.Column="2"
-                                  Orientation="Horizontal"
-                                  Margin="6,0,0,0"
-                                  VerticalAlignment="Center">
-                        <TextBlock Text="Адрес "
-                                   FontSize="{StaticResource FontCaption}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding SlaveId}"
-                                   FontSize="{StaticResource FontCaption}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}" />
-                      </StackPanel>
                     </Grid>
 
                     <CheckBox
                               IsChecked="{Binding UseCurrentSlaveId}"
                               FontSize="{StaticResource FontCaption}" ><TextBlock Text="Устройство из цикла" TextWrapping="Wrap" /></CheckBox>
 
-                    <Grid ColumnDefinitions="50,*,70">
-                      <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" />
-                      <ComboBox Grid.Column="1"
+                    <Grid ColumnDefinitions="108,64,*">
+                      <TextBlock Grid.Column="0" Text="Адрес регистра:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="1" IsVisible="{Binding ShowAddressTextBox}"
+                               Text="{Binding AddressText}" FontSize="{StaticResource FontCaption}"
+                               AutomationProperties.Name="Адрес регистра" />
+                      <ComboBox Grid.Column="2" Margin="4,0,0,0"
                                 IsVisible="{Binding ShowRegisterSelector}"
                                 ItemsSource="{Binding AvailableRegisters}"
                                 SelectedItem="{Binding SelectedRegister}"
                                 FontSize="{StaticResource FontCaption}"
-                                HorizontalAlignment="Stretch">
+                                HorizontalAlignment="Stretch" PlaceholderText="Из списка"
+                                AutomationProperties.Name="Выбрать регистр">
                         <ComboBox.ItemTemplate>
                           <DataTemplate>
                             <TextBlock Text="{Binding}" ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontCaption}" />
                           </DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
-                      <TextBox Grid.Column="2" Margin="4,0,0,0"
-                               IsVisible="{Binding ShowAddressTextBox}"
-                               Text="{Binding AddressText}"
-                               FontSize="{StaticResource FontCaption}" />
                     </Grid>
                     <SelectableTextBlock Text="{Binding RegisterDescription}" MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RegisterDescription}"
                                          FontSize="{StaticResource FontCaption}" TextWrapping="Wrap"
@@ -532,7 +525,7 @@
 
                     <CheckBox
                               IsChecked="{Binding VerifyWrite}"
-                              FontSize="{StaticResource FontCaption}" ><TextBlock Text="Проверка" TextWrapping="Wrap" /></CheckBox>
+                              FontSize="{StaticResource FontCaption}" ToolTip.Tip="Прочитать значение после записи и сравнить с заданным."><TextBlock Text="Проверить запись" TextWrapping="Wrap" /></CheckBox>
                     <CheckBox x:Name="ProfileOpenToggle" Classes="profileOpenToggle" />
                   </StackPanel>
                 </nodify:Node>

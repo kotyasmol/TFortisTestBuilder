@@ -16,8 +16,23 @@ namespace TestBuilder.ViewModels.StepVM
     public partial class ModbusWriteNodeViewModel : NodeViewModel
     {
         [ObservableProperty] private ModbusArea registerArea;
-        partial void OnRegisterAreaChanged(ModbusArea value) => RestoreSelections();
-        public ModbusArea[] RegisterAreas { get; } = System.Enum.GetValues<ModbusArea>();
+        public IReadOnlyList<ModbusArea> RegisterAreas { get; } = new[] { ModbusArea.Holding, ModbusArea.Coil };
+        public bool HasReadOnlyArea => RegisterArea is not (ModbusArea.Holding or ModbusArea.Coil);
+        public ModbusArea? SelectedWritableArea
+        {
+            get => HasReadOnlyArea ? null : RegisterArea;
+            set
+            {
+                if (value is ModbusArea.Holding or ModbusArea.Coil) RegisterArea = value.Value;
+            }
+        }
+
+        partial void OnRegisterAreaChanged(ModbusArea value)
+        {
+            OnPropertyChanged(nameof(HasReadOnlyArea));
+            OnPropertyChanged(nameof(SelectedWritableArea));
+            RestoreSelections();
+        }
         [ObservableProperty] private byte slaveId;
         [ObservableProperty] private ushort address;
         [ObservableProperty] private ushort value;
@@ -39,6 +54,16 @@ namespace TestBuilder.ViewModels.StepVM
         public ConnectorViewModel FalseOut { get; }
 
         public ObservableCollection<RegisterItem> AvailableRegisters { get; } = new();
+        public IReadOnlyList<ModbusDeviceChoice> DeviceChoices { get; private set; } = System.Array.Empty<ModbusDeviceChoice>();
+        public bool ShowDeviceSelector => DeviceChoices.Count > 0;
+        public ModbusDeviceChoice? SelectedDevice
+        {
+            get => DeviceChoices.FirstOrDefault(device => device.SlaveId == SlaveId);
+            set
+            {
+                if (value != null && DeviceChoices.Contains(value)) SlaveId = value.SlaveId;
+            }
+        }
         public bool HasSelectedRegister => SelectedRegister != null;
         public bool ShowRegisterSelector => AvailableRegisters.Count > 0;
         public bool ShowAddressTextBox => true;
@@ -114,6 +139,7 @@ namespace TestBuilder.ViewModels.StepVM
             _slaveIdInputInvalid = false;
             UpdateIntegerInputError();
             SlaveIdText = value.ToString(CultureInfo.InvariantCulture);
+            OnPropertyChanged(nameof(SelectedDevice));
             RestoreSelections();
         }
 
@@ -185,6 +211,15 @@ namespace TestBuilder.ViewModels.StepVM
         /// <summary>Вызывается при подключении — восстанавливает выбранные слейв и регистр</summary>
         protected override void OnSlavesLoaded()
         {
+            if (RegisterReferenceHardware?.Devices is { Count: > 0 } devices)
+                DeviceChoices = devices.OrderBy(d => d.SlaveId).Select(d => new ModbusDeviceChoice(d.SlaveId, d.Name)).ToArray();
+            else
+                DeviceChoices = IsConnected
+                    ? AvailableSlaves.OrderBy(s => s.SlaveId).Select(s => new ModbusDeviceChoice(s.SlaveId, s.DeviceType)).ToArray()
+                    : System.Array.Empty<ModbusDeviceChoice>();
+            OnPropertyChanged(nameof(DeviceChoices));
+            OnPropertyChanged(nameof(ShowDeviceSelector));
+            OnPropertyChanged(nameof(SelectedDevice));
             RestoreSelections();
         }
 
@@ -210,5 +245,10 @@ namespace TestBuilder.ViewModels.StepVM
             UseCurrentSlaveId = UseCurrentSlaveId,
             VerifyWrite = VerifyWrite
         };
+    }
+
+    public sealed record ModbusDeviceChoice(byte SlaveId, string Name)
+    {
+        public override string ToString() => $"{SlaveId} — {Name}";
     }
 }
