@@ -93,7 +93,7 @@ public class ConsoleDiscoveryTests
     public void ShippedSwProfileContainsBothConnections_AndRunsPreflightWithoutEnteringDutPort()
     {
         using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
-        var file = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 10.11.json"));
+        var file = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 11.11.26.json"));
         GraphSerializer.Deserialize(File.ReadAllText(file), vm);
         GraphCompiler.ValidateRunConnections(vm.RootGraph, vm.RootGraph.Hardware, "COM-STAND");
         var hardware = vm.RootGraph.Hardware!;

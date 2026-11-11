@@ -12,7 +12,7 @@ namespace TestBuilder.Tests.SerializationTests;
 
 public class ProReportProfileTests
 {
-    private const string ProProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json";
+    private const string ProProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json";
 
     [Theory]
     [InlineData(false, "17. Отчёт о проверке")]

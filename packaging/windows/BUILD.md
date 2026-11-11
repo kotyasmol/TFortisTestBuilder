@@ -16,10 +16,10 @@
 python3 scripts/package_windows_release.py \
   --browser-bundle artifacts/windows-20261019/TFortisTestBuilder-2026.10.19.16-win-x64 \
   --version 1.0.2-beta --output artifacts/windows-1.0.2-beta \
-  --profile "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json" \
-  --profile "PSW-2G6F+ · Полная проверка · 10.11.json" \
-  --profile "RTL-SW · Проверка платы · 10.11.json" \
-  --profile "RTL-POE · Проверка платы · 10.11.json"
+  --profile "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json" \
+  --profile "PSW-2G6F+ · Полная проверка · 11.11.26.json" \
+  --profile "RTL-SW · Проверка платы · 11.11.26.json" \
+  --profile "RTL-POE · Проверка платы · 11.11.26.json"
 ```
 
 Параметр `--profile` повторяется для каждого поставляемого профиля.

@@ -20,7 +20,7 @@ public class ProfileCopyTests
     public async Task CopyUnopenedProfile_PreservesAllGraphsHardwareButtonsAndUnknownFields_AndGetsUniqueName()
     {
         using var files = new ProfileFolder();
-        var original = JsonNode.Parse(File.ReadAllText(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json")))!;
+        var original = JsonNode.Parse(File.ReadAllText(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json")))!;
         original["extensionData"] = JsonNode.Parse("""{"keep":[1,2,3]}""");
         var sourcePath = files.Write("original.json", original.ToJsonString());
         var originalBytes = File.ReadAllBytes(sourcePath);

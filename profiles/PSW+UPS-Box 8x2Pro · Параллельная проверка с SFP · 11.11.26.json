@@ -1,9 +1,9 @@
 {
-  "name": "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11",
-  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
+  "name": "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26",
+  "updatedAt": "2026-11-11T10:01:05.053735+00:00",
   "deviceModelId": "psw-ups-box-8x2pro",
   "deviceModel": "PSW+UPS-Box 8x2Pro",
-  "configurationName": "Параллельная проверка с SFP · 10.11",
+  "configurationName": "Параллельная проверка с SFP · 11.11.26",
   "hardware": {
     "StandName": "АПК-03 · 8x2Pro",
     "PortName": "",

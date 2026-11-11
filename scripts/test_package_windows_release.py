@@ -41,7 +41,7 @@ class ReleaseProfilesTests(unittest.TestCase):
                 self.assertEqual(sorted(names), [p.name for p in release.select_profiles()])
 
     def test_unknown_traversal_empty_and_duplicate_selections_are_rejected(self):
-        for names in [[], ["missing.json"], ["../graph.json"], ["RTL-SW · Проверка платы · 10.11.json"] * 2]:
+        for names in [[], ["missing.json"], ["../graph.json"], ["RTL-SW · Проверка платы · 11.11.26.json"] * 2]:
             with self.subTest(names=names), self.assertRaises(ValueError):
                 release.select_profiles(names)
 

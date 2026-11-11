@@ -53,7 +53,7 @@ public class ProfileUiIntegrityTests
     }
 
     public static IEnumerable<object[]> ProductionProfiles() => Directory.GetFiles(
-        Path.GetDirectoryName(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json"))!, "*.json")
+        Path.GetDirectoryName(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json"))!, "*.json")
         .OrderBy(path => path).Select(path => new object[] { Path.GetFileName(path) });
 
     [Theory]

@@ -1,5 +1,5 @@
 {
-  "name": "RTL-SW · Проверка платы · 10.11",
+  "name": "RTL-SW · Проверка платы · 11.11.26",
   "nodes": [
     {
       "type": "Start (catalog serials v1)",
@@ -9882,7 +9882,7 @@
   ],
   "productKind": "Board",
   "deviceModel": "RTL-SW",
-  "configurationName": "Проверка платы · 10.11",
+  "configurationName": "Проверка платы · 11.11.26",
   "hardware": {
     "BaudRate": 9600,
     "Parity": 0,
@@ -10891,6 +10891,6 @@
     ]
   },
   "deviceModelId": "rtl-sw",
-  "updatedAt": "2026-11-10T05:15:48.020260+00:00",
+  "updatedAt": "2026-11-11T10:01:05.053735+00:00",
   "useCatalogSerials": true
 }

@@ -79,8 +79,8 @@ public class ProfileConnectionAndLogSelectionTests
     }
 
     [Theory]
-    [InlineData("RTL-SW · Проверка платы · 10.11.json")]
-    [InlineData("RTL-POE · Проверка платы · 10.11.json")]
+    [InlineData("RTL-SW · Проверка платы · 11.11.26.json")]
+    [InlineData("RTL-POE · Проверка платы · 11.11.26.json")]
     public async Task SelectingProfileRechecksPreviouslyFoundPort_AndLeavesProfileOpenOnFailure(string file)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
@@ -129,7 +129,7 @@ public class ProfileConnectionAndLogSelectionTests
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 10.11.json"));
+            var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../profiles/RTL-SW · Проверка платы · 11.11.26.json"));
             var profile = GraphSerializer.ReadProfile(path);
             vm.IsTestRunning = true;
             await vm.SelectProfileAsync(profile);

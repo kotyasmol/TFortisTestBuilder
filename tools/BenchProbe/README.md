@@ -1,12 +1,12 @@
 # Диагностика 8x2Pro на стенде
 
-Только Windows и штатный `PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json`.
+Только Windows и штатный `PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json`.
 Запуск действительно управляет подключённым оборудованием; требуется
 разрешение оператора. Перед запуском освободить COM-порт, остановив приложение.
 
 ```powershell
 dotnet build tools/BenchProbe/BenchProbe.csproj -c Release
-dotnet tools/BenchProbe/bin/Release/net8.0/BenchProbe.dll profiles/PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json COM3 --execute-8x2pro hardware 1
+dotnet tools/BenchProbe/bin/Release/net8.0/BenchProbe.dll profiles/PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json COM3 --execute-8x2pro hardware 1
 ```
 
 Режим `hardware` выполняет штатные подтесты подготовки, настройки PoE,

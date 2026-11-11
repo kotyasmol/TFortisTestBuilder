@@ -104,7 +104,7 @@ public class BoardViewsTests
         await session.Dispatch(()=>
         {
             using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus)){IsOperatorView=false};
-            var path=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../profiles/RTL-POE · Проверка платы · 10.11.json"));GraphSerializer.Deserialize(File.ReadAllText(path),vm);
+            var path=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../profiles/RTL-POE · Проверка платы · 11.11.26.json"));GraphSerializer.Deserialize(File.ReadAllText(path),vm);
             var guide=UserGuideWindow.ReadGuide();Assert.Contains("Запустить готовую проверку",guide);Assert.Contains("Modbus",guide);Assert.True(TestBuilder.Services.Help.UserGuide.All.Count>=50);
             var windows=new Window[]{new HardwareEditorWindow(vm),new BoardWindow(vm,true),new BoardWindow(vm,false),new UserGuideWindow(),new MainWindow { Width=1100, Height=680 }};
             foreach(var window in windows)

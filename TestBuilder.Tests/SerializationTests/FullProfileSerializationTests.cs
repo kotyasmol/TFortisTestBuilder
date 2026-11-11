@@ -13,10 +13,10 @@ namespace TestBuilder.Tests.SerializationTests;
 public class FullProfileSerializationTests
 {
     [Theory]
-    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 32, "PSW+UPS-Box 8x2Pro")]
-    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", 6, "PSW-2G6F+")]
-    [InlineData("RTL-SW · Проверка платы · 10.11.json", 313, "RTL-SW")]
-    [InlineData("RTL-POE · Проверка платы · 10.11.json", 312, "RTL-POE")]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json", 32, "PSW+UPS-Box 8x2Pro")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 11.11.26.json", 6, "PSW-2G6F+")]
+    [InlineData("RTL-SW · Проверка платы · 11.11.26.json", 313, "RTL-SW")]
+    [InlineData("RTL-POE · Проверка платы · 11.11.26.json", 312, "RTL-POE")]
     public void StandardProfileUsesDisplayFilenameAndCatalogModel(string filename, int code, string serverType)
     {
         var path = TestProfilePaths.Find(filename);
@@ -62,7 +62,7 @@ public class FullProfileSerializationTests
     }
 
     [Theory]
-    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", "/test.shtml")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 11.11.26.json", "/test.shtml")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "/cgi-bin/luci/admin/statistics/deviceinfo")]
     public void SelftestUrlsFollowSwitchFamily(string profileFile, string expectedPath)
     {
@@ -77,7 +77,7 @@ public class FullProfileSerializationTests
     }
 
     [Theory]
-    [InlineData("PSW-2G6F+ · Полная проверка · 10.11.json", "Set PSW MAC (UDP)", "Set Pro MAC")]
+    [InlineData("PSW-2G6F+ · Полная проверка · 11.11.26.json", "Set PSW MAC (UDP)", "Set Pro MAC")]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", "Set Pro MAC", "Set PSW MAC (UDP)")]
     public void MacWriterFollowsSwitchFamily(string profileFile, string expectedType, string forbiddenType)
     {
@@ -126,7 +126,7 @@ public class FullProfileSerializationTests
     [Fact]
     public void StandProfileTestsEightCopperLinesAndBothSfpPortsAfterRoundTrip()
     {
-        using var profile = ReadProfile("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json");
+        using var profile = ReadProfile("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json");
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
         GraphSerializer.Deserialize(profile.RootElement.GetRawText(), vm);

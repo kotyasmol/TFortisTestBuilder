@@ -227,7 +227,7 @@ public class ProductionStepTests
                 JsonSerializer.Serialize(new { id = 10, serialNumber = returnedSerial, deviceType = reportSettings.DeviceType }));
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
-            GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"{board} · Проверка платы · 10.11.json")), vm);
+            GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"{board} · Проверка платы · 11.11.26.json")), vm);
             var cleanup = TestBuilder.Services.Graph.FailureCleanupOrder.GetNodes(vm.RootGraph);
             Assert.StartsWith("Снятие питания", cleanup[0].Name);
             var recovery = cleanup[^1];
@@ -308,7 +308,7 @@ public class ProductionStepTests
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             using var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
             GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find(
-                "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json")), vm);
+                "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json")), vm);
             var cleanup = TestBuilder.Services.Graph.FailureCleanupOrder.GetNodes(vm.RootGraph);
             Assert.Equal("Аварийное выключение стенда", cleanup[0].Name);
             var recovery = cleanup[^1];
@@ -1010,7 +1010,7 @@ public class ProductionStepTests
             using var modbus = new TestBuilder.Services.Modbus.ModbusService();
             var vm = new TestBuilder.ViewModels.TestViewModel(modbus, new TestBuilder.Domain.Modbus.SlaveManager(modbus));
             var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "profiles", "PSW-2G6F+ · Полная проверка · 10.11.json"));
+                "profiles", "PSW-2G6F+ · Полная проверка · 11.11.26.json"));
             GraphSerializer.Deserialize(File.ReadAllText(path), vm);
             var recovery = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>()
                 .Single(n => n.RunOnFailure && n.BodyGraph.Nodes.OfType<BuildTestReportNodeViewModel>().Any());
@@ -1067,9 +1067,9 @@ public class ProductionStepTests
     }
 
     [Theory]
-    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", null, false)]
-    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3300000, false)]
-    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json", 3200123, true)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json", null, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json", 3300000, false)]
+    [InlineData("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json", 3200123, true)]
     [InlineData("PSW_UPS_Box_8x2Pro_full_algorithm_polling.json", 3200123, true)]
     [InlineData("PSW_UPS_Box_8x2Pro_parallel_el60.json", 3200123, true)]
     public async Task ProFailureReportRequiresAValidSerial(string variant, int? serial, bool sendsReport)

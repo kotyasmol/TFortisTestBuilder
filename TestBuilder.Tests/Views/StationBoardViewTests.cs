@@ -33,8 +33,8 @@ public class StationBoardViewTests
     }
 
     [Theory]
-    [InlineData(false, "RTL-POE · Проверка платы · 10.11.json", 1320, 850)]
-    [InlineData(true, "RTL-SW · Проверка платы · 10.11.json", 1100, 680)]
+    [InlineData(false, "RTL-POE · Проверка платы · 11.11.26.json", 1320, 850)]
+    [InlineData(true, "RTL-SW · Проверка платы · 11.11.26.json", 1100, 680)]
     public async Task BoardAndStagesAreVisible_AndZoomedWindowReceivesLiveResults(bool dark, string file, int width, int height)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
@@ -184,7 +184,7 @@ public class StationBoardViewTests
                 window.Content = preview; Layout(window);
                 Assert.False(canvas.IsVisible); Assert.True(preview.FindControl<TextBlock>("EmptyMessage")!.IsVisible);
                 vm.ConfirmDiscardProfileAsync = () => Task.FromResult(true);
-                vm.SelectedProfile = Profile("RTL-SW · Проверка платы · 10.11.json"); Layout(window);
+                vm.SelectedProfile = Profile("RTL-SW · Проверка платы · 11.11.26.json"); Layout(window);
                 Assert.True(canvas.IsVisible); Assert.False(preview.FindControl<TextBlock>("EmptyMessage")!.IsVisible); Assert.Equal(1, canvas.Zoom);
                 Capture(window, "reattached-board");
                 var bound = Flatten(vm.Nodes).First(n => !string.IsNullOrWhiteSpace(n.BoardElements)).BoardElements.Split(',')[0].Trim();

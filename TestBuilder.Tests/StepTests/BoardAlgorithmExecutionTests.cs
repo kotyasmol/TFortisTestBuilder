@@ -17,7 +17,7 @@ namespace TestBuilder.Tests.StepTests;
 public class BoardAlgorithmExecutionTests
 {
     [Theory]
-    [InlineData("RTL-SW · Проверка платы · 10.11.json")][InlineData("RTL-POE · Проверка платы · 10.11.json")]
+    [InlineData("RTL-SW · Проверка платы · 11.11.26.json")][InlineData("RTL-POE · Проверка платы · 11.11.26.json")]
     public async Task CompleteHardwareAlgorithm_WithControlledInputs_PassesAndPowersOff(string filename)
     {
         using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -41,8 +41,8 @@ public class BoardAlgorithmExecutionTests
         finally {cts.Cancel();await polling;}
     }
     [Theory]
-    [InlineData("RTL-POE · Проверка платы · 10.11.json",false)][InlineData("RTL-POE · Проверка платы · 10.11.json",true)]
-    [InlineData("RTL-SW · Проверка платы · 10.11.json",false)][InlineData("RTL-SW · Проверка платы · 10.11.json",true)]
+    [InlineData("RTL-POE · Проверка платы · 11.11.26.json",false)][InlineData("RTL-POE · Проверка платы · 11.11.26.json",true)]
+    [InlineData("RTL-SW · Проверка платы · 11.11.26.json",false)][InlineData("RTL-SW · Проверка платы · 11.11.26.json",true)]
     public async Task FailureOrCancellation_KeepsCleanupExecutable(string filename,bool cancel)
     {
         using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(10));using var pollingCts=new CancellationTokenSource();

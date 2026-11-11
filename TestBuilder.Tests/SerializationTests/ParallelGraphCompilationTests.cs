@@ -15,7 +15,7 @@ namespace TestBuilder.Tests.SerializationTests;
 public class ParallelGraphCompilationTests
 {
     private const string SourceProfile = "PSW_UPS_Box_8x2Pro_full_algorithm_polling.json";
-    private const string ParallelProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 10.11.json";
+    private const string ParallelProfile = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json";
     private const string OptimizedProfile = "PSW_UPS_Box_8x2Pro_parallel_el60.json";
     private const string BootStage = "06. Загрузка DUT и получение серийного номера";
     private const string SelftestStage = "07. Проверка selftest DUT";

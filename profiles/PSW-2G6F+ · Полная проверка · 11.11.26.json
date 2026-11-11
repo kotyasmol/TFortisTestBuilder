@@ -1,7 +1,7 @@
 {
-  "name": "PSW-2G6F+ · Полная проверка · 10.11",
+  "name": "PSW-2G6F+ · Полная проверка · 11.11.26",
   "deviceModel": "PSW-2G6F+",
-  "configurationName": "Полная проверка · 10.11",
+  "configurationName": "Полная проверка · 11.11.26",
   "nodes": [
     {
       "id": "0",
@@ -3779,5 +3779,5 @@
   },
   "useCatalogSerials": true,
   "deviceModelId": "psw-2g6f-plus",
-  "updatedAt": "2026-11-10T05:15:48.020260+00:00"
+  "updatedAt": "2026-11-11T10:01:05.053735+00:00"
 }

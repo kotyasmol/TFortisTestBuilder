@@ -33,7 +33,7 @@ public class RtlOriginalSettingsTests
     public void SwPreparationWritesOriginalRawDelaysAndEveryLimit()
     {
         using var original = Read("tools/RtlProfileMigration/SourceProfiles/RTL_SW_v1.json");
-        using var profile = Read("profiles/RTL-SW · Проверка платы · 10.11.json");
+        using var profile = Read("profiles/RTL-SW · Проверка платы · 11.11.26.json");
         var source = original.RootElement;
         var nodes = Nodes(profile.RootElement).ToArray();
         var writes = nodes.Where(n => Text(n, "type") == "Write Register").ToArray();
@@ -62,7 +62,7 @@ public class RtlOriginalSettingsTests
     public void PoeUsesOriginalRevisionColorPortSelectionAndVoltageLimits()
     {
         using var original = Read("tools/RtlProfileMigration/SourceProfiles/RTL_POE_v1.json");
-        using var profile = Read("profiles/RTL-POE · Проверка платы · 10.11.json");
+        using var profile = Read("profiles/RTL-POE · Проверка платы · 11.11.26.json");
         var source = original.RootElement;
         var nodes = Nodes(profile.RootElement).ToArray();
         foreach (var node in nodes.Where(n => Text(n,"type") == "Check Register Range"))
@@ -87,7 +87,7 @@ public class RtlOriginalSettingsTests
     [InlineData("SW"), InlineData("POE")]
     public void StandardProfilesEnableFailureReportsAndKeepOrdinaryReportsPrintingAndFlashingDisabled(string board)
     {
-        using var profile = Read($"profiles/RTL-{board} · Проверка платы · 10.11.json");
+        using var profile = Read($"profiles/RTL-{board} · Проверка платы · 11.11.26.json");
         var nodes = Nodes(profile.RootElement).ToArray();
         Assert.True(Assert.Single(nodes.Where(n => Text(n,"id") == "failure-report")).GetProperty("isEnabled").GetBoolean());
         Assert.All(nodes.Where(n => Text(n,"name") == "Отчёт TestBuilder" || Text(n,"name").StartsWith("Этикетка")),
