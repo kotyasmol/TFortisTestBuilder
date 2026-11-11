@@ -282,9 +282,9 @@
           <Button Content="Состав отчёта…" Click="OnConfigureReportTemplate" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
                   ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" />
-          <Button x:Name="CatalogToolsButton" Content="Справочник" Classes="graphTool"
+          <Button x:Name="CatalogToolsButton" Content="Параметры" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Серийные номера и этикетки выбранного изделия" AutomationProperties.Name="Справочник">
+                  ToolTip.Tip="Серийные номера и этикетки выбранного изделия" AutomationProperties.Name="Параметры изделия">
             <Button.Flyout>
               <Flyout Placement="Bottom">
                 <StackPanel Width="300" Spacing="8" x:DataType="vm:TestViewModel">
@@ -302,11 +302,6 @@
                       </ComboBox.ItemTemplate>
                     </ComboBox>
                   </StackPanel>
-                  <Button Content="Редактировать изделие…" Click="OnConfigureCatalogSerials"
-                          IsVisible="{Binding HasCatalogEquipmentModel}" AutomationProperties.Name="Редактировать изделие" />
-                  <Button Content="Добавить изделие…" Click="OnAddCatalogModel"
-                          IsVisible="{Binding !HasCatalogEquipmentModel}" AutomationProperties.Name="Добавить изделие" />
-                  <Button Content="Все изделия…" Click="OnOpenEquipmentCatalog" AutomationProperties.Name="Все изделия" />
                 </StackPanel>
               </Flyout>
             </Button.Flyout>

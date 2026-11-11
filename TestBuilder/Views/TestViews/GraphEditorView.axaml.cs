@@ -92,28 +92,14 @@ public partial class GraphEditorView : UserControl, IDisposable
             await vm.ConfigureReportTemplateAsync(owner);
     }
 
-    private async void OnConfigureCatalogSerials(object? sender, RoutedEventArgs e) => await OpenCatalogModelAsync(createNew: false);
-
-    private async void OnAddCatalogModel(object? sender, RoutedEventArgs e) => await OpenCatalogModelAsync(createNew: true);
-
-    private async void OnOpenEquipmentCatalog(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
-            return;
-        CatalogToolsButton.Flyout?.Hide();
-        vm.RefreshProfiles();
-        await new EquipmentCatalogWindow(vm).ShowDialog(owner);
-    }
-
-    private async Task OpenCatalogModelAsync(bool createNew)
+    private async void OnAddCatalogModel(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
             return;
         CatalogToolsButton.Flyout?.Hide();
         try
         {
-            var model = createNew ? vm.NewCatalogModel() : vm.ReadCatalogModelForEditing();
-            await new CatalogSerialsWindow(vm, model, createNew).ShowDialog(owner);
+            await new CatalogSerialsWindow(vm, vm.NewCatalogModel(), createNew: true).ShowDialog(owner);
         }
         catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or
             UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)

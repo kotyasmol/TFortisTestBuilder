@@ -22,6 +22,7 @@ internal sealed class EquipmentCatalogDataView : UserControl
         TextWrapping = TextWrapping.NoWrap, FontFamily = FontFamily.Parse("monospace") };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _status = new() { Name = "CatalogDataStatus", TextWrapping = TextWrapping.Wrap };
+    private readonly SelectableTextBlock _paths = new() { Name = "CatalogDataPaths", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private CatalogRow[] _rows = Array.Empty<CatalogRow>();
     private readonly Func<bool> _canEdit;
     private readonly Button _edit = new() { Content = "Редактировать изделие…", Name = "EditCatalogDataModel" };
@@ -59,8 +60,7 @@ internal sealed class EquipmentCatalogDataView : UserControl
             new TabItem { Header = "Данные изделия", Content = _details },
             new TabItem { Header = "JSON всего справочника", Content = _json }
         } };
-        var paths = new SelectableTextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap,
-            Text = $"Поставка: {EquipmentCatalog.BundledPath}\nЛокальные изменения: {localPath}" };
+        UpdatePaths(localPath);
         var root = new Grid { Margin = new Thickness(16), RowDefinitions = new RowDefinitions("Auto,*,8,*,Auto") };
         root.Children.Add(header);
         Grid.SetRow(_models, 1); root.Children.Add(_models);
@@ -68,18 +68,19 @@ internal sealed class EquipmentCatalogDataView : UserControl
             HorizontalAlignment = HorizontalAlignment.Stretch, Background = Brushes.Gray, Opacity = .3 };
         Grid.SetRow(splitter, 2); root.Children.Add(splitter);
         Grid.SetRow(detailsTabs, 3); root.Children.Add(detailsTabs);
-        Grid.SetRow(paths, 4); paths.Margin = new Thickness(0, 8, 0, 0); root.Children.Add(paths);
+        Grid.SetRow(_paths, 4); _paths.Margin = new Thickness(0, 8, 0, 0); root.Children.Add(_paths);
         Content = root;
         _models.SelectionChanged += (_, _) =>
         {
             _details.ItemsSource = (_models.SelectedItem as CatalogRow)?.Fields;
-            _edit.IsEnabled = _models.SelectedItem != null && _canEdit();
+            RefreshAvailability();
         };
         _search.TextChanged += (_, _) => Filter();
     }
 
-    internal void Refresh(EquipmentCatalog catalog, string status)
+    internal void Refresh(EquipmentCatalog catalog, string status, string localPath)
     {
+        UpdatePaths(localPath);
         var selected = (_models.SelectedItem as CatalogRow)?.Model.Id;
         _rows = catalog.Models.OrderBy(model => EquipmentCatalog.SortKey(model.Name), StringComparer.Ordinal)
             .Select(model => new CatalogRow(model, catalog.Sources.GetValueOrDefault(model.Id, "Текущая память"))).ToArray();
@@ -91,6 +92,8 @@ internal sealed class EquipmentCatalogDataView : UserControl
     }
 
     private string RevisionText { get; set; } = "";
+    private void UpdatePaths(string localPath) => _paths.Text = $"Поставка: {EquipmentCatalog.BundledPath}\nЛокальные изменения: {localPath}";
+    internal void RefreshAvailability() => _edit.IsEnabled = _models.SelectedItem != null && _canEdit();
     private static string Version(string revision) => string.IsNullOrWhiteSpace(revision) ? "не указана" : revision;
 
     private void Filter(string? selected = null)
@@ -102,7 +105,7 @@ internal sealed class EquipmentCatalogDataView : UserControl
         _models.ItemsSource = visible;
         _models.SelectedItem = visible.FirstOrDefault(row => row.Model.Id == selected) ?? visible.FirstOrDefault();
         _details.ItemsSource = (_models.SelectedItem as CatalogRow)?.Fields;
-        _edit.IsEnabled = _models.SelectedItem != null && _canEdit();
+        RefreshAvailability();
         _summary.Text = $"Изделий: {visible.Length} из {_rows.Length}. {RevisionText}";
     }
 

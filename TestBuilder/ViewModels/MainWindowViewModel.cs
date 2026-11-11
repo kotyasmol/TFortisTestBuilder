@@ -37,6 +37,7 @@ namespace TestBuilder.ViewModels
         public bool IsSelfTestPage => SelectedPage == "SelfTest" && ShowSwitchTools;
         public bool IsNetworkPage => SelectedPage == "Network" && ShowSwitchTools;
         public bool IsLabelsPage => SelectedPage == "Labels";
+        public bool IsCatalogPage => SelectedPage == "Catalog";
         public bool ShowSwitchTools => !TestVM.IsAutonomousStand;
         partial void OnSelectedPageChanged(string value)
         {
@@ -45,12 +46,14 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(IsSelfTestPage));
             OnPropertyChanged(nameof(IsNetworkPage));
             OnPropertyChanged(nameof(IsLabelsPage));
+            OnPropertyChanged(nameof(IsCatalogPage));
             if (IsLabelsPage) TestVM.RefreshProfiles();
+            if (IsCatalogPage) TestVM.ReloadCatalogForViewing();
         }
         [RelayCommand]
         private void SelectPage(string page)
         {
-            if (page is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels")) return;
+            if (page is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels" or "Catalog")) return;
             if (!ShowSwitchTools && page is "SelfTest" or "Network") return;
             SelectedPage = page;
         }

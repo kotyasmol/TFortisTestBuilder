@@ -105,11 +105,15 @@ public class WindowLayoutTests
                 shellVm.SettingsVM.IsEngineerMode = true;
                 Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
                 shellVm.TestVM.SelectedProfile = profile;
+                // Check the graph workspace independently of the optional register panel.
+                shellVm.TestVM.IsRegisterIndicatorsCollapsed = true;
                 shell.Show();
                 Layout(shell);
                 var rootNode = shellVm.TestVM.RootGraph.Nodes.First();
                 var graph = shell.FindControl<TestView>("TestViewControl")!.FindControl<GraphEditorView>("GraphEditor")!;
-                Assert.True(graph.FindControl<NodifyEditor>("Editor")!.Bounds.Height > 150);
+                var editorSurface = graph.FindControl<NodifyEditor>("Editor")!;
+                if (editorSurface.Bounds.Height <= 150) Capture(shell, "shell-editor-layout-failure", width, dark);
+                Assert.True(editorSurface.Bounds.Height > 150, $"Graph viewport: {editorSurface.Bounds}; shell: {shell.Bounds}");
                 AssertActionsFit(shell);
                 Capture(shell, "shell-editor", width, dark);
                 shellVm.OpenSettingsCommand.Execute(null);

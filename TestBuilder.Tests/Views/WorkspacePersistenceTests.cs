@@ -14,8 +14,10 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class WorkspacePersistenceTests
 {
-    [Fact]
-    public async Task RealSplittersPanelsAndFilter_AutosaveAndRestoreAfterRecreatingWindow()
+    [Theory]
+    [InlineData("Labels")]
+    [InlineData("Catalog")]
+    public async Task RealSplittersPanelsAndFilter_AutosaveAndRestoreAfterRecreatingWindow(string selectedPage)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
@@ -64,7 +66,7 @@ public class WorkspacePersistenceTests
                 Assert.InRange(stageWidth, 350, 390);
                 Assert.Equal(stageWidth, settings.Workspace.BoardStagesWidth, 1);
                 vm.SettingsVM.IsEngineerMode = true;
-                vm.SelectPageCommand.Execute("Labels");
+                vm.SelectPageCommand.Execute(selectedPage);
                 await Task.Delay(750); Layout(first);
                 Assert.True(saves > 0); // Written while the application is still open.
                 Assert.Equal("Board", JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(settingsPath))!.Workspace.ProductFilter);
@@ -90,7 +92,7 @@ public class WorkspacePersistenceTests
                 Assert.False(restored.TestVM.AvailableNodeCategories[0].IsExpanded);
                 Assert.False(restored.SelfTestPageVM.Categories[0].IsExpanded);
                 Assert.True(second.FindControl<NetworkSetupView>("NetworkSetupViewControl")!.FindControl<Expander>("IdentifyCableSection")!.IsExpanded);
-                Assert.Equal("Labels", restored.SelectedPage);
+                Assert.Equal(selectedPage, restored.SelectedPage);
                 Assert.Equal(1320, second.Width, 1); Assert.Equal(840, second.Height, 1);
                 restored.SelectedPage = "Editor"; Layout(second);
                 Assert.Equal(logHeight, second.FindControl<TestView>("TestViewControl")!.FindControl<Grid>("EditorLogLayout")!.RowDefinitions[2].ActualHeight, 1);

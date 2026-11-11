@@ -23,7 +23,7 @@ public sealed class WorkspacePreferences
     internal void Normalize()
     {
         if (ProductFilter is not ("All" or "Board" or "Switch")) ProductFilter = "All";
-        if (EngineerPage is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels")) EngineerPage = "Editor";
+        if (EngineerPage is not ("Editor" or "Registers" or "SelfTest" or "Network" or "Labels" or "Catalog")) EngineerPage = "Editor";
         LogHeight = ValidSize(LogHeight, 160, 100, 4000);
         BoardStagesWidth = ValidSize(BoardStagesWidth, 290, 220, 4000);
         RegisterIndicatorsZoom = NormalizeRegisterIndicatorsZoom(RegisterIndicatorsZoom);

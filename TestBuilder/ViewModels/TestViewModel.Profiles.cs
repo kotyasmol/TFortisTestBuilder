@@ -174,7 +174,7 @@ public partial class TestViewModel
         if (model == null)
             throw new InvalidOperationException("Выберите изделие из справочника над графом.");
         if (string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
-            throw new InvalidOperationException($"Для «{model.Name}» не заполнен «Тип на сервере». Откройте «Справочник → Редактировать изделие… → Серийные номера».");
+            throw new InvalidOperationException($"Для «{model.Name}» не заполнен «Тип на сервере». Откройте раздел «Справочник изделий», выберите модель и перейдите в «Редактировать изделие… → Серийные номера».");
         if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
             model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
             throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");
@@ -262,7 +262,10 @@ public partial class TestViewModel
         SynchronizeStationItems(EquipmentModels, _equipmentCatalog.Models
             .OrderBy(m => EquipmentCatalog.SortKey(m.Name), StringComparer.Ordinal).ToArray());
         NotifyDeviceNameChanged();
+        EquipmentCatalogChanged?.Invoke();
     }
+
+    internal event Action? EquipmentCatalogChanged;
 
     private void SetCatalogStatus(string status)
     {

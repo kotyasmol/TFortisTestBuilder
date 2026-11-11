@@ -39,7 +39,7 @@ public class EquipmentCatalogDataTests
             using var profile = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
             var beforeProfile = GraphSerializer.Serialize(profile, profile.CurrentProfileName);
             var beforeCatalog = File.ReadAllBytes(EquipmentCatalog.LocalPath(folder.Path));
-            var window = new EquipmentCatalogWindow(profile);
+            var window = new Window { Width = 1100, Height = 760, Content = new EquipmentCatalogView { DataContext = profile } };
             try
             {
                 window.Show(); Layout(window);
@@ -93,7 +93,7 @@ public class EquipmentCatalogDataTests
             using var bus = new ModbusService();
             using var profile = new TestViewModel(bus, new SlaveManager(bus));
             var before = GraphSerializer.Serialize(profile, profile.CurrentProfileName);
-            var window = new EquipmentCatalogWindow(profile);
+            var window = new Window { Width = 1100, Height = 760, Content = new EquipmentCatalogView { DataContext = profile } };
             window.Show(); Layout(window);
             try
             {

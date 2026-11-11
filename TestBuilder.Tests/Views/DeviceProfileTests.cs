@@ -28,7 +28,7 @@ public class DeviceProfileTests
             using var folder = new ProfileCopyTests.ProfileFolder();
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
-            var catalog = new EquipmentCatalogWindow(vm);
+            var catalog = new Window { Width = 1100, Height = 760, Content = new EquipmentCatalogView { DataContext = vm } };
             catalog.Show();
             try
             {
@@ -87,7 +87,7 @@ public class DeviceProfileTests
             using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
             vm.SelectedEquipmentModel = vm.EquipmentModels.Single(model => model.Id == "psw-plus-box-8x2pro");
             var openProfile = GraphSerializer.Serialize(vm, vm.CurrentProfileName);
-            var catalog = new EquipmentCatalogWindow(vm);
+            var catalog = new Window { Width = 1100, Height = 760, Content = new EquipmentCatalogView { DataContext = vm } };
             try
             {
                 catalog.Show();
