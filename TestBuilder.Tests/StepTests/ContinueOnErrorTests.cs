@@ -75,8 +75,9 @@ public class ContinueOnErrorTests
     }
 
     [Theory]
-    [InlineData(false, false)] [InlineData(false, true)] [InlineData(true, false)] [InlineData(true, true)]
-    public async Task OptionalLoop_ContinuesEveryIteration_AndNormalOutput(bool repeat, bool throws)
+    [InlineData(false, false, false)] [InlineData(false, true, false)] [InlineData(true, false, false)] [InlineData(true, true, false)]
+    [InlineData(false, false, true)] [InlineData(false, true, true)] [InlineData(true, false, true)] [InlineData(true, true, true)]
+    public async Task OptionalLoop_ContinuesEveryIteration_AndNormalOutput(bool repeat, bool throws, bool preparation)
     {
         var iterations = 0;
         var body = Node((context, _) =>
@@ -90,7 +91,8 @@ public class ContinueOnErrorTests
         var next = false; var error = false;
         loop.Next = Node((_, _) => { next = true; return StepResult.Next; });
         loop.OnFalse = Node((_, _) => { error = true; return StepResult.Next; });
-        var context = Context(); context.CurrentSlaveId = 9; context.SetVariable("slaveId", (byte)9);
+        var context = new TestContext(new RegisterState()) { IsPreparation = preparation };
+        context.CurrentSlaveId = 9; context.SetVariable("slaveId", (byte)9);
         Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(loop, context, default));
         Assert.Equal(3, iterations); Assert.True(next); Assert.False(error);
         Assert.Equal((byte)9, context.CurrentSlaveId); Assert.Equal((byte)9, context.GetVariable<byte>("slaveId"));
@@ -98,10 +100,12 @@ public class ContinueOnErrorTests
         Assert.Equal(3, context.ReportEntries.Count(entry => !entry.IsSuccess));
     }
 
-    [Fact]
-    public async Task OptionalNode_DoesNotEraseEarlierFailure_OrSwallowCancellationOrUnfinishedProcesses()
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task OptionalNode_DoesNotEraseEarlierFailure_OrSwallowCancellationOrUnfinishedProcesses(bool preparation)
     {
-        var context = Context(); context.HasCriticalError = true;
+        TestContext NewContext() => new(new RegisterState()) { IsPreparation = preparation };
+        var context = NewContext(); context.HasCriticalError = true;
         var original = new ExecutionFailure("Earlier", "Earlier failure"); context.CriticalFailure = original;
         var optional = new SubtestStep("Optional", true, false, new(Node((_, _) => StepResult.False)), NullLogger.Instance);
         Assert.Equal(StepResult.True, await optional.ExecuteAsync(context, default));
@@ -109,11 +113,11 @@ public class ContinueOnErrorTests
         using var cts = new CancellationTokenSource();
         var cancelled = new SubtestStep("Optional", true, false, new(Node((_, token) =>
         { cts.Cancel(); token.ThrowIfCancellationRequested(); return StepResult.Next; })), NullLogger.Instance);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled.ExecuteAsync(Context(), cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled.ExecuteAsync(NewContext(), cts.Token));
         var cleanup = new BrowserCleanupException("Browser still running", new Exception());
         var unsafeStep = new ContinueOnErrorStep(new SubtestStep("Optional", true, false,
             new(Node((_, _) => throw cleanup)), NullLogger.Instance), "Node", NullLogger.Instance);
-        Assert.Same(cleanup, await Assert.ThrowsAsync<BrowserCleanupException>(() => unsafeStep.ExecuteAsync(Context(), default)));
+        Assert.Same(cleanup, await Assert.ThrowsAsync<BrowserCleanupException>(() => unsafeStep.ExecuteAsync(NewContext(), default)));
     }
 
     [Fact]

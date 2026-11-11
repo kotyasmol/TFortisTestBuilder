@@ -7,6 +7,9 @@ internal readonly record struct ExecutionFailureState(bool Critical, bool Except
     public static ExecutionFailureState Capture(TestContext context) =>
         new(context.HasCriticalError, context.HasExecutionException, context.Failure, context.CriticalFailure);
 
+    public bool HasNewFailure(TestContext context) =>
+        !Critical && context.HasCriticalError || !Exception && context.HasExecutionException;
+
     public void Restore(TestContext context)
     {
         context.HasCriticalError = Critical;

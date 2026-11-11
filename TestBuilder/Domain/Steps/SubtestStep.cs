@@ -79,6 +79,11 @@ namespace TestBuilder.Domain.Steps
             }
             finally { context.IsCleanup = previousCleanup; }
 
+            // Following a body's False edge does not clear a critical failure.
+            // Apply this subtest's policy even if that path reached its end.
+            if (status == ExecutionStatus.Completed && failureState.HasNewFailure(context))
+                status = ExecutionStatus.Failed;
+
             if (status == ExecutionStatus.Completed)
             {
                 if (_runOnFailure && context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))

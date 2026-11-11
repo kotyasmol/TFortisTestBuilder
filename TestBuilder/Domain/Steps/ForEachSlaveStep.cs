@@ -166,6 +166,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken token, string name, bool tolerateException)
         {
             var reportStart = context.ReportEntries.Count;
+            var failureState = ExecutionFailureState.Capture(context);
             ExecutionStatus result;
             try { result = await executor.ExecuteAsync(_bodyGraph.StartNode, context, token); }
             catch (Exception error) when (tolerateException && !token.IsCancellationRequested && !ExecutionCleanupException.Contains(error))
@@ -176,6 +177,8 @@ namespace TestBuilder.Domain.Steps
                 result = ExecutionStatus.Failed;
             }
             token.ThrowIfCancellationRequested();
+            if (result == ExecutionStatus.Completed && failureState.HasNewFailure(context))
+                result = ExecutionStatus.Failed;
             if (result != ExecutionStatus.Completed && !context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))
                 context.AddReportEntry(name, false, context.Failure?.Summary ?? "Проверка не пройдена.", context.Failure?.Code ?? TestErrorCode.Loop);
             return result;
