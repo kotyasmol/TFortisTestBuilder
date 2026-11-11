@@ -217,6 +217,8 @@ public partial class TestViewModel
     private readonly Dictionary<string, EngineerProfileGroup> _engineerGroups = new(StringComparer.OrdinalIgnoreCase);
     public string CatalogStatus { get; private set; } = "";
     internal string CatalogOverridesPath => EquipmentCatalog.LocalPath(ProfilesFolder);
+    internal EquipmentCatalog CurrentEquipmentCatalog => _equipmentCatalog;
+    internal void ReloadCatalogForViewing() => LoadEquipmentCatalog(ProfilesFolder);
     public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatus);
     public EquipmentModel? SelectedEquipmentModel
     {

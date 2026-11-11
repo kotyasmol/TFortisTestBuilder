@@ -14,11 +14,12 @@ internal sealed class EquipmentCatalogWindow : Window
     public EquipmentCatalogWindow(TestViewModel profile)
     {
         Title = "Справочник изделий";
-        Width = 560;
-        Height = 550;
-        MinWidth = 440;
-        MinHeight = 360;
+        Width = 1100;
+        Height = 760;
+        MinWidth = 700;
+        MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        var data = new EquipmentCatalogDataView(profile.CatalogOverridesPath, () => profile.CanEditQuickActions);
 
         var search = new TextBox { Watermark = "Название или код этикетки, например 026", Margin = new Thickness(0, 0, 0, 12) };
         var list = new ListBox { Name = "EquipmentCatalogList", ItemTemplate = new FuncDataTemplate<EquipmentModel>((model, _) =>
@@ -55,8 +56,21 @@ internal sealed class EquipmentCatalogWindow : Window
         var footer = new StackPanel { Spacing = 6, Margin = new Thickness(0, 12, 0, 0), Children = { status, paths, buttons } };
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
-        Content = root;
+        var tabs = new TabControl { Name = "EquipmentCatalogTabs", Items =
+        {
+            new TabItem { Header = "Изделия", Content = root },
+            new TabItem { Header = "Все данные", Content = data }
+        } };
+        data.ReloadRequested += (_, _) =>
+        {
+            profile.ReloadCatalogForViewing();
+            Refresh((list.SelectedItem as EquipmentModel)?.Id);
+            data.Refresh(profile.CurrentEquipmentCatalog, profile.CatalogStatus);
+        };
+        data.EditRequested += async model => await OpenCardAsync(model, createNew: false);
+        Content = tabs;
         Refresh(profile.SelectedEquipmentModel?.Id);
+        data.Refresh(profile.CurrentEquipmentCatalog, profile.CatalogStatus);
 
         async Task OpenCardAsync(EquipmentModel model, bool createNew)
         {
@@ -66,6 +80,7 @@ internal sealed class EquipmentCatalogWindow : Window
             if (saved == null) return;
             if (!Matches(saved)) search.Text = "";
             Refresh(saved.Id);
+            data.Refresh(profile.CurrentEquipmentCatalog, profile.CatalogStatus);
         }
 
         bool Matches(EquipmentModel model) => EquipmentCatalog.Matches(model, search.Text);

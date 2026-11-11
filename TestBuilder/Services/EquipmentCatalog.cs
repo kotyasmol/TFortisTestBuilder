@@ -39,6 +39,9 @@ public sealed class EquipmentCatalog
     public List<EquipmentModel> Models { get; set; } = new();
     internal static string RelativePath { get; } = Path.Combine("catalog", "equipment-models.json");
     [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    [JsonIgnore] internal string BundledRevision { get; private set; } = "";
+    [JsonIgnore] internal string LocalRevision { get; private set; } = "";
+    [JsonIgnore] internal Dictionary<string, string> Sources { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -53,11 +56,13 @@ public sealed class EquipmentCatalog
         var bundled = LoadBundled();
         var local = Read(LocalPath(profilesFolder));
         var models = bundled.Models.ToDictionary(model => model.Id, StringComparer.OrdinalIgnoreCase);
+        var sources = bundled.Models.ToDictionary(model => model.Id, _ => "Поставка", StringComparer.OrdinalIgnoreCase);
         foreach (var model in local.Models)
         {
             // Older installations retain their original local catalog after updates.
             if (!model.IsFullOverride && models.TryGetValue(model.Id, out var baseline) && Keys(baseline).Contains(Normalize(model.Name)))
             {
+                sources[model.Id] = "Поставка + локальные поля";
                 var series = model.SerialSeries;
                 var bundledSeries = baseline.SerialSeries;
                 if (series is { FailureReportSerialNumber: null } &&
@@ -81,13 +86,20 @@ public sealed class EquipmentCatalog
                 };
             }
             else
+            {
                 models[model.Id] = model;
+                sources[model.Id] = "Локальная карточка";
+            }
         }
+        local.BundledRevision = bundled.Revision;
+        local.LocalRevision = local.Revision;
+        local.Sources = sources;
         local.Models = models.Values.ToList();
         return local;
     }
 
     internal static EquipmentCatalog LoadBundled() => Read(BundledPath);
+    internal string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 
     private static EquipmentCatalog Read(string file)
     {
