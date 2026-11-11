@@ -20,6 +20,7 @@ internal static class LabelPrintContent
     public static LabelTemplateDefinition ForModel(LabelTemplateDefinition template, EquipmentModel model, int variant)
     {
         var copy = ForDevice(template, model.Name);
+        copy.CabinetName = model.LabelCabinets?.GetValueOrDefault(variant);
         if (!copy.UseShortSerial) return copy;
         if (model.LabelCode is not { } code || model.SerialSeries is not { } series)
             throw new InvalidOperationException($"Для «{model.Name}» укажите код этикетки и серию в справочнике.");

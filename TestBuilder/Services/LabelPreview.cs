@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace TestBuilder.Services;
 
@@ -120,6 +121,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
             var barcode = false; var readable = true; var above = false; var skip = false; var auto = false;
             double blockWidth = 0;
             var justification = "L";
+            var utf8 = false;
+            char? hexIndicator = null;
             var matches = Regex.Matches(command, @"[\^~]([A-Za-z0-9@]{2})([^\^~]*)");
             if (matches.Count == 0) _unsupported.Add("формат ZPL");
             foreach (Match match in matches)
@@ -128,6 +131,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 switch (op)
                 {
                     case "XA": break;
+                    case "CI": utf8 = Part(a, 0) == "28"; break;
+                    case "FH": hexIndicator = value.Length == 0 ? '_' : value[0]; break;
                     case "XZ": return; // Preview one label, regardless of requested copies.
                     case "FO": x = Number(a, 0) + homeX; y = Number(a, 1) + homeY; break;
                     case "LH": homeX = Number(a, 0); homeY = Number(a, 1); break;
@@ -149,6 +154,16 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         { _barcodeError = UnverifiedBarcode; skip = true; }
                         barH = Number(a, 1, barH); readable = Part(a, 2, "Y") != "N"; above = Part(a, 3) == "Y"; auto = Part(a, 5) == "A"; break;
                     case "FD":
+                        if (hexIndicator is { } indicator)
+                        {
+                            var bytes = new List<byte>();
+                            for (var i = 0; i < value.Length; i++)
+                                if (value[i] == indicator && i + 2 < value.Length &&
+                                    byte.TryParse(value.AsSpan(i + 1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexByte))
+                                { bytes.Add(hexByte); i += 2; }
+                                else bytes.Add(checked((byte)value[i]));
+                            value = (utf8 ? Encoding.UTF8 : Encoding.Latin1).GetString(bytes.ToArray());
+                        }
                         if (skip) break;
                         if (!barcode)
                         {
@@ -165,8 +180,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                         }
                         break;
                     case "GB": Add(new(x, y, Math.Max(1, Number(a, 0)), Math.Max(1, Number(a, 1)), Stroke: Math.Max(1, Number(a, 2, 1)))); break;
-                    case "FS": barcode = skip = auto = false; blockWidth = 0; justification = "L"; fontH = defaultH; fontW = defaultW; break;
-                    case "MD": case "PR": case "PQ": case "CI": case "FX": break; // Nonvisual settings/comment.
+                    case "FS": barcode = skip = auto = false; hexIndicator = null; blockWidth = 0; justification = "L"; fontH = defaultH; fontW = defaultW; break;
+                    case "MD": case "PR": case "PQ": case "FX": break; // Nonvisual settings/comment.
                     default: _unsupported.Add("^" + op); skip = true; break;
                 }
             }

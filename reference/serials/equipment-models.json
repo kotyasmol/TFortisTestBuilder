@@ -1,31 +1,66 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-11-10",
+  "revision": "2026-11-11",
   "models": [
     {
       "id": "psw-2g",
       "name": "PSW-2G",
-      "labelCode": 1
+      "labelCode": 1,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G",
+        "firstSerialNumber": 100001,
+        "lastSerialNumber": 165535,
+        "serialOffset": 100000,
+        "macPrefix": "C0:11:A6:01"
+      }
     },
     {
       "id": "psw-2g-ups",
       "name": "PSW-2G-UPS",
-      "labelCode": 2
+      "labelCode": 2,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G-UPS",
+        "firstSerialNumber": 200001,
+        "lastSerialNumber": 265535,
+        "serialOffset": 200000,
+        "macPrefix": "C0:11:A6:02"
+      }
     },
     {
       "id": "psw-2g-plus",
       "name": "PSW-2G+",
-      "labelCode": 3
+      "labelCode": 3,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+",
+        "firstSerialNumber": 300001,
+        "lastSerialNumber": 365535,
+        "serialOffset": 300000,
+        "macPrefix": "C0:11:A6:03"
+      }
     },
     {
       "id": "psw-1g4f",
       "name": "PSW-1G4F",
-      "labelCode": 4
+      "labelCode": 4,
+      "serialSeries": {
+        "serverDeviceType": "PSW-1G4F",
+        "firstSerialNumber": 400001,
+        "lastSerialNumber": 465535,
+        "serialOffset": 400000,
+        "macPrefix": "C0:11:A6:04"
+      }
     },
     {
       "id": "psw-2g4f",
       "name": "PSW-2G4F",
-      "labelCode": 5
+      "labelCode": 5,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F",
+        "firstSerialNumber": 500001,
+        "lastSerialNumber": 565535,
+        "serialOffset": 500000,
+        "macPrefix": "C0:11:A6:05"
+      }
     },
     {
       "id": "psw-2g6f-plus",
@@ -45,17 +80,38 @@
     {
       "id": "psw-2g8f-plus",
       "name": "PSW-2G8F+",
-      "labelCode": 7
+      "labelCode": 7,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+",
+        "firstSerialNumber": 700001,
+        "lastSerialNumber": 765535,
+        "serialOffset": 700000,
+        "macPrefix": "C0:11:A6:07"
+      }
     },
     {
       "id": "psw-1g4f-ups",
       "name": "PSW-1G4F-UPS",
-      "labelCode": 8
+      "labelCode": 8,
+      "serialSeries": {
+        "serverDeviceType": "PSW-1G4F-UPS",
+        "firstSerialNumber": 800001,
+        "lastSerialNumber": 865535,
+        "serialOffset": 800000,
+        "macPrefix": "C0:11:A6:08"
+      }
     },
     {
       "id": "psw-2g4f-ups",
       "name": "PSW-2G4F-UPS",
-      "labelCode": 9
+      "labelCode": 9,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F-UPS",
+        "firstSerialNumber": 900001,
+        "lastSerialNumber": 965535,
+        "serialOffset": 900000,
+        "macPrefix": "C0:11:A6:09"
+      }
     },
     {
       "id": "psw-2g-plus-ups-box",
@@ -66,12 +122,32 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+UPS-Box",
+        "firstSerialNumber": 1000001,
+        "lastSerialNumber": 1065535,
+        "serialOffset": 1000000,
+        "macPrefix": "C0:11:A6:0A"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
       "id": "psw-2g2f-plus-ups",
       "name": "PSW-2G2F+UPS",
-      "labelCode": 11
+      "labelCode": 11,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G2F+UPS",
+        "firstSerialNumber": 1100001,
+        "lastSerialNumber": 1165535,
+        "serialOffset": 1100000,
+        "macPrefix": "C0:11:A6:0B"
+      }
     },
     {
       "id": "psw-2g8f-plus-ups-box",
@@ -82,6 +158,19 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+UPS-Box",
+        "firstSerialNumber": 1200001,
+        "lastSerialNumber": 1265535,
+        "serialOffset": 1200000,
+        "macPrefix": "C0:11:A6:0C"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
@@ -91,6 +180,13 @@
       "labelVariants": {
         "1": "K1",
         "2": "DIN"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F-Ex",
+        "firstSerialNumber": 1300001,
+        "lastSerialNumber": 1365535,
+        "serialOffset": 1300000,
+        "macPrefix": "C0:11:A6:0D"
       }
     },
     {
@@ -100,6 +196,13 @@
       "labelVariants": {
         "1": "K1",
         "2": "DIN"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-1G4F-Ex",
+        "firstSerialNumber": 1500001,
+        "lastSerialNumber": 1565535,
+        "serialOffset": 1500000,
+        "macPrefix": "C0:11:A6:0F"
       }
     },
     {
@@ -109,23 +212,55 @@
       "labelVariants": {
         "1": "K1",
         "2": "DIN"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+Ex",
+        "firstSerialNumber": 1700001,
+        "lastSerialNumber": 1765535,
+        "serialOffset": 1700000,
+        "macPrefix": "C0:11:A6:11"
       }
     },
     {
       "id": "psw-2g-plus-hot",
       "name": "PSW-2G+Hot",
-      "labelCode": 19
+      "labelCode": 19,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+Hot",
+        "firstSerialNumber": 1900001,
+        "lastSerialNumber": 1965535,
+        "serialOffset": 1900000,
+        "macPrefix": "C0:11:A6:13"
+      }
     },
     {
       "id": "psw-2g8f-plus-hot",
       "name": "PSW-2G8F+Hot",
-      "labelCode": 20
+      "labelCode": 20,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+Hot",
+        "firstSerialNumber": 2000001,
+        "lastSerialNumber": 2065535,
+        "serialOffset": 2000000,
+        "macPrefix": "C0:11:A6:14"
+      }
     },
     {
       "id": "psw-2g4f-box",
       "name": "PSW-2G4F-Box",
       "labelCode": 21,
       "labelVariants": {
+        "0": "Fibox",
+        "1": "Plastim"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F-Box",
+        "firstSerialNumber": 2100001,
+        "lastSerialNumber": 2165535,
+        "serialOffset": 2100000,
+        "macPrefix": "C0:11:A6:15"
+      },
+      "labelCabinets": {
         "0": "Fibox",
         "1": "Plastim"
       }
@@ -135,6 +270,17 @@
       "name": "PSW-1G4F-Box",
       "labelCode": 22,
       "labelVariants": {
+        "0": "Fibox",
+        "1": "Plastim"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-1G4F-Box",
+        "firstSerialNumber": 2200001,
+        "lastSerialNumber": 2265535,
+        "serialOffset": 2200000,
+        "macPrefix": "C0:11:A6:16"
+      },
+      "labelCabinets": {
         "0": "Fibox",
         "1": "Plastim"
       }
@@ -148,6 +294,19 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+UPS-Box",
+        "firstSerialNumber": 2300001,
+        "lastSerialNumber": 2365535,
+        "serialOffset": 2300000,
+        "macPrefix": "C0:11:A6:17"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
@@ -159,6 +318,19 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+Box",
+        "firstSerialNumber": 2400001,
+        "lastSerialNumber": 2465535,
+        "serialOffset": 2400000,
+        "macPrefix": "C0:11:A6:18"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
@@ -170,6 +342,19 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+Box",
+        "firstSerialNumber": 2500001,
+        "lastSerialNumber": 2565535,
+        "serialOffset": 2500000,
+        "macPrefix": "C0:11:A6:19"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
@@ -181,32 +366,80 @@
         "1": "Plastim + PWR180",
         "2": "Plastim + PWR300",
         "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+Box",
+        "firstSerialNumber": 2600001,
+        "lastSerialNumber": 2665535,
+        "serialOffset": 2600000,
+        "macPrefix": "C0:11:A6:1A"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
       }
     },
     {
       "id": "psw-2g6f-plus-ex",
       "name": "PSW-2G6F+Ex",
-      "labelCode": 27
+      "labelCode": 27,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+Ex",
+        "firstSerialNumber": 2700001,
+        "lastSerialNumber": 2765535,
+        "serialOffset": 2700000,
+        "macPrefix": "C0:11:A6:1B"
+      }
     },
     {
       "id": "psw-2g8f-plus-ex",
       "name": "PSW-2G8F+Ex",
-      "labelCode": 28
+      "labelCode": 28,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+Ex",
+        "firstSerialNumber": 2800001,
+        "lastSerialNumber": 2865535,
+        "serialOffset": 2800000,
+        "macPrefix": "C0:11:A6:1C"
+      }
     },
     {
       "id": "psw-2g8f-plus-ups-ex",
       "name": "PSW-2G8F+UPS-Ex",
-      "labelCode": 29
+      "labelCode": 29,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+UPS-Ex",
+        "firstSerialNumber": 2900001,
+        "lastSerialNumber": 2965535,
+        "serialOffset": 2900000,
+        "macPrefix": "C0:11:A6:1D"
+      }
     },
     {
       "id": "psw-2g-plus-ups-ex",
       "name": "PSW-2G+UPS-Ex",
-      "labelCode": 30
+      "labelCode": 30,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G+UPS-Ex",
+        "firstSerialNumber": 3000001,
+        "lastSerialNumber": 3065535,
+        "serialOffset": 3000000,
+        "macPrefix": "C0:11:A6:1E"
+      }
     },
     {
       "id": "psw-2g6f-plus-ups-ex",
       "name": "PSW-2G6F+UPS-Ex",
-      "labelCode": 31
+      "labelCode": 31,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+UPS-Ex",
+        "firstSerialNumber": 3100001,
+        "lastSerialNumber": 3165535,
+        "serialOffset": 3100000,
+        "macPrefix": "C0:11:A6:1F"
+      }
     },
     {
       "id": "psw-ups-box-8x2pro",

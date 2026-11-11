@@ -19,16 +19,26 @@ public sealed record ModelSerialSeries
 
     public void Validate(string modelName)
     {
-        if (string.IsNullOrWhiteSpace(ServerDeviceType) || FirstSerialNumber <= 0 ||
-            LastSerialNumber < FirstSerialNumber || SerialOffset < 0 ||
-            SerialOffset > FirstSerialNumber || LastSerialNumber - SerialOffset > 99999)
-            throw new InvalidDataException($"Проверьте серверный тип, диапазон и смещение серийных номеров изделия «{modelName}».");
+        if (string.IsNullOrWhiteSpace(ServerDeviceType))
+            throw new InvalidDataException($"Для «{modelName}» укажите «Тип на сервере». Это имя типа в запросе выдачи номера.");
+        if (FirstSerialNumber <= 0)
+            throw new InvalidDataException($"Для «{modelName}» стартовый серийный номер должен быть больше нуля.");
+        if (LastSerialNumber < FirstSerialNumber)
+            throw new InvalidDataException($"Для «{modelName}» последний номер {LastSerialNumber} меньше стартового {FirstSerialNumber}.");
+        if (SerialOffset < 0 || SerialOffset > FirstSerialNumber)
+            throw new InvalidDataException($"Для «{modelName}» база короткого номера должна быть от 0 до {FirstSerialNumber}.");
+        if (LastSerialNumber - SerialOffset > 99999)
+            throw new InvalidDataException($"Для «{modelName}» последний номер минус база не должен превышать 99999. Проверьте «База короткого номера»: сейчас {SerialOffset}.");
         if (FailureReportSerialNumber is { } failureSerial && Check(failureSerial) is { } error)
             throw new InvalidDataException($"Проверьте номер для аварийного отчёта. {error}");
-        if (MacPrefix != null && (!LabelPrintContent.TryNormalizeMac(MacPrefix + ":00:00", out var normalized) ||
-            !string.Equals(normalized, MacPrefix + ":00:00", StringComparison.OrdinalIgnoreCase) ||
-            LastSerialNumber - SerialOffset > ushort.MaxValue))
-            throw new InvalidDataException($"Проверьте префикс MAC и диапазон изделия «{modelName}».");
+        if (MacPrefix != null)
+        {
+            if (!LabelPrintContent.TryNormalizeMac(MacPrefix + ":00:00", out var normalized) ||
+                !string.Equals(normalized, MacPrefix + ":00:00", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Для «{modelName}» префикс MAC должен содержать четыре байта через двоеточие, например C0:11:A6:1A.");
+            if (LastSerialNumber - SerialOffset > ushort.MaxValue)
+                throw new InvalidDataException($"Для «{modelName}» короткий номер MAC не должен превышать 65535. При базе {SerialOffset} последний номер не больше {(long)SerialOffset + ushort.MaxValue}.");
+        }
     }
 
     public string? Check(long serial, int? issuedSerial = null)

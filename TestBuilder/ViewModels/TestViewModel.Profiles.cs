@@ -171,8 +171,10 @@ public partial class TestViewModel
             return (null, _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel));
         // Read once at the start. All nodes, including failure cleanup, use the same model.
         var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
-        if (model == null || string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
-            throw new InvalidOperationException("Выберите изделие с настроенным серверным типом в справочнике.");
+        if (model == null)
+            throw new InvalidOperationException("Выберите изделие из справочника над графом.");
+        if (string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
+            throw new InvalidOperationException($"Для «{model.Name}» не заполнен «Тип на сервере». Откройте «Справочник → Редактировать изделие… → Серийные номера».");
         if (RootGraph.LabelVariant is < 0 or > 9 || RootGraph.LabelVariant != 0 &&
             model.LabelVariants?.ContainsKey(RootGraph.LabelVariant) != true)
             throw new InvalidOperationException($"Комплектация {RootGraph.LabelVariant} не задана для «{model.Name}» в справочнике.");
@@ -214,6 +216,7 @@ public partial class TestViewModel
     public ObservableCollection<EngineerProfileGroup> EngineerProfileGroups { get; } = new();
     private readonly Dictionary<string, EngineerProfileGroup> _engineerGroups = new(StringComparer.OrdinalIgnoreCase);
     public string CatalogStatus { get; private set; } = "";
+    internal string CatalogOverridesPath => EquipmentCatalog.LocalPath(ProfilesFolder);
     public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatus);
     public EquipmentModel? SelectedEquipmentModel
     {

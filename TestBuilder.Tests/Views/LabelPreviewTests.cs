@@ -217,6 +217,13 @@ public class LabelPreviewTests
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                var cabinet = window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "CabinetPreviewSample");
+                cabinet.Text = "Plastim";
+                await Task.Delay(250); Dispatcher.UIThread.RunJobs();
+                Assert.Contains(window.GetVisualDescendants().OfType<LabelPreviewControl>().Single().Preview!.Elements,
+                    element => element.Text == "Plastim");
+                Assert.Null(AppSettings.Instance.LabelTemplates[0].CabinetName);
+                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-cabinet-label-preview.png"));
                 var command = window.GetVisualDescendants().OfType<TextBox>().Single(t => t.AcceptsReturn);
                 command.Text = "^XA^FO20,20^A0N,25,20^FDDraft {{ShortSerial}}^FS^XZ";
                 await Task.Delay(250); Dispatcher.UIThread.RunJobs();

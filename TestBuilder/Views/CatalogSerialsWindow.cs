@@ -46,6 +46,13 @@ internal sealed class CatalogSerialsWindow : Window
         }
         general.Children.Add(columns);
 
+        var cabinetsPanel = new StackPanel { Spacing = 8 };
+        cabinetsPanel.Children.Add(Hint("Подпись шкафа на этикетке для каждой комплектации. Пустое поле — печать без подписи шкафа."));
+        var cabinets = new TextBox[10];
+        for (var code = 0; code < cabinets.Length; code++)
+            cabinets[code] = AddField(cabinetsPanel, $"Комплектация {code}", model.LabelCabinets?.GetValueOrDefault(code) ?? "",
+                "Например, Fibox или Plastim", accessibleName: $"Шкаф комплектации {code}");
+
         var serial = new StackPanel { Spacing = 8 };
         serial.Children.Add(Hint("Сервер выдаёт номер. Стартовый номер задаёт нижнюю границу проверки."));
         var serverType = AddField(serial, "Тип на сервере", current.ServerDeviceType, "Выдача серийных номеров");
@@ -56,6 +63,23 @@ internal sealed class CatalogSerialsWindow : Window
             current.FailureReportSerialNumber is { } fallback ? NumberText(fallback) : "", "При сбое до получения номера устройства");
         var mac = AddField(serial, "Префикс MAC", current.MacPrefix ?? "", "Четыре байта через двоеточие");
         var board = AddField(serial, "Имя платы при записи Pro MAC", current.BoardVersion ?? "");
+        var supplied = EquipmentCatalog.LoadBundled().Resolve(model.Id, null)?.SerialSeries;
+        if (supplied != null)
+        {
+            var fill = new Button { Content = "Заполнить из поставки" };
+            fill.Click += (_, _) =>
+            {
+                serverType.Text = supplied.ServerDeviceType;
+                first.Text = NumberText(supplied.FirstSerialNumber);
+                last.Text = NumberText(supplied.LastSerialNumber);
+                offset.Text = NumberText(supplied.SerialOffset);
+                failureSerial.Text = supplied.FailureReportSerialNumber is { } number ? NumberText(number) : "";
+                mac.Text = supplied.MacPrefix ?? "";
+                board.Text = supplied.BoardVersion ?? "";
+            };
+            serial.Children.Add(fill);
+        }
+        serial.Children.Add(Hint("Код этикетки не задаёт серверную серию автоматически. База вычитается из полного номера для MAC и штрихкода."));
 
         var report = new StackPanel { Spacing = 8 };
         var useRtl = new CheckBox { Content = "Использовать отчёт RTL", IsChecked = model.RtlReport != null };
@@ -78,6 +102,7 @@ internal sealed class CatalogSerialsWindow : Window
         AddTab("Изделие и этикетка", general);
         AddTab("Серийные номера", serial);
         AddTab("Отчёт RTL", report);
+        AddTab("Шкаф на этикетке", cabinetsPanel);
         var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
@@ -108,6 +133,8 @@ internal sealed class CatalogSerialsWindow : Window
                         .DistinctBy(EquipmentCatalog.Normalize).ToArray(),
                     LabelCode = string.IsNullOrWhiteSpace(label.Text) ? null : ReadNumber(label, "код модели на этикетке"),
                     LabelVariants = labelVariants.Count == 0 ? null : labelVariants,
+                    LabelCabinets = cabinets.Select((field, code) => (Code: code, Name: Optional(field)))
+                        .Where(item => item.Name != null).ToDictionary(item => item.Code, item => item.Name!),
                     ServerDeviceType = hasRange ? null : server,
                     IsFullOverride = true,
                     SerialSeries = hasRange ? current with

@@ -178,6 +178,9 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             if (!modelTemplates.TryGetValue(model.Id, out var template))
             {
                 template = LabelPrintContent.ForDevice(model.RtlReport == null ? switchLayout : boardLayout, model.Name);
+                template.CabinetName = model.LabelCabinets?.GetValueOrDefault(0);
+                if (template.UseShortSerial)
+                    template.BarcodePrefix = "0" + model.LabelCode!.Value.ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
                 options.Add(new("model:" + model.Id, $"{model.Name} · {template.Language}", template));
             }
             if (model.LabelVariants == null) continue;
@@ -185,6 +188,10 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             {
                 var variant = template.Copy();
                 variant.VariantName = name;
+                variant.CabinetName = model.LabelCabinets?.GetValueOrDefault(code);
+                if (variant.UseShortSerial)
+                    variant.BarcodePrefix = code.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        model.LabelCode!.Value.ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
                 options.Add(new($"model:{model.Id}:{code}", $"{model.Name} · {name} · {variant.Language}", variant));
             }
         }

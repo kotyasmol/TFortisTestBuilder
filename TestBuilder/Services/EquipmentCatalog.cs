@@ -16,6 +16,7 @@ public sealed record EquipmentModel(string Id, string Name)
     public string? ServerDeviceType { get; init; }
     public RtlReportSettings? RtlReport { get; init; }
     public Dictionary<int, string>? LabelVariants { get; init; }
+    public Dictionary<int, string>? LabelCabinets { get; init; }
     public ModelSerialSeries? SerialSeries { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsFullOverride { get; init; }
@@ -49,8 +50,8 @@ public sealed class EquipmentCatalog
 
     public static EquipmentCatalog Load(string profilesFolder)
     {
-        var bundled = Read(Path.Combine(AppContext.BaseDirectory, "reference", "serials", "equipment-models.json"));
-        var local = Read(Path.Combine(profilesFolder, RelativePath));
+        var bundled = LoadBundled();
+        var local = Read(LocalPath(profilesFolder));
         var models = bundled.Models.ToDictionary(model => model.Id, StringComparer.OrdinalIgnoreCase);
         foreach (var model in local.Models)
         {
@@ -73,6 +74,9 @@ public sealed class EquipmentCatalog
                         ? report with { FailureDeviceIdentifier = report.FailureDeviceIdentifier ?? baselineReport.FailureDeviceIdentifier }
                         : model.RtlReport ?? baseline.RtlReport,
                     LabelVariants = model.LabelVariants ?? baseline.LabelVariants,
+                    LabelCabinets = model.LabelCabinets ?? (model.LabelVariants == null || baseline.LabelVariants != null &&
+                        model.LabelVariants.OrderBy(pair => pair.Key).SequenceEqual(baseline.LabelVariants.OrderBy(pair => pair.Key))
+                        ? baseline.LabelCabinets : null),
                     SerialSeries = series ?? (model.ServerDeviceType == null ? bundledSeries : null)
                 };
             }
@@ -82,6 +86,8 @@ public sealed class EquipmentCatalog
         local.Models = models.Values.ToList();
         return local;
     }
+
+    internal static EquipmentCatalog LoadBundled() => Read(BundledPath);
 
     private static EquipmentCatalog Read(string file)
     {
@@ -94,7 +100,7 @@ public sealed class EquipmentCatalog
 
     internal static void SaveModel(string profilesFolder, EquipmentModel model, bool createNew = false, EquipmentModel? original = null)
     {
-        var file = Path.Combine(profilesFolder, RelativePath);
+        var file = LocalPath(profilesFolder);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         using var editLock = new FileStream(file + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         if (createNew || original != null)
@@ -130,11 +136,16 @@ public sealed class EquipmentCatalog
             throw new InvalidDataException("Некорректная версия каталога или повторяющиеся ID изделий.");
         foreach (var model in Models)
         {
-            if (model.LabelCode is < 0 or > 999 ||
-                model.LabelCode.HasValue && !LabelTemplateDefinition.IsSafeLabelText(model.Name) ||
-                model.LabelVariants?.Any(pair => pair.Key is < 0 or > 9 || string.IsNullOrWhiteSpace(pair.Value) ||
-                    !LabelTemplateDefinition.IsSafeLabelText(pair.Value)) == true)
-                throw new InvalidDataException($"Проверьте код этикетки и комплектации изделия «{model.Name}».");
+            if (model.LabelCode is < 0 or > 999)
+                throw new InvalidDataException($"Для «{model.Name}» код модели на этикетке должен быть от 000 до 999.");
+            if (model.LabelCode.HasValue && !LabelTemplateDefinition.IsSafeLabelText(model.Name))
+                throw new InvalidDataException($"Название изделия «{model.Name}» не должно содержать команды принтера (^, ~, кавычки и переносы строк).");
+            if (model.LabelVariants?.Any(pair => pair.Key is < 0 or > 9 || string.IsNullOrWhiteSpace(pair.Value) ||
+                !LabelTemplateDefinition.IsSafeLabelText(pair.Value)) == true)
+                throw new InvalidDataException($"Для «{model.Name}» задайте коды комплектаций от 0 до 9 и названия без команд принтера.");
+            if (model.LabelCabinets?.Any(pair => pair.Key is < 0 or > 9 || string.IsNullOrWhiteSpace(pair.Value) ||
+                !LabelTemplateDefinition.IsSafeLabelText(pair.Value) || model.LabelVariants?.ContainsKey(pair.Key) != true) == true)
+                throw new InvalidDataException($"Для каждой подписи шкафа изделия «{model.Name}» задайте комплектацию с тем же кодом 0–9. Подпись не должна содержать команды принтера.");
             model.SerialSeries?.Validate(model.Name);
             if (model.RtlReport is { } report &&
                 (report.DeviceType <= 0 || string.IsNullOrWhiteSpace(report.DeviceIdentifierVariable) ||
@@ -152,6 +163,12 @@ public sealed class EquipmentCatalog
     }
     public static string SortKey(string? value) => Regex.Replace(Normalize(value), @"\d+", m => m.Value.PadLeft(12, '0'));
     public static bool Matches(string? value, string? query) => Normalize(value).Contains(Normalize(query), StringComparison.Ordinal);
+    public static bool Matches(EquipmentModel model, string? query) => Matches(model.Name, query) ||
+        (model.Aliases?.Any(alias => Matches(alias, query)) == true) ||
+        model.LabelCode is { } code && code.ToString("D3").Contains((query ?? "").Trim(), StringComparison.Ordinal);
+
+    public static string BundledPath => Path.Combine(AppContext.BaseDirectory, "reference", "serials", "equipment-models.json");
+    public static string LocalPath(string profilesFolder) => Path.Combine(profilesFolder, RelativePath);
 
     private static IEnumerable<string> Keys(EquipmentModel model) =>
         new[] { model.Name }.Concat(model.Aliases ?? Array.Empty<string>()).Select(Normalize).Where(k => k.Length > 0).Distinct();

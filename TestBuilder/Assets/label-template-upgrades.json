@@ -86,5 +86,41 @@
     "Command": "^XA^MD10^FO559,35^A0,36,25^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO510,95^A0,25,20^FDSN: {{Serial}}^FS^FO{{BarcodeX}},{{BarcodeTopDots}}^BY{{BarcodeModuleDots}}^BCN,{{BarcodeHeightDots}},N,N,N^FD{{ZplBarcode}}^FS^XZ ",
     "OriginXDots": 494,
     "BarcodeTopDots": 117
+  },
+  {
+    "Id": "PswUpsBox8x2Pro",
+    "Name": "PSW+UPS-Box 8x2Pro",
+    "Language": "ZPL",
+    "UseShortSerial": true,
+    "RequiresMac": true,
+    "MatchServerSerial": true,
+    "SerialOffset": 3200000,
+    "ShortSerialMax": 65535,
+    "ShortSerialDigits": 5,
+    "DeviceCode": 32,
+    "BarcodePrefix": "0032",
+    "WidthDots": 295,
+    "Command": "^XA^MD10^FO494,35^A0,36,{{FitNameWidth}}^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO510,95^A0,25,20^FDSN: {{Serial}}^FS^FO{{BarcodeX}},{{BarcodeTopDots}}^BY{{BarcodeModuleDots}}^BCN,{{BarcodeHeightDots}},N,N,N^FD{{ZplBarcode}}^FS^XZ ",
+    "HeightDots": 154,
+    "OriginXDots": 494,
+    "BarcodeTopDots": 117
+  },
+  {
+    "Id": "Psw2G6FPlus",
+    "Name": "PSW-2G6F+",
+    "Language": "ZPL",
+    "UseShortSerial": true,
+    "RequiresMac": true,
+    "MatchServerSerial": true,
+    "SerialOffset": 600000,
+    "ShortSerialMax": 65535,
+    "ShortSerialDigits": 5,
+    "DeviceCode": 6,
+    "BarcodePrefix": "0006",
+    "WidthDots": 295,
+    "Command": "^XA^MD10^FO559,35^A0,36,{{FitNameWidth}}^FD{{Name}}^FS^FO510,70^A0,25,20^FDMAC: {{Mac}}^FS^FO510,95^A0,25,20^FDSN: {{Serial}}^FS^FO{{BarcodeX}},{{BarcodeTopDots}}^BY{{BarcodeModuleDots}}^BCN,{{BarcodeHeightDots}},N,N,N^FD{{ZplBarcode}}^FS^XZ ",
+    "HeightDots": 154,
+    "OriginXDots": 494,
+    "BarcodeTopDots": 117
   }
 ]

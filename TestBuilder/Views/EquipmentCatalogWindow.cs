@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using TestBuilder.Services;
 using TestBuilder.ViewModels;
@@ -19,8 +20,16 @@ internal sealed class EquipmentCatalogWindow : Window
         MinHeight = 360;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        var search = new TextBox { Watermark = "Поиск по названию или альтернативному названию", Margin = new Thickness(0, 0, 0, 12) };
-        var list = new ListBox { Name = "EquipmentCatalogList" };
+        var search = new TextBox { Watermark = "Название или код этикетки, например 026", Margin = new Thickness(0, 0, 0, 12) };
+        var list = new ListBox { Name = "EquipmentCatalogList", ItemTemplate = new FuncDataTemplate<EquipmentModel>((model, _) =>
+            new StackPanel { Spacing = 2, Margin = new Thickness(0, 4), Children =
+            {
+                new TextBlock { Text = model?.Name, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { FontSize = 12, Opacity = .75, Text = model == null ? "" :
+                    $"Этикетка: {model.LabelCode?.ToString("D3") ?? "не задана"} · " +
+                    (model.SerialSeries is { } series ? $"Номера: {series.FirstSerialNumber}–{series.LastSerialNumber}" :
+                     string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType) ? "Серверный тип не задан" : "Номера выдаёт сервер") }
+            } }) };
         var edit = new Button { Content = "Редактировать изделие…" };
         var add = new Button { Content = "Добавить изделие…" };
         var close = new Button { Content = "Закрыть", IsCancel = true };
@@ -41,7 +50,9 @@ internal sealed class EquipmentCatalogWindow : Window
         root.Children.Add(list);
         var buttons = new WrapPanel { Orientation = Orientation.Horizontal, Children = { add, edit, close } };
         add.Margin = edit.Margin = new Thickness(0, 0, 8, 4);
-        var footer = new StackPanel { Spacing = 6, Margin = new Thickness(0, 12, 0, 0), Children = { status, buttons } };
+        var paths = new SelectableTextBlock { FontSize = 11, TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Text = $"Поставка: {EquipmentCatalog.BundledPath}\nЛокальные изменения: {profile.CatalogOverridesPath}" };
+        var footer = new StackPanel { Spacing = 6, Margin = new Thickness(0, 12, 0, 0), Children = { status, paths, buttons } };
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
         Content = root;
@@ -57,8 +68,7 @@ internal sealed class EquipmentCatalogWindow : Window
             Refresh(saved.Id);
         }
 
-        bool Matches(EquipmentModel model) => EquipmentCatalog.Matches(model.Name, search.Text) ||
-            (model.Aliases?.Any(alias => EquipmentCatalog.Matches(alias, search.Text)) == true);
+        bool Matches(EquipmentModel model) => EquipmentCatalog.Matches(model, search.Text);
 
         void Refresh(string? selectedId)
         {

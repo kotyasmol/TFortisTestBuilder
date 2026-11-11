@@ -6,11 +6,13 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace TestBuilder.Services;
 public sealed class LabelTemplateDefinition
 {
     private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD\{\{Name\}\}\^FS");
+    private static readonly Regex FittedZplSerial = new(@"\^FO(\d+),(\d+)\^A0N?,\d+,\{\{SerialTextWidth\}\}\^FDSN: \{\{Serial\}\}\^FS");
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
@@ -30,6 +32,10 @@ public sealed class LabelTemplateDefinition
     public string BarcodePrefix { get; set; } = "";
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? VariantName { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CabinetName { get; set; }
+    public int CabinetWidthDots { get; set; } = 84;
+    public int CabinetFontHeightDots { get; set; } = 20;
     public int WidthDots { get; set; } = 354;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? HeightDots { get; set; }
@@ -58,15 +64,17 @@ public sealed class LabelTemplateDefinition
             WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
             BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
             PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
+            CabinetWidthDots is < 1 or > 10000 || CabinetFontHeightDots is < 1 or > 32000 ||
             (long)SerialOffset + ShortSerialMax > int.MaxValue || ShortSerialDigits is < 1 or > 10 ||
             FirstSerialNumber.HasValue && (FirstSerialNumber < SerialOffset || FirstSerialNumber > (long)SerialOffset + ShortSerialMax) ||
             string.IsNullOrWhiteSpace(Command) || Command.Length > 100000 || (RequiresMac && !UseShortSerial) || (MatchServerSerial && !UseShortSerial))
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийных номеров и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
             if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
-                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth" }.Contains(token.Groups[1].Value))
+                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth", "Cabinet", "CabinetField", "SerialTextWidth" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (!IsSafeLabelText(Name) || VariantName != null && !IsSafeLabelText(VariantName) ||
+            CabinetName != null && !IsSafeLabelText(CabinetName) ||
             BarcodePrefix.Any(c => !char.IsAsciiDigit(c)))
             throw new InvalidOperationException("Название не должно содержать команды принтера; префикс штрихкода — только цифры.");
     }
@@ -86,7 +94,32 @@ public sealed class LabelTemplateDefinition
             ["TextX"] = textX.ToString(CultureInfo.InvariantCulture) };
         if (Command.Contains("{{FitNameWidth}}", StringComparison.Ordinal))
             values["FitNameWidth"] = FitNameWidth().ToString(CultureInfo.InvariantCulture);
+        var (serialWidth, cabinetField) = CabinetLayout(serial);
+        values["Cabinet"] = CabinetName ?? "";
+        values["CabinetField"] = cabinetField;
+        values["SerialTextWidth"] = serialWidth.ToString(CultureInfo.InvariantCulture);
         return Regex.Replace(Command, @"\{\{(.*?)\}\}", m => values[m.Groups[1].Value]);
+    }
+
+    private (int SerialWidth, string CabinetField) CabinetLayout(string serial)
+    {
+        if (string.IsNullOrWhiteSpace(CabinetName) || !Command.Contains("{{CabinetField}}", StringComparison.Ordinal))
+            return (20, "");
+        var field = FittedZplSerial.Match(Command);
+        if (Language != "ZPL" || !field.Success)
+            throw new InvalidOperationException("Для подписи шкафа нужен ZPL: строка SN с шириной {{SerialTextWidth}} и поле {{CabinetField}}.");
+        var serialX = int.Parse(field.Groups[1].Value, CultureInfo.InvariantCulture);
+        var y = int.Parse(field.Groups[2].Value, CultureInfo.InvariantCulture);
+        const int margin = 8;
+        var cabinetX = OriginXDots + WidthDots - CabinetWidthDots;
+        var serialWidth = Math.Min(20, (cabinetX - margin - serialX) / (serial.Length + 4));
+        var cabinetWidth = Math.Min(12, (CabinetWidthDots - margin) / CabinetName.Length);
+        if (serialX < OriginXDots || serialWidth < 10 || cabinetWidth < 7 ||
+            HeightDots is { } height && y + CabinetFontHeightDots > height || y + CabinetFontHeightDots > BarcodeTopDots)
+            throw new InvalidOperationException("Серийный номер и шкаф не помещаются. Сократите подпись шкафа или настройте ширину и высоту его поля в макете.");
+        // ^FH UTF-8 bytes keep Cyrillic intact through the workstation's CP1251 transport.
+        var hex = string.Concat(Encoding.UTF8.GetBytes(CabinetName).Select(b => "_" + b.ToString("X2", CultureInfo.InvariantCulture)));
+        return (serialWidth, $"^CI28^FO{cabinetX},{y}^A0N,{CabinetFontHeightDots},{cabinetWidth}^FH^FD{hex}^FS^CI0");
     }
 
     private int FitNameWidth()

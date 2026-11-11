@@ -20,6 +20,63 @@ namespace TestBuilder.Tests.Views;
 public class DeviceProfileTests
 {
     [Fact]
+    public async Task Catalog026CanBeFoundRestoredAndSavedWithACabinet()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var folder = new ProfileCopyTests.ProfileFolder();
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            var catalog = new EquipmentCatalogWindow(vm);
+            catalog.Show();
+            try
+            {
+                Layout(catalog);
+                Assert.Single(catalog.GetVisualDescendants().OfType<TextBox>()).Text = "026";
+                Layout(catalog);
+                var list = Assert.Single(catalog.GetVisualDescendants().OfType<ListBox>());
+                Assert.Equal("PSW-2G8F+Box", Assert.IsType<EquipmentModel>(Assert.Single(list.Items)).Name);
+                catalog.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-026.png"));
+                Press(catalog, "Редактировать изделие…");
+                var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                Layout(card);
+                Assert.Equal("026", Field(card, "Код модели на этикетке").Text);
+                Tab(card, 1);
+                Assert.Equal("2600001", Field(card, "Стартовый серийный номер").Text);
+                Field(card, "Последний серийный номер").Text = "2";
+                Press(card, "Сохранить в справочник");
+                Assert.True(card.IsVisible);
+                Assert.Contains(card.GetVisualDescendants().OfType<TextBlock>(), text => text.Text?.Contains("меньше стартового") == true);
+                Press(card, "Заполнить из поставки");
+                Assert.Equal("2665535", Field(card, "Последний серийный номер").Text);
+                Assert.Equal("C0:11:A6:1A", Field(card, "Префикс MAC").Text);
+                Tab(card, 3);
+                Field(card, "Шкаф комплектации 1").Text = "TestCase";
+                Layout(card);
+                card.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-cabinets.png"));
+                Press(card, "Сохранить в справочник");
+                Assert.False(card.IsVisible);
+                var saved = EquipmentCatalog.Load(folder.Path).Resolve("psw-2g8f-plus-box", null)!;
+                Assert.Equal("TestCase", saved.LabelCabinets![1]);
+                Assert.Equal(26, saved.LabelCode);
+            }
+            finally { catalog.Close(); }
+
+            static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
+            static void Press(Window window, string caption)
+            {
+                window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, caption))
+                    .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Layout(window);
+            }
+            static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
+                .Single(field => AutomationProperties.GetName(field) == caption);
+            static void Tab(Window window, int index) { window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index; Layout(window); }
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task CatalogWindowCreatesAndEditsRtlModelWithoutSwitchingTheOpenProfile()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));

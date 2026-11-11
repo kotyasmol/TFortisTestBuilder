@@ -44,11 +44,14 @@ public sealed class LabelTemplatesWindow : Window
         var preview = new LabelPreviewControl { Height = 150, MaxWidth = 500 };
         var paperSize = new TextBlock();
         var previewMessage = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
-        previewPanel.Children.Add(preview); previewPanel.Children.Add(paperSize); previewPanel.Children.Add(previewMessage);
+        var cabinetSample = new TextBox { Watermark = "Шкаф для предпросмотра", Name = "CabinetPreviewSample" };
+        previewPanel.Children.Add(preview); previewPanel.Children.Add(paperSize); previewPanel.Children.Add(cabinetSample); previewPanel.Children.Add(previewMessage);
         void UpdatePreview()
         {
             var template = list.SelectedItem as LabelTemplateDefinition;
-            preview.Preview = template == null ? null : LabelPreview.FromInput(template, "", "");
+            var sample = template?.Copy();
+            if (sample != null && !string.IsNullOrWhiteSpace(cabinetSample.Text)) sample.CabinetName = cabinetSample.Text.Trim();
+            preview.Preview = sample == null ? null : LabelPreview.FromInput(sample, "", "");
             paperSize.Text = template?.HeightDots is int height && template.PrinterDpi > 0
                 ? $"{template.WidthDots * 25.4 / template.PrinterDpi:0.#} × {height * 25.4 / template.PrinterDpi:0.#} мм · {template.PrinterDpi} dpi"
                 : "";
@@ -57,11 +60,13 @@ public sealed class LabelTemplatesWindow : Window
         var previewTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         previewTimer.Tick += (_, _) => { previewTimer.Stop(); UpdatePreview(); };
         void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
+        cabinetSample.TextChanged += (_, _) => SchedulePreview();
         Closed += (_, _) => previewTimer.Stop();
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
             ("Разрешение принтера, dpi (203 или 300)", "PrinterDpi"), ("Ширина этикетки, точки", "WidthDots"), ("Высота этикетки, точки", "HeightDots"),
             ("Левый край этикетки, точки", "OriginXDots"), ("Ширина узкой полосы ZPL, точки", "BarcodeModuleDots"),
             ("Отступ штрихкода ZPL сверху, точки", "BarcodeTopDots"), ("Высота штрихкода ZPL, точки", "BarcodeHeightDots"),
+            ("Ширина поля шкафа ZPL, точки", "CabinetWidthDots"), ("Высота текста шкафа ZPL, точки", "CabinetFontHeightDots"),
             ("Смещение полного серийного номера", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
             ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
         {
@@ -75,7 +80,7 @@ public sealed class LabelTemplatesWindow : Window
             var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
             box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };
         }
-        fields.Children.Add(new TextBlock { Text = "Команда принтера. Данные: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Variant}}, {{Barcode}}. Для компактного Code 128 в ZPL используйте {{ZplBarcode}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        fields.Children.Add(new TextBlock { Text = "Команда принтера. Данные: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Variant}}, {{Cabinet}}, {{Barcode}}. ZPL: {{ZplBarcode}} — компактный Code 128; {{CabinetField}} — шкаф рядом с SN с шириной {{SerialTextWidth}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
         command.TextChanged += (_, _) => SchedulePreview();
