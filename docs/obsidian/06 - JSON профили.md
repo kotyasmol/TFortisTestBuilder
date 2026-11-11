@@ -3,7 +3,7 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-11-10
+updated: 2026-11-11
 ---
 
 # JSON профили
