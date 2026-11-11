@@ -106,14 +106,12 @@ namespace TestBuilder.Domain.Execution
                 var failedCheck = context.ReportEntries.Skip(reportStart).FirstOrDefault(entry => !entry.IsSuccess);
                 var observedResult = failedCheck != null || (context.StopOnPreparationError && context.HasCriticalError)
                     ? StepResult.False : result;
-                if (context.StopOnPreparationError && observedResult == StepResult.False)
+                if (context.StopOnPreparationError && result == StepResult.False && failedCheck != null)
                 {
-                    result = StepResult.False;
-                    if (failedCheck != null)
-                        context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId)
-                        {
-                            Code = failedCheck.ErrorCode ?? diagnostics.Code
-                        };
+                    context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId)
+                    {
+                        Code = failedCheck.ErrorCode ?? diagnostics.Code
+                    };
                 }
                 if (context.ExecutionObserver != null)
                     await context.ExecutionObserver.NodeCompletedAsync(node, observedResult, context, CancellationToken.None);

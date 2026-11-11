@@ -290,8 +290,19 @@ public class DeviceProfileTests
 
                 SelectModel("psw-plus-ex-8x2pro");
                 Assert.True(badge.IsEffectivelyVisible);
-                Assert.Equal("3500001–3565535", badge.Text);
-                Assert.Equal("PSW+Ex 8x2Pro · 3500001–3565535", ToolTip.GetTip(Assert.IsType<Border>(badge.Parent)));
+                Assert.Equal("Серийные номера: 3500001–3565535", badge.Text);
+                Assert.Equal("Тип на сервере: PSW+Ex 8x2Pro\nСерийные номера: от 3500001 до 3565535", ToolTip.GetTip(Assert.IsType<Border>(badge.Parent)));
+                var modelPicker = view.FindControl<ComboBox>("DeviceModelPicker")!;
+                var kindPicker = view.FindControl<ComboBox>("ProfileProductKindInput")!;
+                var modelCenter = modelPicker.TranslatePoint(new Rect(modelPicker.Bounds.Size).Center, view)!.Value.Y;
+                var kindCenter = kindPicker.TranslatePoint(new Rect(kindPicker.Bounds.Size).Center, view)!.Value.Y;
+                Assert.InRange(Math.Abs(modelCenter - kindCenter), 0, 1);
+                foreach (var picker in new[] { modelPicker, kindPicker })
+                {
+                    var label = picker.GetVisualDescendants().OfType<TextBlock>().First(text => !string.IsNullOrWhiteSpace(text.Text));
+                    Assert.True(label.TextLayout.WidthIncludingTrailingWhitespace <= label.Bounds.Width + 1);
+                    Assert.True(label.TextLayout.Height <= label.Bounds.Height + 1);
+                }
                 var artifacts = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
                 if (artifacts != null)
                 {
@@ -303,21 +314,21 @@ public class DeviceProfileTests
 
                 vm.UseCatalogSerials = false;
                 Layout();
-                Assert.Equal("3500001–3565535", badge.Text);
+                Assert.Equal("Серийные номера: 3500001–3565535", badge.Text);
                 Assert.Contains("Профиль использует настройки нод.", Assert.IsType<string>(ToolTip.GetTip((Border)badge.Parent!)));
                 SelectModel("psw-plus-box-8x2pro");
-                Assert.Equal("3300001–3365535", badge.Text);
+                Assert.Equal("Серийные номера: 3300001–3365535", badge.Text);
                 SelectModel("rtl-sw");
-                Assert.Equal("Диапазон задаёт сервер", badge.Text);
+                Assert.Equal("Серийные номера: выдаёт сервер", badge.Text);
                 SelectModel("psw-plus-ups-ex-8x2pro");
-                Assert.Equal("Серия не задана", badge.Text);
+                Assert.Equal("Серийные номера: не настроены", badge.Text);
 
                 SelectModel("psw-plus-ex-8x2pro");
                 var model = vm.SelectedEquipmentModel!;
                 var series = model.SerialSeries! with { FirstSerialNumber = 3500020, LastSerialNumber = 3565500 };
                 vm.SaveCatalogModel(model with { SerialSeries = series }, createNew: false);
                 Layout();
-                Assert.Equal("3500020–3565500", badge.Text);
+                Assert.Equal("Серийные номера: 3500020–3565500", badge.Text);
             }
             finally { window.Close(); }
 

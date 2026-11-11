@@ -51,7 +51,7 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken)
         {
             if (_repeat) return await RepeatAsync(context, cancellationToken);
-            var stopOnError = _stopOnError || context.StopOnPreparationError;
+            var stopOnError = _stopOnError;
             if (_fromSlaveId > _toSlaveId)
             {
                 _logger.Warning(
@@ -108,13 +108,12 @@ namespace TestBuilder.Domain.Steps
         }
         private async Task<StepResult> RepeatAsync(TestContext context, CancellationToken token)
         {
-            var stopOnPreparationError = context.StopOnPreparationError;
             if (_repeatCount is < 1 or > 100000 || _repeatDelayMs is < 0 or > 3600000 ||
                 string.IsNullOrWhiteSpace(_indexVariable) || _indexVariable == "slaveId")
             {
                 _logger.Warning("[ОШИБКА] For: число повторов 1..100000, задержка 0..3600000 мс; нужна отдельная переменная счётчика.");
                 context.AddReportEntry("Цикл For", false, "Некорректные параметры повторов.");
-                return stopOnPreparationError || _stopOnError ? StepResult.False : StepResult.Next;
+                return _stopOnError ? StepResult.False : StepResult.Next;
             }
             var previousSlave = context.CurrentSlaveId;
             var hadIndex = context.Variables.TryGetValue(_indexVariable, out var previousIndex);
@@ -135,7 +134,7 @@ namespace TestBuilder.Domain.Steps
                     _logger.Info($"[ШАГ] For: повтор {i}/{_repeatCount}, slave не меняется.");
                     var iterationReportStart = context.ReportEntries.Count;
                     var result = await ExecuteIterationAsync(executor, context, token,
-                        $"Цикл For: повтор {i}", tolerateException: !stopOnPreparationError && (!_stopOnError || _untilSuccess));
+                        $"Цикл For: повтор {i}", tolerateException: !_stopOnError || _untilSuccess);
                     token.ThrowIfCancellationRequested();
                     var success = result == ExecutionStatus.Completed && context.HasCriticalError == initialCritical &&
                         (!_untilSuccess || !context.ReportEntries.Skip(iterationReportStart).Any(entry => !entry.IsSuccess));
@@ -143,7 +142,7 @@ namespace TestBuilder.Domain.Steps
                     if (!success)
                     {
                         anyFailure = true;
-                        if (stopOnPreparationError || (!_untilSuccess && _stopOnError)) return StepResult.False;
+                        if (!_untilSuccess && _stopOnError) return StepResult.False;
                         if (_untilSuccess && i < _repeatCount)
                         {
                             // Failed attempts are diagnostics, not final product failures.

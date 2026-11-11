@@ -71,8 +71,8 @@ public class FirstRunNodeTests
         {
             await siblingStarted.Task.WaitAsync(token);
             context.AddReportEntry("ARP", false, "Недостаточно прав");
-            return StepResult.True;
-        })) { OnTrue = join };
+            return StepResult.False;
+        })) { OnFalse = join };
         var sibling = new TestNode(new AsyncStep(async (_, token) =>
         {
             siblingStarted.SetResult();
@@ -94,16 +94,31 @@ public class FirstRunNodeTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task PreparationStopsLoopAtFirstFailure(bool repeatOnSameSlave)
+    public async Task PreparationStopsLoopAtFirstFailureWhenConfigured(bool repeatOnSameSlave)
     {
         var iterations = 0;
         var step = new TestNode(new ActionStep(() => { iterations++; return StepResult.False; }));
-        var loop = new ForEachSlaveStep(1, 3, 1, stopOnError: false, new CompiledGraph(step),
-            NullLogger.Instance, repeatOnSameSlave, repeatCount: 3, untilSuccess: true);
+        var loop = new ForEachSlaveStep(1, 3, 1, stopOnError: true, new CompiledGraph(step),
+            NullLogger.Instance, repeatOnSameSlave, repeatCount: 3);
         var context = new TestContext(new RegisterState()) { IsPreparation = true };
 
         Assert.Equal(StepResult.False, await loop.ExecuteAsync(context, default));
         Assert.Equal(1, iterations);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreparationContinuesLoopWhenStoppingIsDisabled(bool repeatOnSameSlave)
+    {
+        var iterations = 0;
+        var step = new TestNode(new ActionStep(() => { iterations++; return StepResult.False; }));
+        var loop = new ForEachSlaveStep(1, 3, 1, stopOnError: false, new CompiledGraph(step),
+            NullLogger.Instance, repeatOnSameSlave, repeatCount: 3);
+        var context = new TestContext(new RegisterState()) { IsPreparation = true };
+
+        Assert.Equal(StepResult.Next, await loop.ExecuteAsync(context, default));
+        Assert.Equal(3, iterations);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:services="using:TestBuilder.Services"
              xmlns:nodify="using:Nodify"
              xmlns:nodifyvm="using:TestBuilder.ViewModels.NodifyVM"
              xmlns:stepvm="using:TestBuilder.ViewModels.StepVM"
@@ -210,41 +211,42 @@
     <Border Grid.Row="0" Padding="10,8,10,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-        <Grid ColumnDefinitions="Auto,Auto,236,Auto,Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
-          <Button Command="{Binding ToggleProfilesCommand}" ToolTip.Tip="{Binding ProfilesToggleTip}" AutomationProperties.Name="{Binding ProfilesToggleTip}" Margin="0,0,10,0" Padding="8,6">
-            <PathIcon Width="18" Height="18" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
-          </Button>
-          <TextBlock Grid.Column="1" Text="Устройство" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,6,0">
+        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
+          <TextBlock Text="Устройство" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+          <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,0,6,0" VerticalAlignment="Center">
             <ComboBox x:Name="DeviceModelPicker" ItemsSource="{Binding EquipmentModels}"
                       SelectedItem="{Binding SelectedEquipmentModel, Mode=TwoWay}" PlaceholderText="{Binding EquipmentPlaceholder}"
-                      HorizontalAlignment="Stretch" VerticalContentAlignment="Center" MinHeight="32"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Center" MinHeight="32" Padding="10,5"
                       IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Устройство"
-                      ToolTip.Tip="Выберите устройство из справочника. Если его нет, нажмите «+»." />
+                      ToolTip.Tip="Выберите устройство из справочника. Если его нет, нажмите «+».">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="services:EquipmentModel">
+                  <TextBlock Text="{Binding Name}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
             <Button Grid.Column="1" x:Name="AddCatalogModelButton" Classes="graphTool icon" Margin="4,0,0,0"
                     Click="OnAddCatalogModel" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
                     ToolTip.Tip="Добавить изделие в справочник" AutomationProperties.Name="Добавить изделие в справочник">
               <PathIcon Width="16" Height="16" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" />
             </Button>
           </Grid>
-          <Border Grid.Column="3" Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6"
-                  Margin="0,0,6,0" Padding="7,4" VerticalAlignment="Center"
+          <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6"
+                  Margin="6,6,0,0" Padding="7,4" VerticalAlignment="Center"
                   IsVisible="{Binding CatalogSerialSeriesCaption, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}"
                   ToolTip.Tip="{Binding CatalogSerialSeriesSummary}">
             <TextBlock x:Name="CatalogSerialSeriesBadge" Text="{Binding CatalogSerialSeriesCaption}"
                        Foreground="{DynamicResource PrimaryTextBrush}" FontSize="{StaticResource FontCaption}" FontWeight="SemiBold" />
           </Border>
-          <TextBlock Grid.Column="4" Text="·" FontSize="18" VerticalAlignment="Center" Margin="0,0,8,0"
-                     IsVisible="{Binding CatalogSerialSeriesCaption, Converter={x:Static avaloniaConverters:StringConverters.IsNullOrEmpty}}"
-                     Foreground="{DynamicResource TextSecondaryBrush}" />
-          <AutoCompleteBox x:Name="ProfileNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Column="5" ItemsSource="{Binding ProfileNameSuggestions}"
+          <AutoCompleteBox x:Name="ProfileNameInput" Classes="profileIdentity" DataContextChanged="OnProfileFieldDataContextChanged" LostFocus="OnProfileFieldLostFocus" KeyDown="OnProfileFieldKeyDown" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" ItemsSource="{Binding ProfileNameSuggestions}"
                    Text="{Binding ProfileDescription, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Watermark="Название проверки"
                    FilterMode="ContainsOrdinal" IsTextCompletionEnabled="False" MinimumPrefixLength="1"
                    Padding="10,5" MinHeight="32" IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Название профиля"
                    ToolTip.Tip="Полное имя: устройство · название проверки. Новое название и «Сохранить» создают копию. С прежним названием обновляется открытый профиль." />
-          <ComboBox Grid.Column="6" x:Name="ProfileProductKindInput" ItemsSource="{Binding ProductKinds}"
+          <ComboBox Grid.Column="2" x:Name="ProfileProductKindInput" ItemsSource="{Binding ProductKinds}"
                     SelectedItem="{Binding ProfileProductKind, Mode=TwoWay}" IsEnabled="{Binding CanEditGraph}"
-                    MinWidth="124" MinHeight="32" Margin="6,0,0,0" VerticalContentAlignment="Center"
+                    MinWidth="160" MinHeight="32" Padding="10,5" HorizontalAlignment="Right" VerticalAlignment="Center" VerticalContentAlignment="Center"
                     AutomationProperties.Name="Тип изделия" ToolTip.Tip="Тип изделия" />
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,0,0,8" IsVisible="{Binding CanGoBackGraph}">
@@ -269,8 +271,10 @@
                   ToolTip.Tip="Остановить" AutomationProperties.Name="Остановить">
             <PathIcon Width="16" Height="16" Data="M5 5 H19 V19 H5 Z" />
           </Button>
-          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding SaveGraphCommand}" Classes="graphTool"
-                  Content="Сохранить" ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль" />
+          <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding SaveGraphCommand}" Classes="graphTool icon"
+                  ToolTip.Tip="Сохранить профиль" AutomationProperties.Name="Сохранить профиль">
+            <PathIcon Width="16" Height="16" Data="M4 3 H17 L21 7 V21 H3 V3 Z M7 5 V10 H16 V5 Z M6 13 V19 H18 V13 Z M13 6 H15 V9 H13 Z" />
+          </Button>
           <Button IsVisible="{Binding !IsActionGraphEditor}" Command="{Binding ReloadProfileCommand}" Classes="graphTool icon"
                   ToolTip.Tip="Перечитать сохранённый профиль" AutomationProperties.Name="Обновить профиль">
             <PathIcon Width="16" Height="16" Data="M17.65 6.35 A8 8 0 1 0 19.9 13 H17.88 A6 6 0 1 1 16.24 7.76 L13 11 H21 V3 Z" />

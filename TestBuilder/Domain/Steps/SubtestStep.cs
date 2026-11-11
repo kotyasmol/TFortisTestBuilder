@@ -50,7 +50,7 @@ namespace TestBuilder.Domain.Steps
             var failureState = ExecutionFailureState.Capture(context);
             var reportStart = context.ReportEntries.Count;
             context.IsCleanup |= _runOnFailure;
-            var stopOnError = _stopOnError || context.StopOnPreparationError;
+            var stopOnError = _stopOnError;
             try
             {
                 status = await executor.ExecuteAsync(

@@ -1374,13 +1374,16 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
             executionStatus = result;
             runFailure = context.CriticalFailure ?? context.Failure;
-            if (runFailure == null && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
+            if (runFailure == null && !preparing && context.ReportEntries.FirstOrDefault(entry => !entry.IsSuccess) is { } failedCheck)
                 runFailure = new ExecutionFailure(failedCheck.Name, failedCheck.Value)
                 {
                     Code = failedCheck.ErrorCode ?? TestErrorCode.Unexpected
                 };
 
-            if (result != ExecutionStatus.Completed || context.HasCriticalError || context.ReportEntries.Any(e => !e.IsSuccess))
+            // Preparation follows the nodes' error policies. Optional failures stay in
+            // its log, but do not prevent starting the device check or seed its report.
+            if (result != ExecutionStatus.Completed || context.HasCriticalError ||
+                (!preparing && context.ReportEntries.Any(e => !e.IsSuccess)))
             {
                 // A completed graph has already run its normal final actions. Failed report
                 // entries affect the verdict, but must not start the emergency path again.

@@ -49,8 +49,9 @@ public class ContinueOnErrorTests
     }
 
     [Theory]
-    [InlineData(false)] [InlineData(true)]
-    public async Task OptionalSubtest_RestoresNestedFailureFlags_AndDoesNotCancelParallelSibling(bool throws)
+    [InlineData(false, false)] [InlineData(true, false)]
+    [InlineData(false, true)] [InlineData(true, true)]
+    public async Task OptionalSubtest_RestoresNestedFailureFlags_AndDoesNotCancelParallelSibling(bool throws, bool preparation)
     {
         var body = Node((context, _) =>
         {
@@ -65,7 +66,7 @@ public class ContinueOnErrorTests
         var sibling = Node((_, _) => { siblingRan = true; return StepResult.Next; }); sibling.Next = join;
         var root = new TestNode(null);
         root.ParallelTransitions[StepResult.Next] = new(new[] { optional, sibling }, join);
-        var context = Context();
+        var context = new TestContext(new RegisterState()) { IsPreparation = preparation };
         Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(root, context, default));
         Assert.True(joined); Assert.True(siblingRan);
         Assert.False(context.HasCriticalError); Assert.False(context.HasExecutionException);
@@ -139,14 +140,15 @@ public class ContinueOnErrorTests
         Assert.Equal(ExecutionStatus.Failed, await new TestExecutor().ExecuteAsync(compiler.Compile(conditional, check, true).StartNode, Context(), default));
     }
 
-    [Fact]
-    public async Task UncheckedHttpNode_HandlesTransportException_AndRecordsIt()
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task UncheckedHttpNode_HandlesTransportException_AndRecordsIt(bool preparation)
     {
         using var bus = new ModbusService();
         using var compiler = new GraphCompiler(bus, new ThrowingHttp(), NullLogger.Instance);
         var node = new ReadHttpVariableNodeViewModel { FailOnError = false, BaseUrl = "http://dut.test" };
         var graph = new GraphWorkspaceViewModel(); graph.Nodes.Add(node);
-        var context = Context();
+        var context = new TestContext(new RegisterState()) { IsPreparation = preparation };
         Assert.Equal(ExecutionStatus.Completed, await new TestExecutor().ExecuteAsync(compiler.Compile(graph, node, true).StartNode, context, default));
         Assert.Contains(context.ReportEntries, entry => !entry.IsSuccess && entry.Value.Contains("HTTP failed"));
     }

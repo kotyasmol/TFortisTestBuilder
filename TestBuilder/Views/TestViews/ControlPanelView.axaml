@@ -5,21 +5,29 @@
 			 x:DataType="vm:TestViewModel">
 
   <StackPanel Spacing="12">
-    <StackPanel Spacing="4">
-      <TextBlock Text="{Binding StandSectionTitle}" TextWrapping="Wrap" Classes="sectionTitle" Foreground="{DynamicResource PrimaryTextBrush}" />
-      <TextBlock Text="{Binding StandSerialCaption}" IsVisible="{Binding HasStandSerial}" TextWrapping="Wrap"
-                 FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
-    </StackPanel>
-    <Button Content="{Binding ConnectionButtonText}" Command="{Binding ToggleConnectionCommand}"
-            Classes="primary" HorizontalAlignment="Stretch" MinHeight="40" />
-    <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}" TextWrapping="Wrap"
-               FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
-    <StackPanel IsVisible="{Binding NeedsStandInspection}" Spacing="8">
-      <TextBlock Text="{Binding StandInspectionMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DangerTextBrush}" />
-      <TextBlock Text="После ручного обесточивания и проверки отключитесь от стенда в программе и подтвердите:" TextWrapping="Wrap" />
-      <Button Command="{Binding ConfirmStandInspectionCommand}" IsEnabled="{Binding !IsConnected}">
-        <TextBlock Text="Стенд проверен и обесточен" TextWrapping="Wrap" />
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="4" IsVisible="{Binding !IsProfilesCollapsed}">
+        <TextBlock Text="{Binding StandSectionTitle}" TextWrapping="Wrap" Classes="sectionTitle" Foreground="{DynamicResource PrimaryTextBrush}" />
+        <TextBlock Text="{Binding StandSerialCaption}" IsVisible="{Binding HasStandSerial}" TextWrapping="Wrap"
+                   FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </StackPanel>
+      <Button Grid.Column="1" Command="{Binding ToggleProfilesCommand}" ToolTip.Tip="{Binding ProfilesToggleTip}"
+              AutomationProperties.Name="{Binding ProfilesToggleTip}" VerticalAlignment="Top" Padding="5" MinWidth="28" MinHeight="28">
+        <PathIcon Width="16" Height="16" Data="M3 3 H21 V21 H3 Z M5 5 V19 H8 V5 Z M10 5 V19 H19 V5 Z" />
       </Button>
+    </Grid>
+    <StackPanel Spacing="12" IsVisible="{Binding !IsProfilesCollapsed}">
+      <Button Content="{Binding ConnectionButtonText}" Command="{Binding ToggleConnectionCommand}"
+              Classes="primary" HorizontalAlignment="Stretch" MinHeight="40" />
+      <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding HasStatusMessage}" TextWrapping="Wrap"
+                 FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
+      <StackPanel IsVisible="{Binding NeedsStandInspection}" Spacing="8">
+        <TextBlock Text="{Binding StandInspectionMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DangerTextBrush}" />
+        <TextBlock Text="После ручного обесточивания и проверки отключитесь от стенда в программе и подтвердите:" TextWrapping="Wrap" />
+        <Button Command="{Binding ConfirmStandInspectionCommand}" IsEnabled="{Binding !IsConnected}">
+          <TextBlock Text="Стенд проверен и обесточен" TextWrapping="Wrap" />
+        </Button>
+      </StackPanel>
     </StackPanel>
   </StackPanel>
 </UserControl>

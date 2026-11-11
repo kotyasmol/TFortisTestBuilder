@@ -49,10 +49,15 @@ public class UsabilityTests
                 var graphWidth = graph.Bounds.Width;
                 var sameNodes = vm.TestVM.Nodes.ToArray();
                 var toggle = window.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.TestVM.ToggleProfilesCommand));
+                var sidebar = window.FindControl<TestView>("TestViewControl")!.FindControl<RoundedPanel>("ProfileSidebar")!;
+                Assert.Contains(sidebar, toggle.GetVisualAncestors());
+                Assert.Equal(260, sidebar.Bounds.Width);
                 Click(window, toggle); Layout(window);
                 Assert.True(vm.TestVM.IsProfilesCollapsed);
-                Assert.True(graph.Bounds.Width >= graphWidth + 250);
+                Assert.Equal(40, sidebar.Bounds.Width);
+                Assert.True(graph.Bounds.Width >= graphWidth + 210);
                 Assert.Equal(sameNodes, vm.TestVM.Nodes);
+                Assert.True(toggle.IsEffectivelyVisible);
                 Capture(window, $"editor-board-collapsed-{width}-{dark}");
                 Click(window, toggle); Layout(window);
                 Assert.False(vm.TestVM.IsProfilesCollapsed);

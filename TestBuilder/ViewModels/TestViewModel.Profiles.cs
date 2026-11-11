@@ -127,9 +127,9 @@ public partial class TestViewModel
         {
             var model = SelectedEquipmentModel;
             if (model?.SerialSeries is { } series)
-                return $"{series.FirstSerialNumber}–{series.LastSerialNumber}";
+                return $"Серийные номера: {series.FirstSerialNumber}–{series.LastSerialNumber}";
             if (!UseCatalogSerials) return "";
-            return string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ? "Серия не задана" : "Диапазон задаёт сервер";
+            return string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ? "Серийные номера: не настроены" : "Серийные номера: выдаёт сервер";
         }
     }
 
@@ -140,7 +140,7 @@ public partial class TestViewModel
             var model = SelectedEquipmentModel;
             if (model?.SerialSeries is { } series)
             {
-                var summary = $"{series.ServerDeviceType} · {series.FirstSerialNumber}–{series.LastSerialNumber}";
+                var summary = $"Тип на сервере: {series.ServerDeviceType}\nСерийные номера: от {series.FirstSerialNumber} до {series.LastSerialNumber}";
                 return UseCatalogSerials ? summary : summary + "\nПрофиль использует настройки нод.";
             }
             return model?.EffectiveServerDeviceType is { Length: > 0 } serverType
