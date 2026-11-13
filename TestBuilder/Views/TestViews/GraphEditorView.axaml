@@ -89,7 +89,8 @@
                   Classes="nodeColorTrigger nodeHeaderAction"
                   Theme="{StaticResource NodeHeaderButtonTheme}" Width="24" Height="24" MinWidth="24" MinHeight="24" Padding="4"
                   Background="Transparent" Foreground="{Binding NodeHeaderTextBrush}"
-                  ToolTip.Tip="Изменить цвет ноды" AutomationProperties.Name="Изменить цвет ноды">
+                  ToolTip.Tip="{Binding ColorHint}" AutomationProperties.Name="Цвет и проверка ноды"
+                  IsEnabled="{Binding $parent[testviews:GraphEditorView].((vm:TestViewModel)DataContext).CanEditGraph}">
             <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding NodeHeaderTextBrush}" StrokeThickness="1.8"
                    StrokeLineCap="Round"
                   Data="M14 5 L17 2 Q19 0 21 2 Q23 4 21 6 L18 9 M12 5 L19 12 M14 7 L4 17 L3 21 L7 20 L17 10 M5 16 L8 19" />
@@ -100,15 +101,22 @@
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         CornerRadius="8">
-                  <UniformGrid Columns="4">
-                    <Button Classes="nodeColorChoice colorSwatch" Background="#3B82F6" ToolTip.Tip="Синий" Command="{Binding SelectColorCommand}" CommandParameter="blue" />
+                  <StackPanel Spacing="8" MaxWidth="340" IsEnabled="{Binding #ColorPickerTrigger.IsEnabled}">
+                    <TextBlock Text="{Binding ModelReviewText}" IsVisible="{Binding HasModelReview}" TextWrapping="Wrap" />
+                    <Button Content="{Binding ConfirmModelReviewCaption}" IsVisible="{Binding CanConfirmModelReview}"
+                            Command="{Binding AcknowledgeModelReviewCommand}" />
+                    <Button Content="Автоматический цвет" Command="{Binding ResetColorCommand}"
+                            ToolTip.Tip="Голубой — обычная нода, красный — обработка ошибки, жёлтый — проверить после смены модели." />
+                    <UniformGrid Columns="4">
+                    <Button Classes="nodeColorChoice colorSwatch" Background="#38BDF8" ToolTip.Tip="Голубой" Command="{Binding SelectColorCommand}" CommandParameter="blue" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#14B8A6" ToolTip.Tip="Бирюзовый" Command="{Binding SelectColorCommand}" CommandParameter="turquoise" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#22C55E" ToolTip.Tip="Зелёный" Command="{Binding SelectColorCommand}" CommandParameter="green" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#EAB308" ToolTip.Tip="Жёлтый" Command="{Binding SelectColorCommand}" CommandParameter="yellow" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#F97316" ToolTip.Tip="Оранжевый" Command="{Binding SelectColorCommand}" CommandParameter="orange" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#EF4444" ToolTip.Tip="Красный" Command="{Binding SelectColorCommand}" CommandParameter="red" />
                     <Button Classes="nodeColorChoice colorSwatch" Background="#A855F7" ToolTip.Tip="Фиолетовый" Command="{Binding SelectColorCommand}" CommandParameter="purple" />
-                  </UniformGrid>
+                    </UniformGrid>
+                  </StackPanel>
                 </Border>
               </Flyout>
             </Button.Flyout>
@@ -340,6 +348,13 @@
             </Button>
             <TextBlock Text="{Binding ViewportZoom, ElementName=Editor, StringFormat={}{0:0%}}" VerticalAlignment="Center" Margin="2,0,0,4" />
           </StackPanel>
+          <Button IsVisible="{Binding HasModelReview}" Content="{Binding ModelReviewSummary}"
+                  Background="#FDE68A" Foreground="#422006" Margin="0,0,0,4"
+                  ToolTip.Tip="Жёлтые ноды требуют проверки после смены модели. Нажмите значок цвета в заголовке ноды для пояснения и подтверждения.">
+            <Button.Flyout><Flyout><ScrollViewer MaxHeight="420" Width="460">
+              <TextBlock Text="{Binding ModelReviewDetails}" TextWrapping="Wrap" />
+            </ScrollViewer></Flyout></Button.Flyout>
+          </Button>
         </WrapPanel>
         <Border Grid.Row="3" IsVisible="{Binding HasPartialRun}" Background="{DynamicResource PrimarySoftBrush}"
                 CornerRadius="8" Padding="10" Margin="0,4,0,0">

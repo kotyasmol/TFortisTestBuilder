@@ -16,7 +16,7 @@ namespace TestBuilder.ViewModels.NodifyVM
     {
         private static readonly IReadOnlyList<NodeColorOption> ColorOptions = new NodeColorOption[]
         {
-            new("blue", "Синий", Color.Parse("#3B82F6")),
+            new("blue", "Голубой", Color.Parse("#38BDF8")),
             new("turquoise", "Бирюзовый", Color.Parse("#14B8A6")),
             new("green", "Зелёный", Color.Parse("#22C55E")),
             new("yellow", "Жёлтый", Color.Parse("#EAB308")),
@@ -26,7 +26,7 @@ namespace TestBuilder.ViewModels.NodifyVM
         };
 
         private static readonly IBrush DefaultBorderBrush =
-            new SolidColorBrush(Color.FromRgb(99, 102, 241));
+            new SolidColorBrush(Color.Parse("#38BDF8"));
 
         private static readonly IBrush ExecutingBorderBrush =
             new SolidColorBrush(Color.FromRgb(255, 214, 10));
@@ -66,6 +66,40 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty] private bool hasExecutionError;
         [ObservableProperty] private bool hasExecutionSucceeded;
         private NodeColorOption selectedColor = ColorOptions[0];
+        private bool _customColor;
+        private bool _failureHandling;
+        private int _descendantReviews;
+        [ObservableProperty]
+        private TestBuilder.Models.NodeModelReview? modelReview;
+        public bool HasDirectModelReview => ModelReview != null;
+        public bool HasModelReview => HasDirectModelReview || _descendantReviews > 0;
+        public string ModelReviewText => ModelReview is { } review
+            ? $"Для «{review.ModelName}»:\n{review.Message}" + (_descendantReviews > 0 ? $"\nТакже проверьте вложенные шаги ({_descendantReviews})." : "")
+            : _descendantReviews > 0 ? $"Внутри есть шаги для проверки после смены модели ({_descendantReviews}). Откройте тело ноды." : "";
+        public string ColorHint => HasModelReview ? ModelReviewText :
+            _failureHandling ? "Обработка ошибки" : "Цвет ноды";
+        public bool CanConfirmModelReview => HasModelReview;
+        public string ConfirmModelReviewCaption => this is SubtestNodeViewModel ? "Подтест проверен для этой модели" :
+            this is ICompositeNodeViewModel ? "Цикл проверен для этой модели" : "Нода проверена для этой модели";
+        public bool IsFailureHandling => _failureHandling;
+        internal Action<NodeViewModel>? ConfirmReviewRequested { get; set; }
+        [RelayCommand]
+        private void AcknowledgeModelReview() => ConfirmReviewRequested?.Invoke(this);
+
+        partial void OnModelReviewChanged(TestBuilder.Models.NodeModelReview? value) => NotifyPresentation();
+        internal void SetPresentation(bool failureHandling, int descendantReviews)
+        {
+            if (_failureHandling == failureHandling && _descendantReviews == descendantReviews) return;
+            _failureHandling = failureHandling;
+            _descendantReviews = descendantReviews;
+            NotifyPresentation();
+        }
+        private void NotifyPresentation()
+        {
+            foreach (var name in new[] { nameof(HasDirectModelReview), nameof(HasModelReview), nameof(ModelReviewText),
+                nameof(ColorHint), nameof(CanConfirmModelReview), nameof(IsFailureHandling), nameof(NodeColorBrush), nameof(NodeHeaderTextBrush) })
+                OnPropertyChanged(name);
+        }
 
         public ObservableCollection<ConnectorViewModel> Input { get; } = new();
         public ObservableCollection<ConnectorViewModel> Output { get; } = new();
@@ -95,14 +129,20 @@ namespace TestBuilder.ViewModels.NodifyVM
         public NodeColorOption SelectedColor
         {
             get => selectedColor;
+            set => ColorSelection = new(value.Key, true);
+        }
+
+        // One history entry restores both the manual color and its automatic/manual mode.
+        public NodeColorSelection ColorSelection
+        {
+            get => new(selectedColor.Key, _customColor);
             set
             {
-                if (SetProperty(ref selectedColor, value))
-                {
-                    OnPropertyChanged(nameof(NodeColor));
-                    OnPropertyChanged(nameof(NodeColorBrush));
-                    OnPropertyChanged(nameof(NodeHeaderTextBrush));
-                }
+                var option = ColorOptions.FirstOrDefault(c => c.Key.Equals(value.Key, StringComparison.OrdinalIgnoreCase)) ?? ColorOptions[0];
+                if (selectedColor == option && _customColor == value.IsCustom) return;
+                selectedColor = option; _customColor = value.IsCustom;
+                OnPropertyChanged(nameof(ColorSelection)); OnPropertyChanged(nameof(SelectedColor));
+                OnPropertyChanged(nameof(NodeColor)); NotifyPresentation();
             }
         }
 
@@ -110,17 +150,19 @@ namespace TestBuilder.ViewModels.NodifyVM
         public string NodeColor
         {
             get => SelectedColor.Key;
-            set => SelectedColor = ColorOptions.FirstOrDefault(option =>
-                                      string.Equals(option.Key, value, StringComparison.OrdinalIgnoreCase))
-                                  ?? ColorOptions[0];
+            set => ColorSelection = new(value, true);
         }
 
         public virtual bool IsInactive => false;
-        public IBrush NodeColorBrush => IsInactive ? Brushes.Gray : SelectedColor.Brush;
-        public IBrush NodeHeaderTextBrush => IsInactive ? InactiveHeaderTextBrush : SelectedColor.HeaderTextBrush;
+        private NodeColorOption DisplayColor => HasModelReview ? ColorOptions[3] :
+            _failureHandling ? ColorOptions[5] : _customColor ? selectedColor : ColorOptions[0];
+        public IBrush NodeColorBrush => IsInactive ? Brushes.Gray : DisplayColor.Brush;
+        public IBrush NodeHeaderTextBrush => IsInactive ? InactiveHeaderTextBrush : DisplayColor.HeaderTextBrush;
 
         [RelayCommand]
         private void SelectColor(string color) => NodeColor = color;
+        [RelayCommand]
+        private void ResetColor() => ColorSelection = new(NodeColor, false);
 
         public IBrush ExecutionBorderBrush =>
             HasExecutionError ? ErrorBorderBrush :
@@ -196,6 +238,8 @@ namespace TestBuilder.ViewModels.NodifyVM
             if (this is ICompositeNodeViewModel composite) composite.BodyGraph.DisposeNodes();
         }
     }
+
+    public sealed record NodeColorSelection(string Key, bool IsCustom);
 
     public sealed class NodeColorOption
     {

@@ -639,6 +639,65 @@ public class GraphEditorViewTests
         }, CancellationToken.None);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ModelReviewColorsAndConfirmationRenderInBothThemes(bool dark)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            Application.Current!.RequestedThemeVariant = dark
+                ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            var start = new StartNodeViewModel { Location = new Point(80, 80) };
+            var check = new CheckVariableEqualityNodeViewModel { Location = new Point(400, 80) };
+            var review = new DelayNodeViewModel { Location = new Point(900, 80), ModelReview = new("m", "Новая модель", "Проверьте время ожидания.") };
+            var error = new DelayNodeViewModel { Location = new Point(900, 420) };
+            vm.Nodes.Add(start); vm.Nodes.Add(check); vm.Nodes.Add(review); vm.Nodes.Add(error);
+            vm.Connections.Add(new(start.Output[0], check.Input[0]));
+            vm.Connections.Add(new(check.Output[0], review.Input[0]));
+            vm.Connections.Add(new(check.Output[1], error.Input[0]));
+            using var view = new GraphEditorView { DataContext = vm };
+            var window = new Window { Width = 1440, Height = 900, Content = view };
+            try
+            {
+                window.Show(); Layout(window);
+                Node Visual(object model) => view.GetVisualDescendants().OfType<Node>().Single(n => ReferenceEquals(n.DataContext, model));
+                Color Header(object model) => ((ISolidColorBrush)Visual(model).HeaderBrush!).Color;
+                Assert.Equal(Color.Parse("#38BDF8"), Header(check));
+                Assert.Equal(Color.Parse("#EF4444"), Header(error));
+                Assert.Equal(Color.Parse("#EAB308"), Header(review));
+                var folder = Environment.GetEnvironmentVariable("TESTBUILDER_LAYOUT_CAPTURES");
+                if (!string.IsNullOrEmpty(folder))
+                {
+                    Directory.CreateDirectory(folder);
+                    using var frame = window.CaptureRenderedFrame();
+                    frame!.Save(Path.Combine(folder, $"model-review-{(dark ? "dark" : "light")}.png"));
+                }
+                var trigger = Visual(review).GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ColorPickerTrigger");
+                trigger.Flyout!.ShowAt(trigger); Layout(window);
+                var flyout = Assert.IsType<Avalonia.Controls.Flyout>(trigger.Flyout);
+                var content = Assert.IsType<Border>(flyout.Content);
+                var confirm = content.GetLogicalDescendants().OfType<Button>().Single(b => Equals(b.Content, "Нода проверена для этой модели"));
+                Assert.True(confirm.IsVisible); Assert.NotNull(confirm.Command);
+                Assert.Contains(content.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Проверьте время") == true);
+                confirm.Command.Execute(confirm.CommandParameter); Layout(window);
+                Assert.Null(review.ModelReview); Assert.Equal(Header(check), Header(review));
+                Assert.False(confirm.IsVisible);
+                flyout.Hide();
+                vm.UndoCommand.Execute(null); Layout(window);
+                Assert.Equal(Color.Parse("#EAB308"), Header(review));
+                vm.IsTestRunning = true; Layout(window);
+                Assert.False(trigger.IsEnabled);
+                review.AcknowledgeModelReviewCommand.Execute(null);
+                Assert.NotNull(review.ModelReview);
+            }
+            finally { window.Close(); }
+        }, CancellationToken.None);
+    }
+
     private static void Layout(Window window)
     {
         window.UpdateLayout();

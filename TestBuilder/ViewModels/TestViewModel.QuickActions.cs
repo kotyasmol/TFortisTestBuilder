@@ -39,6 +39,7 @@ public partial class TestViewModel
 
     private void RefreshQuickActions()
     {
+        _nodePresentation?.Refresh();
         foreach (var action in QuickActions) action.Cancel();
         QuickActions.Clear();
         foreach (var definition in RootGraph.QuickActions)

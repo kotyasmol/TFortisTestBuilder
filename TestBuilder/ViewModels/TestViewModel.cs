@@ -365,6 +365,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RedoCommand = new RelayCommand(RedoAction, () => CanEditGraph && CurrentGraph.UndoRedo.CanRedo);
 
         _history = new ProfileEditHistory(RootGraph, () => CanEditGraph, NavigateToGraph);
+        _nodePresentation = new ProfileNodePresentation(RootGraph, NotifyModelReview, ConfirmNodeModelReview);
         AttachUndoRedo(_history.Manager);
 
         Profiles.CollectionChanged += (_, _) => { if (!_refreshingProfiles) RefreshEngineerProfileGroups(); };
@@ -566,6 +567,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         var clone = source.Clone();
         clone.NodeColor = source.NodeColor;
+        clone.ColorSelection = source.ColorSelection;
+        clone.ModelReview = source.ModelReview;
         clone.CustomName = source.CustomName;
         clone.OperatorName = source.OperatorName;
         clone.BoardElements = source.BoardElements;
@@ -2281,6 +2284,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (_currentUndoRedo != null)
             _currentUndoRedo.StateChanged -= OnUndoRedoStateChanged;
         _history.Dispose();
+        _nodePresentation.Dispose();
         DisposeRegisterMonitor();
 
         foreach (var node in AvailableNodes)

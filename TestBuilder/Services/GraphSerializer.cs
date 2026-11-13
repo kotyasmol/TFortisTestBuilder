@@ -210,7 +210,9 @@ namespace TestBuilder.Services
                     BoardElements = node.BoardElements,
                     CustomName = string.IsNullOrWhiteSpace(node.CustomName) ? null : node.CustomName.Trim(),
                     RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
-                    Color = node.NodeColor
+                    Color = node.NodeColor,
+                    UseCustomColor = node.ColorSelection.IsCustom ? true : null,
+                    ModelReview = node.ModelReview
                 };
 
                 // An explicit empty operator name keeps the editor name from being read as a legacy shared name.
@@ -985,7 +987,8 @@ namespace TestBuilder.Services
                 };
 
                 node.BoardElements = n.BoardElements ?? "";
-                node.NodeColor = n.Color ?? "blue";
+                node.ColorSelection = new(n.Color ?? "blue", n.UseCustomColor == true);
+                node.ModelReview = n.ModelReview;
                 node.CustomName = n.CustomName ?? string.Empty;
                 node.OperatorName = (n.OperatorName ?? n.CustomName ?? string.Empty).Trim();
                 node.RunOnlyOnFirstRun = n.RunOnlyOnFirstRun || wrappedFirstRun;

@@ -108,6 +108,11 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Color { get; set; }
 
+        [JsonPropertyName("useCustomColor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? UseCustomColor { get; set; }
+        [JsonPropertyName("modelReview"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TestBuilder.Models.NodeModelReview? ModelReview { get; set; }
+
         [JsonPropertyName("customName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? CustomName { get; set; }

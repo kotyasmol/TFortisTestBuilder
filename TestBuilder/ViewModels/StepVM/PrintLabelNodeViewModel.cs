@@ -54,7 +54,7 @@ namespace TestBuilder.ViewModels.StepVM
             }
         }
         [ObservableProperty] private LabelTemplateDefinition? labelTemplate;
-        public string CurrentTemplateName => LabelTemplate?.Name ?? (UseQtProZplFormat ? LabelModel.ToString() : "Только серийный номер");
+        public string CurrentTemplateName => LabelTemplate?.Name ?? (UseQtProZplFormat ? "Общий макет ZPL" : "Только серийный номер");
         partial void OnLabelTemplateChanged(LabelTemplateDefinition? value)
         {
             if (value != null) UseQtProZplFormat = value.UseShortSerial;

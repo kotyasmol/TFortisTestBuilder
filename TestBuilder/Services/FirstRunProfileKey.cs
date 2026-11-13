@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -31,10 +32,17 @@ internal static class FirstRunProfileKey
             if (node["type"]?.GetValue<string>() is "Start (parallel v1)" or "Start (board v1)" or "Start (connections v1)" or "Start (actions v1)" or "Start (indicators v1)" or "Start (ping v1)" or "Start (action state v1)" or "Start (action labels v1)" or GraphSerializer.ReportStartType or GraphSerializer.CatalogSerialsStartType)
                 node["type"] = "Start";
             node.Remove("x"); node.Remove("y"); node.Remove("color"); node.Remove("boardElements");
+            node.Remove("useCustomColor"); node.Remove("modelReview");
             node.Remove("customName");
             node.Remove("operatorName");
             if (node["body"] is JsonObject body) StripLayout(body);
             if (node["bodyGraph"] is JsonObject bodyGraph) StripLayout(bodyGraph);
         }
+        if (graph["quickActions"] is JsonArray actions)
+            foreach (var action in actions.OfType<JsonObject>())
+            {
+                if (action["graph"] is JsonObject on) StripLayout(on);
+                if (action["offGraph"] is JsonObject off) StripLayout(off);
+            }
     }
 }

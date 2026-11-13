@@ -21,7 +21,7 @@ namespace TestBuilder.ViewModels.StepVM
         [ObservableProperty] private bool failOnError = true;
 
         // Retain checks explicitly enabled in profiles saved with the former control.
-        internal bool Psw2G6FHardwareChecks { get; init; }
+        internal bool Psw2G6FHardwareChecks { get; set; }
 
         public ConnectorViewModel In { get; }
         public ConnectorViewModel TrueOut { get; }

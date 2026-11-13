@@ -96,6 +96,32 @@ public class ProfileCopyTests
     }
 
     [Fact]
+    public async Task CopyThenSelectAnotherModelAndSave_AdaptsOnlyTheCopyAndPersistsReviewNotes()
+    {
+        using var files = new ProfileFolder();
+        var json = File.ReadAllText(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json"));
+        var sourcePath = files.Write("source.json", json);
+        using var bus = new ModbusService();
+        using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+        vm.SelectedProfile = Assert.Single(vm.Profiles);
+        vm.PromptProfileNameAsync = (_, _, name, _) => Task.FromResult<string?>(name);
+        await vm.CopyProfileCommand.ExecuteAsync(vm.SelectedProfile);
+        Assert.NotEqual(sourcePath, vm.SelectedProfile!.FilePath);
+        vm.SelectedEquipmentModel = vm.EquipmentModels.Single(m => m.Id == "psw-2g8f-plus-box");
+        await vm.SaveGraphCommand.ExecuteAsync(null);
+        var copyPath = vm.SelectedProfile!.FilePath;
+        Assert.NotEqual(sourcePath, copyPath);
+        Assert.Contains("PSW-2G8F+Box", Path.GetFileName(copyPath));
+        var copyJson = File.ReadAllText(copyPath);
+        Assert.Contains("modelReview", copyJson);
+        GraphSerializer.Deserialize(copyJson, vm);
+        Assert.Equal("PSW-2G8F+Box", vm.RootGraph.DeviceModel);
+        Assert.True(vm.HasModelReview);
+        Assert.Equal(json, File.ReadAllText(sourcePath));
+        Assert.False(bus.IsConnected);
+    }
+
+    [Fact]
     public async Task CancelInvalidNameAndRunDuringPrompt_WriteNothing()
     {
         using var files = new ProfileFolder();

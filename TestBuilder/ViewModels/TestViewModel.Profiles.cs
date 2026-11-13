@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TestBuilder.Services;
+using TestBuilder.Services.Graph;
 using TestBuilder.ViewModels.StepVM;
 
 namespace TestBuilder.ViewModels;
@@ -163,7 +164,8 @@ public partial class TestViewModel
 
     private bool UseCatalogAfterModelChange(EquipmentModel? model) =>
         RootGraph.UseCatalogSerials || !string.IsNullOrWhiteSpace(model?.EffectiveServerDeviceType) ||
-        BoardNodes(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel);
+        ProfileModelAdaptation.All(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel
+            or PrintLabelNodeViewModel or BuildMacFromSerialNodeViewModel or SetProMacNodeViewModel or SetPswMacNodeViewModel);
 
     private (EquipmentModel? Production, EquipmentModel? Legacy) ResolveRunSerialModels()
     {
@@ -232,10 +234,13 @@ public partial class TestViewModel
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
             var oldKind = RootGraph.ProductKind;
-            var kind = _profileCatalog.FirstOrDefault(p => p.DeviceModelId == value.Id)?.ProductKind ?? oldKind;
+            var kind = value.RtlReport != null ? "Board" : value.SerialSeries != null ? "Switch" :
+                _profileCatalog.FirstOrDefault(p => p.DeviceModelId == value.Id)?.ProductKind ?? oldKind;
             var oldUseCatalog = RootGraph.UseCatalogSerials;
             var useCatalog = UseCatalogAfterModelChange(value);
             var oldVariant = RootGraph.LabelVariant;
+            var adaptation = sameModel ? null : ProfileModelAdaptation.Create(RootGraph,
+                _equipmentCatalog.Resolve(oldId, oldName), value);
             void Set(string? id, string? model, string title, string? detail, string productKind, bool useSeries, int variant)
             {
                 RootGraph.DeviceModelId = id; RootGraph.DeviceModel = model;
@@ -246,9 +251,20 @@ public partial class TestViewModel
                 NotifyDeviceNameChanged();
                 NotifyProfileMetadataChanged();
             }
-            _history.Execute(RootGraph, new ProfileMetadataCommand(
-                () => Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, sameModel ? oldVariant : 0),
-                () => Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant)));
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() =>
+            {
+                using var batch = _nodePresentation.Defer();
+                Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, sameModel ? oldVariant : 0);
+                adaptation?.Apply();
+                _nodePresentation.Refresh();
+            }, () =>
+            {
+                using var batch = _nodePresentation.Defer();
+                adaptation?.Undo();
+                Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant);
+                _nodePresentation.Refresh();
+            }));
+            if (adaptation != null) StatusMessage = "Данные изделия обновлены из справочника. Проверьте жёлтые ноды перед запуском.";
         }
     }
     private void LoadEquipmentCatalog(string folder)
