@@ -104,16 +104,28 @@ def firmware_references(profiles):
     return references
 
 
-def select_profiles(names=None):
+def select_profiles(names=None, additional=None):
     available = {p.name: p for p in sorted((ROOT / PROFILES_DIRECTORY).glob("*.json")) if p.is_file()}
-    if names is None:
-        return list(available.values())
-    if not names or len(set(names)) != len(names):
-        raise ValueError("Select at least one profile; duplicate names are not allowed")
-    missing = [name for name in names if name not in available]
-    if missing:
-        raise ValueError(f"Unknown profile(s): {', '.join(missing)}")
-    return [available[name] for name in names]
+    if names is not None:
+        if not names or len(set(names)) != len(names):
+            raise ValueError("Select at least one profile; duplicate names are not allowed")
+        missing = [name for name in names if name not in available]
+        if missing:
+            raise ValueError(f"Unknown profile(s): {', '.join(missing)}")
+    selected = list(available.values()) if names is None else [available[name] for name in names]
+    seen = {p.name.casefold() for p in selected}
+    for source in additional or []:
+        path = Path(source).resolve()
+        if not path.is_file() or path.suffix.lower() != ".json":
+            raise ValueError(f"Additional profile must be a JSON file: {path}")
+        if path.name.casefold() in seen:
+            raise ValueError(f"Duplicate release profile filename: {path.name}")
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
+            raise ValueError(f"Additional file does not contain a graph: {path.name}")
+        seen.add(path.name.casefold())
+        selected.append(path)
+    return selected
 
 
 def stage_profiles(bundle, profiles):
@@ -172,8 +184,10 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts")
     parser.add_argument("--profile", action="append", dest="profiles", metavar="FILENAME",
                         help="Include this profile from profiles/; repeat to select a release subset (default: all)")
+    parser.add_argument("--additional-profile", action="append", type=Path, metavar="PATH",
+                        help="Also include this exported JSON without changing the standard profiles/ source set")
     args = parser.parse_args()
-    profiles = select_profiles(args.profiles)
+    profiles = select_profiles(args.profiles, args.additional_profile)
     browser = json.loads((PACKAGING / "browser.json").read_text())
     if args.browser_zip and sha256(args.browser_zip) != browser["sha256"]:
         raise RuntimeError("Browser archive SHA-256 does not match packaging/windows/browser.json")

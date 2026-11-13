@@ -76,6 +76,32 @@ class ReleaseProfilesTests(unittest.TestCase):
                 release.stage_profiles(bundle, [profile])
             self.assertEqual("edited", profile.read_text())
 
+    def test_additional_export_is_explicit_and_preserves_standard_source_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "profiles").mkdir()
+            standard = root / "profiles/base.json"
+            standard.write_text('{"nodes": []}')
+            extra = root / "diagnostic.json"
+            extra.write_text('{"nodes": [], "catalogModel": {"id": "model"}}')
+            with patch.object(release, "ROOT", root):
+                self.assertEqual([standard, extra.resolve()], release.select_profiles(additional=[extra]))
+                self.assertEqual([standard], release.select_profiles())
+
+    def test_additional_exports_reject_bad_files_and_windows_name_collisions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "profiles").mkdir()
+            (root / "profiles/base.json").write_text('{"nodes": []}')
+            bad = root / "bad.json"
+            bad.write_text('{"models": []}')
+            duplicate = root / "BASE.json"
+            duplicate.write_text('{"nodes": []}')
+            with patch.object(release, "ROOT", root):
+                for path in [root, root / "missing.json", bad, duplicate]:
+                    with self.subTest(path=path), self.assertRaises(ValueError):
+                        release.select_profiles(additional=[path])
+
 
 if __name__ == "__main__":
     unittest.main()
