@@ -56,6 +56,7 @@ namespace TestBuilder.ViewModels.Graphs
         public string ProductKind { get; set; } = "Switch";
         public string? DeviceModel { get; set; }
         public string? DeviceModelId { get; set; }
+        public TestBuilder.Services.EquipmentModel? CatalogModel { get; set; }
         public bool UseCatalogSerials { get; set; }
         public int LabelVariant { get; set; }
 

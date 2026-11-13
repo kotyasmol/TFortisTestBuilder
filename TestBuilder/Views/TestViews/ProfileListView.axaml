@@ -16,10 +16,10 @@
     <ComboBox Grid.Row="1" ItemsSource="{Binding ProductFilters}" SelectedItem="{Binding ProductFilter}" IsEnabled="{Binding CanChooseProfile}" HorizontalAlignment="Stretch" Margin="0,0,0,8" AutomationProperties.Name="Вид изделия" />
     <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,0,0,12">
       <Button Classes="sidebarAction" HorizontalAlignment="Stretch" Content="Новый" Command="{Binding NewProfileCommand}" Margin="0,0,8,0" ToolTip.Tip="Создать пустой профиль" />
-      <Button Classes="sidebarAction" Grid.Column="1" HorizontalAlignment="Stretch" Content="Импорт" Command="{Binding ImportProfilesCommand}" ToolTip.Tip="Импортировать JSON-профиль" />
+      <Button Classes="sidebarAction" Grid.Column="1" HorizontalAlignment="Stretch" Content="Импорт" Command="{Binding ImportProfilesCommand}" ToolTip.Tip="Импортировать JSON-профиль и его карточку изделия" />
     </Grid>
     <TextBox Grid.Row="3" Text="{Binding ProfileSearch}" Watermark="Поиск профиля" Margin="0,0,0,12" />
-    <TextBlock Grid.Row="4" Text="{Binding CatalogStatus}" IsVisible="{Binding HasCatalogStatus}" Classes="hint" Margin="0,0,0,8" />
+    <TextBlock Grid.Row="4" Text="{Binding CatalogStatus}" ToolTip.Tip="{Binding CatalogStatus}" TextWrapping="Wrap" IsVisible="{Binding HasCatalogStatus}" Classes="hint" Margin="0,0,0,8" />
     <views:RoundedPanel Grid.Row="5"
             BorderThickness="1"
             BorderBrush="{DynamicResource BorderBrush}"

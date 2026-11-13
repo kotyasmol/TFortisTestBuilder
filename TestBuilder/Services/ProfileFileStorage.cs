@@ -127,7 +127,8 @@ internal static class ProfileFileStorage
         finally { DeleteTemporary(temporary); }
     }
 
-    public static async Task ImportAsync(Stream source, string folder, string name)
+    public static async Task<bool> ImportAsync(Stream source, string folder, string name,
+        Func<CatalogImportConflict, Task<CatalogImportChoice>>? resolveCatalog = null, Func<bool>? canPublish = null)
     {
         if (string.IsNullOrWhiteSpace(name) || name.IndexOfAny(new[] { '/', '\\' }) >= 0 ||
             !string.Equals(Path.GetExtension(name), ".json", StringComparison.OrdinalIgnoreCase))
@@ -137,14 +138,21 @@ internal static class ProfileFileStorage
         {
             await using (var destination = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write))
                 await source.CopyToAsync(destination);
-            GraphSerializer.ValidateProfile(await File.ReadAllTextAsync(temporary));
+            var json = await File.ReadAllTextAsync(temporary);
+            GraphSerializer.ValidateProfile(json);
+            var plan = await ProfileCatalogImport.PrepareAsync(json, folder, resolveCatalog);
+            if (plan == null) return false;
+            await File.WriteAllTextAsync(temporary, plan.Json);
+            GraphSerializer.ValidateProfile(plan.Json);
             var profile = GraphSerializer.ReadProfile(temporary);
             var destinationPath = DisplayPath(folder, profile.DisplayName);
             lock (PublishLock)
             {
+                if (canPublish != null && !canPublish()) throw new IOException("Импорт отменён: состояние программы изменилось. Остановите проверку и повторите импорт.");
                 EnsureNameAvailable(destinationPath);
-                File.Move(temporary, destinationPath, overwrite: false);
+                plan.Publish(folder, () => File.Move(temporary, destinationPath, overwrite: false));
             }
+            return true;
         }
         finally { DeleteTemporary(temporary); }
     }

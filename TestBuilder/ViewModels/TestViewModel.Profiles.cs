@@ -111,7 +111,7 @@ public partial class TestViewModel
     {
         get
         {
-            var variants = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)?.LabelVariants;
+            var variants = SelectedEquipmentModel?.LabelVariants;
             var names = variants == null ? new Dictionary<int, string>() : new Dictionary<int, string>(variants);
             names.TryAdd(0, "По умолчанию");
             names.TryAdd(ProfileLabelVariant, "Не задана в справочнике");
@@ -167,12 +167,13 @@ public partial class TestViewModel
         ProfileModelAdaptation.All(RootGraph).Any(node => node is GetSerialNumberFromServerNodeViewModel or BuildTestReportNodeViewModel
             or PrintLabelNodeViewModel or BuildMacFromSerialNodeViewModel or SetProMacNodeViewModel or SetPswMacNodeViewModel);
 
-    private (EquipmentModel? Production, EquipmentModel? Legacy) ResolveRunSerialModels()
+    internal (EquipmentModel? Production, EquipmentModel? Legacy) ResolveRunSerialModels()
     {
         if (!RootGraph.UseCatalogSerials)
             return (null, _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel));
         // Read once at the start. All nodes, including failure cleanup, use the same model.
-        var model = EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+        var model = ProfileCatalogLink.Resolve(EquipmentCatalog.Load(ProfilesFolder), RootGraph.CatalogModel,
+            RootGraph.DeviceModelId, RootGraph.DeviceModel);
         if (model == null)
             throw new InvalidOperationException("Выберите изделие из справочника над графом.");
         if (string.IsNullOrWhiteSpace(model.EffectiveServerDeviceType))
@@ -185,7 +186,8 @@ public partial class TestViewModel
 
     internal EquipmentModel ReadCatalogModelForEditing()
     {
-        return EquipmentCatalog.Load(ProfilesFolder).Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel)
+        return ProfileCatalogLink.Resolve(EquipmentCatalog.Load(ProfilesFolder), RootGraph.CatalogModel,
+            RootGraph.DeviceModelId, RootGraph.DeviceModel)
             ?? throw new InvalidOperationException("Выберите изделие из справочника или добавьте новое.");
     }
 
@@ -195,7 +197,9 @@ public partial class TestViewModel
     internal void SaveCatalogModel(EquipmentModel model, bool createNew, bool selectForProfile = true, EquipmentModel? original = null)
     {
         if (!CanEditQuickActions) throw new InvalidOperationException("Остановите проверку перед правкой справочника.");
-        EquipmentCatalog.SaveModel(ProfilesFolder, model, createNew, original);
+        var portableOnly = !createNew && original != null &&
+            _equipmentCatalog.Sources.GetValueOrDefault(original.Id) == "Из JSON профиля";
+        EquipmentCatalog.SaveModel(ProfilesFolder, model, createNew || portableOnly, portableOnly ? null : original);
         if (!selectForProfile)
         {
             RefreshProfiles();
@@ -224,12 +228,13 @@ public partial class TestViewModel
     public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatus);
     public EquipmentModel? SelectedEquipmentModel
     {
-        get => _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+        get => ProfileCatalogLink.Resolve(_equipmentCatalog, RootGraph.CatalogModel, RootGraph.DeviceModelId, RootGraph.DeviceModel);
         set
         {
             if (!CanEditGraph || value == null || !EquipmentModels.Contains(value) ||
                 (value.Id == RootGraph.DeviceModelId && value.Name == RootGraph.DeviceModel)) return;
             var oldId = RootGraph.DeviceModelId; var oldName = RootGraph.DeviceModel;
+            var oldCard = RootGraph.CatalogModel;
             var sameModel = string.Equals(oldId, value.Id, StringComparison.OrdinalIgnoreCase);
             var oldTitle = CurrentProfileName; var oldDescription = RootGraph.ConfigurationName;
             var description = ProfileDescription;
@@ -240,28 +245,30 @@ public partial class TestViewModel
             var useCatalog = UseCatalogAfterModelChange(value);
             var oldVariant = RootGraph.LabelVariant;
             var adaptation = sameModel ? null : ProfileModelAdaptation.Create(RootGraph,
-                _equipmentCatalog.Resolve(oldId, oldName), value);
-            void Set(string? id, string? model, string title, string? detail, string productKind, bool useSeries, int variant)
+                SelectedEquipmentModel, value);
+            void Set(string? id, string? model, string title, string? detail, string productKind, bool useSeries, int variant, EquipmentModel? card)
             {
                 RootGraph.DeviceModelId = id; RootGraph.DeviceModel = model;
+                RootGraph.CatalogModel = card;
                 RootGraph.ProductKind = productKind;
                 RootGraph.UseCatalogSerials = useSeries;
                 RootGraph.LabelVariant = variant;
                 SetProfileIdentity(title, detail);
                 NotifyDeviceNameChanged();
                 NotifyProfileMetadataChanged();
+                RefreshProfileCatalogStatus();
             }
             _history.Execute(RootGraph, new ProfileMetadataCommand(() =>
             {
                 using var batch = _nodePresentation.Defer();
-                Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, sameModel ? oldVariant : 0);
+                Set(value.Id, value.Name, ComposeProfileName(value.Name, description), description, kind, useCatalog, sameModel ? oldVariant : 0, value);
                 adaptation?.Apply();
                 _nodePresentation.Refresh();
             }, () =>
             {
                 using var batch = _nodePresentation.Defer();
                 adaptation?.Undo();
-                Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant);
+                Set(oldId, oldName, oldTitle, oldDescription, oldKind, oldUseCatalog, oldVariant, oldCard);
                 _nodePresentation.Refresh();
             }));
             if (adaptation != null) StatusMessage = "Данные изделия обновлены из справочника. Проверьте жёлтые ноды перед запуском.";
@@ -273,6 +280,17 @@ public partial class TestViewModel
         {
             _equipmentCatalog = EquipmentCatalog.Load(folder);
             SetCatalogStatus(Directory.Exists(folder) ? "" : $"Папка профилей недоступна: {folder}");
+            if (RootGraph.CatalogModel is { } card)
+            {
+                ProfileCatalogLink.Validate(card, RootGraph.DeviceModelId, RootGraph.DeviceModel);
+                var current = _equipmentCatalog.Resolve(card.Id, card.Name);
+                if (current == null)
+                {
+                    _equipmentCatalog.Models.Add(card);
+                    _equipmentCatalog.Sources[card.Id] = "Из JSON профиля";
+                }
+            }
+            RefreshProfileCatalogStatus();
         }
         catch (Exception ex) { SetCatalogStatus("Каталог изделий недоступен: " + ex.Message); }
         SynchronizeStationItems(EquipmentModels, _equipmentCatalog.Models
@@ -282,6 +300,16 @@ public partial class TestViewModel
     }
 
     internal event Action? EquipmentCatalogChanged;
+    internal void ReloadProfileCatalogLink() => LoadEquipmentCatalog(ProfilesFolder);
+
+    private const string CatalogCardDifference = "Карточка в JSON отличается от справочника этого компьютера. Используются данные справочника. Сравнение — в «Ещё → Зависимости профиля».";
+    private void RefreshProfileCatalogStatus()
+    {
+        if (CatalogStatus.Length > 0 && CatalogStatus != CatalogCardDifference) return;
+        var active = _equipmentCatalog.Resolve(RootGraph.DeviceModelId, RootGraph.DeviceModel);
+        SetCatalogStatus(RootGraph.CatalogModel is { } backup && active != null && !ProfileCatalogLink.Equivalent(active, backup)
+            ? CatalogCardDifference : "");
+    }
 
     private void SetCatalogStatus(string status)
     {

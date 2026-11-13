@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using TestBuilder.Domain.Execution;
 using TestBuilder.Services;
+using Avalonia.Platform.Storage;
 
 namespace TestBuilder.ViewModels;
 
@@ -21,6 +22,31 @@ public partial class TestViewModel
         "Закрыть профиль?", "Закрыть без сохранения",
         "В профиле есть несохранённые изменения. Закрыть его без сохранения?"));
     internal Func<Func<Views.ReloadProfileDialog>, Task<bool>> ShowDeleteProfileDialogAsync { get; set; } = ShowProfileConfirmationAsync;
+    internal Func<CatalogImportConflict, Task<CatalogImportChoice>> ResolveCatalogImportAsync { get; set; } = async conflict =>
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
+            return await new Views.ProfileCatalogImportDialog(conflict).ShowDialog<CatalogImportChoice>(owner);
+        return CatalogImportChoice.Cancel;
+    };
+
+    internal Func<GraphProfile, string, Task<bool>> WriteProfileExportAsync { get; set; } = async (profile, json) =>
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is not
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow is not { } owner) return false;
+        var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Экспорт профиля с карточкой изделия", DefaultExtension = "json", ShowOverwritePrompt = true,
+            SuggestedFileName = Path.GetFileName(ProfileFileStorage.DisplayPath(".", profile.DisplayName)),
+            FileTypeChoices = new[] { new FilePickerFileType("JSON профиль с карточкой изделия") { Patterns = new[] { "*.json" } } }
+        });
+        if (file == null) return false;
+        await using var stream = await file.OpenWriteAsync();
+        if (stream.CanSeek) stream.SetLength(0);
+        await using var writer = new StreamWriter(stream);
+        await writer.WriteAsync(json);
+        return true;
+    };
 
     private static async Task<bool> ShowProfileConfirmationAsync(Func<Views.ReloadProfileDialog> createDialog)
     {
@@ -150,6 +176,39 @@ public partial class TestViewModel
     }
 
     [RelayCommand(CanExecute = nameof(CanManageProfile))]
+    private async Task ExportProfile(GraphProfile? profile)
+    {
+        if (profile == null || !CanManageProfile(profile)) return;
+        try
+        {
+            var json = IsCurrentProfile(profile) && _profileLoadError.Length == 0
+                ? GraphSerializer.Serialize(this, CurrentProfileName) : await File.ReadAllTextAsync(profile.FilePath);
+            var exported = ProfilePortableExport.Create(json, EquipmentCatalog.Load(ProfilesFolder), profile);
+            var header = System.Text.Json.Nodes.JsonNode.Parse(exported, new System.Text.Json.Nodes.JsonNodeOptions { PropertyNameCaseInsensitive = true })!;
+            var info = new GraphProfile(profile.FilePath, header["name"]!.GetValue<string>(), header["deviceModel"]?.GetValue<string>(),
+                header["configurationName"]?.GetValue<string>(), header["deviceModelId"]?.GetValue<string>(), header["productKind"]?.GetValue<string>() ?? "Switch");
+            if (await WriteProfileExportAsync(info, exported))
+                StatusMessage = "Профиль экспортирован с карточкой изделия и макетами этикеток. Внешние файлы передаются отдельно; список — «Ещё → Зависимости профиля».";
+        }
+        catch (Exception ex) { StatusMessage = $"Не удалось экспортировать профиль: {ex.Message}"; LogUiException("Экспорт профиля", ex); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditGraph))]
+    private async Task ShowProfileDependencies()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
+        {
+            try
+            {
+                var text = ProfileDependencies.Describe(RootGraph, EquipmentCatalog.Load(ProfilesFolder));
+                await new Views.ProfileDependenciesWindow(text).ShowDialog(owner);
+            }
+            catch (Exception ex) { StatusMessage = $"Не удалось прочитать зависимости: {ex.Message}"; LogUiException("Зависимости профиля", ex); }
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanManageProfile))]
     private async Task CopyProfile(GraphProfile? profile)
     {
         if (!CanManageProfile(profile)) return;
@@ -165,6 +224,7 @@ public partial class TestViewModel
             var currentPath = _currentProfilePath;
             var copyCurrent = IsCurrentProfile(profile!) && _profileLoadError.Length == 0;
             var json = copyCurrent ? GraphSerializer.Serialize(this, CurrentProfileName) : await File.ReadAllTextAsync(profile!.FilePath);
+            json = ProfileCatalogLink.Attach(json, EquipmentCatalog.Load(ProfilesFolder), source);
             var copyPath = ProfileFileStorage.NewCopyPath(Path.GetDirectoryName(profile!.FilePath)!, GraphProfile.ComposeName(source.DeviceModel, description));
             await ProfileFileStorage.WriteAsync(copyPath, ProfileFileStorage.WithName(json, source, description), createNew: true);
             RevealProfileFile(copyPath);

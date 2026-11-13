@@ -32,7 +32,7 @@ public sealed record RtlReportSettings(int DeviceType, bool AssignSerialOnReport
     [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }
 
-public sealed class EquipmentCatalog
+public sealed partial class EquipmentCatalog
 {
     public int SchemaVersion { get; set; } = 1;
     public string Revision { get; set; } = "";
@@ -42,7 +42,7 @@ public sealed class EquipmentCatalog
     [JsonIgnore] internal string BundledRevision { get; private set; } = "";
     [JsonIgnore] internal string LocalRevision { get; private set; } = "";
     [JsonIgnore] internal Dictionary<string, string> Sources { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -141,7 +141,7 @@ public sealed class EquipmentCatalog
         finally { File.Delete(temporary); }
     }
 
-    private void Validate()
+    internal void Validate()
     {
         if (SchemaVersion != 1 || Models == null || Models.Any(m => m == null || string.IsNullOrWhiteSpace(m.Id) || string.IsNullOrWhiteSpace(m.Name)) ||
             Models.Select(m => m.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Models.Count)

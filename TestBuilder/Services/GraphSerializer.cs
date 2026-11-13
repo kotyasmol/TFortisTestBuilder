@@ -151,6 +151,7 @@ namespace TestBuilder.Services
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = ReportStartType;
             dto.DeviceModel = vm.RootGraph.DeviceModel;
             dto.DeviceModelId = vm.RootGraph.DeviceModelId;
+            dto.CatalogModel = vm.SelectedEquipmentModel;
             dto.UseCatalogSerials = vm.RootGraph.UseCatalogSerials;
             dto.LabelVariant = vm.RootGraph.LabelVariant;
             if (dto.UseCatalogSerials)
@@ -538,12 +539,14 @@ namespace TestBuilder.Services
             foreach (var connection in loaded.Connections) vm.RootGraph.Connections.Add(connection);
             var profile = new GraphProfile(string.Empty, dto.Name, dto.DeviceModel, dto.ConfigurationName, dto.DeviceModelId);
             vm.RootGraph.DeviceModel = profile.DeviceModel;
-            vm.RootGraph.DeviceModelId = profile.DeviceModelId;
+            vm.RootGraph.DeviceModelId = profile.DeviceModelId ?? dto.CatalogModel?.Id;
+            vm.RootGraph.CatalogModel = dto.CatalogModel;
             vm.RootGraph.UseCatalogSerials = dto.UseCatalogSerials;
             vm.RootGraph.LabelVariant = dto.LabelVariant;
             vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
                 (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
+            vm.ReloadProfileCatalogLink();
             vm.NotifyDeviceNameChanged();
             vm.ResetToRootGraph();
             // Board viewers need the complete graph to resolve region-to-node bindings.
@@ -569,6 +572,7 @@ namespace TestBuilder.Services
 
         private static GraphWorkspaceViewModel LoadProfileGraph(GraphDto dto)
         {
+            ProfileCatalogLink.Validate(dto.CatalogModel, dto.DeviceModelId, dto.DeviceModel);
             dto.Hardware?.Validate();
             dto.Board?.Validate();
             dto.PingMonitor?.Validate();

@@ -315,11 +315,12 @@
             </Button.Flyout>
           </Button>
           <Button Content="Ещё" Classes="graphTool" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Пинг и аварийные действия" AutomationProperties.Name="Ещё">
+                  ToolTip.Tip="Дополнительные настройки и зависимости профиля" AutomationProperties.Name="Ещё">
             <Button.Flyout>
               <MenuFlyout Placement="Bottom">
                 <MenuItem Header="Пинг" Click="OnConfigurePing" />
                 <MenuItem Header="Аварийные действия" Click="OnConfigureFailureCleanup" />
+                <MenuItem Header="Зависимости профиля" Command="{Binding ShowProfileDependenciesCommand}" />
               </MenuFlyout>
             </Button.Flyout>
           </Button>

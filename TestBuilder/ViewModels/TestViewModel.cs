@@ -821,6 +821,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.Title = "Новый профиль";
         RootGraph.DeviceModel = null;
         RootGraph.DeviceModelId = null;
+        RootGraph.CatalogModel = null;
         RootGraph.ConfigurationName = null;
         NotifyDeviceNameChanged();
         RootGraph.IsBodyGraph = false;
@@ -2036,6 +2037,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (files.Count == 0)
             return;
 
+        if (!CanEditGraph || folder != ProfilesFolder || IsTraining) return;
+
         int imported = 0;
         var errors = new List<string>();
 
@@ -2044,9 +2047,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             try
             {
                 await using var source = await file.OpenReadAsync();
-                await ProfileFileStorage.ImportAsync(source, folder, file.Name);
-
-                imported++;
+                if (await ProfileFileStorage.ImportAsync(source, folder, file.Name, ResolveCatalogImportAsync,
+                    () => CanEditGraph && folder == ProfilesFolder && !IsTraining)) imported++;
             }
             catch (Exception ex)
             {
@@ -2058,7 +2060,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
         if (errors.Count == 0)
         {
-            StatusMessage = imported == 1
+            StatusMessage = imported == 0 ? "Импорт отменён." : imported == 1
                 ? "Профиль импортирован."
                 : $"Импортировано профилей: {imported}.";
         }
@@ -2114,6 +2116,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (!CanEditGraph || string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         try
         {
+            LoadEquipmentCatalog(folder: ProfilesFolder);
             RefreshSelectedEquipmentModel();
             var profileName = CurrentProfileName.Trim();
             var currentFile = !createNew && string.Equals(_currentProfilePath, filePath, StringComparison.Ordinal);
@@ -2131,6 +2134,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
             var updatedAt = DateTimeOffset.UtcNow;
             var configurationName = renameConfiguration ? ProfileDescription : RootGraph.ConfigurationName;
+            var catalogCard = SelectedEquipmentModel;
             var json = GraphSerializer.Serialize(this, profileName, updatedAt, configurationName);
 
             var revision = moving
@@ -2150,6 +2154,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _savedProfileRevision = revision;
             RootGraph.UpdatedAt = updatedAt;
             RootGraph.ConfigurationName = configurationName;
+            if (catalogCard != null && string.Equals(RootGraph.DeviceModelId, catalogCard.Id, StringComparison.OrdinalIgnoreCase))
+                RootGraph.CatalogModel = catalogCard;
             SetProfileTitle(profileName);
             RefreshSelectedEquipmentModel();
             OnPropertyChanged(nameof(CurrentProfileName));
