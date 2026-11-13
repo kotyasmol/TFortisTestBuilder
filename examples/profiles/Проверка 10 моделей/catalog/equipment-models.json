@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-13-qualification",
+  "models": [
+    {
+      "id": "psw-1g4f",
+      "name": "PSW-1G4F",
+      "labelCode": 4,
+      "serialSeries": {
+        "serverDeviceType": "PSW-1G4F",
+        "firstSerialNumber": 400001,
+        "lastSerialNumber": 465535,
+        "serialOffset": 400000,
+        "macPrefix": "C0:11:A6:04"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g4f",
+      "name": "PSW-2G4F",
+      "labelCode": 5,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F",
+        "firstSerialNumber": 500001,
+        "lastSerialNumber": 565535,
+        "serialOffset": 500000,
+        "macPrefix": "C0:11:A6:05"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g6f-plus",
+      "name": "PSW-2G6F+",
+      "aliases": [
+        "PSW 2G6F plus"
+      ],
+      "labelCode": 6,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+",
+        "firstSerialNumber": 600000,
+        "lastSerialNumber": 665535,
+        "serialOffset": 600000,
+        "macPrefix": "C0:11:A6:06"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g8f-plus",
+      "name": "PSW-2G8F+",
+      "labelCode": 7,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+",
+        "firstSerialNumber": 700001,
+        "lastSerialNumber": 765535,
+        "serialOffset": 700000,
+        "macPrefix": "C0:11:A6:07"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g4f-box",
+      "name": "PSW-2G4F-Box",
+      "labelCode": 21,
+      "labelVariants": {
+        "0": "Fibox",
+        "1": "Plastim"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G4F-Box",
+        "firstSerialNumber": 2100001,
+        "lastSerialNumber": 2165535,
+        "serialOffset": 2100000,
+        "macPrefix": "C0:11:A6:15"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g6f-plus-box",
+      "name": "PSW-2G6F+Box",
+      "labelCode": 25,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G6F+Box",
+        "firstSerialNumber": 2500001,
+        "lastSerialNumber": 2565535,
+        "serialOffset": 2500000,
+        "macPrefix": "C0:11:A6:19"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g8f-plus-box",
+      "name": "PSW-2G8F+Box",
+      "labelCode": 26,
+      "labelVariants": {
+        "0": "Fibox + PWR180",
+        "1": "Plastim + PWR180",
+        "2": "Plastim + PWR300",
+        "3": "Наш шкаф + PWR300"
+      },
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+Box",
+        "firstSerialNumber": 2600001,
+        "lastSerialNumber": 2665535,
+        "serialOffset": 2600000,
+        "macPrefix": "C0:11:A6:1A"
+      },
+      "labelCabinets": {
+        "0": "Fibox",
+        "1": "Plastim",
+        "2": "Plastim",
+        "3": "Наш шкаф"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-2g8f-plus-ex",
+      "name": "PSW-2G8F+Ex",
+      "labelCode": 28,
+      "serialSeries": {
+        "serverDeviceType": "PSW-2G8F+Ex",
+        "firstSerialNumber": 2800001,
+        "lastSerialNumber": 2865535,
+        "serialOffset": 2800000,
+        "macPrefix": "C0:11:A6:1C"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-ups-box-8x2pro",
+      "name": "PSW+UPS-Box 8x2Pro",
+      "aliases": [
+        "PSW UPS Box 8x2Pro",
+        "PSW-UPS-Box 8x2 Pro"
+      ],
+      "labelCode": 32,
+      "serialSeries": {
+        "serverDeviceType": "PSW+UPS-Box 8x2Pro",
+        "firstSerialNumber": 3200001,
+        "lastSerialNumber": 3265535,
+        "serialOffset": 3200000,
+        "failureReportSerialNumber": 3200001,
+        "macPrefix": "C0:11:A6:20",
+        "boardVersion": "PSW+UPS-Box 8x2Pro"
+      },
+      "isFullOverride": true
+    },
+    {
+      "id": "psw-plus-box-8x2pro",
+      "name": "PSW+Box 8x2Pro",
+      "labelCode": 33,
+      "serialSeries": {
+        "serverDeviceType": "PSW+Box 8x2Pro",
+        "firstSerialNumber": 3300001,
+        "lastSerialNumber": 3365535,
+        "serialOffset": 3300000,
+        "macPrefix": "C0:11:A6:21",
+        "boardVersion": "PSW+Box 8x2Pro"
+      },
+      "isFullOverride": true
+    }
+  ]
+}

@@ -1452,9 +1452,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     ModbusRegisters = new ModbusRegisterCatalog(_slaveManager.GetSlavesSnapshot()),
                     ExecutionObserver = this
                 };
-                var hasFailureSerial = context.ProductionModel?.SerialSeries?.FailureReportSerialNumber != null;
-                context.SetVariable("Execution.SendFailureReport", executionStatus == ExecutionStatus.Failed && !partialRun &&
-                    (hasFailureSerial && (!preparing || preparationForRun) || !preparing && context.ProductionModel?.RtlReport != null));
+                context.SetVariable("Execution.SendFailureReport", FailureReportPolicy.ShouldSend(
+                    executionStatus, context, partialRun, preparing, preparationForRun));
                 context.SetVariable("Execution.Status", executionStatus.ToString());
                 if (runFailure != null) context.SetVariable("Execution.Error", runFailure.Summary);
                 if (observedReportVariables != null) context.Variables.ObserveAssignment = ObserveReportVariable;

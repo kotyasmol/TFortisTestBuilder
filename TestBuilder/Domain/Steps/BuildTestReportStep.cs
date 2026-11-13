@@ -138,7 +138,10 @@ namespace TestBuilder.Domain.Steps
                         reportEntries.Add(entry);
                 }
 
-                if (!successful && selected.All(entry => entry.IsSuccess))
+                // A selected Boolean failure identifies the failed check, but does
+                // not carry its diagnostic details (pair/IP, timeout, etc.). Keep
+                // the stop reason even when that check is already in the template.
+                if (!successful)
                 {
                     var failedEntry = entries.FirstOrDefault(entry => !entry.IsSuccess);
                     reportEntries.Add(new TestReportEntry(ReportTemplate.FailureLabel, false, FailureReason(context, failedEntry)));

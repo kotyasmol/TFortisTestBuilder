@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-13",
+  "sourceBase": "aec3e60",
+  "scope": "Diagnostic profiles; synthetic transport fixtures. No physical or production-server run.",
+  "environment": {
+    "os": "macOS ARM64",
+    "sdk": "8.0.424",
+    "target": "net8.0"
+  },
+  "tests": {
+    "qualification.trx": {
+      "total": 249,
+      "executed": 249,
+      "passed": 249,
+      "failed": 0,
+      "error": 0,
+      "timeout": 0,
+      "aborted": 0,
+      "inconclusive": 0,
+      "passedButRunAborted": 0,
+      "notRunnable": 0,
+      "notExecuted": 0,
+      "disconnected": 0,
+      "warning": 0,
+      "completed": 0,
+      "inProgress": 0,
+      "pending": 0
+    },
+    "ui-integrity.trx": {
+      "total": 64,
+      "executed": 64,
+      "passed": 64,
+      "failed": 0,
+      "error": 0,
+      "timeout": 0,
+      "aborted": 0,
+      "inconclusive": 0,
+      "passedButRunAborted": 0,
+      "notRunnable": 0,
+      "notExecuted": 0,
+      "disconnected": 0,
+      "warning": 0,
+      "completed": 0,
+      "inProgress": 0,
+      "pending": 0
+    }
+  },
+  "layout": {
+    "profiles": 10,
+    "graphs": 130,
+    "nodes": 621,
+    "conflicts": 0
+  },
+  "baseProfiles": [
+    {
+      "file": "profiles/PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json",
+      "sha256": "023fda3fdc960dd60979943c159b97192d70300ca4b288b45a844d7e340c65cc",
+      "unchangedFrom": "aec3e60"
+    },
+    {
+      "file": "profiles/PSW-2G6F+ · Полная проверка · 11.11.26.json",
+      "sha256": "fe100dee892a84deb63a1e01415c86c87fde3286c8ba2f2abcc6fe13d5fe6c6d",
+      "unchangedFrom": "aec3e60"
+    },
+    {
+      "file": "profiles/RTL-POE · Проверка платы · 11.11.26.json",
+      "sha256": "8b9b2337a1bcd1236589e18305188bd583f87ec1fafa30cdecaedafc72febf46",
+      "unchangedFrom": "aec3e60"
+    },
+    {
+      "file": "profiles/RTL-SW · Проверка платы · 11.11.26.json",
+      "sha256": "908b109cbbde4ece56eaa3d2c08da4c1f12a73c7ed6019248235e2ad448f61aa",
+      "unchangedFrom": "aec3e60"
+    }
+  ],
+  "models": [
+    {
+      "model": "PSW+Box 8x2Pro",
+      "modelId": "psw-plus-box-8x2pro",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW+Box 8x2Pro · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "aa7664deb1189cd9fc5fb090bd57813b51bf395c45834ce24ffbb5eb8e3f87d7",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3300579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BBox%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3300579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BBox%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3300579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BBox%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3300579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:21:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW+Box 8x2Pro",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW+Box 8x2Pro",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,19^FDPSW+Box 8x2Pro^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:21:02:43^FS^FO510,95^A0,25,20^FDSN: 3300579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00330057>69^FS^XZ "
+    },
+    {
+      "model": "PSW+UPS-Box 8x2Pro",
+      "modelId": "psw-ups-box-8x2pro",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW+UPS-Box 8x2Pro · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "63983c0da5861ebd1697c9afe07451642da7ec69a5d54bbe533c1b7b0d732cf4",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3200579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3200579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3200579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW%2BUPS-Box%208x2Pro&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=0\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:20:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nДетекция ИБП=true=1\r\nнапряжение АКБ=true=24.200000\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 3200001,
+            "serialRequest": "",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200001\r\nТип проверки=true=diagnostic\r\nПричина остановки=false=Контролируемый отказ: устройство не отдало CPU ID\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=3200001\r\nТип проверки=true=diagnostic\r\nПричина остановки=false=Контролируемый отказ: устройство не отдало CPU ID\r\n"
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW+UPS-Box 8x2Pro",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,15^FDPSW+UPS-Box 8x2Pro^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:02:43^FS^FO510,95^A0,25,20^FDSN: 3200579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00320057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-1G4F",
+      "modelId": "psw-1g4f",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-1G4F · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "adf29a982bfba2f049ec5a2d140bf4b4cef2ea3b8d7f4deaf5658c5df4035594",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 400579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-1G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 400579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-1G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 400579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-1G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=400579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=4\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:04:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Гигабит RJ45–SFP=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-1G4F",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-1G4F",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,25^FDPSW-1G4F^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:04:02:43^FS^FO510,95^A0,25,20^FDSN: 400579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00040057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G4F",
+      "modelId": "psw-2g4f",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G4F · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "93a53ae22cc5f09bd3baf5000eab8d3f6aa77db6525c31451507b004f7369a01",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:05:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G4F",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G4F",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,25^FDPSW-2G4F^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:05:02:43^FS^FO510,95^A0,25,20^FDSN: 500579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00050057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G4F-Box",
+      "modelId": "psw-2g4f-box",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G4F-Box · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "cfa8db86209475f1d77a6d15fb09f8eace0bedd01de1665f6446d49496932f2e",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2100579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F-Box&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2100579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F-Box&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2100579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G4F-Box&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2100579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=5\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:15:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G4F-Box",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G4F-Box",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,22^FDPSW-2G4F-Box^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:15:02:43^FS^FO510,95^A0,25,17^FDSN: 2100579^FS^CI28^FO705,95^A0N,20,12^FH^FD_46_69_62_6F_78^FS^CI0^FO540,117^BY2^BCN,34,N,N,N^FD>;00210057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G6F+",
+      "modelId": "psw-2g6f-plus",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G6F+ · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "55379570f81f3419ba47da89641f6db9e393f9fdd4da57679fa73a4eb5c1478f",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:06:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G6F+",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G6F+",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,25^FDPSW-2G6F+^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:02:43^FS^FO510,95^A0,25,20^FDSN: 600579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00060057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G6F+Box",
+      "modelId": "psw-2g6f-plus-box",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G6F+Box · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "eef4f3f24853794bfacd67a659f4d34c370d65bfa8b8b0a2e6bdfe7db4e9e761",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2500579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G6F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2500579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=6\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:19:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G6F+Box",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G6F+Box",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,22^FDPSW-2G6F+Box^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:19:02:43^FS^FO510,95^A0,25,17^FDSN: 2500579^FS^CI28^FO705,95^A0N,20,12^FH^FD_46_69_62_6F_78^FS^CI0^FO540,117^BY2^BCN,34,N,N,N^FD>;00250057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G8F+",
+      "modelId": "psw-2g8f-plus",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G8F+ · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "c23a0e00a0b2bd6064119c6d4fc4b918922417f5bd3f02dbba31b9d3ded735fa",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 700579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 700579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 700579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2B&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=700579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:07:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G8F+",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G8F+",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,25^FDPSW-2G8F+^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:07:02:43^FS^FO510,95^A0,25,20^FDSN: 700579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00070057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G8F+Box",
+      "modelId": "psw-2g8f-plus-box",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G8F+Box · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "80fab2a1e1fba6e19dd715fd6002ef285eab97985b8c47586a1e011fc33f82c2",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2600579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BBox&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2600579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1A:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G8F+Box",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G8F+Box",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,22^FDPSW-2G8F+Box^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:1A:02:43^FS^FO510,95^A0,25,17^FDSN: 2600579^FS^CI28^FO705,95^A0N,20,12^FH^FD_46_69_62_6F_78^FS^CI0^FO540,117^BY2^BCN,34,N,N,N^FD>;00260057>69^FS^XZ "
+    },
+    {
+      "model": "PSW-2G8F+Ex",
+      "modelId": "psw-2g8f-plus-ex",
+      "profile": "examples/profiles/Проверка 10 моделей/PSW-2G8F+Ex · Диагностика и отчёт · 13.11.26.json",
+      "profileSha256": "9b8dadda923b071bac003efd38bf7e067e57d3a394e9d10a2021d4703b0ab836",
+      "scenarios": {
+        "passed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2800579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BEx&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "device-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2800579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BEx&cpuId=QUALIFICATION-CPU",
+            "delivery": "Sent",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=0\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=false=0\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\nПричина остановки=false=Контролируемый отказ: пара 192.168.0.2 ↔ 192.168.0.3\r\n"
+        },
+        "server-failed": {
+          "capture": {
+            "Url": "https://qualification.invalid/api/Api.svc/result.json",
+            "Method": "POST",
+            "ContentType": "multipart/form-data; boundary=---------------------------723690991551375881941828858",
+            "expectedSerial": 2800579,
+            "serialRequest": "https://qualification.invalid/api/api.svc/getSerialNum?devType=PSW-2G8F%2BEx&cpuId=QUALIFICATION-CPU",
+            "delivery": "Failed",
+            "multipartBody": "-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"updatefile\"; filename=\"result.json\"\r\nContent-Type: application/octet-stream;\r\n\r\ntest_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n\r\n-----------------------------723690991551375881941828858\r\n-----------------------------723690991551375881941828858\r\nContent-Disposition: form-data; name=\"result\"; filename=\"result.json\"\r\n\r\n",
+            "hardware": "not exercised; device measurements and DataTest are synthetic fixtures"
+          },
+          "report": "test_result=true=1\r\nstand_id=true=QUALIFICATION-SIMULATION\r\nserial_num=true=2800579\r\nТип проверки=true=diagnostic\r\nТип устройства (dev_type)=true=7\r\nCPU ID=true=QUALIFICATION-CPU\r\nсамотестирование=true=true\r\nВерсия прошивки=true=qualification-fixture\r\nВерсия бутлоадера=true=fixture\r\nMAC адрес=true=C0:11:A6:00:00:01\r\nРасчётный MAC (без записи)=true=C0:11:A6:1C:02:43\r\nКороткая часть серийного номера=true=579\r\nCPU ID соответствует выданному номеру=true=1\r\nПередача данных: Медь 1–2=true=1\r\nПередача данных: Медь 3–4=true=1\r\nПередача данных: Медь 5–6=true=1\r\nПередача данных: Медь 7–8=true=1\r\nПередача данных: SFP 1–2=true=1\r\n"
+        },
+        "early-failed": {
+          "capture": {
+            "model": "PSW-2G8F+Ex",
+            "requests": 0,
+            "status": "No report before serial assignment; no configured failure serial",
+            "error": null
+          },
+          "report": null
+        },
+        "stand-missing": {
+          "capture": {
+            "model": "PSW-2G8F+Ex",
+            "status": "Failed to build: missing Stand ID",
+            "requests": 0
+          },
+          "report": null
+        }
+      },
+      "optionalLabelZpl": "^XA^MD10^FO494,35^A0,36,25^FDPSW-2G8F+Ex^FS^FO510,70^A0,25,20^FDMAC: C0:11:A6:1C:02:43^FS^FO510,95^A0,25,20^FDSN: 2800579^FS^FO540,117^BY2^BCN,34,N,N,N^FD>;00280057>69^FS^XZ "
+    }
+  ]
+}

@@ -54,7 +54,10 @@ public class ProfileUiIntegrityTests
 
     public static IEnumerable<object[]> ProductionProfiles() => Directory.GetFiles(
         Path.GetDirectoryName(TestProfilePaths.Find("PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json"))!, "*.json")
-        .OrderBy(path => path).Select(path => new object[] { Path.GetFileName(path) });
+        .OrderBy(path => path).Select(path => new object[] { Path.GetFileName(path) })
+        .Concat(Directory.GetFiles(Path.GetDirectoryName(TestProfilePaths.Find(
+            Path.Combine("Проверка 10 моделей", "PSW-1G4F · Диагностика и отчёт · 13.11.26.json")))!, "*.json")
+            .OrderBy(path => path).Select(path => new object[] { Path.Combine("Проверка 10 моделей", Path.GetFileName(path)) }));
 
     [Theory]
     [MemberData(nameof(ProductionProfiles))]

@@ -1,0 +1,1413 @@
+{
+  "nodes": [
+    {
+      "type": "Start (catalog serials v1)",
+      "id": "0",
+      "x": 80,
+      "y": 80
+    },
+    {
+      "type": "Profile Open (v2): Subtest",
+      "name": "01. Подготовка стенда",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 880,
+            "y": 80
+          },
+          {
+            "type": "Clear ARP Cache",
+            "timeoutMs": 5000,
+            "failOnError": false,
+            "runArpdBat": true,
+            "arpdBatPath": "arpd.bat",
+            "command": "arp",
+            "arguments": "-d *",
+            "id": "3",
+            "x": 1440,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "4",
+            "x": 80,
+            "y": 576
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "01. Подготовка стенда"
+      },
+      "runOnlyOnFirstRun": true,
+      "id": "1",
+      "x": 80,
+      "y": 240
+    },
+    {
+      "type": "Subtest",
+      "name": "02. Подача питания DUT",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1200,
+            "value": 1,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 880,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1440,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "02. Подача питания DUT"
+      },
+      "id": "2",
+      "x": 624,
+      "y": 240
+    },
+    {
+      "type": "Subtest",
+      "name": "03. Загрузка и тип устройства",
+      "description": "CPU ID и тип читаются до выдачи номера. Допустимые dev_type: 4",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Read Selftest Field (v1)",
+            "url": "http://192.168.0.1/test.shtml",
+            "readField": "cpu_id",
+            "timeoutMs": 250000,
+            "pollIntervalMs": 5000,
+            "outputPrefix": "Dut",
+            "failOnError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Read Selftest Field (v1)",
+            "url": "http://192.168.0.1/test.shtml",
+            "readField": "dev_type",
+            "timeoutMs": 250000,
+            "pollIntervalMs": 5000,
+            "outputPrefix": "Dut",
+            "failOnError": true,
+            "id": "2",
+            "x": 912,
+            "y": 80
+          },
+          {
+            "type": "Parse Response",
+            "customName": "Проверить тип устройства",
+            "parseResponse": {
+              "sourceVariableName": "Dut.dev_type",
+              "parseMode": "Regex",
+              "valueType": "String",
+              "selector": "^(?:4)$",
+              "outputVariableName": "VerifiedDeviceType"
+            },
+            "id": "3",
+            "x": 1504,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "4",
+            "x": 80,
+            "y": 640
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "03. Загрузка и тип устройства"
+      },
+      "id": "3",
+      "x": 1168,
+      "y": 240
+    },
+    {
+      "type": "Subtest",
+      "name": "04. Серийный номер из справочника",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Get Serial Number",
+            "serverBaseUrl": "",
+            "deviceType": "",
+            "cpuIdVariableName": "Dut.cpu_id",
+            "outputVariableName": "SerialNumber",
+            "useFixedSerialNumber": false,
+            "fixedSerialNumber": 0,
+            "timeoutMs": 30000,
+            "retryCount": 0,
+            "retryDelayMs": 1000,
+            "failOnError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "2",
+            "x": 928,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "04. Серийный номер из справочника"
+      },
+      "id": "4",
+      "x": 80,
+      "y": 704
+    },
+    {
+      "type": "Subtest",
+      "name": "05. Встроенная самопроверка",
+      "description": "Проверяется init_ok. Версии и измерения включены в отчёт без неподтверждённых производственных допусков.",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Selftest Check",
+            "url": "http://192.168.0.1/test.shtml",
+            "timeoutMs": 250000,
+            "pollIntervalMs": 5000,
+            "outputPrefix": "Dut",
+            "validationRules": "init_ok=1..1",
+            "failOnError": true,
+            "psw2G6FHardwareChecks": false,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Compare Variables (capture v1)",
+            "leftVariableName": "Dut.cpu_id",
+            "rightVariableName": "SerialNumberCpuId",
+            "comparisonType": "String",
+            "resultVariableName": "DeviceIdentity",
+            "failMessage": "CPU ID изменился после выдачи серийного номера. Проверьте подключённое устройство.",
+            "id": "2",
+            "x": 912,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1504,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "05. Встроенная самопроверка"
+      },
+      "id": "5",
+      "x": 624,
+      "y": 704
+    },
+    {
+      "type": "Subtest",
+      "name": "06. Передача данных",
+      "description": "Подключения нужно сверить на стенде. Пара .8/.9: гигабитный RJ45 и SFP на 1000 Мбит/с (руководство PSW-1G4F v13, раздел 2).",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Run Data Test",
+            "mode": "SoftwarePcap",
+            "expectedPackets": 10000,
+            "packetSizeBytes": 1514,
+            "udpPort": 43962,
+            "maxPortTestTimeMs": 15000,
+            "targetBandwidthMbps": 100,
+            "allowGigabit": true,
+            "durationMs": 5000,
+            "warmupMs": 500,
+            "interPairDelayMs": 5000,
+            "allowedLossPercent": 1,
+            "allowedTxDeficitPercent": 2,
+            "bidirectional": true,
+            "portsText": "Медь 1–2,192.168.0.2,192.168.0.3,100\r\nМедь 3–4,192.168.0.4,192.168.0.5,100\r\nГигабит RJ45–SFP,192.168.0.8,192.168.0.9,1000",
+            "outputVariableName": "DataTest",
+            "failOnError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "2",
+            "x": 960,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "06. Передача данных"
+      },
+      "id": "6",
+      "x": 1168,
+      "y": 704
+    },
+    {
+      "type": "Subtest",
+      "name": "07. Расчёт MAC без записи в устройство",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Build MAC From Serial",
+            "serialVariableName": "SerialNumber",
+            "serialOffset": 400000,
+            "macPrefix": "C0:11:A6:04",
+            "serialShortVariableName": "SerialShort",
+            "macVariableName": "CalculatedMac",
+            "failOnError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "2",
+            "x": 928,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "07. Расчёт MAC без записи в устройство"
+      },
+      "id": "7",
+      "x": 80,
+      "y": 1168
+    },
+    {
+      "type": "Subtest",
+      "name": "08. Выключение питания",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 880,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1440,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "08. Выключение питания"
+      },
+      "id": "8",
+      "x": 624,
+      "y": 1168
+    },
+    {
+      "type": "Subtest",
+      "name": "09. Сформировать и отправить отчёт",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Build Test Report",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "includeAllVariables": false,
+            "testType": "diagnostic",
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Send Test Report",
+            "serverBaseUrl": "",
+            "reportVariableName": "TestReportText",
+            "endpoint": "/api/Api.svc/result.json",
+            "timeoutMs": 10000,
+            "retryCount": 0,
+            "retryDelayMs": 1000,
+            "failOnError": false,
+            "saveLocalCopy": true,
+            "localReportsDirectory": "reports",
+            "id": "2",
+            "x": 928,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1568,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "09. Сформировать и отправить отчёт"
+      },
+      "id": "9",
+      "x": 1168,
+      "y": 1168
+    },
+    {
+      "type": "Subtest",
+      "name": "10. Этикетка — включить при необходимости",
+      "description": "Модель/комплектация из справочника, принтер и макет из общих настроек. Расчётный MAC не выдаётся за записанный.",
+      "isEnabled": false,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Print Label",
+            "printerName": "",
+            "serialVariableName": "SerialNumber",
+            "macVariableName": "Dut.default_mac",
+            "copies": 1,
+            "useQtProZplFormat": true,
+            "useDefaultPrinter": true,
+            "failOnPrinterError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "2",
+            "x": 944,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "10. Этикетка — включить при необходимости"
+      },
+      "id": "10",
+      "x": 80,
+      "y": 1632
+    },
+    {
+      "type": "End",
+      "id": "11",
+      "x": 80,
+      "y": 2096
+    },
+    {
+      "type": "Subtest",
+      "name": "Аварийное выключение",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": true,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1200,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Write Register",
+            "slaveId": 23,
+            "useCurrentSlaveId": false,
+            "registerArea": "Holding",
+            "address": 1201,
+            "value": 0,
+            "verifyWrite": true,
+            "id": "2",
+            "x": 880,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "3",
+            "x": 1440,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "Аварийное выключение"
+      },
+      "id": "cleanup",
+      "x": 80,
+      "y": 2256
+    },
+    {
+      "type": "Subtest",
+      "name": "Отчёт при ошибке",
+      "description": "",
+      "isEnabled": true,
+      "stopOnError": false,
+      "runOnFailure": true,
+      "bodyGraph": {
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Check Variable Equality",
+            "variableName": "Execution.SendFailureReport",
+            "expectedValue": "true",
+            "comparisonType": "Boolean",
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "Check Variable Equality",
+            "variableName": "ReportDelivery.Status",
+            "expectedValue": "Sent",
+            "comparisonType": "String",
+            "id": "2",
+            "x": 896,
+            "y": 80
+          },
+          {
+            "type": "Build Test Report",
+            "serialVariableName": "SerialNumber",
+            "reportVariableName": "TestReportText",
+            "includeAllVariables": false,
+            "testType": "diagnostic",
+            "id": "3",
+            "x": 1472,
+            "y": 80
+          },
+          {
+            "type": "Send Test Report",
+            "serverBaseUrl": "",
+            "reportVariableName": "TestReportText",
+            "endpoint": "/api/Api.svc/result.json",
+            "timeoutMs": 10000,
+            "retryCount": 0,
+            "retryDelayMs": 1000,
+            "failOnError": false,
+            "saveLocalCopy": true,
+            "localReportsDirectory": "reports",
+            "id": "4",
+            "x": 80,
+            "y": 512
+          },
+          {
+            "type": "End",
+            "id": "5",
+            "x": 720,
+            "y": 512
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "2",
+            "sourceConnector": "False",
+            "targetNodeId": "3",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "True",
+            "targetNodeId": "4",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "3",
+            "sourceConnector": "False",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          },
+          {
+            "sourceNodeId": "4",
+            "sourceConnector": "True",
+            "targetNodeId": "5",
+            "targetConnector": "Вход"
+          }
+        ],
+        "name": "Отчёт при ошибке"
+      },
+      "id": "failure-report",
+      "x": 624,
+      "y": 2256
+    }
+  ],
+  "connections": [
+    {
+      "sourceNodeId": "0",
+      "sourceConnector": "Выход",
+      "targetNodeId": "1",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "1",
+      "sourceConnector": "Success",
+      "targetNodeId": "2",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "2",
+      "sourceConnector": "Success",
+      "targetNodeId": "3",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "3",
+      "sourceConnector": "Success",
+      "targetNodeId": "4",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "4",
+      "sourceConnector": "Success",
+      "targetNodeId": "5",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "5",
+      "sourceConnector": "Success",
+      "targetNodeId": "6",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "6",
+      "sourceConnector": "Success",
+      "targetNodeId": "7",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "7",
+      "sourceConnector": "Success",
+      "targetNodeId": "8",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "8",
+      "sourceConnector": "Success",
+      "targetNodeId": "9",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "9",
+      "sourceConnector": "Success",
+      "targetNodeId": "10",
+      "targetConnector": "In"
+    },
+    {
+      "sourceNodeId": "10",
+      "sourceConnector": "Success",
+      "targetNodeId": "11",
+      "targetConnector": "Вход"
+    }
+  ],
+  "name": "PSW-1G4F · Диагностика и отчёт · 13.11.26",
+  "deviceModel": "PSW-1G4F",
+  "deviceModelId": "psw-1g4f",
+  "configurationName": "Диагностика и отчёт · 13.11.26",
+  "productKind": "Switch",
+  "useCatalogSerials": true,
+  "labelVariant": 0,
+  "updatedAt": "2026-11-13T08:00:00+05:00",
+  "hardware": {
+    "StandName": "АПК-03 · диагностика профилей",
+    "PortName": "",
+    "ConsoleDevices": [],
+    "BaudRate": 9600,
+    "Parity": 0,
+    "DataBits": 8,
+    "StopBits": 1,
+    "PollIntervalMs": 1000,
+    "Devices": [
+      {
+        "Name": "PS-3",
+        "SlaveId": 23,
+        "IdentificationValue": 8,
+        "IdentificationAddress": 0,
+        "Registers": [
+          {
+            "Address": 1200,
+            "Name": "Выход AC1",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1201,
+            "Name": "Выход AC2",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Выходы"
+          },
+          {
+            "Address": 1202,
+            "Name": "Выход Sensor1",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Сенсоры"
+          },
+          {
+            "Address": 1203,
+            "Name": "Выход Sensor2",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Сенсоры"
+          },
+          {
+            "Address": 1204,
+            "Name": "Ключ зарядки",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1205,
+            "Name": "Напряжение зарядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1206,
+            "Name": "Ток зарядки, мА",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Зарядка"
+          },
+          {
+            "Address": 1207,
+            "Name": "Макс. напряжение зарядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Статистика зарядки"
+          },
+          {
+            "Address": 1208,
+            "Name": "Мин. напряжение зарядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Статистика зарядки"
+          },
+          {
+            "Address": 1209,
+            "Name": "Сопротивление контроля тока, Ом",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Управление"
+          },
+          {
+            "Address": 1210,
+            "Name": "Ключ разрядки",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1211,
+            "Name": "Напряжение разрядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1212,
+            "Name": "Ток разрядки, мА",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Разрядка"
+          },
+          {
+            "Address": 1213,
+            "Name": "Макс. напряжение разрядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Статистика разрядки"
+          },
+          {
+            "Address": 1214,
+            "Name": "Мин. напряжение разрядки, мВ",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Статистика разрядки"
+          },
+          {
+            "Address": 1215,
+            "Name": "Реле нагревателя 1",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1216,
+            "Name": "Ток нагревателя 1, мА",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1217,
+            "Name": "Температура радиатора ЭН",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Температура"
+          },
+          {
+            "Address": 1218,
+            "Name": "Макс. температура радиатора",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Защита"
+          },
+          {
+            "Address": 1219,
+            "Name": "Очистка статистики",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Управление"
+          },
+          {
+            "Address": 1220,
+            "Name": "Реле нагревателя 2",
+            "Area": "Holding",
+            "Writable": true,
+            "Unit": "",
+            "Category": "Нагреватели"
+          },
+          {
+            "Address": 1221,
+            "Name": "Ток нагревателя 2, мА",
+            "Area": "Holding",
+            "Writable": false,
+            "Unit": "",
+            "Category": "Нагреватели"
+          }
+        ]
+      }
+    ]
+  },
+  "reportTemplate": {
+    "fields": [
+      {
+        "key": "",
+        "label": "",
+        "source": "TestType",
+        "format": "Text"
+      },
+      {
+        "key": "Dut.dev_type",
+        "label": "Тип устройства (dev_type)",
+        "source": "Variable",
+        "format": "Text"
+      },
+      {
+        "key": "Dut.cpu_id",
+        "label": "CPU ID",
+        "source": "Variable",
+        "format": "Text"
+      },
+      {
+        "key": "самотестирование",
+        "label": "самотестирование",
+        "source": "Entry",
+        "format": "BooleanText"
+      },
+      {
+        "key": "Версия прошивки",
+        "label": "Версия прошивки",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "Версия бутлоадера",
+        "label": "Версия бутлоадера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "MAC адрес",
+        "label": "MAC адрес",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "CalculatedMac",
+        "label": "Расчётный MAC (без записи)",
+        "source": "Variable",
+        "format": "Text"
+      },
+      {
+        "key": "SerialShort",
+        "label": "Короткая часть серийного номера",
+        "source": "Variable",
+        "format": "Text"
+      },
+      {
+        "key": "DeviceIdentity.Passed",
+        "label": "CPU ID соответствует выданному номеру",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "key": "DataTest.Port0.Passed",
+        "label": "Передача данных: Медь 1–2",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "key": "DataTest.Port1.Passed",
+        "label": "Передача данных: Медь 3–4",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "key": "DataTest.Port2.Passed",
+        "label": "Передача данных: Гигабит RJ45–SFP",
+        "source": "Variable",
+        "format": "BooleanNumber"
+      },
+      {
+        "key": "версия платы",
+        "label": "версия платы",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "ID микросхемы PoE контроллера",
+        "label": "ID микросхемы PoE контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "ID микросхемы Switch контроллера",
+        "label": "ID микросхемы Switch контроллера",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "link_0",
+        "label": "link_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_st_0",
+        "label": "poe_a_st_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_v_0",
+        "label": "poe_a_v_0",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "key": "poe_a_c_0",
+        "label": "poe_a_c_0",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "link_1",
+        "label": "link_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_st_1",
+        "label": "poe_a_st_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_v_1",
+        "label": "poe_a_v_1",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "key": "poe_a_c_1",
+        "label": "poe_a_c_1",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "link_2",
+        "label": "link_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_st_2",
+        "label": "poe_a_st_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_v_2",
+        "label": "poe_a_v_2",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "key": "poe_a_c_2",
+        "label": "poe_a_c_2",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "link_3",
+        "label": "link_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_st_3",
+        "label": "poe_a_st_3",
+        "source": "Entry",
+        "format": "Text"
+      },
+      {
+        "key": "poe_a_v_3",
+        "label": "poe_a_v_3",
+        "source": "Entry",
+        "format": "FixedSix"
+      },
+      {
+        "key": "poe_a_c_3",
+        "label": "poe_a_c_3",
+        "source": "Entry",
+        "format": "Text"
+      }
+    ],
+    "includeAutomaticEntries": false
+  },
+  "pingMonitor": {
+    "enabled": true,
+    "host": "192.168.0.1",
+    "intervalMs": 1000,
+    "timeoutMs": 1000,
+    "showInEngineer": true,
+    "showInOperator": true
+  }
+}
