@@ -54,11 +54,28 @@ public partial class TestViewModel
 
     public bool HasCatalogEquipmentModel => SelectedEquipmentModel != null;
 
+    public bool IsDiagnosticProfile
+    {
+        get => RootGraph.ProfilePurpose == ProfilePurpose.Diagnostic;
+        set
+        {
+            var old = IsDiagnosticProfile;
+            if (!CanEditGraph || old == value) return;
+            void Set(bool diagnostic)
+            {
+                RootGraph.ProfilePurpose = diagnostic ? ProfilePurpose.Diagnostic : ProfilePurpose.Production;
+                OnPropertyChanged(nameof(IsDiagnosticProfile));
+            }
+            _history.Execute(RootGraph, new ProfileMetadataCommand(() => Set(value), () => Set(old)));
+        }
+    }
+
     internal void NotifyDeviceNameChanged()
     {
         OnPropertyChanged(nameof(CurrentProfileName));
         OnPropertyChanged(nameof(ProfileDescription));
         OnPropertyChanged(nameof(DeviceName));
+        OnPropertyChanged(nameof(IsDiagnosticProfile));
         OnPropertyChanged(nameof(EquipmentPlaceholder));
         OnPropertyChanged(nameof(SelectedEquipmentModel));
         OnPropertyChanged(nameof(HasCatalogEquipmentModel));

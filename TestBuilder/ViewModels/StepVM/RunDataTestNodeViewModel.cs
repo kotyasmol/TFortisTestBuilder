@@ -154,17 +154,26 @@ namespace TestBuilder.ViewModels.StepVM
 
         internal IEnumerable<DataTestPortConfig> ParsePorts()
         {
-            return PortsText
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(line => line.Split(','))
-                .Where(parts => parts.Length >= 3)
-                .Select(parts => new DataTestPortConfig(
-                    parts[0].Trim(),
-                    parts[1].Trim(),
-                    parts[2].Trim(),
-                    parts.Length >= 4 && int.TryParse(parts[3].Trim(), out var mbps)
-                        ? RunDataTestStep.NormalizeBandwidth(mbps, AllowGigabit)
-                        : null));
+            var lines = PortsText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (lines.Length == 0) throw new InvalidOperationException("DataTest: не задана ни одна активная пара.");
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var parts = lines[i].Split(',').Select(p => p.Trim()).ToArray();
+                if (parts.Length is < 3 or > 4 || string.IsNullOrWhiteSpace(parts[0]) ||
+                    !System.Net.IPAddress.TryParse(parts[1], out var first) ||
+                    !System.Net.IPAddress.TryParse(parts[2], out var second) ||
+                    first.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork ||
+                    second.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork || first.Equals(second))
+                    throw new InvalidOperationException($"DataTest, строка {i + 1}: нужны название и два разных IPv4-адреса. Получено: {lines[i]}");
+                int? bandwidth = null;
+                if (parts.Length == 4)
+                {
+                    if (!int.TryParse(parts[3], out var mbps) || mbps <= 0 || mbps > 1000)
+                        throw new InvalidOperationException($"DataTest, пара «{parts[0]}»: скорость должна быть 1–1000 Мбит/с.");
+                    bandwidth = RunDataTestStep.NormalizeBandwidth(mbps, AllowGigabit);
+                }
+                yield return new DataTestPortConfig(parts[0], parts[1], parts[2], bandwidth);
+            }
         }
     }
 }

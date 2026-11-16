@@ -61,6 +61,7 @@ namespace TestBuilder.ViewModels.Graphs
         public int LabelVariant { get; set; }
 
         public string? ConfigurationName { get; set; }
+        public string ProfilePurpose { get; set; } = "production";
 
         public bool IsBodyGraph { get; set; }
 

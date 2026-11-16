@@ -127,12 +127,14 @@
         "Address": 1420,
         "Name": "Авт. включение нагрузки, канал A",
         "Writable": true,
+        "RetryWriteOnMismatch": true,
         "Category": "Автоуправление"
       },
       {
         "Address": 1421,
         "Name": "Авт. включение нагрузки, канал B",
         "Writable": true,
+        "RetryWriteOnMismatch": true,
         "Category": "Автоуправление"
       },
       {

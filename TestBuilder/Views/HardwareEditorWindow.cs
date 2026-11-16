@@ -63,6 +63,9 @@ public sealed partial class HardwareEditorWindow : Window
         AddColumn(_registersGrid, "Адрес", "Address"); AddColumn(_registersGrid, "Название", "Name");
         AddAreaColumn(); AddColumn(_registersGrid, "Единица", "Unit"); AddColumn(_registersGrid, "Категория", "Category");
         _registersGrid.Columns.Add(new DataGridCheckBoxColumn { Header = "Запись", Binding = new Binding("Writable") { Mode = BindingMode.TwoWay } });
+        var repeatHeader = new TextBlock { Text = "Повтор состояния" };
+        ToolTip.SetTip(repeatHeader, "Повторить запись при несовпадении контрольного чтения. Только для установки состояния; для командных регистров оставьте выключенным.");
+        _registersGrid.Columns.Add(new DataGridCheckBoxColumn { Header = repeatHeader, Binding = new Binding("RetryWriteOnMismatch") { Mode = BindingMode.TwoWay } });
         _devicesGrid.SelectionChanged += (_, _) => ShowRegisters();
         var root = new DockPanel { Margin = new Thickness(20) };
         var bottom = new StackPanel { Spacing = 8, Margin = new Thickness(0, 12, 0, 0) };

@@ -15,14 +15,15 @@ public sealed class ModbusRegisterCatalog
 {
     public static ModbusRegisterCatalog Empty { get; } = new(Array.Empty<SlaveModelBase>());
 
-    private readonly FrozenDictionary<RegisterKey, (string Name, bool IsReadOnly)> _registers;
+    private readonly FrozenDictionary<RegisterKey, (string Name, bool IsReadOnly, bool RetryWrite)> _registers;
 
     public ModbusRegisterCatalog(IEnumerable<SlaveModelBase> slaves)
     {
-        var registers = new Dictionary<RegisterKey, (string Name, bool IsReadOnly)>();
+        var registers = new Dictionary<RegisterKey, (string Name, bool IsReadOnly, bool RetryWrite)>();
         foreach (var slave in slaves)
         foreach (var register in slave.RegisterItems)
-            registers[new RegisterKey(slave.SlaveId, register.Address, register.Area)] = (register.Name, register.IsReadOnly);
+            registers[new RegisterKey(slave.SlaveId, register.Address, register.Area)] =
+                (register.Name, register.IsReadOnly, !register.IsReadOnly && register.RetryWriteOnMismatch);
         _registers = registers.ToFrozenDictionary();
     }
 
@@ -30,6 +31,9 @@ public sealed class ModbusRegisterCatalog
 
     public bool IsReadOnly(byte slaveId, int address, ModbusArea area) =>
         _registers.TryGetValue(new RegisterKey(slaveId, address, area), out var register) && register.IsReadOnly;
+
+    public bool CanRetryWrite(byte slaveId, int address, ModbusArea area) =>
+        _registers.TryGetValue(new RegisterKey(slaveId, address, area), out var register) && register.RetryWrite;
 
     public string FormatAddress(byte? slaveId, int address, ModbusArea area = ModbusArea.Holding)
     {

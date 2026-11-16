@@ -132,10 +132,11 @@
                                   AutomationProperties.Name="{Binding Profile.DisplayName}">
                             <StackPanel Spacing="5">
                               <TextBlock Text="{Binding Profile.DisplayName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
-                              <Grid ColumnDefinitions="Auto,*">
+                              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
                                 <Border Classes="profileLatestBadge" IsVisible="{Binding Profile.IsLatest}">
-                                  <TextBlock Classes="profileMetadata" Text="Актуальный" />
+                                  <TextBlock Classes="profileMetadata" Text="{Binding Profile.LatestCaption}" />
                                 </Border>
+                                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="profileMetadata" Text="Диагностический" IsVisible="{Binding Profile.ShowDiagnosticCaption}" />
                                 <TextBlock Grid.Column="1" Classes="profileMetadata" Text="{Binding Profile.UpdatedAtText}"
                                            IsVisible="{Binding Profile.HasUpdatedAt}" HorizontalAlignment="Right" Opacity="0.7"
                                            ToolTip.Tip="{Binding Profile.UpdatedAtTooltip}" />

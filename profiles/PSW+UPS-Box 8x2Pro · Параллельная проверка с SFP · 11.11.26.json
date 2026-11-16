@@ -185,6 +185,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -193,6 +194,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -441,6 +443,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -449,6 +452,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -697,6 +701,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -705,6 +710,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -953,6 +959,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -961,6 +968,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1209,6 +1217,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1217,6 +1226,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1465,6 +1475,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1473,6 +1484,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1721,6 +1733,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1729,6 +1742,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1977,6 +1991,7 @@
             "Name": "Авт. включение нагрузки, канал A",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },
@@ -1985,6 +2000,7 @@
             "Name": "Авт. включение нагрузки, канал B",
             "Area": "Holding",
             "Writable": true,
+            "RetryWriteOnMismatch": true,
             "Unit": "",
             "Category": "Автоуправление"
           },

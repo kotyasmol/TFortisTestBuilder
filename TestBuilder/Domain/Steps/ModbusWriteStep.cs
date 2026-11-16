@@ -175,10 +175,23 @@ namespace TestBuilder.Domain.Steps
                 _logger.Warning(
                     $"[ОШИБКА] Значение не совпадает. Попытка {attempt}/{VerifyAttempts}. Ожидалось {_value}, прочитано {actualValue}. Устройство {actualSlaveId}, адрес {registerAddress}.",
                     TestErrorCode.ModbusReadBack);
+                if (attempt < VerifyAttempts && context.ModbusRegisters.CanRetryWrite(actualSlaveId.Value, _address, _area))
+                {
+                    _logger.Info($"Повтор установки состояния: устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. " +
+                        "Повтор разрешён картой оборудования профиля.");
+                    if (!await _modbusService.WriteAreaAsync(actualSlaveId.Value, _address, _value, _area, cancellationToken))
+                    {
+                        _logger.Warning($"Повторная запись не выполнена. Устройство {actualSlaveId}, адрес {registerAddress}.", TestErrorCode.ModbusWrite);
+                        return StepResult.False;
+                    }
+                    if (context.RequireFreshMonitoring)
+                        context.RequiredPollAfter[actualSlaveId.Value] = System.Diagnostics.Stopwatch.GetTimestamp();
+                }
             }
 
             _logger.Warning(
-                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. {lastVerificationError}",
+                $"[ОШИБКА] Проверка записи не пройдена после {VerifyAttempts} попыток. Устройство {actualSlaveId}, адрес {registerAddress}, значение {_value}. {lastVerificationError} " +
+                "Проверьте тип и прошивку платы, поддержку регистра и другие управляющие программы.",
                 TestErrorCode.ModbusReadBack);
 
             return StepResult.False;

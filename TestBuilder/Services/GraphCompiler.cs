@@ -49,13 +49,15 @@ namespace TestBuilder.Services
         }
 
         public static void ValidateRunConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware,
-            string? standPort, NodeViewModel? entry = null, bool singleNode = false)
+            string? standPort, NodeViewModel? entry = null, bool singleNode = false, bool validateLocalNetwork = false)
         {
             hardware?.Validate();
             var nodes = entry == null ? graph.Nodes.AsEnumerable() : GetRunNodes(graph, entry, singleNode);
             foreach (var node in nodes)
             {
                 if (node is SubtestNodeViewModel { IsEnabled: false }) continue;
+                if (validateLocalNetwork && node is RunDataTestNodeViewModel dataTest)
+                    RunDataTestStep.ValidateAdapterBindings(dataTest.ParsePorts());
                 if (node is ModbusWriteNodeViewModel write &&
                     (write.RegisterArea is not (ModbusArea.Holding or ModbusArea.Coil) ||
                     (!write.UseCurrentSlaveId && ReadOnlySlaves(hardware, write)?.Contains(write.SlaveId) == true)))
@@ -68,7 +70,7 @@ namespace TestBuilder.Services
                     if (!string.IsNullOrWhiteSpace(device.PortName) && string.Equals(device.PortName.Trim(), standPort?.Trim(), StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Консоль «{device.Name}» использует порт подключённого стенда. Укажите отдельный порт USB-UART.");
                 }
-                if (node is ICompositeNodeViewModel composite) ValidateRunConnections(composite.BodyGraph, hardware, standPort);
+                if (node is ICompositeNodeViewModel composite) ValidateRunConnections(composite.BodyGraph, hardware, standPort, validateLocalNetwork: validateLocalNetwork);
             }
         }
         // Transport substitutions preserve the real report/label steps in integration tests.
@@ -141,6 +143,7 @@ namespace TestBuilder.Services
                 throw new InvalidOperationException($"В графе '{graph.Title}' должна быть ровно одна стартовая нода (найдено {starts.Count}).");
 
             var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
+            if (!singleNode) ReportOrderValidation.Validate(graph, nodes);
             foreach (var node in nodes.Where(n => n.RunOnlyOnFirstRun && !n.CanRunOnlyOnFirstRun))
                 throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение при первом запуске.");
             var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node, currentSlaves), node)

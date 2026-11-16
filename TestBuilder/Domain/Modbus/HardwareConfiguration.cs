@@ -19,6 +19,10 @@ public sealed class RegisterDefinition
     public string Name { get; set; } = "Регистр";
     public ModbusArea Area { get; set; }
     public bool Writable { get; set; }
+    // Opt-in only: a state assignment can be repeated; command registers may
+    // execute an action again and must retain the conservative default.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RetryWriteOnMismatch { get; set; }
     public string Unit { get; set; } = "";
     public string Category { get; set; } = "";
 }
@@ -105,7 +109,8 @@ public sealed class HardwareConfiguration
                 throw new InvalidOperationException($"Устройство {d.Name}: добавьте регистр серийного номера стенда {serial} в область Holding.");
             foreach (var reg in d.Registers)
                 if (reg.Address is < 0 or > 65535 || !Enum.IsDefined(reg.Area) || string.IsNullOrWhiteSpace(reg.Name) ||
-                    (reg.Writable && reg.Area is ModbusArea.Input or ModbusArea.Discrete))
+                    (reg.Writable && reg.Area is ModbusArea.Input or ModbusArea.Discrete) ||
+                    (reg.RetryWriteOnMismatch && !reg.Writable))
                     throw new InvalidOperationException($"Устройство {d.Name}: некорректный регистр {reg.Address}.");
         }
         if (Devices.Count(d => d.StandSerialNumberAddress.HasValue) > 1)

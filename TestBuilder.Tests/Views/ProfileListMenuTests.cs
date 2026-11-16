@@ -20,6 +20,29 @@ namespace TestBuilder.Tests.Views;
 public class ProfileListMenuTests
 {
     [Fact]
+    public async Task NewerDiagnosticDoesNotHideProductionBaselineInEitherMenu()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var files = new ProfileCopyTests.ProfileFolder();
+            var production = files.Write("old-production.json", ProfileCopyTests.SimpleJson.Replace("\"nodes\":",
+                "\"updatedAt\":\"2026-11-11T12:00:00Z\",\"nodes\":"));
+            files.Write("new-diagnostic.json", ProfileCopyTests.SimpleJson.Replace("\"nodes\":",
+                "\"profilePurpose\":\"diagnostic\",\"updatedAt\":\"2026-11-13T12:00:00Z\",\"nodes\":"));
+            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
+            Assert.Equal(production, Assert.Single(vm.Profiles.Where(p => p.IsLatest)).FilePath);
+            Assert.Equal(production, Assert.Single(Assert.Single(vm.EngineerProfileGroups).VisibleProfiles).FilePath);
+            Assert.Equal(production, Assert.Single(Assert.Single(vm.StationProfileGroups).VisibleProfiles).Profile.FilePath);
+            Assert.True(vm.Profiles.Single(p => p.IsDiagnostic).ShowDiagnosticCaption);
+            File.Delete(production); vm.RefreshProfiles();
+            var diagnostic = Assert.Single(Assert.Single(vm.StationProfileGroups).VisibleProfiles).Profile;
+            Assert.True(diagnostic.IsDiagnostic);
+            Assert.NotEqual("Актуальный", diagnostic.LatestCaption);
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task NewestProfilePerModel_IsVisibleInBothMenus_AndUpdatesOnlyItsGroup()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));

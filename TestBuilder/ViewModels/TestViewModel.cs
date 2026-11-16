@@ -823,6 +823,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         RootGraph.DeviceModelId = null;
         RootGraph.CatalogModel = null;
         RootGraph.ConfigurationName = null;
+        RootGraph.ProfilePurpose = ProfilePurpose.Production;
         NotifyDeviceNameChanged();
         RootGraph.IsBodyGraph = false;
         RootGraph.UsesBodyBoundaryNodes = false;
@@ -1180,7 +1181,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         var logPath = IsTraining ? null : LoggingService.Instance.StartFileLogForRun(CurrentProfileName,
             message => TestingLogger.Warning(message, TestErrorCode.RunLog));
-        try { await run(); }
+        try
+        {
+            if (!IsTraining)
+                RunEnvironmentLog.Write(TestingLogger, _currentProfilePath,
+                    () => GraphSerializer.Serialize(this, CurrentProfileName), RootGraph.ProfilePurpose, AppSettings.Instance.StandId);
+            await run();
+        }
         finally
         {
             if (logPath != null) LoggingService.Instance.StopFileLogForRun(logPath);
@@ -1247,7 +1254,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             }
             else
             {
-                GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode);
+                GraphCompiler.ValidateRunConnections(runWorkspace, RootGraph.Hardware, SelectedPort, runEntry, singleNode, validateLocalNetwork: !IsTraining);
                 graphs = new[] { compiler.Compile(runWorkspace, runEntry, singleNode, slaveId is >= 1 and <= 247 ? (byte)slaveId.Value : null) };
             }
         }
@@ -1893,10 +1900,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     var modelName = model?.Name ?? info.DeviceModel;
                     var profile = previous.TryGetValue(file, out var old) && old.Name == info.Name &&
                         old.DeviceModelId == modelId && old.DeviceModel == modelName &&
-                        old.ConfigurationName == info.ConfigurationName && old.ProductKind == info.ProductKind &&
+                        old.ConfigurationName == info.ConfigurationName && old.ProductKind == info.ProductKind && old.IsDiagnostic == info.IsDiagnostic &&
                         old.HasReadableMetadata == info.HasReadableMetadata
                         ? old
-                        : new GraphProfile(file, info.Name, modelName, info.ConfigurationName, modelId, info.ProductKind, info.UpdatedAt)
+                        : new GraphProfile(file, info.Name, modelName, info.ConfigurationName, modelId, info.ProductKind, info.UpdatedAt, info.IsDiagnostic)
                             { HasReadableMetadata = info.HasReadableMetadata };
                     profile.RefreshUpdatedAt(info.UpdatedAt);
                     _profileCatalog.Add(profile);
@@ -1910,7 +1917,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var latestProfiles = _profileCatalog
                 .Where(p => p.HasReadableMetadata && p.HasUpdatedAt && (p.DeviceModel != null || p.DeviceModelId != null))
                 .GroupBy(p => p.ModelGroupKey, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.OrderByDescending(p => p.UpdatedAt)
+                .Select(group => group.OrderBy(p => p.IsDiagnostic).ThenByDescending(p => p.UpdatedAt)
                     .ThenBy(p => p.FilePath, StringComparer.Ordinal).First())
                 .ToHashSet();
             foreach (var profile in _profileCatalog) profile.IsLatest = latestProfiles.Contains(profile);

@@ -29,11 +29,11 @@ namespace TestBuilder.Domain.Steps
         private const int ProbeIdentityLength = 16;
         private const int MaximumSupportedBandwidthMbps = 100;
         private const int MaxPacketsPerBurst = 512;
-        private const int SendQueueChunkMs = 500;
+        private const int SendQueueChunkMs = 50;
         private const int CaptureStartSettleMs = 100;
         private const int WarmupDrainMs = 100;
-        private const int ReceiveDrainQuietMs = 75;
-        private const int ReceiveDrainMaxMs = 500;
+        private const int ReceiveDrainQuietMs = 200;
+        private const int ReceiveDrainMaxMs = 2000;
         private const int InfrastructureRetryCount = 1;
 
         private static readonly byte[] ProbeMagic = { 0x54, 0x46, 0x44, 0x54 }; // "TFDT"
@@ -147,6 +147,7 @@ namespace TestBuilder.Domain.Steps
                 $"duration {_durationMs} ms, warmup {_warmupMs} ms, pause {_interPairDelayMs} ms, packet {_packetSizeBytes} bytes, " +
                 $"directions {(_bidirectional ? "both" : "one")}, max loss {_allowedLossPercent:F3}%, " +
                 $"max TX deficit {_allowedTxDeficitPercent:F3}%.");
+            LogRuntimeVersion();
 
             var allPassed = true;
             var errors = new List<string>();
@@ -226,6 +227,8 @@ namespace TestBuilder.Domain.Steps
             {
                 return DataTestPairResult.Fail($"Не найдена pcap-сетевая карта с IP {outIp}.");
             }
+            if (inNetworkInterface.Id.Equals(outNetworkInterface.Id, StringComparison.OrdinalIgnoreCase))
+                return DataTestPairResult.Fail($"IP {inIp} и {outIp} назначены одной карте. Для пары нужны два разных адаптера.");
 
             var inMac = GetMacBytes(inDevice.MacAddress);
             if (inMac == null)
@@ -381,6 +384,7 @@ namespace TestBuilder.Domain.Steps
             var unexpectedPackets = 0;
             var countingEnabled = 0;
             var runId = CreateRunId();
+            var phase = "открытие карт";
 
             void OnPacketArrival(object sender, PacketCapture capture)
             {
@@ -430,39 +434,48 @@ namespace TestBuilder.Domain.Steps
                 receiveDevice.StartCapture();
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
 
+                var senderCount = 1;
                 if (_warmupMs > 0)
                 {
-                    await SendPacedAsync(
-                        sendDevice,
-                        packet,
-                        targetBandwidthMbps,
-                        _warmupMs,
-                        CreateRunId(),
-                        cancellationToken);
+                    phase = "прогрев";
+                    senderCount = await DataTestSenderCalibration.SelectAsync(
+                        (lanes, token) => SendPacedAsync(sendDevice, packet, targetBandwidthMbps, _warmupMs,
+                            CreateRunId(), token, lanes),
+                        CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _warmupMs), packet.Length,
+                        targetBandwidthMbps, _allowedTxDeficitPercent,
+                        highRateWindows && sendDevice is PcapDevice && IsNativeSendQueueAvailable(),
+                        message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken);
                     await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
 
                 var captureStatsBefore = ReadCaptureStatistics(receiveDevice);
+                var sendCountersBefore = DataTestHostCounters.Read(sendNetworkInterface);
+                var receiveCountersBefore = DataTestHostCounters.Read(receiveNetworkInterface);
                 Interlocked.Exchange(ref receivedPackets, 0);
                 Interlocked.Exchange(ref duplicatePackets, 0);
                 Interlocked.Exchange(ref unexpectedPackets, 0);
                 Volatile.Write(ref countingEnabled, 1);
 
+                phase = "измерение";
                 var sendResult = await SendPacedAsync(
                     sendDevice,
                     packet,
                     targetBandwidthMbps,
                     _durationMs,
                     runId,
-                    cancellationToken);
+                    cancellationToken, senderCount);
                 var transmittedPackets = sendResult.SentPackets;
 
-                await WaitForCaptureDrainAsync(() => Volatile.Read(ref receivedPackets), cancellationToken);
+                await WaitForCaptureDrainAsync(() => Volatile.Read(ref receivedPackets), cancellationToken, transmittedPackets);
                 Volatile.Write(ref countingEnabled, 0);
 
                 var received = Volatile.Read(ref receivedPackets);
                 var captureStatsAfter = ReadCaptureStatistics(receiveDevice);
-                var captureDroppedPackets = CounterDelta(captureStatsBefore.DroppedPackets, captureStatsAfter.DroppedPackets);
+                var sendErrors = DataTestHostCounters.Read(sendNetworkInterface).Delta(sendCountersBefore);
+                var receiveErrors = DataTestHostCounters.Read(receiveNetworkInterface).Delta(receiveCountersBefore);
+                var captureStatsAvailable = captureStatsBefore.Available && captureStatsAfter.Available;
+                var captureDroppedPackets = captureStatsAvailable
+                    ? CounterDelta(captureStatsBefore.DroppedPackets, captureStatsAfter.DroppedPackets) : 0;
                 var receivedForLoss = Math.Min(received, transmittedPackets);
                 var lostPackets = Math.Max(0, transmittedPackets - receivedForLoss);
                 var lossPercent = transmittedPackets > 0
@@ -476,7 +489,8 @@ namespace TestBuilder.Domain.Steps
                     ? receivedForLoss * wireSizeBytes * 8.0 / sendResult.ElapsedMs / 1000.0
                     : 0.0;
                 var txDeficitPercent = CalculateTxDeficitPercent(targetBandwidthMbps, txMbps);
-                var infrastructureFailure = txDeficitPercent > _allowedTxDeficitPercent || captureDroppedPackets > 0;
+                var infrastructureFailure = txDeficitPercent > _allowedTxDeficitPercent || captureDroppedPackets > 0 ||
+                    sendErrors.HasErrors || receiveErrors.HasErrors || !captureStatsAvailable && lossPercent > _allowedLossPercent;
                 var passed = lossPercent <= _allowedLossPercent && !infrastructureFailure;
                 var error = BuildFailureMessage(
                     passed,
@@ -487,13 +501,19 @@ namespace TestBuilder.Domain.Steps
                     expectedPackets,
                     captureDroppedPackets,
                     sendResult.Engine);
+                if (sendErrors.HasErrors || receiveErrors.HasErrors)
+                    error += $" Ошибки сетевых карт стенда: отправитель [{sendErrors}], приёмник [{receiveErrors}].";
+                if (!captureStatsAvailable && lossPercent > _allowedLossPercent)
+                    error += " Статистика потерь Npcap недоступна; нельзя отделить потерю захвата на ПК от потерь тракта.";
 
                 _logger.Info(
                     $"DataTest {pairName} [{index}] {direction}: {sourceIp} -> {destinationIp}, target {targetBandwidthMbps} Mbps, " +
                     $"expected {expectedPackets}, TX {transmittedPackets}, RX {received}, loss {lossPercent:F3}%, " +
                     $"tx deficit {txDeficitPercent:F3}%, tx speed {txMbps:F3} Mbps, rx speed {rxMbps:F3} Mbps, " +
                     $"capture drops {captureDroppedPackets}, duplicates {duplicatePackets}, unexpected {unexpectedPackets}, " +
-                    $"engine {sendResult.Engine}, " +
+                    $"engine {sendResult.Engine}, senders {senderCount}, capture stats {(captureStatsAvailable ? "available" : "unavailable")}, " +
+                    $"capture received {CounterDelta(captureStatsBefore.ReceivedPackets, captureStatsAfter.ReceivedPackets)}, " +
+                    $"NIC send [{sendErrors}], NIC receive [{receiveErrors}], {DescribeMissing(receivedMarks)}, " +
                     $"{(passed ? "OK" : "FAIL")}.");
 
                 return new DataTestPortResult(
@@ -522,7 +542,7 @@ namespace TestBuilder.Domain.Steps
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return DataTestPortResult.Fail(ex.Message, infrastructureFailure: true);
+                return DataTestPortResult.Fail($"{phase}: {ex.Message}", infrastructureFailure: true);
             }
             finally
             {
@@ -630,11 +650,11 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             int durationMs,
             ulong runId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, int senderCount = 1)
         {
             if (device is PcapDevice pcapDevice && IsNativeSendQueueAvailable())
             {
-                if (OperatingSystem.IsWindows() && targetBandwidthMbps > 100)
+                if (senderCount == 2 && OperatingSystem.IsWindows() && targetBandwidthMbps > 100)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     // Independent native handles overlap transmit completion waits.
@@ -685,7 +705,7 @@ namespace TestBuilder.Domain.Steps
             var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
             // Bound queue memory independently of test duration. At 1 Gbit/s a
             // complete five-second prebuilt test would otherwise occupy ~640 MB.
-            var chunkMs = targetBandwidthMbps > 100 ? 100 : SendQueueChunkMs;
+            var chunkMs = targetBandwidthMbps > 100 ? 20 : SendQueueChunkMs;
             var queues = Channel.CreateBounded<SendQueuePlan>(new BoundedChannelOptions(2)
             {
                 SingleReader = true,
@@ -765,17 +785,20 @@ namespace TestBuilder.Domain.Steps
                         if (parallelClock != null)
                             await WaitForSendDeadlineAsync(parallelClock, sent * 1000.0 / packetsPerSecond, cancellationToken);
                         if (startTimestamp == 0) startTimestamp = Stopwatch.GetTimestamp();
-                        var transmittedBytes = plan.Queue.Transmit(device, parallelClock == null
-                            ? SendQueueTransmitModes.Synchronized : SendQueueTransmitModes.Normal);
+                        // Both single and dual senders respect per-frame timing.
+                        // Unsynchronised 100 ms batches overloaded some NIC/driver queues.
+                        var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
                         var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
                         var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
                             ? plan.PacketCount
                             : Math.Clamp(transmittedBytes / Math.Max(1, entrySize), 0, plan.PacketCount);
                         sent += sentInQueue;
 
-                        if (sentInQueue < plan.PacketCount)
+                        if (transmittedBytes != plan.Queue.CurrentLength)
                         {
-                            break;
+                            throw new InvalidOperationException($"Npcap: очередь передала {sentInQueue}/{plan.PacketCount} кадров, " +
+                                $"{transmittedBytes}/{plan.Queue.CurrentLength} байт; отправитель {lane + 1}, " +
+                                $"всего {sent}/{targetPackets}. Ошибка драйвера: {device.LastError}");
                         }
                     }
                 }
@@ -940,7 +963,7 @@ namespace TestBuilder.Domain.Steps
             return string.Join(":", mac.Select(value => value.ToString("x2")));
         }
 
-        private static async Task WaitForCaptureDrainAsync(Func<int> readCount, CancellationToken cancellationToken)
+        internal static async Task WaitForCaptureDrainAsync(Func<int> readCount, CancellationToken cancellationToken, int expectedCount = int.MaxValue)
         {
             var startedAt = Stopwatch.GetTimestamp();
             var quietStartedAt = startedAt;
@@ -948,6 +971,7 @@ namespace TestBuilder.Domain.Steps
 
             while (GetElapsedMilliseconds(startedAt, Stopwatch.GetTimestamp()) < ReceiveDrainMaxMs)
             {
+                if (readCount() >= expectedCount) break;
                 await Task.Delay(25, cancellationToken);
                 var currentCount = readCount();
 
@@ -975,7 +999,7 @@ namespace TestBuilder.Domain.Steps
                     return default;
                 }
 
-                return new CaptureStatisticsSnapshot(statistics.ReceivedPackets, statistics.DroppedPackets);
+                return new CaptureStatisticsSnapshot(statistics.ReceivedPackets, statistics.DroppedPackets, true);
             }
             catch
             {
@@ -986,6 +1010,19 @@ namespace TestBuilder.Domain.Steps
         private static uint CounterDelta(uint before, uint after)
         {
             return after >= before ? after - before : uint.MaxValue - before + after + 1;
+        }
+
+        internal static string DescribeMissing(IReadOnlyList<int> marks)
+        {
+            var first = -1; var last = -1; var longest = 0; var length = 0;
+            for (var i = 0; i < marks.Count; i++)
+            {
+                if (marks[i] != 0) { length = 0; continue; }
+                if (first < 0) first = i;
+                last = i;
+                longest = Math.Max(longest, ++length);
+            }
+            return $"missing sequence first {first}, last {last}, longest gap {longest}";
         }
 
         private string BuildFailureMessage(
@@ -1168,8 +1205,52 @@ namespace TestBuilder.Domain.Steps
                 return null;
             }
 
-            var expectedMac = networkInterface.GetPhysicalAddress();
-            return devices.FirstOrDefault(device => SamePhysicalAddress(device.MacAddress, expectedMac));
+            return DataTestAdapterBinding.Resolve(devices, networkInterface.Id, networkInterface.GetPhysicalAddress(),
+                device => device.Name, device => device.MacAddress ?? PhysicalAddress.None);
+        }
+
+        internal static void ValidateAdapterBindings(IEnumerable<DataTestPortConfig> ports)
+        {
+            var pairs = ports.ToArray();
+            ILiveDevice[] devices;
+            try { devices = CaptureDeviceList.Instance.ToArray(); }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("DataTest: не удалось получить pcap-интерфейсы. Проверьте установку Npcap и права доступа. " + ex.Message, ex);
+            }
+            foreach (var port in pairs)
+            {
+                var ids = new List<string>();
+                foreach (var text in new[] { port.InIp, port.OutIp })
+                {
+                    var matches = FindNetworkInterfacesByIp(IPAddress.Parse(text));
+                    if (matches.Length != 1)
+                        throw new InvalidOperationException($"DataTest «{port.Name}» ({port.InIp} ↔ {port.OutIp}): IP {text} " +
+                            (matches.Length == 0 ? "не назначен сетевой карте этого ПК." : "назначен нескольким картам этого ПК."));
+                    if (FindDeviceByNetworkInterface(devices, matches[0]) == null)
+                        throw new InvalidOperationException($"DataTest «{port.Name}»: для IP {text} не найден pcap-интерфейс. Проверьте Npcap и права доступа.");
+                    ids.Add(matches[0].Id);
+                }
+                if (string.Equals(ids[0], ids[1], StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"DataTest «{port.Name}»: оба IP назначены одной карте. Для проверки нужны две разные сетевые карты.");
+                // Link may legitimately be down before the graph powers the DUT.
+                // Speed and link status are checked when the pair actually runs.
+            }
+        }
+
+        private void LogRuntimeVersion()
+        {
+            _logger.Info($"DataTest: SharpPcap {typeof(CaptureDeviceList).Assembly.GetName().Version}; отправка синхронизированными очередями.");
+            if (!OperatingSystem.IsWindows()) return;
+            try
+            {
+                using var process = System.Diagnostics.Process.GetCurrentProcess();
+                foreach (System.Diagnostics.ProcessModule module in process.Modules)
+                    if (module.ModuleName.Equals("wpcap.dll", StringComparison.OrdinalIgnoreCase) ||
+                        module.ModuleName.Equals("Packet.dll", StringComparison.OrdinalIgnoreCase))
+                        _logger.Info($"DataTest: {module.FileName}, версия {module.FileVersionInfo.FileVersion}.");
+            }
+            catch (Exception ex) { _logger.Info("DataTest: версия native-библиотеки недоступна: " + ex.Message); }
         }
 
         private static byte[]? GetMacBytes(PhysicalAddress? address)
@@ -1188,7 +1269,7 @@ namespace TestBuilder.Domain.Steps
             if (networkInterface == null) return $"{ip}: не найдена";
             var speed = NetworkSpeedMbps(networkInterface);
             var speedText = speed > 0 ? $"{speed:F0} Mbps" : "скорость неизвестна";
-            return $"{ip}: {networkInterface.Name}, MAC {networkInterface.GetPhysicalAddress()}, " +
+            return $"{ip}: {networkInterface.Name}, ID {networkInterface.Id}, MAC {networkInterface.GetPhysicalAddress()}, " +
                 $"{networkInterface.OperationalStatus}, {speedText}";
         }
 
@@ -1209,16 +1290,6 @@ namespace TestBuilder.Domain.Steps
                         return false;
                     }
                 }).ToArray();
-        }
-
-        private static bool SamePhysicalAddress(PhysicalAddress? left, PhysicalAddress? right)
-        {
-            var leftBytes = left?.GetAddressBytes();
-            var rightBytes = right?.GetAddressBytes();
-
-            return leftBytes is { Length: 6 } &&
-                   rightBytes is { Length: 6 } &&
-                   leftBytes.SequenceEqual(rightBytes);
         }
 
         private static void SafeStopAndClose(ILiveDevice device)
@@ -1312,7 +1383,7 @@ namespace TestBuilder.Domain.Steps
 
     internal sealed record SendQueuePlan(SendQueue Queue, int PacketCount);
 
-    internal readonly record struct CaptureStatisticsSnapshot(uint ReceivedPackets, uint DroppedPackets);
+    internal readonly record struct CaptureStatisticsSnapshot(uint ReceivedPackets, uint DroppedPackets, bool Available = true);
 
     internal sealed record PacedSendResult(int SentPackets, long ElapsedMs, string Engine);
 

@@ -31,6 +31,7 @@ namespace TestBuilder.Domain.Modbus.Models
 
         /// <summary>Признак доступности записи</summary>
         public bool IsReadOnly { get; set; }
+        public bool RetryWriteOnMismatch { get; set; }
 
         /// <summary>Категория/группа регистра (для UI)</summary>
         public string Category { get; set; } = string.Empty;

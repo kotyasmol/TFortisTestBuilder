@@ -321,6 +321,7 @@
                 <MenuItem Header="Пинг" Click="OnConfigurePing" />
                 <MenuItem Header="Аварийные действия" Click="OnConfigureFailureCleanup" />
                 <MenuItem Header="Зависимости профиля" Command="{Binding ShowProfileDependenciesCommand}" />
+                <MenuItem Header="Диагностический профиль" ToggleType="CheckBox" IsChecked="{Binding IsDiagnosticProfile}" />
               </MenuFlyout>
             </Button.Flyout>
           </Button>

@@ -124,20 +124,20 @@ def generate():
         mac = stage("07. Расчёт MAC без записи в устройство", [node("Build MAC From Serial",
             serialVariableName="SerialNumber", serialOffset=series["serialOffset"], macPrefix=series["macPrefix"],
             serialShortVariableName="SerialShort", macVariableName="CalculatedMac", failOnError=True)])
-        shutdown = stage("08. Выключение питания", [write(1200), write(1201)])
+        shutdown = stage("09. Выключение питания", [write(1200), write(1201)])
         shutdown["stopOnError"] = False
         shutdown["bodyGraph"] = graph([write(1200), write(1201)], continue_errors=True, name=shutdown["name"])
-        report = stage("09. Сформировать и отправить отчёт", report_nodes())
-        items = [preparation, stage("02. Подача питания DUT", [write(1201), write(1200, 1)]),
-                 identity, serial, selftest, data, mac, shutdown, report]
+        report = stage("10. Сформировать и отправить отчёт", report_nodes())
         # Use a separate disabled print stage, with catalog model/variant and global printer/layout.
-        label = stage("10. Этикетка — включить при необходимости", [node("Print Label", printerName="",
+        label = stage("08. Этикетка — включить при необходимости", [node("Print Label", printerName="",
             serialVariableName="SerialNumber", macVariableName="Dut.default_mac", copies=1,
             useQtProZplFormat=True, useDefaultPrinter=True, failOnPrinterError=True)])
         label["isEnabled"] = False
         label["description"] = "Модель/комплектация из справочника, принтер и макет из общих настроек. Расчётный MAC не выдаётся за записанный."
-        items.append(label)
+        items = [preparation, stage("02. Подача питания DUT", [write(1201), write(1200, 1)]),
+                 identity, serial, selftest, data, mac, label, shutdown, report]
         g = graph([])
+        g["profilePurpose"] = "diagnostic"
         g["nodes"] = [node("Start (catalog serials v1)", id="0", x=80, y=80), *items,
                       node("End", id="11", x=80, y=2600)]
         for index, item in enumerate(items, 1):

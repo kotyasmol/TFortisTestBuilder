@@ -1,4 +1,5 @@
 {
+  "name": "PSW-2G6F+Box · Диагностика и отчёт · 13.11.26",
   "nodes": [
     {
       "type": "Start (catalog serials v1)",
@@ -14,6 +15,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "01. Подготовка стенда",
         "nodes": [
           {
             "type": "Start",
@@ -89,8 +91,7 @@
             "targetNodeId": "4",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "01. Подготовка стенда"
+        ]
       },
       "runOnlyOnFirstRun": true,
       "id": "1",
@@ -105,6 +106,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "02. Подача питания DUT",
         "nodes": [
           {
             "type": "Start",
@@ -162,8 +164,7 @@
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "02. Подача питания DUT"
+        ]
       },
       "id": "2",
       "x": 624,
@@ -177,6 +178,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "03. Загрузка и тип устройства",
         "nodes": [
           {
             "type": "Start",
@@ -254,8 +256,7 @@
             "targetNodeId": "4",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "03. Загрузка и тип устройства"
+        ]
       },
       "id": "3",
       "x": 1168,
@@ -269,6 +270,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "04. Серийный номер из справочника",
         "nodes": [
           {
             "type": "Start",
@@ -312,8 +314,7 @@
             "targetNodeId": "2",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "04. Серийный номер из справочника"
+        ]
       },
       "id": "4",
       "x": 80,
@@ -327,6 +328,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "05. Встроенная самопроверка",
         "nodes": [
           {
             "type": "Start",
@@ -384,8 +386,7 @@
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "05. Встроенная самопроверка"
+        ]
       },
       "id": "5",
       "x": 624,
@@ -399,6 +400,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "06. Передача данных",
         "nodes": [
           {
             "type": "Start",
@@ -448,8 +450,7 @@
             "targetNodeId": "2",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "06. Передача данных"
+        ]
       },
       "id": "6",
       "x": 1168,
@@ -463,6 +464,7 @@
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "07. Расчёт MAC без записи в устройство",
         "nodes": [
           {
             "type": "Start",
@@ -502,8 +504,7 @@
             "targetNodeId": "2",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "07. Расчёт MAC без записи в устройство"
+        ]
       },
       "id": "7",
       "x": 80,
@@ -511,12 +512,68 @@
     },
     {
       "type": "Subtest",
-      "name": "08. Выключение питания",
+      "name": "08. Этикетка — включить при необходимости",
+      "description": "Модель/комплектация из справочника, принтер и макет из общих настроек. Расчётный MAC не выдаётся за записанный.",
+      "isEnabled": false,
+      "stopOnError": true,
+      "runOnFailure": false,
+      "bodyGraph": {
+        "name": "08. Этикетка — включить при необходимости",
+        "nodes": [
+          {
+            "type": "Start",
+            "id": "0",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "type": "Print Label",
+            "printerName": "",
+            "serialVariableName": "SerialNumber",
+            "macVariableName": "Dut.default_mac",
+            "copies": 1,
+            "useQtProZplFormat": true,
+            "useDefaultPrinter": true,
+            "failOnPrinterError": true,
+            "id": "1",
+            "x": 320,
+            "y": 80
+          },
+          {
+            "type": "End",
+            "id": "2",
+            "x": 944,
+            "y": 80
+          }
+        ],
+        "connections": [
+          {
+            "sourceNodeId": "0",
+            "sourceConnector": "Выход",
+            "targetNodeId": "1",
+            "targetConnector": "In"
+          },
+          {
+            "sourceNodeId": "1",
+            "sourceConnector": "True",
+            "targetNodeId": "2",
+            "targetConnector": "Вход"
+          }
+        ]
+      },
+      "id": "8",
+      "x": 624,
+      "y": 1168
+    },
+    {
+      "type": "Subtest",
+      "name": "09. Выключение питания",
       "description": "",
       "isEnabled": true,
       "stopOnError": false,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "09. Выключение питания",
         "nodes": [
           {
             "type": "Start",
@@ -586,21 +643,21 @@
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "08. Выключение питания"
+        ]
       },
-      "id": "8",
-      "x": 624,
+      "id": "9",
+      "x": 1168,
       "y": 1168
     },
     {
       "type": "Subtest",
-      "name": "09. Сформировать и отправить отчёт",
+      "name": "10. Сформировать и отправить отчёт",
       "description": "",
       "isEnabled": true,
       "stopOnError": true,
       "runOnFailure": false,
       "bodyGraph": {
+        "name": "10. Сформировать и отправить отчёт",
         "nodes": [
           {
             "type": "Start",
@@ -659,63 +716,7 @@
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "09. Сформировать и отправить отчёт"
-      },
-      "id": "9",
-      "x": 1168,
-      "y": 1168
-    },
-    {
-      "type": "Subtest",
-      "name": "10. Этикетка — включить при необходимости",
-      "description": "Модель/комплектация из справочника, принтер и макет из общих настроек. Расчётный MAC не выдаётся за записанный.",
-      "isEnabled": false,
-      "stopOnError": true,
-      "runOnFailure": false,
-      "bodyGraph": {
-        "nodes": [
-          {
-            "type": "Start",
-            "id": "0",
-            "x": 80,
-            "y": 80
-          },
-          {
-            "type": "Print Label",
-            "printerName": "",
-            "serialVariableName": "SerialNumber",
-            "macVariableName": "Dut.default_mac",
-            "copies": 1,
-            "useQtProZplFormat": true,
-            "useDefaultPrinter": true,
-            "failOnPrinterError": true,
-            "id": "1",
-            "x": 320,
-            "y": 80
-          },
-          {
-            "type": "End",
-            "id": "2",
-            "x": 944,
-            "y": 80
-          }
-        ],
-        "connections": [
-          {
-            "sourceNodeId": "0",
-            "sourceConnector": "Выход",
-            "targetNodeId": "1",
-            "targetConnector": "In"
-          },
-          {
-            "sourceNodeId": "1",
-            "sourceConnector": "True",
-            "targetNodeId": "2",
-            "targetConnector": "Вход"
-          }
-        ],
-        "name": "10. Этикетка — включить при необходимости"
+        ]
       },
       "id": "10",
       "x": 80,
@@ -735,6 +736,7 @@
       "stopOnError": false,
       "runOnFailure": true,
       "bodyGraph": {
+        "name": "Аварийное выключение",
         "nodes": [
           {
             "type": "Start",
@@ -804,8 +806,7 @@
             "targetNodeId": "3",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "Аварийное выключение"
+        ]
       },
       "id": "cleanup",
       "x": 80,
@@ -819,6 +820,7 @@
       "stopOnError": false,
       "runOnFailure": true,
       "bodyGraph": {
+        "name": "Отчёт при ошибке",
         "nodes": [
           {
             "type": "Start",
@@ -925,8 +927,7 @@
             "targetNodeId": "5",
             "targetConnector": "Вход"
           }
-        ],
-        "name": "Отчёт при ошибке"
+        ]
       },
       "id": "failure-report",
       "x": 624,
@@ -1001,7 +1002,7 @@
       "targetConnector": "Вход"
     }
   ],
-  "name": "PSW-2G6F+Box · Диагностика и отчёт · 13.11.26",
+  "profilePurpose": "diagnostic",
   "deviceModel": "PSW-2G6F+Box",
   "deviceModelId": "psw-2g6f-plus-box",
   "configurationName": "Диагностика и отчёт · 13.11.26",

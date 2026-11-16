@@ -157,6 +157,7 @@ namespace TestBuilder.Services
             if (dto.UseCatalogSerials)
                 foreach (var n in dto.Nodes.Where(n => n.Type.StartsWith("Start", StringComparison.Ordinal))) n.Type = CatalogSerialsStartType;
             dto.ConfigurationName = configurationName ?? vm.RootGraph.ConfigurationName;
+            dto.ProfilePurpose = vm.RootGraph.ProfilePurpose;
             return JsonSerializer.Serialize(dto, JsonOptions);
         }
 
@@ -520,6 +521,7 @@ namespace TestBuilder.Services
         {
             if (vm.HasRunningQuickActions) throw new InvalidOperationException("Дождитесь завершения кнопок перед открытием профиля.");
             var dto = ReadProfileDto(json);
+            var purpose = ProfilePurpose.Resolve(dto);
             var loaded = LoadProfileGraph(dto);
             vm.ResetPingMonitor();
             vm.ResetToRootGraph();
@@ -543,6 +545,7 @@ namespace TestBuilder.Services
             vm.RootGraph.CatalogModel = dto.CatalogModel;
             vm.RootGraph.UseCatalogSerials = dto.UseCatalogSerials;
             vm.RootGraph.LabelVariant = dto.LabelVariant;
+            vm.RootGraph.ProfilePurpose = purpose;
             vm.RootGraph.ConfigurationName = dto.ConfigurationName ??
                 (profile.DeviceModel != null ? profile.ConfigurationName : null);
 
@@ -1350,7 +1353,8 @@ namespace TestBuilder.Services
                     { loadable = false; }
                 }
                 return new GraphProfile(filePath, dto?.Name ?? Path.GetFileNameWithoutExtension(filePath),
-                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt)
+                    dto?.DeviceModel, dto?.ConfigurationName, dto?.DeviceModelId, dto?.ProductKind ?? "Switch", dto?.UpdatedAt ?? fileModifiedAt,
+                    dto != null && ProfilePurpose.Resolve(dto) == ProfilePurpose.Diagnostic)
                     { HasReadableMetadata = loadable };
             }
             catch

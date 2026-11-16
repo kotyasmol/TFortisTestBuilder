@@ -117,14 +117,14 @@ public class SwitchQualificationProfileTests
         Assert.Equal(2, data.AllowedTxDeficitPercent);
         Assert.True(data.AllowGigabit);
         Assert.EndsWith("192.168.0.8,192.168.0.9,1000", pairs[^1]);
-        var printStage = stages.Single(s => s.Name.StartsWith("10."));
+        var printStage = stages.Single(s => s.Name.StartsWith("08."));
         Assert.False(printStage.IsEnabled);
         var print = Assert.Single(printStage.BodyGraph.Nodes.OfType<PrintLabelNodeViewModel>());
         Assert.True(print.UseDefaultPrinter);
         Assert.True(print.UseQtProZplFormat);
         Assert.Equal("Dut.default_mac", print.MacVariableName);
         // The ordinary and emergency paths both switch off AC1 and AC2, including after a write failure.
-        foreach (var s in stages.Where(s => s.Name.StartsWith("08.") || s.Name == "Аварийное выключение"))
+        foreach (var s in stages.Where(s => s.Name.StartsWith("09.") || s.Name == "Аварийное выключение"))
         {
             Assert.Equal(new ushort[] { 1200, 1201 }, s.BodyGraph.Nodes.OfType<ModbusWriteNodeViewModel>().Select(n => n.Address));
             Assert.Equal(2, s.BodyGraph.Connections.Count(c => c.Source.Title == "False"));
@@ -351,7 +351,7 @@ public class SwitchQualificationProfileTests
                 ctx.SetVariable("Execution.SendFailureReport", FailureReportPolicy.ShouldSend(ExecutionStatus.Failed, ctx, false, false, false));
                 ctx.AddReportEntry("Проверка устройства", false, reason);
             }
-            var stage = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(s => failed ? s.Name == "Отчёт при ошибке" : s.Name.StartsWith("09."));
+            var stage = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(s => failed ? s.Name == "Отчёт при ошибке" : s.Name.StartsWith("10."));
             var execution = await new TestExecutor().ExecuteAsync(compiler.Compile(stage.BodyGraph).StartNode, ctx, default);
             if (scenario == "stand-missing")
             {

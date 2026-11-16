@@ -18,7 +18,7 @@ public sealed class ConfiguredSlaveModel : SlaveModelBase
         foreach (var reg in definition.Registers)
             RegisterItems.Add(new RegisterItem { Address = reg.Address, Area = reg.Area,
                 Name = TestBuilder.Presentation.RussianUiText.Display(reg.Name) + (string.IsNullOrWhiteSpace(reg.Unit) ? "" : $", {reg.Unit}"),
-                IsReadOnly = !reg.Writable, Category = reg.Category });
+                IsReadOnly = !reg.Writable, RetryWriteOnMismatch = reg.RetryWriteOnMismatch, Category = reg.Category });
     }
     public override Task PollAsync() => PollAsync(default);
     public override async Task PollAsync(System.Threading.CancellationToken token)

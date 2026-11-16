@@ -16,12 +16,18 @@ namespace TestBuilder.Services
         public string? DeviceModel { get; }
         public string? DeviceModelId { get; }
         public string ConfigurationName { get; }
+        public bool IsDiagnostic { get; }
+        public bool ShowDiagnosticCaption => IsDiagnostic && !IsLatest;
+        public string LatestCaption => IsDiagnostic ? "Диагностика" : "Актуальный";
         internal bool HasReadableMetadata { get; init; } = true;
         private bool _isLatest;
         public bool IsLatest
         {
             get => _isLatest;
-            internal set => SetProperty(ref _isLatest, value);
+            internal set
+            {
+                if (SetProperty(ref _isLatest, value)) OnPropertyChanged(nameof(ShowDiagnosticCaption));
+            }
         }
         private DateTimeOffset? _updatedAt;
         public DateTimeOffset? UpdatedAt => _updatedAt;
@@ -55,8 +61,9 @@ namespace TestBuilder.Services
             return title.Length == 0 ? device : device + " · " + title;
         }
 
-        public GraphProfile(string filePath, string name, string? deviceModel = null, string? configurationName = null, string? deviceModelId = null, string productKind = "Switch", DateTimeOffset? updatedAt = null)
+        public GraphProfile(string filePath, string name, string? deviceModel = null, string? configurationName = null, string? deviceModelId = null, string productKind = "Switch", DateTimeOffset? updatedAt = null, bool isDiagnostic = false)
         {
+            IsDiagnostic = isDiagnostic;
             FilePath = filePath;
             _updatedAt = updatedAt;
             ProductKind = productKind;

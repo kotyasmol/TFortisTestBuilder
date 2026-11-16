@@ -42,6 +42,10 @@ namespace TestBuilder.Serialization
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ConfigurationName { get; set; }
 
+        [JsonPropertyName("profilePurpose")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ProfilePurpose { get; set; }
+
         [JsonPropertyName("hardware")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Domain.Modbus.HardwareConfiguration? Hardware { get; set; }
         [JsonPropertyName("board")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

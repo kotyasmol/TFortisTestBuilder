@@ -162,6 +162,41 @@ public class ModbusWriteStepTests
         return new TestContext(new RegisterState());
     }
 
+    [Theory]
+    [InlineData(true, 2)]
+    [InlineData(false, 1)]
+    public async Task RepeatWriteRequiresExplicitStateRegisterPermission(bool retryAllowed, int writes)
+    {
+        var bus = new FakeModbusService();
+        bus.EnqueueRead(1); bus.EnqueueRead(0);
+        var device = new DeviceDefinition { SlaveId = 7, Registers = new()
+        {
+            new RegisterDefinition { Address = 1421, Name = "Автозапуск B", Writable = true, RetryWriteOnMismatch = retryAllowed }
+        }};
+        var context = new TestContext(new RegisterState())
+        { ModbusRegisters = new ModbusRegisterCatalog(new[] { new ConfiguredSlaveModel(device, bus) }) };
+        var step = new ModbusWriteStep(bus, NullLogger.Instance, 7, 1421, 0, verifyWrite: true);
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, default));
+        Assert.Equal(writes, bus.WriteCount);
+    }
+
+    [Fact]
+    public async Task StateThatNeverChangesStillFailsAfterBoundedRewrites()
+    {
+        var bus = new FakeModbusService();
+        bus.EnqueueRead(1); bus.EnqueueRead(1); bus.EnqueueRead(1);
+        var device = new DeviceDefinition { SlaveId = 7, Registers = new()
+        {
+            new RegisterDefinition { Address = 1421, Writable = true, RetryWriteOnMismatch = true }
+        }};
+        var context = new TestContext(new RegisterState())
+        { ModbusRegisters = new ModbusRegisterCatalog(new[] { new ConfiguredSlaveModel(device, bus) }) };
+        var step = new ModbusWriteStep(bus, NullLogger.Instance, 7, 1421, 0, verifyWrite: true);
+        Assert.Equal(StepResult.False, await step.ExecuteAsync(context, default));
+        Assert.Equal(3, bus.WriteCount);
+        Assert.Equal(3, bus.ReadCount);
+    }
+
     private sealed class RecordingLogger : ILogger
     {
         public string Category => "Test";
