@@ -132,6 +132,7 @@ public partial class TestViewModel
         if (profile == null || !CanDeleteProfile(profile)) return;
         var isOpen = IsOpenDeleteTarget(profile);
         var unsaved = isOpen && HasUnsavedProfileChanges();
+        var markWarning = "";
         try
         {
             var revision = (IsCurrentProfile(profile) ? _savedProfileRevision : null) ??
@@ -142,6 +143,7 @@ public partial class TestViewModel
                 !CanDeleteProfile(profile) || isOpen != IsOpenDeleteTarget(profile) ||
                 (isOpen && !unsaved && HasUnsavedProfileChanges())) return;
             ProfileFileStorage.MoveToDeleted(profile.FilePath, revision);
+            markWarning = await MoveCurrentProfileMarkAsync(profile.FilePath, null);
         }
         catch (Exception ex)
         {
@@ -152,7 +154,7 @@ public partial class TestViewModel
 
         if (isOpen) ResetToEmptyProfile();
         RefreshProfiles();
-        StatusMessage = $"Профиль «{profile.DisplayName}» перемещён в папку deleted.";
+        StatusMessage = $"Профиль «{profile.DisplayName}» перемещён в папку deleted." + markWarning;
     }
 
     private string? ValidateProfileDescription(GraphProfile source, string name, bool copy)
@@ -258,6 +260,7 @@ public partial class TestViewModel
             var updated = ProfileFileStorage.WithName(json, profile, description);
             var newRevision = moving ? await ProfileFileStorage.RenameAsync(profile.FilePath, target, updated, revision)
                 : await ProfileFileStorage.WriteAsync(profile.FilePath, updated, createNew: false, expectedRevision: revision);
+            var markWarning = moving ? await MoveCurrentProfileMarkAsync(profile.FilePath, target) : "";
             if (moving) _reportVariableHistory.Remember(target, _reportVariableHistory.Read(profile.FilePath));
             var renamed = GraphSerializer.ReadProfile(moving ? target : profile.FilePath);
             var isCurrent = IsCurrentProfile(profile);
@@ -273,7 +276,7 @@ public partial class TestViewModel
             }
             RevealProfileFile(renamed.FilePath);
             if (isCurrent) SelectProfileByPath(renamed.FilePath);
-            StatusMessage = $"Профиль переименован: {renamed.DisplayName}";
+            StatusMessage = $"Профиль переименован: {renamed.DisplayName}" + markWarning;
         }
         catch (Exception ex) { StatusMessage = $"Не удалось переименовать профиль: {ex.Message}"; LogUiException("Переименование профиля", ex); }
     }

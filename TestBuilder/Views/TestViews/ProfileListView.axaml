@@ -48,13 +48,18 @@
                       <DataTemplate x:DataType="services:GraphProfile">
                         <StackPanel Spacing="5" ToolTip.Tip="{Binding FilePath}">
                           <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" FontSize="{StaticResource FontBody}" />
-                          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
-                            <Border Classes="profileLatestBadge" IsVisible="{Binding IsLatest}">
-                              <TextBlock Classes="profileMetadata" Text="{Binding LatestCaption}" />
-                            </Border>
+                          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                            <WrapPanel Margin="0,0,6,0">
+                              <Border Classes="profileLatestBadge" IsVisible="{Binding IsLatest}" ToolTip.Tip="Самый свежий профиль изделия по дате изменения">
+                                <TextBlock Classes="profileMetadata" Text="{Binding LatestCaption}" />
+                              </Border>
+                              <Border Classes="profileLatestBadge profileCurrentBadge" IsVisible="{Binding IsMarkedCurrent}" ToolTip.Tip="Отмечен как актуальный на этом компьютере">
+                                <TextBlock Classes="profileMetadata" Text="Актуальный" />
+                              </Border>
+                            </WrapPanel>
                             <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="profileMetadata" Text="Диагностический" IsVisible="{Binding ShowDiagnosticCaption}" />
                             <TextBlock Grid.Column="1" Classes="profileMetadata" Text="{Binding UpdatedAtText}"
-                                       IsVisible="{Binding HasUpdatedAt}" HorizontalAlignment="Right"
+                                       IsVisible="{Binding HasUpdatedAt}" HorizontalAlignment="Right" VerticalAlignment="Top"
                                        Foreground="{DynamicResource TextMutedBrush}" ToolTip.Tip="{Binding UpdatedAtTooltip}" />
                           </Grid>
                         </StackPanel>

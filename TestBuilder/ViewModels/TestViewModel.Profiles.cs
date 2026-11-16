@@ -381,6 +381,7 @@ public partial class TestViewModel
         var ordered = Profiles.OrderBy(p => p.DeviceModel == null)
             .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), StringComparer.Ordinal)
             .ThenBy(p => p.ModelGroupKey, StringComparer.Ordinal)
+            .ThenByDescending(p => p.IsMarkedCurrent)
             .ThenByDescending(p => p.IsLatest)
             .ThenBy(p => EquipmentCatalog.SortKey(p.Name), StringComparer.Ordinal);
         foreach (var items in ordered.GroupBy(p => p.ModelGroupKey, StringComparer.OrdinalIgnoreCase))
@@ -403,7 +404,7 @@ public partial class EngineerProfileGroup : ViewModelBase
     public string Name { get; }
     public string Key { get; }
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
-    public IEnumerable<GraphProfile> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.IsLatest);
+    public IEnumerable<GraphProfile> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.IsMarkedCurrent || p.IsLatest);
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VisibleProfiles))]
     private bool isExpanded;

@@ -20,25 +20,31 @@ namespace TestBuilder.Tests.Views;
 public class ProfileListMenuTests
 {
     [Fact]
-    public async Task NewerDiagnosticDoesNotHideProductionBaselineInEitherMenu()
+    public async Task NewIsByDateAndManualCurrentKeepsProductionVisibleInBothMenus()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(() =>
+        await session.Dispatch<bool>(async () =>
         {
             using var files = new ProfileCopyTests.ProfileFolder();
             var production = files.Write("old-production.json", ProfileCopyTests.SimpleJson.Replace("\"nodes\":",
                 "\"updatedAt\":\"2026-11-11T12:00:00Z\",\"nodes\":"));
             files.Write("new-diagnostic.json", ProfileCopyTests.SimpleJson.Replace("\"nodes\":",
                 "\"profilePurpose\":\"diagnostic\",\"updatedAt\":\"2026-11-13T12:00:00Z\",\"nodes\":"));
-            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            Assert.Equal(production, Assert.Single(vm.Profiles.Where(p => p.IsLatest)).FilePath);
-            Assert.Equal(production, Assert.Single(Assert.Single(vm.EngineerProfileGroups).VisibleProfiles).FilePath);
-            Assert.Equal(production, Assert.Single(Assert.Single(vm.StationProfileGroups).VisibleProfiles).Profile.FilePath);
+            var store = new ProfileCurrentStore(Path.Combine(files.Path, "local", "current.json"));
+            using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus), true, null, profileCurrentStore: store);
+            var source = vm.Profiles.Single(p => p.FilePath == production);
+            Assert.True(vm.Profiles.Single(p => p.IsDiagnostic).IsLatest);
+            Assert.False(source.IsMarkedCurrent);
+            await vm.ToggleProfileCurrentCommand.ExecuteAsync(source);
+            Assert.Equal(2, Assert.Single(vm.EngineerProfileGroups).VisibleProfiles.Count());
+            Assert.Equal(2, Assert.Single(vm.StationProfileGroups).VisibleProfiles.Count());
+            Assert.True(source.IsMarkedCurrent);
             Assert.True(vm.Profiles.Single(p => p.IsDiagnostic).ShowDiagnosticCaption);
             File.Delete(production); vm.RefreshProfiles();
             var diagnostic = Assert.Single(Assert.Single(vm.StationProfileGroups).VisibleProfiles).Profile;
             Assert.True(diagnostic.IsDiagnostic);
-            Assert.NotEqual("Актуальный", diagnostic.LatestCaption);
+            Assert.Equal("Новый", diagnostic.LatestCaption);
+            return true;
         }, CancellationToken.None);
     }
 
@@ -117,7 +123,8 @@ public class ProfileListMenuTests
 
         static string WithDate(string json, string date) => json.Replace("\"nodes\":", $"\"updatedAt\":\"{date}T12:00:00Z\",\"nodes\":");
         static IEnumerable<TextBlock> Badges(Control view) => view.GetVisualDescendants().OfType<TextBlock>()
-            .Where(t => t.Text == "Актуальный" && t.IsEffectivelyVisible);
+            .Where(t => t.Text == "Новый" && t.IsEffectivelyVisible &&
+                t.GetVisualAncestors().OfType<Border>().Any(b => b.Classes.Contains("profileLatestBadge")));
     }
 
     [Fact]

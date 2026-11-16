@@ -13,7 +13,7 @@ public partial class StationProfileGroupViewModel : ViewModelBase
     public string ModelName { get; }
     public string Key { get; }
     public ObservableCollection<StationProfileOptionViewModel> Profiles { get; } = new();
-    public IEnumerable<StationProfileOptionViewModel> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.Profile.IsLatest);
+    public IEnumerable<StationProfileOptionViewModel> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.Profile.IsMarkedCurrent || p.Profile.IsLatest);
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VisibleProfiles))]
     private bool isExpanded;

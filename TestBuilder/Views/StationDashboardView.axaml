@@ -132,13 +132,18 @@
                                   AutomationProperties.Name="{Binding Profile.DisplayName}">
                             <StackPanel Spacing="5">
                               <TextBlock Text="{Binding Profile.DisplayName}" FontSize="{StaticResource FontSection}" TextWrapping="Wrap" />
-                              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
-                                <Border Classes="profileLatestBadge" IsVisible="{Binding Profile.IsLatest}">
-                                  <TextBlock Classes="profileMetadata" Text="{Binding Profile.LatestCaption}" />
-                                </Border>
+                              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                <WrapPanel Margin="0,0,6,0">
+                                  <Border Classes="profileLatestBadge" IsVisible="{Binding Profile.IsLatest}" ToolTip.Tip="Самый свежий профиль изделия по дате изменения">
+                                    <TextBlock Classes="profileMetadata" Text="{Binding Profile.LatestCaption}" />
+                                  </Border>
+                                  <Border Classes="profileLatestBadge profileCurrentBadge" IsVisible="{Binding Profile.IsMarkedCurrent}" ToolTip.Tip="Отмечен как актуальный на этом компьютере">
+                                    <TextBlock Classes="profileMetadata" Text="Актуальный" />
+                                  </Border>
+                                </WrapPanel>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="profileMetadata" Text="Диагностический" IsVisible="{Binding Profile.ShowDiagnosticCaption}" />
                                 <TextBlock Grid.Column="1" Classes="profileMetadata" Text="{Binding Profile.UpdatedAtText}"
-                                           IsVisible="{Binding Profile.HasUpdatedAt}" HorizontalAlignment="Right" Opacity="0.7"
+                                           IsVisible="{Binding Profile.HasUpdatedAt}" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.7"
                                            ToolTip.Tip="{Binding Profile.UpdatedAtTooltip}" />
                               </Grid>
                             </StackPanel>

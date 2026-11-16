@@ -321,8 +321,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         : this(modbusService, slaveManager, allowEditing, null) { }
 
     internal TestViewModel(ModbusService modbusService, SlaveManager slaveManager, bool allowEditing, string? trainingDirectory,
-        StandInspectionStore? inspectionStore = null)
+        StandInspectionStore? inspectionStore = null, ProfileCurrentStore? profileCurrentStore = null)
     {
+        _profileCurrentStore = profileCurrentStore ?? ProfileCurrentStore.Local;
         _trainingDirectory = trainingDirectory;
         _allowEditing = allowEditing;
         _modbusService = modbusService ?? throw new ArgumentNullException(nameof(modbusService));
@@ -1917,10 +1918,12 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var latestProfiles = _profileCatalog
                 .Where(p => p.HasReadableMetadata && p.HasUpdatedAt && (p.DeviceModel != null || p.DeviceModelId != null))
                 .GroupBy(p => p.ModelGroupKey, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.OrderBy(p => p.IsDiagnostic).ThenByDescending(p => p.UpdatedAt)
+                .Select(group => group.OrderByDescending(p => p.UpdatedAt)
                     .ThenBy(p => p.FilePath, StringComparer.Ordinal).First())
                 .ToHashSet();
             foreach (var profile in _profileCatalog) profile.IsLatest = latestProfiles.Contains(profile);
+            ReadCurrentProfileMarks();
+            ApplyCurrentProfileMarks();
             RefreshNameSuggestions();
             RefreshStationProfiles();
             RefreshEngineerProfileGroups();
@@ -2147,6 +2150,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var revision = moving
                 ? await ProfileFileStorage.RenameAsync(filePath, destination, json, expectedRevision ?? ProfileFileStorage.Read(filePath).Revision)
                 : await ProfileFileStorage.WriteAsync(filePath, json, createNew, expectedRevision);
+            var markWarning = moving && !createNew ? await MoveCurrentProfileMarkAsync(filePath, destination) : "";
             if (moving && !IsTraining)
                 _reportVariableHistory.Remember(destination, _reportVariableHistory.Read(filePath));
             filePath = moving ? destination : filePath;
@@ -2167,7 +2171,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             RefreshSelectedEquipmentModel();
             OnPropertyChanged(nameof(CurrentProfileName));
 
-            StatusMessage = createNew && renameConfiguration ? $"Создана копия профиля: {profileName}" : $"Профиль сохранён: {profileName}";
+            StatusMessage = (createNew && renameConfiguration ? $"Создана копия профиля: {profileName}" : $"Профиль сохранён: {profileName}") + markWarning;
 
             if (createNew) { _profileSearch = string.Empty; OnPropertyChanged(nameof(ProfileSearch)); }
             RefreshProfiles();

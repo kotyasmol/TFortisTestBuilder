@@ -63,8 +63,10 @@ public partial class ProfileListView : UserControl
                     ProfileMenu?.Close();
                     ProfileMenu = new ContextMenu
                     {
-                        ItemsSource = new[]
+                        ItemsSource = new Control[]
                         {
+                            ProfileMenuItems.Current(vm, profile),
+                            new Separator(),
                             new MenuItem { Header = "Копировать профиль", Command = vm.CopyProfileCommand, CommandParameter = profile },
                             new MenuItem { Header = "Экспорт профиля", Command = vm.ExportProfileCommand, CommandParameter = profile },
                             new MenuItem { Header = "Переименовать профиль", Command = vm.RenameProfileCommand, CommandParameter = profile },

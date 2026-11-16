@@ -43,6 +43,7 @@ public partial class TestViewModel
             .OrderBy(p => p.DeviceModel == null)
             .ThenBy(p => EquipmentCatalog.SortKey(p.ModelGroup), System.StringComparer.Ordinal)
             .ThenBy(p => p.ModelGroupKey, System.StringComparer.Ordinal)
+            .ThenByDescending(p => p.IsMarkedCurrent)
             .ThenByDescending(p => p.IsLatest)
             .ThenBy(p => p.ConfigurationName != "Полная проверка")
             .ThenBy(p => p.ConfigurationName, System.StringComparer.OrdinalIgnoreCase)

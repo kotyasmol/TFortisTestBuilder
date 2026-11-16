@@ -17,8 +17,14 @@ namespace TestBuilder.Services
         public string? DeviceModelId { get; }
         public string ConfigurationName { get; }
         public bool IsDiagnostic { get; }
-        public bool ShowDiagnosticCaption => IsDiagnostic && !IsLatest;
-        public string LatestCaption => IsDiagnostic ? "Диагностика" : "Актуальный";
+        public bool ShowDiagnosticCaption => IsDiagnostic;
+        public string LatestCaption => "Новый";
+        private bool _isMarkedCurrent;
+        public bool IsMarkedCurrent
+        {
+            get => _isMarkedCurrent;
+            internal set => SetProperty(ref _isMarkedCurrent, value);
+        }
         internal bool HasReadableMetadata { get; init; } = true;
         private bool _isLatest;
         public bool IsLatest

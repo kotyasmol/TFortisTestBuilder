@@ -265,6 +265,9 @@
     <Setter Property="LineHeight" Value="15" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <Style Selector="Border.profileCurrentBadge">
+    <Setter Property="Background" Value="#24599A" />
+  </Style>
   <Style Selector="Border.profileLatestBadge TextBlock">
     <Setter Property="Foreground" Value="White" />
     <Setter Property="FontWeight" Value="SemiBold" />

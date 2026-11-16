@@ -6,14 +6,26 @@ using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.Graphs;
 using TestBuilder.ViewModels.NodifyVM;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Tests.SerializationTests;
 
 namespace TestBuilder.Tests.StepTests;
 
+[Collection(AppSettingsTestCollection.Name)]
 public class StationDashboardTests
 {
+    private static ProfileCopyTests.ProfileFolder DashboardProfiles()
+    {
+        var files = new ProfileCopyTests.ProfileFolder();
+        var json = ProfileCopyTests.SimpleJson.Replace("Модель А", "PSW+UPS-Box 8x2Pro");
+        files.Write("full.json", json.Replace("Проверка", "Полная проверка").Replace("\"nodes\":", "\"updatedAt\":\"2026-11-11T12:00:00Z\",\"nodes\":"));
+        files.Write("parallel.json", json.Replace("Проверка", "Полная проверка · параллельный старт и нагрузки").Replace("\"nodes\":", "\"updatedAt\":\"2026-11-13T12:00:00Z\",\"nodes\":"));
+        return files;
+    }
+
     [Fact]
     public void ProfileGroups_SelectConfiguration_FilterAndRestoreSelection()
     {
+        using var files = DashboardProfiles();
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus)) { IsOperatorView = true };
         var group = vm.StationProfileGroups.Single(g => g.ModelName == "PSW+UPS-Box 8x2Pro");
@@ -56,6 +68,7 @@ public class StationDashboardTests
     [Fact]
     public void ProfileGroups_CannotChangeConfigurationDuringRun()
     {
+        using var files = DashboardProfiles();
         using var modbus = new ModbusService();
         using var vm = new TestViewModel(modbus, new SlaveManager(modbus)) { IsOperatorView = true };
         var group = vm.StationProfileGroups.Single(g => g.ModelName == "PSW+UPS-Box 8x2Pro");
