@@ -109,6 +109,24 @@ public class ModbusWriteStepTests
     }
 
     [Fact]
+    public async Task DelayedDeviceStateCanSettleWithoutRepeatingTheCommand()
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var modbus = new FakeModbusService
+        {
+            ReadValue = () => new ushort[] { clock.ElapsedMilliseconds >= 1000 ? (ushort)0 : (ushort)1 }
+        };
+        var context = CreateContext();
+        var step = new ModbusWriteStep(modbus, NullLogger.Instance, 7, 1414, 0, verifyWrite: true);
+
+        Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
+        Assert.Equal(1, modbus.WriteCount);
+        Assert.InRange(modbus.ReadCount, 1, 3);
+        Assert.True(context.RegisterState.TryGet(7, 1414, out var value));
+        Assert.Equal(0, value);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenVerificationConfirmsValue_UpdatesRegisterState()
     {
         var modbus = new FakeModbusService();
@@ -216,6 +234,7 @@ public class ModbusWriteStepTests
 
         public int ReadCount { get; private set; }
         public int WriteCount { get; private set; }
+        public Func<ushort[]>? ReadValue { get; init; }
 
         public void EnqueueRead(ushort value)
         {
@@ -234,6 +253,7 @@ public class ModbusWriteStepTests
             CancellationToken cancellationToken = default)
         {
             ReadCount++;
+            if (ReadValue != null) return Task.FromResult(ReadValue());
             if (_reads.Count == 0)
             {
                 return Task.FromResult(Array.Empty<ushort>());

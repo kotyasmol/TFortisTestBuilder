@@ -16,7 +16,10 @@ namespace TestBuilder.Domain.Steps
     public class ModbusWriteStep : ITestStep
     {
         private const int VerifyAttempts = 3;
-        private static readonly TimeSpan VerifyRetryDelay = TimeSpan.FromMilliseconds(300);
+        // Some boards acknowledge a command immediately but publish its state
+        // about one second later. Keep three bounded reads, allowing that update
+        // to settle without reissuing a command register.
+        private static readonly TimeSpan VerifyRetryDelay = TimeSpan.FromMilliseconds(750);
 
         private readonly IModbusService _modbusService;
         private readonly TestBuilder.Domain.Modbus.ModbusArea _area;
