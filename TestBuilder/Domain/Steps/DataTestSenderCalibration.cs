@@ -28,7 +28,8 @@ internal static class DataTestSenderCalibration
                     log($"Прогрев: отправителей {lanes}, TX {result.SentPackets}/{expectedPackets}, {txMbps:F3} Мбит/с, {result.Engine}.");
                     return lanes;
                 }
-                errors.Add($"отправителей {lanes}: TX {result.SentPackets}/{expectedPackets}, {txMbps:F3} Мбит/с, дефицит {deficit:F3}%");
+                errors.Add($"отправителей {lanes}: TX {result.SentPackets}/{expectedPackets} за {result.ElapsedMs} мс, " +
+                    $"{txMbps:F3} Мбит/с, дефицит {deficit:F3}%, {result.Engine}");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -36,6 +37,7 @@ internal static class DataTestSenderCalibration
             }
             log("Прогрев не подтверждён: " + errors[^1]);
         }
-        throw new InvalidOperationException("Генератор не подтвердил заданную скорость на прогреве. Основное измерение не началось. " + string.Join("; ", errors));
+        throw new InvalidOperationException("Генератор не подтвердил заданную скорость на прогреве. Основное измерение не началось. " +
+            "Это дефицит скорости отправителя, а не измеренная потеря пакетов устройства. " + string.Join("; ", errors));
     }
 }

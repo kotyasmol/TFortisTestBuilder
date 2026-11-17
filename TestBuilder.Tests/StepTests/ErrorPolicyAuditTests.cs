@@ -125,7 +125,10 @@ public class ErrorPolicyAuditTests
         nameof(GetSerialNumberFromServerNodeViewModel) => new GetSerialNumberFromServerNodeViewModel { UseFixedSerialNumber = true, FixedSerialNumber = -1 },
         nameof(SetProMacNodeViewModel) => new SetProMacNodeViewModel(),
         nameof(SetPswMacNodeViewModel) => new SetPswMacNodeViewModel(),
-        nameof(RunDataTestNodeViewModel) => new RunDataTestNodeViewModel { PortsText = "" },
+        // Empty pairs are now rejected at compilation. Exercise a runtime
+        // failure without opening capture handles or generating real traffic.
+        nameof(RunDataTestNodeViewModel) => new RunDataTestNodeViewModel
+            { PortsText = "Fixture,192.0.2.1,192.0.2.2,100", Mode = "UnsupportedFixtureMode" },
         nameof(ReadHttpVariableNodeViewModel) => new ReadHttpVariableNodeViewModel { BaseUrl = "http://fixture.invalid" },
         nameof(BuildMacFromSerialNodeViewModel) => new BuildMacFromSerialNodeViewModel(),
         nameof(PrintLabelNodeViewModel) => new PrintLabelNodeViewModel(),

@@ -60,6 +60,17 @@ public class DataTestReliabilityTests
     }
 
     [Fact]
+    public async Task CompleteLineRateQueueWithSlowDriverIsNotMistakenForDutLoss()
+    {
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => DataTestSenderCalibration.SelectAsync((_, _) =>
+            Task.FromResult(new PacedSendResult(40637, 623, "NpcapLineRateQueue")),
+            40637, 1514, 1000, 2, false, _ => { }, default));
+        Assert.Contains("за 623 мс", error.Message);
+        Assert.Contains("NpcapLineRateQueue", error.Message);
+        Assert.Contains("не измеренная потеря", error.Message);
+    }
+
+    [Fact]
     public async Task ReceiveDrainIncludesDelayedWindowsBatch()
     {
         var timer = Stopwatch.StartNew();

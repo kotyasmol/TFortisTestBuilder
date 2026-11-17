@@ -435,15 +435,20 @@ namespace TestBuilder.Domain.Steps
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
 
                 var senderCount = 1;
+                var lineRate = highRateWindows && sendDevice is PcapDevice && IsNativeSendQueueAvailable() && DataTestLineRatePacer.CanUse(
+                    targetBandwidthMbps, NetworkSpeedMbps(sendNetworkInterface));
+                _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: генератор " +
+                    (lineRate ? "по скорости линии, короткие очереди 2 мс" : "с синхронизацией кадров") +
+                    $", линк {NetworkSpeedMbps(sendNetworkInterface):F0} Мбит/с, цель {targetBandwidthMbps} Мбит/с.");
                 if (_warmupMs > 0)
                 {
                     phase = "прогрев";
                     senderCount = await DataTestSenderCalibration.SelectAsync(
                         (lanes, token) => SendPacedAsync(sendDevice, packet, targetBandwidthMbps, _warmupMs,
-                            CreateRunId(), token, lanes),
+                            CreateRunId(), token, lanes, lineRate),
                         CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _warmupMs), packet.Length,
                         targetBandwidthMbps, _allowedTxDeficitPercent,
-                        highRateWindows && sendDevice is PcapDevice && IsNativeSendQueueAvailable(),
+                        highRateWindows && !lineRate && sendDevice is PcapDevice && IsNativeSendQueueAvailable(),
                         message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken);
                     await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
@@ -463,7 +468,7 @@ namespace TestBuilder.Domain.Steps
                     targetBandwidthMbps,
                     _durationMs,
                     runId,
-                    cancellationToken, senderCount);
+                    cancellationToken, senderCount, lineRate);
                 var transmittedPackets = sendResult.SentPackets;
 
                 await WaitForCaptureDrainAsync(() => Volatile.Read(ref receivedPackets), cancellationToken, transmittedPackets);
@@ -650,7 +655,7 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             int durationMs,
             ulong runId,
-            CancellationToken cancellationToken, int senderCount = 1)
+            CancellationToken cancellationToken, int senderCount = 1, bool lineRate = false)
         {
             if (device is PcapDevice pcapDevice && IsNativeSendQueueAvailable())
             {
@@ -671,13 +676,17 @@ namespace TestBuilder.Domain.Steps
                     }, CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs),
                         durationMs, timer, cancellationToken);
                 }
+                // Keep native calls and the short boundary spin off the UI thread.
+                if (lineRate)
+                    return await Task.Run(() => SendWithNpcapQueueAsync(pcapDevice, packet, targetBandwidthMbps,
+                        durationMs, runId, cancellationToken, lineRate: true), cancellationToken);
                 return await SendWithNpcapQueueAsync(
                     pcapDevice,
                     packet,
                     targetBandwidthMbps,
                     durationMs,
                     runId,
-                    cancellationToken);
+                    cancellationToken, lineRate: lineRate);
             }
 
             return await SendIndividuallyAsync(
@@ -698,14 +707,15 @@ namespace TestBuilder.Domain.Steps
             CancellationToken cancellationToken,
             int lane = 0,
             int laneCount = 1,
-            Stopwatch? parallelClock = null)
+            Stopwatch? parallelClock = null,
+            bool lineRate = false)
         {
             var totalPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var targetPackets = CalculateLanePacketCount(totalPackets, lane, laneCount);
             var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
             // Bound queue memory independently of test duration. At 1 Gbit/s a
             // complete five-second prebuilt test would otherwise occupy ~640 MB.
-            var chunkMs = targetBandwidthMbps > 100 ? 20 : SendQueueChunkMs;
+            var chunkMs = lineRate ? DataTestLineRatePacer.WindowMs : targetBandwidthMbps > 100 ? 20 : SendQueueChunkMs;
             var queues = Channel.CreateBounded<SendQueuePlan>(new BoundedChannelOptions(2)
             {
                 SingleReader = true,
@@ -774,25 +784,29 @@ namespace TestBuilder.Domain.Steps
 
             try
             {
-                long startTimestamp = 0;
+                var clock = new Stopwatch();
+                var pacer = lineRate ? new DataTestLineRatePacer(packetsPerSecond, clock, cancellationToken) : null;
                 var sent = 0;
 
-                await foreach (var plan in queues.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var plan in queues.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                 {
                     using (plan.Queue)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (parallelClock != null)
                             await WaitForSendDeadlineAsync(parallelClock, sent * 1000.0 / packetsPerSecond, cancellationToken);
-                        if (startTimestamp == 0) startTimestamp = Stopwatch.GetTimestamp();
-                        // Both single and dual senders respect per-frame timing.
-                        // Unsynchronised 100 ms batches overloaded some NIC/driver queues.
-                        var transmittedBytes = plan.Queue.Transmit(device, SendQueueTransmitModes.Synchronized);
+                        if (!clock.IsRunning) clock.Start();
+                        pacer?.BeginBatch();
+                        // At full link rate the NIC supplies inter-frame timing.
+                        // At lower rates retain native per-frame synchronization.
+                        var transmittedBytes = plan.Queue.Transmit(device,
+                            lineRate ? SendQueueTransmitModes.Normal : SendQueueTransmitModes.Synchronized);
                         var entrySize = plan.Queue.CurrentLength / plan.PacketCount;
                         var sentInQueue = transmittedBytes >= plan.Queue.CurrentLength
                             ? plan.PacketCount
                             : Math.Clamp(transmittedBytes / Math.Max(1, entrySize), 0, plan.PacketCount);
                         sent += sentInQueue;
+                        pacer?.EndBatch(sentInQueue);
 
                         if (transmittedBytes != plan.Queue.CurrentLength)
                         {
@@ -803,8 +817,9 @@ namespace TestBuilder.Domain.Steps
                     }
                 }
 
-                var elapsedMs = startTimestamp == 0 ? 0 : GetElapsedMilliseconds(startTimestamp, Stopwatch.GetTimestamp());
-                return new PacedSendResult(sent, elapsedMs, "NpcapSendQueue");
+                pacer?.Drain();
+                return new PacedSendResult(sent, Math.Max(1, clock.ElapsedMilliseconds),
+                    lineRate ? "NpcapLineRateQueue" : "NpcapSendQueue");
             }
             finally
             {
@@ -1240,7 +1255,7 @@ namespace TestBuilder.Domain.Steps
 
         private void LogRuntimeVersion()
         {
-            _logger.Info($"DataTest: SharpPcap {typeof(CaptureDeviceList).Assembly.GetName().Version}; отправка синхронизированными очередями.");
+            _logger.Info($"DataTest: SharpPcap {typeof(CaptureDeviceList).Assembly.GetName().Version}; режим отправки выбирается по цели и скорости линка.");
             if (!OperatingSystem.IsWindows()) return;
             try
             {
