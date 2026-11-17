@@ -93,6 +93,30 @@ public class DataTestReliabilityTests
     }
 
     [Fact]
+    public async Task CompleteShortWarmupCanChooseBestSenderForMandatoryLongerMeasurement()
+    {
+        var messages = new List<string>();
+        var lanes = await DataTestSenderCalibration.SelectAsync((count, _) =>
+            Task.FromResult(new PacedSendResult(40637, count == 1 ? 559 : 536, "native")),
+            40637, 1514, 1000, 2, true, messages.Add, default, qualifyInLongerMeasurement: true);
+        Assert.Equal(2, lanes);
+        Assert.Contains("Скорость не подтверждена", messages[^1]);
+        Assert.Contains("в основном замере", messages[^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task IncompleteOrFaultedWarmupCannotDeferQualification(bool nativeError)
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => DataTestSenderCalibration.SelectAsync((lanes, _) =>
+        {
+            if (lanes == 1 && nativeError) throw new InvalidOperationException("native short transmit");
+            return Task.FromResult(new PacedSendResult(lanes == 1 ? 40000 : 40637, 536, "native"));
+        }, 40637, 1514, 1000, 2, true, _ => { }, default, qualifyInLongerMeasurement: true));
+    }
+
+    [Fact]
     public async Task ReceiveDrainIncludesDelayedWindowsBatch()
     {
         var timer = Stopwatch.StartNew();

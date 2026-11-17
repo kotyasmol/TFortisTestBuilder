@@ -460,7 +460,8 @@ namespace TestBuilder.Domain.Steps
                         targetBandwidthMbps, _allowedTxDeficitPercent,
                         windowsSender && sendDevice is PcapDevice &&
                             (targetBandwidthMbps <= 100 || IsNativeSendQueueAvailable()),
-                        message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken);
+                        message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken,
+                        qualifyInLongerMeasurement: lineRate && _durationMs > _warmupMs);
                     await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
 
