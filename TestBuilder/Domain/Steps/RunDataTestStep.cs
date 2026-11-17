@@ -436,6 +436,11 @@ namespace TestBuilder.Domain.Steps
                 receiveDevice.Filter = BuildCaptureFilter(sourceIp, destinationIp, sourceMac, destinationMac, _udpPort);
                 receiveDevice.OnPacketArrival += OnPacketArrival;
                 receiveDevice.StartCapture();
+                phase = "подготовка MAC-адресов";
+                _logger.Info($"DataTest {pairName} {sourceIp} ↔ {destinationIp}: двустороннее обучение MAC-адресов перед замером.");
+                await DataTestAddressLearning.PrepareAsync(sourceMac, destinationMac,
+                    frame => sendDevice.SendPacket(frame, frame.Length),
+                    frame => receiveDevice.SendPacket(frame, frame.Length), cancellationToken);
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
 
                 var senderCount = 1;
