@@ -23,15 +23,15 @@ internal static class DataTestSendCoordinator
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task<PacedSendResult> StartLane(int lane) => Task.Run(async () =>
+        Task<PacedSendResult> StartLane(int lane) => DataTestWorker.Run(() =>
         {
             try
             {
-                var result = await sendLane(lane, stop.Token);
+                var result = sendLane(lane, stop.Token).GetAwaiter().GetResult();
                 var expected = CalculateLanePacketCount(expectedPackets, lane, 2);
                 if (result.SentPackets != expected)
                     throw new InvalidOperationException(
-                        $"DataTest: очередь {lane + 1} передала {result.SentPackets} из {expected} пакетов.");
+                        $"DataTest: отправитель {lane + 1} передал {result.SentPackets} из {expected} пакетов.");
                 return result;
             }
             catch
@@ -39,13 +39,15 @@ internal static class DataTestSendCoordinator
                 stop.Cancel();
                 throw;
             }
-        }, CancellationToken.None);
+        });
 
         // Await both lanes before disposing either handle, including on failure.
         var results = await Task.WhenAll(StartLane(0), StartLane(1));
         await WaitForSendDeadlineAsync(clock, durationMs, cancellationToken);
+        var engine = results[0].Engine == "PcapPacedPackets" && results[1].Engine == "PcapPacedPackets"
+            ? "PcapParallelPackets" : "PcapParallelQueues";
         return new PacedSendResult(results[0].SentPackets + results[1].SentPackets,
-            Math.Max(1, clock.ElapsedMilliseconds), "PcapParallelQueues");
+            Math.Max(1, clock.ElapsedMilliseconds), engine);
     }
 
     internal static async Task WaitForSendDeadlineAsync(

@@ -1,7 +1,8 @@
-param([string]$SourceIp,[string]$DestinationIp,[int]$DurationMs=500,[int]$Senders=1,[int[]]$QueueWindowsMs=@(2,20),[switch]$SynchronizedOnly,[double]$TimestampRateScale=1,[switch]$ExecuteTraffic)
+param([string]$SourceIp,[string]$DestinationIp,[int]$DurationMs=500,[int]$Senders=1,[int[]]$QueueWindowsMs=@(2,20),[switch]$SynchronizedOnly,[double]$TimestampRateScale=1,[int]$TargetMbps=1000,[switch]$IndividualOnly,[switch]$ExecuteTraffic)
 $ErrorActionPreference='Stop'
 if(-not $ExecuteTraffic){throw 'Explicit -ExecuteTraffic is required; this sends traffic through the connected DUT.'}
-if($DurationMs -lt 100 -or $DurationMs -gt 1000){throw 'Duration must be 100..1000 ms'}
+if($TargetMbps -notin @(100,1000)){throw 'Target must be 100 or 1000 Mbps'}
+if($DurationMs -lt 100 -or $DurationMs -gt $(if($IndividualOnly){5000}else{1000})){throw 'Duration must be 100..1000 ms (5000 for individual mode)'}
 if($Senders -notin @(1,2)){throw 'Senders must be 1 or 2'}
 if(-not $QueueWindowsMs.Count -or @($QueueWindowsMs | Where-Object {$_ -lt 1 -or $_ -gt 100}).Count){throw 'Queue windows must be 1..100 ms'}
 if($TimestampRateScale -lt 1 -or $TimestampRateScale -gt 1.1){throw 'Timestamp scale must be 1..1.1'}
@@ -19,6 +20,7 @@ public static class NativeQueueProbe {
  [StructLayout(LayoutKind.Sequential)] struct Header { public int sec,usec;public uint caplen,len; }
  [StructLayout(LayoutKind.Sequential)] struct Bpf { public uint len;public IntPtr instructions; }
  [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl,CharSet=CharSet.Ansi)] static extern IntPtr pcap_open(string name,int snap,int flags,int timeout,IntPtr auth,StringBuilder error);
+ [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl)] static extern int pcap_sendpacket(IntPtr p,byte[] data,int size);
  [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl)] static extern void pcap_close(IntPtr p);
  [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl)] static extern IntPtr pcap_lib_version();
  [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl)] static extern IntPtr pcap_geterr(IntPtr p);
@@ -35,8 +37,8 @@ public static class NativeQueueProbe {
  [DllImport("wpcap.dll",CallingConvention=CallingConvention.Cdecl)] static extern uint pcap_sendqueue_transmit(IntPtr p,IntPtr q,int sync);
  public sealed class Row {
   public string Source,Destination,Library,Error;
-  public int WindowMs,Queues,Expected,Sent,Received,CaptureDrops,Senders;
-  public bool Paced,Synchronized;
+  public int WindowMs,Queues,Expected,Sent,Received,CaptureDrops,Senders,TargetMbps;
+  public bool Paced,Synchronized,Individual;
   public double BuildMs,ElapsedMs,NativeMs,NativeMedianMs,NativeP95Ms,BoundaryWaitMs,TxMbps,RxSpanMs,TimestampRateScale;
  }
  sealed class Queue : IDisposable {
@@ -44,11 +46,11 @@ public static class NativeQueueProbe {
   public Queue(int count){Count=count;Handle=pcap_sendqueue_alloc((uint)(count*(1514+16)));if(Handle==IntPtr.Zero)throw new Exception("Queue allocation failed");}
   public void Dispose(){if(Handle!=IntPtr.Zero){pcap_sendqueue_destroy(Handle);Handle=IntPtr.Zero;}}
  }
- static NetworkInterface Adapter(string ip){
+ static NetworkInterface Adapter(string ip,int target){
   IPAddress address=IPAddress.Parse(ip);
   if(address.AddressFamily!=System.Net.Sockets.AddressFamily.InterNetwork || !ip.StartsWith("192.168.0."))throw new Exception("Only the explicitly configured bench subnet 192.168.0.x is allowed");
   var nic=NetworkInterface.GetAllNetworkInterfaces().Single(n=>n.GetIPProperties().UnicastAddresses.Any(a=>a.Address.Equals(address)));
-  if(nic.OperationalStatus!=OperationalStatus.Up || nic.Speed<1000000000L || nic.GetPhysicalAddress().GetAddressBytes().Length!=6)throw new Exception("Bench adapter has no active gigabit link: "+ip);
+  if(nic.OperationalStatus!=OperationalStatus.Up || nic.Speed<(long)target*1000000 || nic.GetPhysicalAddress().GetAddressBytes().Length!=6)throw new Exception("Bench adapter has no sufficient active link: "+ip);
   return nic;
  }
  static IntPtr Open(NetworkInterface nic,int flags){var error=new StringBuilder(512);var p=pcap_open(@"\Device\NPF_"+nic.Id,1514,flags,20,IntPtr.Zero,error);if(p==IntPtr.Zero)throw new Exception(error.ToString());return p;}
@@ -62,18 +64,19 @@ public static class NativeQueueProbe {
   U16(b,34,53962);U16(b,36,53962);U16(b,38,1480);b[42]=84;b[43]=70;b[44]=66;b[45]=80;
   return b;
  }
- public static Row[] Run(string source,string destination,int duration,int lanes,int[] windows,bool syncOnly,double timestampRateScale){
-  var src=Adapter(source);var dst=Adapter(destination);if(src.Id==dst.Id)throw new Exception("Two different physical adapters are required");
+ public static Row[] Run(string source,string destination,int duration,int lanes,int[] windows,bool syncOnly,double timestampRateScale,int target,bool individual){
+  var src=Adapter(source,target);var dst=Adapter(destination,target);if(src.Id==dst.Id)throw new Exception("Two different physical adapters are required");
   var result=new List<Row>();
+  if(individual)return new[]{Measure(src,dst,source,destination,duration,2,true,false,lanes,1,target,true)};
   foreach(int window in windows){
-   if(!syncOnly)foreach(bool paced in new[]{true,false})result.Add(Measure(src,dst,source,destination,duration,window,paced,false,lanes,timestampRateScale));
-   result.Add(Measure(src,dst,source,destination,duration,window,true,true,lanes,timestampRateScale));
+   if(!syncOnly)foreach(bool paced in new[]{true,false})result.Add(Measure(src,dst,source,destination,duration,window,paced,false,lanes,timestampRateScale,target,false));
+   result.Add(Measure(src,dst,source,destination,duration,window,true,true,lanes,timestampRateScale,target,false));
   }
   return result.ToArray();
  }
- static Row Measure(NetworkInterface src,NetworkInterface dst,string source,string destination,int duration,int window,bool paced,bool sync,int lanes,double timestampRateScale){
-  var row=new Row{Source=source,Destination=destination,WindowMs=window,Paced=paced,Synchronized=sync,Senders=lanes,TimestampRateScale=timestampRateScale,Library=Marshal.PtrToStringAnsi(pcap_lib_version())};
-  double pps=1000000000.0/(1538*8);int expected=(int)Math.Round(pps*duration/1000.0,MidpointRounding.AwayFromZero);row.Expected=expected;
+ static Row Measure(NetworkInterface src,NetworkInterface dst,string source,string destination,int duration,int window,bool paced,bool sync,int lanes,double timestampRateScale,int target,bool individual){
+  var row=new Row{Source=source,Destination=destination,WindowMs=window,Paced=paced,Synchronized=sync,Senders=lanes,TargetMbps=target,Individual=individual,TimestampRateScale=timestampRateScale,Library=Marshal.PtrToStringAnsi(pcap_lib_version())};
+  double pps=target*1000000.0/(1538*8);int expected=(int)Math.Round(pps*duration/1000.0,MidpointRounding.AwayFromZero);row.Expected=expected;
   var qs=new List<Queue>();IntPtr[] send=new IntPtr[lanes];IntPtr receive=IntPtr.Zero;Thread reader=null;Thread[] workers=new Thread[lanes];int stopping=0,received=0;long firstRx=0,lastRx=0;
   var marks=new int[expected];int run=Guid.NewGuid().GetHashCode();
   try{
@@ -81,7 +84,7 @@ public static class NativeQueueProbe {
    var error=new StringBuilder(512);if(pcap_setnonblock(receive,1,error)!=0)throw new Exception(error.ToString());
    var packet=Packet(src,dst,source,destination);Buffer.BlockCopy(BitConverter.GetBytes(run),0,packet,46,4);
    var preparation=Stopwatch.StartNew();
-   for(int lane=0;lane<lanes;lane++){int lanePackets=(expected+lanes-1-lane)/lanes;double lanePps=pps/lanes;
+   if(!individual)for(int lane=0;lane<lanes;lane++){int lanePackets=(expected+lanes-1-lane)/lanes;double lanePps=pps/lanes;
    for(int start=0,ms=0;start<lanePackets;ms+=window){
     int end=ms+window>=duration?lanePackets:Math.Min(lanePackets,(int)Math.Round(lanePps*(ms+window)/1000.0,MidpointRounding.AwayFromZero));
     var q=new Queue(end-start);q.Lane=lane;qs.Add(q);
@@ -105,7 +108,19 @@ public static class NativeQueueProbe {
    for(int lane=0;lane<lanes;lane++){
     int index=lane;workers[lane]=new Thread(()=>{
      ready.Signal();go.Wait();double due=0;double lanePps=pps/lanes;
-     try{foreach(var q in qs.Where(q=>q.Lane==index)){
+     try{
+     if(individual){
+      var frame=(byte[])packet.Clone();
+      for(int seq=index;seq<expected;seq+=lanes){
+       if(Volatile.Read(ref stopping)!=0)break;
+       while(clock.Elapsed.TotalMilliseconds<due)Thread.SpinWait(32);
+       double start=clock.Elapsed.TotalMilliseconds;
+       Buffer.BlockCopy(BitConverter.GetBytes(seq),0,frame,50,4);
+       if(pcap_sendpacket(send[index],frame,frame.Length)!=0)throw new Exception(Marshal.PtrToStringAnsi(pcap_geterr(send[index])));
+       Interlocked.Increment(ref row.Sent);due=start+1000.0/lanePps;
+      }
+     }
+     else foreach(var q in qs.Where(q=>q.Lane==index)){
       if(Volatile.Read(ref stopping)!=0)break;
       double wait=0;if(paced){var waiting=Stopwatch.StartNew();while(clock.Elapsed.TotalMilliseconds<due)Thread.SpinWait(32);wait=waiting.Elapsed.TotalMilliseconds;}
       double batchStart=clock.Elapsed.TotalMilliseconds;var native=Stopwatch.StartNew();uint sent=pcap_sendqueue_transmit(send[index],q.Handle,sync?1:0);double took=native.Elapsed.TotalMilliseconds;
@@ -129,6 +144,7 @@ public static class NativeQueueProbe {
  }
 }
 '@
-$rows=[NativeQueueProbe]::Run($SourceIp,$DestinationIp,$DurationMs,$Senders,$QueueWindowsMs,[bool]$SynchronizedOnly,$TimestampRateScale)
+$rows=[NativeQueueProbe]::Run($SourceIp,$DestinationIp,$DurationMs,$Senders,$QueueWindowsMs,[bool]$SynchronizedOnly,$TimestampRateScale,$TargetMbps,[bool]$IndividualOnly)
 $rows | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $PSScriptRoot ('native-queue-probe-result-'+$Senders+'.json')) -Encoding UTF8
 $rows | ConvertTo-Json -Depth 4 -Compress
+if(@($rows | Where-Object {$_.Error -or $_.Sent -ne $_.Expected -or $_.Received -ne $_.Expected -or $_.CaptureDrops -gt 0}).Count){exit 1}

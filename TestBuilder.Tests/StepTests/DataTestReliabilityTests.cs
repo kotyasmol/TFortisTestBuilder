@@ -83,6 +83,16 @@ public class DataTestReliabilityTests
     }
 
     [Fact]
+    public async Task HundredMbpsPacketPacingCanChooseTwoSendersWithoutRelaxingTheDeficit()
+    {
+        var selected = await DataTestSenderCalibration.SelectAsync((lanes, _) =>
+            Task.FromResult(new PacedSendResult(4064, lanes == 1 ? 630 : 503,
+                lanes == 1 ? "PcapPacedPackets" : "PcapParallelPackets")),
+            4064, 1514, 100, 2, true, _ => { }, default);
+        Assert.Equal(2, selected);
+    }
+
+    [Fact]
     public async Task ReceiveDrainIncludesDelayedWindowsBatch()
     {
         var timer = Stopwatch.StartNew();
