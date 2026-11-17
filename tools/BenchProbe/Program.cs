@@ -9,6 +9,23 @@ using TestBuilder.Services.Logging;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
 using TestBuilder.ViewModels.StepVM;
+using TestBuilder.Domain.Steps;
+
+// Isolated production DataTest: no profile, executor, COM, report or printer.
+if (OperatingSystem.IsWindows() && args.Length == 4 && args[0] == "--execute-datatest" &&
+    int.TryParse(args[3], out var rate) && rate is 100 or 1000)
+{
+    using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+    var context = new TestContext(new RegisterState());
+    var step = new RunDataTestStep(new ConsoleLogger(), "SoftwarePcap", 200000, 1514,
+        43962, 15000, rate, 5000, 500, 250, 1, 2, true,
+        new[] { new DataTestPortConfig("Isolated pair", args[1], args[2], rate) },
+        "DataTest", true, allowGigabit: true);
+    var result = await step.ExecuteAsync(context, cancellation.Token);
+    Console.WriteLine("ISOLATED_DATATEST_RESULT=" + result);
+    return result == StepResult.True ? 0 : 1;
+}
 
 // Explicitly opt-in hardware diagnostic. Uses the production compiler, executor,
 // monitoring and profile steps. Never allocates a serial number or posts reports.

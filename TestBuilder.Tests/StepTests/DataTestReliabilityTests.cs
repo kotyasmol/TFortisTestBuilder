@@ -71,6 +71,18 @@ public class DataTestReliabilityTests
     }
 
     [Fact]
+    public async Task RealtekLineRateCanSelectTwoSendersWithTheSameSpeedRequirement()
+    {
+        // APK-04-04 after the Realtek update: a single short queue sender
+        // cannot fill the link; independent handles overlap driver completion.
+        var selected = await DataTestSenderCalibration.SelectAsync((lanes, _) =>
+            Task.FromResult(new PacedSendResult(40637, lanes == 1 ? 565 : 509,
+                lanes == 1 ? "NpcapLineRateQueue" : "PcapParallelQueues")),
+            40637, 1514, 1000, 2, true, _ => { }, default);
+        Assert.Equal(2, selected);
+    }
+
+    [Fact]
     public async Task ReceiveDrainIncludesDelayedWindowsBatch()
     {
         var timer = Stopwatch.StartNew();

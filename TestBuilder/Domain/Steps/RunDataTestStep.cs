@@ -448,7 +448,7 @@ namespace TestBuilder.Domain.Steps
                             CreateRunId(), token, lanes, lineRate),
                         CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _warmupMs), packet.Length,
                         targetBandwidthMbps, _allowedTxDeficitPercent,
-                        highRateWindows && !lineRate && sendDevice is PcapDevice && IsNativeSendQueueAvailable(),
+                        highRateWindows && sendDevice is PcapDevice && IsNativeSendQueueAvailable(),
                         message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken);
                     await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
@@ -494,8 +494,9 @@ namespace TestBuilder.Domain.Steps
                     ? receivedForLoss * wireSizeBytes * 8.0 / sendResult.ElapsedMs / 1000.0
                     : 0.0;
                 var txDeficitPercent = CalculateTxDeficitPercent(targetBandwidthMbps, txMbps);
+                var directionNicFailure = sendErrors.HasErrorsSendingTo(receiveErrors);
                 var infrastructureFailure = txDeficitPercent > _allowedTxDeficitPercent || captureDroppedPackets > 0 ||
-                    sendErrors.HasErrors || receiveErrors.HasErrors || !captureStatsAvailable && lossPercent > _allowedLossPercent;
+                    directionNicFailure || !captureStatsAvailable && lossPercent > _allowedLossPercent;
                 var passed = lossPercent <= _allowedLossPercent && !infrastructureFailure;
                 var error = BuildFailureMessage(
                     passed,
@@ -506,8 +507,15 @@ namespace TestBuilder.Domain.Steps
                     expectedPackets,
                     captureDroppedPackets,
                     sendResult.Engine);
-                if (sendErrors.HasErrors || receiveErrors.HasErrors)
-                    error += $" Ошибки сетевых карт стенда: отправитель [{sendErrors}], приёмник [{receiveErrors}].";
+                if (directionNicFailure)
+                    error += $" Ошибки сетевых карт в направлении {sourceIp} → {destinationIp}: " +
+                        $"TX отправителя [drops {sendErrors.TxDrops}, errors {sendErrors.TxErrors}], " +
+                        $"RX приёмника [drops {receiveErrors.RxDrops}, errors {receiveErrors.RxErrors}].";
+                if (sendErrors.HasReceiveErrors || receiveErrors.HasTransmitErrors)
+                    _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: счётчики вне проверяемого направления: " +
+                        $"RX отправителя [drops {sendErrors.RxDrops}, errors {sendErrors.RxErrors}], " +
+                        $"TX приёмника [drops {receiveErrors.TxDrops}, errors {receiveErrors.TxErrors}]. " +
+                        "Сохранены для диагностики, результат этого направления по ним не отклоняется.");
                 if (!captureStatsAvailable && lossPercent > _allowedLossPercent)
                     error += " Статистика потерь Npcap недоступна; нельзя отделить потерю захвата на ПК от потерь тракта.";
 
@@ -672,7 +680,7 @@ namespace TestBuilder.Domain.Steps
                     {
                         var sender = lane == 0 ? pcapDevice : second;
                         return await SendWithNpcapQueueAsync(sender, (byte[])packet.Clone(),
-                            targetBandwidthMbps, durationMs, runId, token, lane, 2, timer);
+                            targetBandwidthMbps, durationMs, runId, token, lane, 2, timer, lineRate);
                     }, CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs),
                         durationMs, timer, cancellationToken);
                 }
@@ -793,7 +801,9 @@ namespace TestBuilder.Domain.Steps
                     using (plan.Queue)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (parallelClock != null)
+                        // Line-rate lanes already pace their short queue boundaries.
+                        // An additional Task.Delay can exceed an entire 2 ms window.
+                        if (parallelClock != null && !lineRate)
                             await WaitForSendDeadlineAsync(parallelClock, sent * 1000.0 / packetsPerSecond, cancellationToken);
                         if (!clock.IsRunning) clock.Start();
                         pacer?.BeginBatch();

@@ -21,7 +21,13 @@ internal readonly record struct DataTestHostCounters(bool Available, long RxDrop
         new(true, Math.Max(0, RxDrops - before.RxDrops), Math.Max(0, RxErrors - before.RxErrors),
             Math.Max(0, TxDrops - before.TxDrops), Math.Max(0, TxErrors - before.TxErrors));
 
-    internal bool HasErrors => Available && (RxDrops > 0 || RxErrors > 0 || TxDrops > 0 || TxErrors > 0);
+    internal bool HasReceiveErrors => Available && (RxDrops > 0 || RxErrors > 0);
+    internal bool HasTransmitErrors => Available && (TxDrops > 0 || TxErrors > 0);
+    internal bool HasErrors => HasReceiveErrors || HasTransmitErrors;
+
+    // A -> B probes use A's TX and B's RX. A's background RX and B's
+    // background TX must not invalidate an otherwise complete measurement.
+    internal bool HasErrorsSendingTo(DataTestHostCounters receiver) => HasTransmitErrors || receiver.HasReceiveErrors;
     public override string ToString() => Available
         ? $"RX drops {RxDrops}, RX errors {RxErrors}, TX drops {TxDrops}, TX errors {TxErrors}" : "недоступны";
 }
