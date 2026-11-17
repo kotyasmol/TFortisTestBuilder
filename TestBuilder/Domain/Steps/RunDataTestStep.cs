@@ -688,15 +688,16 @@ namespace TestBuilder.Domain.Steps
                     using var second = new LibPcapLiveDevice(pcapDevice.Interface!);
                     second.Open(DeviceModes.NoCaptureLocal, 100);
                     second.Filter = "len = 0";
-                    var timer = Stopwatch.StartNew();
+                    var timer = new Stopwatch();
+                    using var startGate = new DataTestSendStartGate(timer);
                     return await RunParallelSendersAsync((lane, token) =>
                     {
                         var sender = lane == 0 ? pcapDevice : second;
                         if (precisePackets)
                             return Task.FromResult(SendPrecisePackets(lane == 0 ? device : second, (byte[])packet.Clone(),
-                                targetBandwidthMbps, durationMs, runId, token, lane, 2));
+                                targetBandwidthMbps, durationMs, runId, token, lane, 2, startGate));
                         return Task.FromResult(SendWithNpcapQueue(sender, (byte[])packet.Clone(),
-                            targetBandwidthMbps, durationMs, runId, token, lane, 2, timer, lineRate));
+                            targetBandwidthMbps, durationMs, runId, token, lane, 2, timer, lineRate, startGate));
                     }, CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs),
                         durationMs, timer, cancellationToken);
                 }
@@ -723,11 +724,12 @@ namespace TestBuilder.Domain.Steps
 
         private static PacedSendResult SendPrecisePackets(IInjectionDevice device, byte[] packet,
             int targetBandwidthMbps, int durationMs, ulong runId, CancellationToken cancellationToken,
-            int lane = 0, int laneCount = 1)
+            int lane = 0, int laneCount = 1, DataTestSendStartGate? startGate = null)
         {
             var total = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var count = CalculateLanePacketCount(total, lane, laneCount);
             var rate = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
+            startGate?.Wait(cancellationToken);
             var clock = Stopwatch.StartNew();
             DataTestPacketTrain.Send(count, rate, sequence =>
             {
@@ -747,11 +749,17 @@ namespace TestBuilder.Domain.Steps
             int lane = 0,
             int laneCount = 1,
             Stopwatch? parallelClock = null,
-            bool lineRate = false)
+            bool lineRate = false,
+            DataTestSendStartGate? startGate = null)
         {
             var totalPackets = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var targetPackets = CalculateLanePacketCount(totalPackets, lane, laneCount);
             var packetsPerSecond = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
+            if (targetPackets == 0)
+            {
+                startGate?.Wait(cancellationToken);
+                return new PacedSendResult(0, 1, lineRate ? "NpcapLineRateQueue" : "NpcapSendQueue");
+            }
             // Bound queue memory independently of test duration. At 1 Gbit/s a
             // complete five-second prebuilt test would otherwise occupy ~640 MB.
             var chunkMs = lineRate ? DataTestLineRatePacer.WindowMs : targetBandwidthMbps > 100 ? 20 : SendQueueChunkMs;
@@ -837,12 +845,18 @@ namespace TestBuilder.Domain.Steps
                         using (plan.Queue)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
+                            // Start together after both producers supplied their first
+                            // queue; thread/JIT preparation is outside the wire sample.
+                            if (!clock.IsRunning)
+                            {
+                                startGate?.Wait(cancellationToken);
+                                clock.Start();
+                            }
                             // Line-rate lanes already pace their short queue boundaries.
                             // An additional Task.Delay can exceed an entire 2 ms window.
                             if (parallelClock != null && !lineRate)
                                 WaitForSendDeadlineAsync(parallelClock, sent * 1000.0 / packetsPerSecond, cancellationToken)
                                     .GetAwaiter().GetResult();
-                            if (!clock.IsRunning) clock.Start();
                             pacer?.BeginBatch();
                             // At full link rate the NIC supplies inter-frame timing.
                             // At lower rates retain native per-frame synchronization.
