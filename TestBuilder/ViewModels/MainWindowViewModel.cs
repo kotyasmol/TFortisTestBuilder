@@ -49,6 +49,7 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(IsCatalogPage));
             if (IsLabelsPage) TestVM.RefreshProfiles();
             if (IsCatalogPage) TestVM.ReloadCatalogForViewing();
+            if (IsNetworkPage) _ = NetworkSetupVM?.CheckRuntimeAsync();
         }
         [RelayCommand]
         private void SelectPage(string page)
@@ -92,7 +93,8 @@ namespace TestBuilder.ViewModels
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM = new NetworkSetupViewModel(DataTestNetworkConfigurator.GetAdapters,
-                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
+                () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,
+                canInspectRuntime: () => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
             LabelPrintingVM = new LabelPrintingViewModel(TestVM.TestingLogger,
                 () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,

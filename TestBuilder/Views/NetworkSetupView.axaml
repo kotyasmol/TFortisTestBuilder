@@ -17,6 +17,16 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding RuntimeSummary}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+          <Button Content="Проверить компьютер" Command="{Binding CheckRuntimeCommand}" HorizontalAlignment="Left"/>
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCheckingRuntime}"/>
+          <Expander Header="Версия программы и компоненты захвата">
+            <TextBlock Text="{Binding RuntimeDetails}" TextWrapping="Wrap"/>
+          </Expander>
+        </StackPanel>
+      </Border>
       <TextBlock Text="Выберите карту для каждого порта. Выбор занятой карты меняет две карты местами."
                  TextWrapping="Wrap"/>
       <TextBlock Text="Адреса и маска задаются в плане сети. В ноде DataTest нажмите «Взять пары из плана сети», затем сохраните профиль. Адреса Windows изменяются только кнопкой «Применить адреса»."

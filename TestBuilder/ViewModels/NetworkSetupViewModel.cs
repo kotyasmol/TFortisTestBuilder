@@ -50,6 +50,30 @@ public partial class NetworkSetupViewModel : ViewModelBase
 
     private readonly Func<IReadOnlyList<BenchAdapter>> _getAdapters;
     private readonly Func<bool> _canUse;
+    private readonly Func<DataTestRuntimeReport> _checkRuntime;
+    private readonly Func<bool> _canInspectRuntime;
+    [ObservableProperty] private string runtimeSummary = "Компоненты DataTest ещё не проверены.";
+    [ObservableProperty] private string runtimeDetails = "";
+    [ObservableProperty] private bool isCheckingRuntime;
+    public IAsyncRelayCommand CheckRuntimeCommand { get; }
+
+    public async Task CheckRuntimeAsync()
+    {
+        if (IsCheckingRuntime || !_canInspectRuntime() || IsBusy) return;
+        IsCheckingRuntime = true;
+        try
+        {
+            var report = await Task.Run(_checkRuntime);
+            RuntimeSummary = report.Summary;
+            RuntimeDetails = report.Details;
+        }
+        catch (Exception ex)
+        {
+            RuntimeSummary = "Не удалось проверить компоненты DataTest.";
+            RuntimeDetails = ex.Message;
+        }
+        finally { IsCheckingRuntime = false; }
+    }
     private bool _updating;
     private Dictionary<string, string?>? _draft;
     private void CaptureDraft() => _draft = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter?.Id);
@@ -70,6 +94,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
         SaveBindingsCommand.NotifyCanExecuteChanged();
         RememberLinksCommand.NotifyCanExecuteChanged();
         CompareLinksCommand.NotifyCanExecuteChanged();
+        CheckRuntimeCommand.NotifyCanExecuteChanged();
     }
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
     private void SelectionChanged(NetworkSetupRowViewModel row, BenchAdapter? previous)
@@ -111,10 +136,14 @@ public partial class NetworkSetupViewModel : ViewModelBase
     public IAsyncRelayCommand ApplyCommand { get; }
 
     public NetworkSetupViewModel() : this(DataTestNetworkConfigurator.GetAdapters, () => true) { }
-    internal NetworkSetupViewModel(Func<IReadOnlyList<BenchAdapter>> getAdapters, Func<bool> canUse)
+    internal NetworkSetupViewModel(Func<IReadOnlyList<BenchAdapter>> getAdapters, Func<bool> canUse,
+        Func<DataTestRuntimeReport>? checkRuntime = null, Func<bool>? canInspectRuntime = null)
     {
         _getAdapters = getAdapters;
         _canUse = canUse;
+        _checkRuntime = checkRuntime ?? DataTestRuntimeCheck.Inspect;
+        _canInspectRuntime = canInspectRuntime ?? canUse;
+        CheckRuntimeCommand = new AsyncRelayCommand(CheckRuntimeAsync, () => !IsBusy && _canInspectRuntime());
         Rows = new(DataTestNetworkConfigurator.BenchIps.Select(
             (ip, index) => CreateRow(ip, index)));
         foreach (var row in Rows) row.SelectionChanged += SelectionChanged;
