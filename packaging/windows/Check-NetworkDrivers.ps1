@@ -1,6 +1,7 @@
 # Windows PowerShell 5.1. Read-only collection; no driver or network changes.
 [CmdletBinding()]
-param([string]$OutputDirectory = $PSScriptRoot, [switch]$PassThru)
+param([string]$OutputDirectory, [switch]$PassThru)
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { $OutputDirectory = $PSScriptRoot }
 $ErrorActionPreference = 'Stop'
 $warnings = New-Object 'System.Collections.Generic.List[string]'
 $lines = New-Object 'System.Collections.Generic.List[string]'
