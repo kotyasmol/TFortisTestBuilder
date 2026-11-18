@@ -16,8 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging" / "windows"
 PROFILES_DIRECTORY = Path("profiles")
 PROFILE_UI_TEST_FILTER = (
-    "FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
-    "FullyQualifiedName~DataTestModeTests"
+    "(FullyQualifiedName~ProfileUiIntegrityTests|FullyQualifiedName~RussianInterfaceTests|"
+    "FullyQualifiedName~DataTest|FullyQualifiedName~NetworkSetupTests|"
+    "FullyQualifiedName~NetworkQuickSetupTests|FullyQualifiedName~NetworkConnectivityProbeTests|"
+    "FullyQualifiedName~NetworkPresetCatalogTests)&Category!=Hardware"
 )
 
 
@@ -238,7 +240,8 @@ def main():
                 destination = bundle / entry["path"]
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(args.browser_bundle / entry["path"], destination)
-        for filename in ("Start-TestBuilder.cmd", "Check-Installation.cmd", "Check-Installation.ps1", "README-FIRST.txt"):
+        for filename in ("Start-TestBuilder.cmd", "Check-Installation.cmd", "Check-Installation.ps1",
+                         "Check-NetworkDrivers.cmd", "Check-NetworkDrivers.ps1", "README-FIRST.txt"):
             encoding = "utf-8-sig" if filename.endswith(".ps1") else "utf-8"
             text = (PACKAGING / filename).read_text(encoding="utf-8-sig")
             if filename == "README-FIRST.txt":

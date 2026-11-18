@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "updated": "2026-11-18",
+  "capture": {
+    "name": "Npcap",
+    "version": "1.90",
+    "downloadUrl": "https://npcap.com/dist/npcap-1.90.exe",
+    "installerSha256": "682b57e1c05ef375931975c9d6ded40888f4bfdf9f4b11571e654f962f1199b6",
+    "winPcapCompatibilityMode": true,
+    "licenseUrl": "https://npcap.com/oem/",
+    "installationGuideUrl": "https://npcap.com/guide/npcap-users-guide.html"
+  },
+  "networkDrivers": [
+    {
+      "name": "Realtek PCIe GbE, проверенная ревизия стенда",
+      "hardwareIds": ["PCI\\VEN_10EC&DEV_8161&SUBSYS_816810EC&REV_15"],
+      "version": "10.74.1128.2024",
+      "driverFileSha256": "88e8cb59b5aedae60ec6b66f9c0ae5c1681a3cddb6d00d22aa37e66dd86d46cc",
+      "sourceUrl": "https://www.catalog.update.microsoft.com/ScopedViewInline.aspx?updateid=1a9eeaaa-1367-48f8-a86e-f132bd485d84",
+      "packageSha256": "5b4a1e0178293c1cab285e7688ebf81b9f668a9c72d5e6696f0ca2d484f5a275",
+      "qualification": "APK-04-04 и APK-03-06; документы 44 и 48"
+    }
+  ],
+  "qualification": {
+    "fullDataTestRuns": 3,
+    "requireFirstAttemptSuccess": true,
+    "requireNoCaptureOrAdapterErrors": true,
+    "switchBootWaitSeconds": 180
+  }
+}

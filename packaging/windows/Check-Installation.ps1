@@ -87,6 +87,9 @@ try {
     foreach ($adapter in @(Get-NetAdapter -Physical)) {
         Result 'INFO' ("$($adapter.Name): $($adapter.InterfaceDescription), $($adapter.Status), $($adapter.LinkSpeed)")
     }
+    $driverAudit = & (Join-Path $PSScriptRoot 'Check-NetworkDrivers.ps1') -PassThru
+    foreach ($warning in $driverAudit.warnings) { Result 'WARN' $warning }
+    Result 'INFO' 'Сведения о драйверах: network-driver-report.json и network-driver-report.txt.'
     Result 'INFO' 'Проверка не включает оборудование, не меняет сеть, не печатает и не прошивает DUT.'
     Result 'INFO' 'Для производственных операций нужны настройка карт, действующая сессия лаунчера и доступ к серверу.'
     Result 'INFO' ("Ошибок комплекта: $script:bundleErrors; замечаний: $script:stationWarnings")
