@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "presets": [
+    {
+      "id": "four-100", "name": "4 порта · 100 Мбит/с",
+      "plan": {
+        "mask": "255.255.255.0",
+        "addresses": [
+          { "name": "Порт 1", "role": "Медь", "ip": "192.168.0.2", "temporaryIp": "192.0.2.2", "pair": "Порты 1–2", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 2", "role": "Медь", "ip": "192.168.0.3", "temporaryIp": "192.0.2.3", "pair": "Порты 1–2", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 3", "role": "Медь", "ip": "192.168.0.4", "temporaryIp": "192.0.2.4", "pair": "Порты 3–4", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 4", "role": "Медь", "ip": "192.168.0.5", "temporaryIp": "192.0.2.5", "pair": "Порты 3–4", "testMbps": 100, "includeInDataTest": true }
+        ]
+      }
+    },
+    {
+      "id": "four-1000", "name": "4 порта · 1 Гбит/с",
+      "plan": {
+        "mask": "255.255.255.0",
+        "addresses": [
+          { "name": "Порт 1", "role": "Медь", "ip": "192.168.0.2", "temporaryIp": "192.0.2.2", "pair": "Порты 1–2", "testMbps": 1000, "includeInDataTest": true },
+          { "name": "Порт 2", "role": "Медь", "ip": "192.168.0.3", "temporaryIp": "192.0.2.3", "pair": "Порты 1–2", "testMbps": 1000, "includeInDataTest": true },
+          { "name": "Порт 3", "role": "Медь", "ip": "192.168.0.4", "temporaryIp": "192.0.2.4", "pair": "Порты 3–4", "testMbps": 1000, "includeInDataTest": true },
+          { "name": "Порт 4", "role": "Медь", "ip": "192.168.0.5", "temporaryIp": "192.0.2.5", "pair": "Порты 3–4", "testMbps": 1000, "includeInDataTest": true }
+        ]
+      }
+    },
+    {
+      "id": "eight-100-two-1000", "name": "8 × 100 Мбит/с + 2 × 1 Гбит/с",
+      "plan": {
+        "mask": "255.255.255.0",
+        "addresses": [
+          { "name": "Порт 1", "role": "Медь", "ip": "192.168.0.2", "temporaryIp": "192.0.2.2", "pair": "Порты 1–2", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 2", "role": "Медь", "ip": "192.168.0.3", "temporaryIp": "192.0.2.3", "pair": "Порты 1–2", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 3", "role": "Медь", "ip": "192.168.0.4", "temporaryIp": "192.0.2.4", "pair": "Порты 3–4", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 4", "role": "Медь", "ip": "192.168.0.5", "temporaryIp": "192.0.2.5", "pair": "Порты 3–4", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 5", "role": "Медь", "ip": "192.168.0.6", "temporaryIp": "192.0.2.6", "pair": "Порты 5–6", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 6", "role": "Медь", "ip": "192.168.0.7", "temporaryIp": "192.0.2.7", "pair": "Порты 5–6", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 7", "role": "Медь", "ip": "192.168.0.8", "temporaryIp": "192.0.2.8", "pair": "Порты 7–8", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Порт 8", "role": "Медь", "ip": "192.168.0.9", "temporaryIp": "192.0.2.9", "pair": "Порты 7–8", "testMbps": 100, "includeInDataTest": true },
+          { "name": "Гигабитный порт 1", "role": "Uplink", "ip": "192.168.0.10", "temporaryIp": "192.0.2.10", "pair": "Гигабитная пара", "testMbps": 1000, "includeInDataTest": true },
+          { "name": "Гигабитный порт 2", "role": "Uplink", "ip": "192.168.0.11", "temporaryIp": "192.0.2.11", "pair": "Гигабитная пара", "testMbps": 1000, "includeInDataTest": true }
+        ]
+      }
+    }
+  ]
+}

@@ -79,7 +79,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
     private void CaptureDraft() => _draft = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter?.Id);
     public ObservableCollection<string> Journal { get; } = new();
     [ObservableProperty] private string validation = "";
-    public bool CanEdit => !IsBusy && _canUse();
+    public bool CanEdit => !IsBusy && !IsCheckingRuntime && _canUse();
     public bool CanApply => CanEdit && string.IsNullOrEmpty(Validation);
     public string Summary => $"Выбрано карт: {Rows.Count(r => r.SelectedAdapter != null)} из {Rows.Count}";
     public IRelayCommand ResetCommand { get; }
@@ -95,8 +95,19 @@ public partial class NetworkSetupViewModel : ViewModelBase
         RememberLinksCommand.NotifyCanExecuteChanged();
         CompareLinksCommand.NotifyCanExecuteChanged();
         CheckRuntimeCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanProbe));
+        OnPropertyChanged(nameof(CanCancelProbe));
+        OnPropertyChanged(nameof(CanDeletePreset));
+        ProbeConnectionsCommand.NotifyCanExecuteChanged();
+        CancelProbeCommand.NotifyCanExecuteChanged();
+        SavePresetCommand.NotifyCanExecuteChanged();
+        ImportNetworkPresetsCommand.NotifyCanExecuteChanged();
+        ExportNetworkPlanCommand.NotifyCanExecuteChanged();
+        DeletePresetCommand.NotifyCanExecuteChanged();
+        foreach (var preset in Presets) preset.LoadCommand.NotifyCanExecuteChanged();
     }
     partial void OnIsBusyChanged(bool value) => RefreshAvailability();
+    partial void OnIsCheckingRuntimeChanged(bool value) => RefreshAvailability();
     private void SelectionChanged(NetworkSetupRowViewModel row, BenchAdapter? previous)
     {
         if (_updating) return;
@@ -107,6 +118,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
                 row.SelectedAdapter.Id, StringComparison.OrdinalIgnoreCase))) other.SelectedAdapter = previous;
         _updating = false;
         CaptureDraft();
+        InvalidateProbeResults();
         Validate();
     }
     private void Validate()
@@ -126,6 +138,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
         foreach (var row in Rows) row.SelectedAdapter = null;
         _updating = false;
         _draft = null;
+        InvalidateProbeResults();
         Refresh();
     }
 
@@ -137,12 +150,17 @@ public partial class NetworkSetupViewModel : ViewModelBase
 
     public NetworkSetupViewModel() : this(DataTestNetworkConfigurator.GetAdapters, () => true) { }
     internal NetworkSetupViewModel(Func<IReadOnlyList<BenchAdapter>> getAdapters, Func<bool> canUse,
-        Func<DataTestRuntimeReport>? checkRuntime = null, Func<bool>? canInspectRuntime = null)
+        Func<DataTestRuntimeReport>? checkRuntime = null, Func<bool>? canInspectRuntime = null,
+        Func<NetworkProbePair, System.Threading.CancellationToken, Task<NetworkProbeResult>>? probePair = null,
+        Func<IReadOnlyList<NetworkConfigurationPreset>>? loadPresets = null, Action? saveSettings = null)
     {
         _getAdapters = getAdapters;
         _canUse = canUse;
         _checkRuntime = checkRuntime ?? DataTestRuntimeCheck.Inspect;
         _canInspectRuntime = canInspectRuntime ?? canUse;
+        if (probePair != null) _probePair = probePair;
+        if (loadPresets != null) _loadBundledPresets = loadPresets;
+        if (saveSettings != null) _saveNetworkSettings = saveSettings;
         CheckRuntimeCommand = new AsyncRelayCommand(CheckRuntimeAsync, () => !IsBusy && _canInspectRuntime());
         Rows = new(DataTestNetworkConfigurator.BenchIps.Select(
             (ip, index) => CreateRow(ip, index)));
@@ -151,6 +169,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
         RefreshCommand = new RelayCommand(Refresh, () => CanEdit);
         ApplyCommand = new AsyncRelayCommand(ApplyAsync, () => CanApply);
         Refresh();
+        ReloadPresets();
     }
 
     private NetworkSetupRowViewModel CreateRow(string ip, int index) =>
@@ -223,20 +242,17 @@ public partial class NetworkSetupViewModel : ViewModelBase
         {
             var saved = await new TestBuilder.Views.NetworkPlanWindow().ShowDialog<bool>(desktop.MainWindow);
             if (!saved) return;
-            foreach (var row in Rows) row.SelectionChanged -= SelectionChanged;
-            Rows.Clear();
-            foreach (var (ip, index) in DataTestNetworkConfigurator.BenchIps.Select((ip, index) => (ip, index)))
-            {
-                var row = CreateRow(ip, index);
-                row.SelectionChanged += SelectionChanged; Rows.Add(row);
-            }
-            _draft = null; Refresh();
+            RebuildRows();
+            LoadedPreset = null;
+            ProbeResults.Clear(); ProbeStatus = "План изменён. Повторите проверку связи.";
         }
     }
 
     private void Refresh()
     {
         if (IsBusy) return;
+
+        var previousMapping = ProbeMapping();
 
         try
         {
@@ -258,6 +274,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             _updating = false;
             _draft ??= Rows.ToDictionary(r => r.Ip, r => previous[r.Ip] ?? r.SelectedAdapter?.Id);
             Validate();
+            if (previousMapping != ProbeMapping()) InvalidateProbeResults();
             Status = $"Найдено адаптеров: {Adapters.Count}.";
         }
         catch (Exception ex)

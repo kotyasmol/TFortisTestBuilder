@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace TestBuilder.Services;
 
 public sealed record BenchAdapter(string Id, string Name, string Mac, string Status, string Ipv4,
-    double SpeedMbps = 0)
+    double SpeedMbps = 0, bool HasIpv4Gateway = false)
 {
     public string ChoiceDisplay => $"{Name} · {Mac}";
     public string LinkDisplay => Status.Equals("Up", StringComparison.OrdinalIgnoreCase)
@@ -40,7 +40,8 @@ public static class DataTestNetworkConfigurator
             string.Join(", ", adapter.GetIPProperties().UnicastAddresses
                 .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
                 .Select(address => address.Address.ToString())),
-            GetSpeedMbps(adapter)))
+            GetSpeedMbps(adapter), adapter.GetIPProperties().GatewayAddresses.Any(g =>
+                g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any))))
         .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToArray();
 

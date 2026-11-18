@@ -85,6 +85,9 @@ namespace TestBuilder.Services
 
         public BenchNetworkPlan NetworkPlan { get; set; } = new();
 
+        [JsonPropertyName("networkPresets")]
+        public List<NetworkConfigurationPreset> NetworkPresets { get; set; } = new();
+
         public List<LabelTemplateDefinition> LabelTemplates { get; set; } = LabelTemplateCatalog.Defaults();
 
         // IP -> stable Windows network interface ID for the DataTest bench.

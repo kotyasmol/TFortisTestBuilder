@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels"
+             xmlns:services="using:TestBuilder.Services"
              x:Class="TestBuilder.Views.NetworkSetupView"
              x:DataType="vm:NetworkSetupViewModel">
   <DockPanel>
@@ -9,7 +10,7 @@
       <StackPanel Orientation="Horizontal" Spacing="12">
         <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}"/>
         <Button Content="Применить адреса" Command="{Binding ApplyCommand}"/>
-        <TextBlock Text="Нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center"/>
+        <TextBlock Text="Для изменения IP нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center" TextWrapping="Wrap"/>
       </StackPanel>
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="15"/>
@@ -17,6 +18,50 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Быстрая настройка" FontWeight="SemiBold"/>
+          <ItemsControl ItemsSource="{Binding Presets}" IsEnabled="{Binding CanEdit}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:NetworkPresetItem">
+                <Button Content="{Binding Name}" Command="{Binding LoadCommand}" ToolTip.Tip="{Binding Description}" Margin="0,0,8,8"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <WrapPanel>
+            <Button Content="Сохранить свой набор…" Command="{Binding SavePresetCommand}" Margin="0,0,8,6"/>
+            <Button Content="Импорт наборов…" Command="{Binding ImportNetworkPresetsCommand}" Margin="0,0,8,6"/>
+            <Button Content="Экспорт плана…" Command="{Binding ExportNetworkPlanCommand}" Margin="0,0,8,6"/>
+            <Button Content="Удалить свой набор" Command="{Binding DeletePresetCommand}" Margin="0,0,8,6"/>
+          </WrapPanel>
+          <TextBlock Text="{Binding PresetStatus}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Связь между портами" FontWeight="SemiBold"/>
+          <TextBlock Text="Короткая передача пакетов в обе стороны по парам плана сети. Включите изделие и дождитесь его загрузки. Полную скорость проверяет DataTest профиля." TextWrapping="Wrap"/>
+          <WrapPanel>
+            <Button Content="Проверить связь" Command="{Binding ProbeConnectionsCommand}" Margin="0,0,8,0"/>
+            <Button Content="Остановить" Command="{Binding CancelProbeCommand}"/>
+          </WrapPanel>
+          <TextBlock Text="{Binding ProbeStatus}" TextWrapping="Wrap"/>
+          <ItemsControl ItemsSource="{Binding ProbeResults}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="services:NetworkProbeResult">
+                <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="0,6">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Details}" TextWrapping="Wrap" FontSize="12"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
       <Border Classes="card" Padding="12">
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding RuntimeSummary}" TextWrapping="Wrap" FontWeight="SemiBold"/>
