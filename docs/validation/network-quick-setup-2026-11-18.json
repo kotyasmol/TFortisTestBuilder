@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-18",
+  "codeCommit": "e37048b",
+  "macOS": { "targetedPassed": 101, "failed": 0, "skipped": 0 },
+  "windows": {
+    "machine": "APK-03-07",
+    "workingCopy": "C:\\Users\\АПК-03-07\\Documents\\GitHub\\TFortisTestBuilder",
+    "targetedPassedIncludingHardware": 102,
+    "failed": 0,
+    "skipped": 0,
+    "trx": "output/network-quick-setup-20261118/results/network-quick-setup.trx",
+    "log": "output/network-quick-setup-20261118/windows-tests.log",
+    "probe": {
+      "connection": "direct cable, no DUT",
+      "firstIp": "192.168.0.2",
+      "secondIp": "192.168.0.6",
+      "linkMbps": 1000,
+      "loadMbps": 1,
+      "durationMsPerDirection": 300,
+      "frameBytes": 128,
+      "firstToSecond": { "tx": 247, "rx": 247 },
+      "secondToFirst": { "tx": 247, "rx": 247 }
+    },
+    "profilesVerifiedBeforeAndAfter": {
+      "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json": "EA1027936385F3A98743C954F521477BFA235E52BCBAB77E37D926FFE7933A6F",
+      "PSW-2G6F+ · Полная проверка · 11.11.26.json": "81899D62A90A34594F62BD8EAD25F64DC162B2A0A0B8AE015E551AA1D527FD64",
+      "RTL-POE · Проверка платы · 11.11.26.json": "4AFBEAC58A762C7D820B2C9728A3EEAB5208B8E6AAFF90DBB0176BBDF68C91CE",
+      "RTL-SW · Проверка платы · 11.11.26.json": "F43790E50AA09547619CFEAF1494C69CEAE837E56BAB3B727446F1BEF664BEB4"
+    }
+  },
+  "limits": [
+    "The short probe establishes connectivity, not maximum throughput.",
+    "The hardware check covered only the direct .2/.6 pair.",
+    "No production graph, print job or server report was run.",
+    "No Windows IP or driver changes were applied.",
+    "Installed launcher beta was not replaced; publication remains pending."
+  ]
+}
