@@ -34,7 +34,6 @@ namespace TestBuilder.Domain.Steps
         private const int WarmupDrainMs = 100;
         private const int ReceiveDrainQuietMs = 200;
         private const int ReceiveDrainMaxMs = 2000;
-        private const int InfrastructureRetryCount = 1;
 
         private static readonly byte[] ProbeMagic = { 0x54, 0x46, 0x44, 0x54 }; // "TFDT"
 
@@ -297,7 +296,7 @@ namespace TestBuilder.Domain.Steps
             return DataTestPairResult.FromDirections(forward, reverse);
         }
 
-        private async Task<DataTestPortResult> RunDirectionWithRetryAsync(
+        private Task<DataTestPortResult> RunDirectionWithRetryAsync(
             int index,
             string pairName,
             string direction,
@@ -312,17 +311,8 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             CancellationToken cancellationToken)
         {
-            DataTestPortResult? lastResult = null;
-
-            for (var attempt = 0; attempt <= InfrastructureRetryCount; attempt++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutCts.CancelAfter(_maxPortTestTimeMs);
-
-                try
-                {
-                    lastResult = await RunDirectionAsync(
+            return DataTestDirectionRetry.RunAsync(
+                token => RunDirectionAsync(
                         index,
                         pairName,
                         direction,
@@ -335,30 +325,18 @@ namespace TestBuilder.Domain.Steps
                         sourceMac,
                         destinationMac,
                         targetBandwidthMbps,
-                        timeoutCts.Token);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                        token),
+                sourceIp, destinationIp, _maxPortTestTimeMs,
+                result =>
                 {
-                    lastResult = DataTestPortResult.Fail(
-                        $"Таймаут измерения после {_maxPortTestTimeMs} мс.",
-                        infrastructureFailure: true);
-                }
-
-                lastResult = lastResult with { AttemptCount = attempt + 1 };
-                if (!lastResult.Passed)
-                    lastResult = lastResult with { Error = lastResult.DescribeFailure(sourceIp, destinationIp) };
-                if (lastResult.Passed || !lastResult.InfrastructureFailure || attempt >= InfrastructureRetryCount)
-                {
-                    return lastResult;
-                }
-
-                _logger.Warning(
-                    $"DataTest {pairName}: {lastResult.Error} Повтор {attempt + 2}/{InfrastructureRetryCount + 1}.",
-                    TestErrorCode.DataTestStand);
-                await Task.Delay(CaptureStartSettleMs, cancellationToken);
-            }
-
-            return lastResult ?? DataTestPortResult.Fail("Не удалось выполнить направление DataTest.");
+                    if (result.Passed)
+                        _logger.Info($"DataTest {pairName}: {sourceIp} → {destinationIp}, попытка {result.AttemptCount}/{DataTestDirectionRetry.MaxAttempts}: успешно.");
+                    else
+                        _logger.Warning($"DataTest {pairName}: {result.Error} " +
+                            (result.AttemptCount < DataTestDirectionRetry.MaxAttempts ? "Повтор 2/2." : "Обе попытки не пройдены."),
+                            result.InfrastructureFailure ? TestErrorCode.DataTestStand : TestErrorCode.DataTestLoss);
+                },
+                token => Task.Delay(CaptureStartSettleMs, token), cancellationToken);
         }
 
         private async Task<DataTestPortResult> RunDirectionAsync(
@@ -1157,7 +1135,7 @@ namespace TestBuilder.Domain.Steps
             return _failOnError ? StepResult.False : StepResult.True;
         }
 
-        private void WritePortResult(
+        internal void WritePortResult(
             TestContext context,
             int index,
             DataTestPortConfig port,
@@ -1165,11 +1143,17 @@ namespace TestBuilder.Domain.Steps
             string pairError)
         {
             var prefix = $"{_outputVariableName}.Port{index}";
+            foreach (var key in context.Variables.Keys.Where(key =>
+                key.StartsWith(prefix + ".Forward.", StringComparison.Ordinal) ||
+                key.StartsWith(prefix + ".Reverse.", StringComparison.Ordinal)).ToArray())
+                context.Variables.Remove(key);
             var details = FormattableString.Invariant(
                 $"цель {result.TargetBandwidthMbps} Мбит/с; TX {result.ActualTxMbps:F3}; RX {result.ActualRxMbps:F3}; потери {result.LossPercent:F3}%");
             if (!result.Passed)
                 details = result.TargetBandwidthMbps == 0 || result.Forward.InfrastructureFailure || result.Reverse?.InfrastructureFailure == true
                     ? pairError : $"{pairError} ({details})";
+            var retries = DescribeRetries(port, result);
+            if (retries.Length > 0) details += "; " + retries;
             context.AddReportEntry($"Передача данных {port.Name}", result.Passed, details, result.FailureCode);
             context.SetVariable($"{prefix}.Name", port.Name);
             context.SetVariable($"{prefix}.InIp", port.InIp);
@@ -1189,6 +1173,8 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.SendDevice", result.SendDeviceName);
             context.SetVariable($"{prefix}.CaptureDroppedPackets", result.CaptureDroppedPackets);
             context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
+            context.SetVariable($"{prefix}.RecoveredOnRetry", result.Passed && result.AttemptCount > 1);
+            context.SetVariable($"{prefix}.RetryDetails", retries);
             context.SetVariable($"{prefix}.DirectionsTested", result.Reverse == null ? 1 : 2);
             context.SetVariable($"{prefix}.Error", pairError);
 
@@ -1200,6 +1186,23 @@ namespace TestBuilder.Domain.Steps
         }
 
         private static void WriteDirectionResult(TestContext context, string prefix, DataTestPortResult result)
+        {
+            WriteDirectionMeasurement(context, prefix, result);
+            context.SetVariable($"{prefix}.RecoveredOnRetry", result.Passed && result.AttemptCount > 1);
+            foreach (var attempt in result.Attempts)
+                WriteDirectionMeasurement(context, $"{prefix}.Attempt{attempt.AttemptCount}", attempt);
+        }
+
+        private static string DescribeRetries(DataTestPortConfig port, DataTestPairResult result)
+        {
+            var directions = new (string Source, string Destination, DataTestPortResult? Result)[]
+                { (port.OutIp, port.InIp, result.Forward), (port.InIp, port.OutIp, result.Reverse) };
+            return string.Join("; ", directions.Where(d => d.Result is { AttemptCount: > 1 }).Select(d =>
+                $"{d.Source} → {d.Destination}: " + (d.Result!.Passed ? "пройдено со второй попытки" : "обе попытки не пройдены") +
+                ". Первая попытка: " + (d.Result.Attempts.FirstOrDefault()?.Error ?? "см. журнал")));
+        }
+
+        private static void WriteDirectionMeasurement(TestContext context, string prefix, DataTestPortResult result)
         {
             context.SetVariable($"{prefix}.Passed", result.Passed);
             context.SetVariable($"{prefix}.TransmittedPackets", result.TransmittedPackets);
@@ -1216,6 +1219,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.DuplicatePackets", result.DuplicatePackets);
             context.SetVariable($"{prefix}.UnexpectedPackets", result.UnexpectedPackets);
             context.SetVariable($"{prefix}.SendEngine", result.SendEngine);
+            context.SetVariable($"{prefix}.InfrastructureFailure", result.InfrastructureFailure);
             context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
             context.SetVariable($"{prefix}.Error", result.Error);
         }
@@ -1489,6 +1493,8 @@ namespace TestBuilder.Domain.Steps
         int AttemptCount,
         string Error)
     {
+        public IReadOnlyList<DataTestPortResult> Attempts { get; init; } = Array.Empty<DataTestPortResult>();
+
         internal string DescribeFailure(IPAddress source, IPAddress destination)
         {
             var category = InfrastructureFailure ? "Сбой генератора или захвата на стенде. Результат измерения недостоверен. " : "";

@@ -98,6 +98,8 @@ internal static class NetworkConnectivityProbe
             $"{source} → {target}: TX {d.Transmitted}, RX {d.Received}" + (d.Error.Length == 0 ? "" : $". {d.Error}");
         var details = Describe(pair.SecondIp, pair.FirstIp, forward) + Environment.NewLine +
             Describe(pair.FirstIp, pair.SecondIp, reverse);
+        var retries = context.GetVariable<string>("NetworkProbe.Port0.RetryDetails");
+        if (!string.IsNullOrEmpty(retries)) details += Environment.NewLine + retries;
         var error = context.GetVariable<string>("NetworkProbe.Error");
         if (!forward.Passed && !reverse.Passed && !string.IsNullOrEmpty(error)) details += Environment.NewLine + error;
         var result = new NetworkProbeResult(pair, "", details, forward, reverse);

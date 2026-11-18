@@ -69,6 +69,8 @@ public class NetworkConnectivityProbeTests
         }
         Assert.True(NetworkConnectivityProbe.ReadResult(Pair, context).Passed);
         Assert.DoesNotContain("Гбит", NetworkConnectivityProbe.ReadResult(Pair, context).Status);
+        context.SetVariable("NetworkProbe.Port0.RetryDetails", "Пройдено со второй попытки. Первая попытка: потери 10%.");
+        Assert.Contains("Первая попытка: потери 10%", NetworkConnectivityProbe.ReadResult(Pair, context).Details);
     }
 
     [Fact]
