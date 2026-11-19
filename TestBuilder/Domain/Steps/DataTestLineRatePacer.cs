@@ -4,13 +4,14 @@ using System.Threading;
 
 namespace TestBuilder.Domain.Steps;
 
-// At full link speed the NIC serializes frames. Bound each injection to 2 ms
+// At full link speed the NIC serializes frames. Bound each injection to 10 ms
 // of wire time and pace queue boundaries, rather than delaying every frame
 // again in Npcap. A slow native call remains visible in the elapsed time.
 internal sealed class DataTestLineRatePacer(
-    double packetsPerSecond, Func<double> elapsedMs, Action idle, CancellationToken cancellationToken)
+    double packetsPerSecond, Func<double> elapsedMs, Action idle, CancellationToken cancellationToken) : IDisposable
 {
-    internal const int WindowMs = 2;
+    internal const int WindowMs = 10;
+    private DataTestDeadlineWait? _deadlineWait;
 
     internal static bool CanUse(int targetMbps, double linkMbps) =>
         targetMbps > 100 && targetMbps == linkMbps;
@@ -19,7 +20,10 @@ internal sealed class DataTestLineRatePacer(
     private double _batchStartMs;
 
     internal DataTestLineRatePacer(double packetsPerSecond, Stopwatch clock, CancellationToken cancellationToken)
-        : this(packetsPerSecond, () => clock.Elapsed.TotalMilliseconds, () => Thread.SpinWait(32), cancellationToken) { }
+        : this(packetsPerSecond, () => clock.Elapsed.TotalMilliseconds, () => Thread.SpinWait(32), cancellationToken)
+    {
+        _deadlineWait = new DataTestDeadlineWait();
+    }
 
     internal void BeginBatch()
     {
@@ -31,7 +35,13 @@ internal sealed class DataTestLineRatePacer(
 
     internal void EndBatch(int packets) => _nextQueueMs = _batchStartMs + packets * 1000.0 / packetsPerSecond;
 
-    internal void Drain() => WaitUntil(_nextQueueMs, elapsedMs, idle, cancellationToken);
+    internal void Drain()
+    {
+        if (_deadlineWait != null) _deadlineWait.Wait(_nextQueueMs, elapsedMs, cancellationToken);
+        else WaitUntil(_nextQueueMs, elapsedMs, idle, cancellationToken);
+    }
+
+    public void Dispose() => _deadlineWait?.Dispose();
 
     // No Task.Delay: Windows timer quantization can exceed an entire window.
     internal static void WaitUntil(double deadlineMs, Func<double> elapsedMs, Action idle,
