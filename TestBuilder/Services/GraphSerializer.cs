@@ -104,6 +104,7 @@ namespace TestBuilder.Services
             SubtestNodeViewModel { FailureOrder: not null } => "Subtest (cleanup order v1)",
             SubtestNodeViewModel => "Subtest",
             ForEachSlaveNodeViewModel f => f.RepeatOnSameSlave ? "For Slaves (repeat v1)" : "For Slaves",
+            RetryCheckNodeViewModel => "Retry Check (v1)",
             _ => node.Title
         };
 
@@ -474,6 +475,12 @@ namespace TestBuilder.Services
                         n.RunOnFailure = s.RunOnFailure;
                         n.FailureOrder = s.FailureOrder;
                         n.BodyGraph = SerializeGraph(s.BodyGraph, s.BodyGraph.Title);
+                        break;
+
+                    case RetryCheckNodeViewModel retry:
+                        n.RepeatCount = retry.MaxAttempts;
+                        n.RepeatDelayMs = retry.DelayMs;
+                        n.Body = SerializeGraph(retry.BodyGraph, retry.BodyGraph.Title);
                         break;
 
                     case ForEachSlaveNodeViewModel f:
@@ -980,6 +987,7 @@ namespace TestBuilder.Services
                     "Subtest" or "SUBTEST" or "Подтест" or "Subtest (cleanup order v1)" => CreateSubtestNode(n, location),
 
                     "For Slaves" or "For Slaves (repeat v1)" or "Цикл For" => CreateForEachSlaveNode(n, location),
+                    "Retry Check (v1)" => CreateRetryCheckNode(n, location),
 
                     "Wait Until" or "Ожидание значения" => CreateWaitUntilNode(n, location),
 
@@ -1119,6 +1127,13 @@ namespace TestBuilder.Services
 
             node.RestoreSelections();
 
+            return node;
+        }
+
+        private static RetryCheckNodeViewModel CreateRetryCheckNode(NodeDto n, Point location)
+        {
+            var node = new RetryCheckNodeViewModel { Location = location, MaxAttempts = n.RepeatCount ?? 2, DelayMs = n.RepeatDelayMs ?? 1000 };
+            if (n.Body != null) DeserializeGraph(n.Body, node.BodyGraph, isBodyGraph: true);
             return node;
         }
 

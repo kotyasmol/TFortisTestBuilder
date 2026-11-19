@@ -66,6 +66,9 @@ internal static class ParallelResourceValidator
                 if (subtest.RunOnFailure) Reject(node, "аварийную очистку следует оставить вне параллельных ветвей");
                 CollectGraph(subtest.BodyGraph, usage, currentSlaves, hardware);
                 return;
+            case RetryCheckNodeViewModel retry:
+                CollectGraph(retry.BodyGraph, usage, currentSlaves, hardware);
+                return;
             case ForEachSlaveNodeViewModel loop:
                 var slaves = GetLoopSlaves(loop, currentSlaves);
                 if (!loop.RepeatOnSameSlave && slaves == null)

@@ -438,7 +438,17 @@ public class ParallelGraphCompilationTests
         Assert.NotEqual(original["name"]!.GetValue<string>(), parallel["name"]!.GetValue<string>());
         Assert.Contains("Параллельная проверка", parallel["configurationName"]!.GetValue<string>());
 
-        Assert.True(JsonNode.DeepEquals(original["hardware"], parallel["hardware"]));
+        // The 16.11 production map intentionally enables bounded state-write
+        // retries for EL-60v5 automatic-load controls. Keep every other hardware
+        // field under the same strict comparison; do not rewrite either profile.
+        var expectedHardware = original["hardware"]!.DeepClone();
+        var retryRegisters = expectedHardware["Devices"]!.AsArray().OfType<JsonObject>()
+            .Where(device => device["IdentificationValue"]?.GetValue<int>() == 4)
+            .SelectMany(device => device["Registers"]!.AsArray().OfType<JsonObject>())
+            .Where(register => register["Address"]!.GetValue<int>() is 1420 or 1421).ToArray();
+        Assert.Equal(16, retryRegisters.Length);
+        foreach (var register in retryRegisters) register["RetryWriteOnMismatch"] = true;
+        Assert.True(JsonNode.DeepEquals(expectedHardware, parallel["hardware"]));
         var originalNodes = Stages(original);
         var parallelNodes = Stages(parallel);
         Assert.Equal(originalNodes.Keys.Order(), parallelNodes.Keys.Order());

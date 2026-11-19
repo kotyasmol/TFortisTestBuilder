@@ -206,6 +206,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new LabelNodeViewModel(),
         new SubtestNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
+        new RetryCheckNodeViewModel(),
         new WaitUntilNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
@@ -391,6 +392,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             Find("Конец"),
             Find("Подтест"),
             Find("Цикл For"),
+            Find("Retry Check"),
             Find("Метка"),
             Find("Задержка")));
 
@@ -2246,6 +2248,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Метка" => new LabelNodeViewModel { Location = location },
             "Подтест" => new SubtestNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
+            "Retry Check" => new RetryCheckNodeViewModel { Location = location },
             "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
             "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null
