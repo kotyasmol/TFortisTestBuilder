@@ -21,7 +21,7 @@ public sealed class NetworkPortBatchWindow : Window
         var firstNumber = new NumericUpDown { Name = "BatchFirstNumber", Minimum = 1, Maximum = int.MaxValue, Increment = 1, FormatString = "0", Value = source.Addresses.Count + 1 };
         var prefix = new TextBox { Name = "BatchPrefix", Text = "Порт" };
         var role = new TextBox { Name = "BatchRole", Text = "Медь", Watermark = "Например, Медь или SFP" };
-        var speed = new ComboBox { Name = "BatchSpeed", ItemsSource = new[] { 10, 100, 1000 }, SelectedItem = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var speed = new TextBox { Name = "BatchSpeed", Text = "100", Watermark = "1–1000", HorizontalAlignment = HorizontalAlignment.Stretch };
         var ip = new TextBox { Name = "BatchFirstIp", Text = suggested.Ip };
         var temporary = new TextBox { Name = "BatchFirstTemporaryIp", Text = suggested.TemporaryIp };
         var pairs = new CheckBox { Name = "BatchCreatePairs", Content = "Объединить соседние порты в пары DataTest", IsChecked = true };
@@ -59,7 +59,7 @@ public sealed class NetworkPortBatchWindow : Window
                 if (count.Value != decimal.Truncate(count.Value ?? 0) || firstNumber.Value != decimal.Truncate(firstNumber.Value ?? 0))
                     throw new InvalidOperationException("Количество и начальный номер должны быть целыми числами.");
                 var batch = new NetworkPortBatch(checked((int)(count.Value ?? 0)), checked((int)(firstNumber.Value ?? 0)),
-                    prefix.Text ?? "", role.Text ?? "", (int)(speed.SelectedItem ?? 100), ip.Text ?? "", temporary.Text ?? "", pairs.IsChecked == true);
+                    prefix.Text ?? "", role.Text ?? "", DataTestSpeed.Parse(speed.Text), ip.Text ?? "", temporary.Text ?? "", pairs.IsChecked == true);
                 Close(batch.AppendTo(source));
             }
             catch (Exception ex) { error.Text = ex.Message; }

@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TestBuilder.Services;
@@ -41,6 +42,21 @@ public sealed class NetworkPlanWindow : Window
         var summary = new TextBlock { Name = "NetworkPlanCount" };
         void UpdateCount() => summary.Text = $"Адресов в плане: {addresses.Count}";
         addresses.CollectionChanged += (_, _) => UpdateCount(); UpdateCount(); bottom.Children.Add(summary);
+        var allSpeed = new TextBox { Name = "AllPortsSpeed", Text = "100", Width = 100, Watermark = "1–1000" };
+        var applySpeed = new Button { Content = "Применить всем", Margin = new Thickness(8, 0, 0, 0) };
+        applySpeed.Click += (_, _) =>
+        {
+            try
+            {
+                Commit(); var value = DataTestSpeed.Parse(allSpeed.Text);
+                foreach (var row in addresses) row.TestMbps = value;
+                status.Text = ""; errorBox.IsVisible = false;
+            }
+            catch (Exception ex) { status.Text = ex.Message; errorBox.IsVisible = true; }
+        };
+        var speedRow = new WrapPanel { Orientation = Orientation.Horizontal };
+        speedRow.Children.Add(new TextBlock { Text = "Всем портам, Мбит/с", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+        speedRow.Children.Add(allSpeed); speedRow.Children.Add(applySpeed); bottom.Children.Add(speedRow);
         void Commit()
         {
             if (!grid.CommitEdit(DataGridEditingUnit.Cell, true) || !grid.CommitEdit(DataGridEditingUnit.Row, true))

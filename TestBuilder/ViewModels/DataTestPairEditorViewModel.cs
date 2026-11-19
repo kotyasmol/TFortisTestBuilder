@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -16,6 +17,9 @@ public partial class DataTestPairRow : ObservableObject
     [ObservableProperty] private string firstIp = "";
     [ObservableProperty] private string secondIp = "";
     [ObservableProperty] private int mbps = 100;
+    // Keep invalid draft text visible; parse only when applying instead of retaining a stale integer binding.
+    [ObservableProperty] private string mbpsText = "100";
+    partial void OnMbpsChanged(int value) => MbpsText = value.ToString(CultureInfo.InvariantCulture);
 }
 
 // A detached draft: cancelling the window never changes the node.
@@ -45,7 +49,11 @@ public sealed class DataTestPairEditorViewModel
                 Mbps = TestBuilder.Domain.Steps.RunDataTestStep.NormalizeBandwidth(fields.Length == 4 ? int.Parse(fields[3]) : fallback, allowGigabit) });
         }
     }
-    public void SetAllSpeeds(int mbps) { foreach (var row in Rows) row.Mbps = mbps; }
+    public void SetAllSpeeds(int mbps)
+    {
+        DataTestSpeed.Parse(mbps.ToString(CultureInfo.InvariantCulture));
+        foreach (var row in Rows) { row.Mbps = mbps; row.MbpsText = mbps.ToString(CultureInfo.InvariantCulture); }
+    }
     public void Apply(RunDataTestNodeViewModel node)
     {
         if (!Rows.Any(r => r.Enabled)) throw new InvalidOperationException("Включите хотя бы одну пару.");
@@ -57,10 +65,12 @@ public sealed class DataTestPairEditorViewModel
                 if (!IPAddress.TryParse(ip, out var parsed) || parsed.AddressFamily != AddressFamily.InterNetwork || parsed.ToString() != ip)
                     throw new InvalidOperationException($"Пара «{row.Name}»: выберите два адреса IPv4.");
             if (row.FirstIp == row.SecondIp) throw new InvalidOperationException($"Пара «{row.Name}»: выберите разные карты.");
-            if (row.Mbps is < 1 or > 1000) throw new InvalidOperationException("Скорость теста: от 1 до 1000 Мбит/с.");
+            try { DataTestSpeed.Parse(row.MbpsText); }
+            catch (InvalidOperationException error) { throw new InvalidOperationException($"Пара «{row.Name}»: {error.Message}", error); }
         }
         if (Rows.Select(r => r.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Rows.Count)
             throw new InvalidOperationException("Названия пар должны различаться.");
+        foreach (var row in Rows) row.Mbps = DataTestSpeed.Parse(row.MbpsText);
         string Format(bool enabled) => string.Join(Environment.NewLine, Rows.Where(r => r.Enabled == enabled)
             .Select(r => $"{r.Name.Trim()},{r.FirstIp},{r.SecondIp},{r.Mbps}"));
         var active = Format(true); var disabled = Format(false);

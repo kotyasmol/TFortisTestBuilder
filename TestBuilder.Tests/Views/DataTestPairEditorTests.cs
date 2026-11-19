@@ -84,15 +84,15 @@ public class DataTestPairEditorTests
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 var combos = window.GetVisualDescendants().OfType<ComboBox>().ToArray();
-                Assert.Equal(3, combos.Length);
+                Assert.Equal(2, combos.Length);
                 combos[0].SelectedItem = "192.168.0.4";
-                combos[2].SelectedItem = 1000;
+                window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "PairSpeed").Text = "375";
                 Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
                 window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-datatest-pairs.png"));
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Применить к ноде"))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Assert.Equal("Пара 1,192.168.0.4,192.168.0.3,1000", node.PortsText);
+                Assert.Equal("Пара 1,192.168.0.4,192.168.0.3,375", node.PortsText);
                 Assert.True(node.AllowGigabit);
             }
             finally { window.Close(); }
