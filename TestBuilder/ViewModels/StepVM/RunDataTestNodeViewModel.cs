@@ -65,8 +65,10 @@ namespace TestBuilder.ViewModels.StepVM
                 try
                 {
                     var rows = new DataTestPairEditorViewModel(this).Rows;
-                    return string.Join(Environment.NewLine, rows.Select(r =>
-                        $"{(r.Enabled ? "✓" : "—")} {r.Name}: {r.FirstIp} ↔ {r.SecondIp} · {r.Mbps} Мбит/с"));
+                    var lines = rows.Take(5).Select(r =>
+                        $"{(r.Enabled ? "✓" : "—")} {r.Name}: {r.FirstIp} ↔ {r.SecondIp} · {r.Mbps} Мбит/с");
+                    if (rows.Count > 5) lines = lines.Append($"Ещё пар: {rows.Count - 5}. Всего: {rows.Count}, включено: {rows.Count(r => r.Enabled)}.");
+                    return string.Join(Environment.NewLine, lines);
                 }
                 catch { return "Не удалось прочитать пары. Проверьте профиль."; }
             }

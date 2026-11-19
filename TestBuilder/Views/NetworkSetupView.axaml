@@ -7,17 +7,25 @@
   <DockPanel>
     <StackPanel DockPanel.Dock="Bottom" Margin="20,10" Spacing="8">
       <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}"/>
-        <Button Content="Применить адреса" Command="{Binding ApplyCommand}"/>
+      <WrapPanel>
+        <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}" Margin="0,0,12,6"/>
+        <Button Content="Применить адреса" Command="{Binding ApplyCommand}" Margin="0,0,12,6"/>
         <TextBlock Text="Для изменения IP нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center" TextWrapping="Wrap"/>
-      </StackPanel>
+      </WrapPanel>
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="15"/>
     </StackPanel>
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
       <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
+      <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
+      <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
+        <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
+        <Button Content="Названия, порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
+        <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
+      </WrapPanel>
+      <Expander Header="Наборы, связь и компоненты" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="14">
       <Border Classes="card" Padding="12">
         <StackPanel Spacing="8">
           <TextBlock Text="Быстрая настройка" FontWeight="SemiBold"/>
@@ -72,15 +80,7 @@
           </Expander>
         </StackPanel>
       </Border>
-      <TextBlock Text="Выберите карту для каждого порта. Выбор занятой карты меняет две карты местами."
-                 TextWrapping="Wrap"/>
-      <TextBlock Text="Адреса и маска задаются в плане сети. В ноде DataTest нажмите «Взять пары из плана сети», затем сохраните профиль. Адреса Windows изменяются только кнопкой «Применить адреса»."
-                 TextWrapping="Wrap" Opacity="0.7"/>
-      <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
-        <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
-        <Button Content="Названия, порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
-        <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
-      </WrapPanel>
+
       <Expander x:Name="IdentifyCableSection" Header="Определить карту по кабелю" HorizontalAlignment="Stretch">
         <StackPanel Spacing="8">
           <TextBlock Text="При включённом DUT запомните линки, отключите один кабель и сравните. После определения подключите кабель обратно. Несколько изменений не доказывают соответствие порту." TextWrapping="Wrap"/>
@@ -91,44 +91,71 @@
           <TextBlock Text="{Binding LinkChanges}" TextWrapping="Wrap"/>
         </StackPanel>
       </Expander>
-      <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
-      <Grid ColumnDefinitions="160,*,205,90" Margin="8,0">
-        <TextBlock Text="Порт / адрес стенда" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="1" Text="Сетевая карта / состояние" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="Текущий IPv4 / изменение" FontWeight="SemiBold"/>
+        </StackPanel>
+      </Expander>
+      <Grid ColumnDefinitions="*,190">
+        <TextBox Name="NetworkPortSearch" Text="{Binding RowSearch}" Watermark="Поиск по порту, IP, названию карты или MAC" Margin="0,0,12,0"/>
+        <ComboBox Name="NetworkPortFilter" Grid.Column="1" ItemsSource="{Binding RowFilters}" SelectedIndex="{Binding RowFilterIndex}" HorizontalAlignment="Stretch"/>
       </Grid>
-      <ItemsControl ItemsSource="{Binding Rows}" IsEnabled="{Binding CanEdit}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
-            <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,10">
-              <Grid ColumnDefinitions="160,*,205,90">
-                <StackPanel Spacing="4">
-                  <TextBlock Text="{Binding Port}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-                  <TextBlock Text="{Binding Ip}"/>
-                  <TextBlock Text="{Binding Role}" TextWrapping="Wrap" FontSize="12"/>
-                  <TextBlock Text="{Binding TestAssignment}" TextWrapping="Wrap" FontSize="12"/>
+      <TextBlock Text="{Binding VisibleRowsSummary}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+      <DataGrid Name="NetworkAdaptersGrid" ItemsSource="{Binding VisibleRows}" IsEnabled="{Binding CanEdit}"
+                AutoGenerateColumns="False" CanUserSortColumns="False" Height="440"
+                HeadersVisibility="Column" GridLinesVisibility="Horizontal" MinColumnWidth="80">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="Порт / адрес плана" Width="150">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+                <StackPanel Spacing="3" Margin="6" ToolTip.Tip="{Binding TestAssignment}">
+                  <TextBlock Text="{Binding Port}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Ip}" FontSize="12"/>
+                  <TextBlock Text="{Binding Role}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
-                  <ComboBox HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                            ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter}"
-                            PlaceholderText="Выберите сетевую карту">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate><TextBlock Text="{Binding ChoiceDisplay}" ToolTip.Tip="{Binding Display}" TextWrapping="Wrap"/></DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
-                  <TextBlock Text="{Binding Link}" FontSize="12" TextWrapping="Wrap"/>
-                  <Button Content="Название карты Windows…" Command="{Binding RenameCommand}" HorizontalAlignment="Left"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Сетевая карта Windows" Width="*" MinWidth="220">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+                <ComboBox Margin="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                          ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter}" PlaceholderText="Выберите сетевую карту">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate><TextBlock Text="{Binding ChoiceDisplay}" ToolTip.Tip="{Binding Display}" TextWrapping="Wrap"/></DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Линк" Width="110">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+                <TextBlock Text="{Binding Link}" FontSize="12" TextWrapping="Wrap" Margin="6" VerticalAlignment="Center"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Текущий IPv4" Width="140">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+                <StackPanel Spacing="3" Margin="6" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding CurrentAddress}" FontSize="12" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Spacing="6" Margin="0,0,8,0">
-                  <TextBlock Text="{Binding CurrentAddress}" TextWrapping="Wrap"/>
-                  <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Действия" Width="95">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
+                <StackPanel Spacing="4" Margin="4">
+                  <Button Content="Название…" Command="{Binding RenameCommand}" FontSize="12" MinHeight="0" Padding="6,3" ToolTip.Tip="Изменить название карты Windows"/>
+                  <Button Content="Убрать" Command="{Binding ClearCommand}" FontSize="12" MinHeight="0" Padding="6,3"/>
                 </StackPanel>
-                <Button Grid.Column="3" Content="Убрать" Command="{Binding ClearCommand}" VerticalAlignment="Center"/>
-              </Grid>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </DataGrid>
+      <TextBlock Text="Выберите физическую карту для каждого адреса плана. Выбор занятой карты меняет две привязки местами. Фильтр скрывает строки только на экране." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+
       <Expander x:Name="NetworkJournalSection" Header="Журнал применения" HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding Journal}">
           <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,3"/></DataTemplate></ItemsControl.ItemTemplate>

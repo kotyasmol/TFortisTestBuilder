@@ -38,6 +38,9 @@ public sealed class NetworkPlanWindow : Window
         errorBox.Bind(Border.BackgroundProperty, new DynamicResourceExtension("DangerSoftBrush"));
         bottom.Children.Add(errorBox);
         var buttons = new WrapPanel();
+        var summary = new TextBlock { Name = "NetworkPlanCount" };
+        void UpdateCount() => summary.Text = $"Адресов в плане: {addresses.Count}";
+        addresses.CollectionChanged += (_, _) => UpdateCount(); UpdateCount(); bottom.Children.Add(summary);
         void Commit()
         {
             if (!grid.CommitEdit(DataGridEditingUnit.Cell, true) || !grid.CommitEdit(DataGridEditingUnit.Row, true))
@@ -59,11 +62,28 @@ public sealed class NetworkPlanWindow : Window
             var row = plan.CreateNextAddress(); addresses.Add(row);
             grid.SelectedItem = row; grid.ScrollIntoView(row, grid.Columns[4]);
         });
+        var bulk = new Button { Content = "Добавить порты…", Margin = new Thickness(0, 0, 8, 0) };
+        bulk.Click += async (_, _) =>
+        {
+            try
+            {
+                Commit(); plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList();
+                var result = await new NetworkPortBatchWindow(TestViewModel.CopyDefinition(plan)).ShowDialog<BenchNetworkPlan?>(this);
+                if (result == null) return;
+                addresses.Clear(); foreach (var row in result.Addresses) addresses.Add(row);
+                var last = addresses.LastOrDefault(); if (last != null) { grid.SelectedItem = last; grid.ScrollIntoView(last, grid.Columns[4]); }
+                status.Text = ""; errorBox.IsVisible = false;
+            }
+            catch (Exception ex) { status.Text = "Изменения не сохранены. " + ex.Message; errorBox.IsVisible = true; }
+        };
+        buttons.Children.Add(bulk);
         Button("Удалить строку", () =>
         {
             grid.CancelEdit(DataGridEditingUnit.Cell); grid.CancelEdit(DataGridEditingUnit.Row);
             if (grid.SelectedItem is BenchNetworkAddress row) addresses.Remove(row);
         }, commit: false);
+        Button("Всем 100 Мбит/с", () => { foreach (var row in addresses) row.TestMbps = 100; });
+        Button("Всем 1000 Мбит/с", () => { foreach (var row in addresses) row.TestMbps = 1000; });
         Button("Сохранить план", () =>
         {
             plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList();

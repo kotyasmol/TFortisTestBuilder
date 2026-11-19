@@ -45,6 +45,8 @@ internal static class ReportSourceCatalog
         var statuses = new HashSet<string>(StringComparer.Ordinal);
         var reportOutputs = new HashSet<string>(StringComparer.Ordinal);
         var path = new HashSet<GraphWorkspaceViewModel>();
+        var dataTestAddresses = new HashSet<string>(StringComparer.Ordinal);
+        var hasSelftest = false;
 
         void Visit(GraphWorkspaceViewModel graph, IReadOnlyList<byte> slaves)
         {
@@ -136,7 +138,9 @@ internal static class ReportSourceCatalog
         {
             var prefix = string.IsNullOrWhiteSpace(node.OutputVariableName) ? "DataTest" : node.OutputVariableName.Trim();
             AddStatus(prefix + ".Passed");
+            if (string.IsNullOrWhiteSpace(node.PortsText)) return; // A newly added draft may not have its pairs yet.
             var ports = node.ParsePorts().ToArray();
+            foreach (var port in ports) { dataTestAddresses.Add(port.InIp); dataTestAddresses.Add(port.OutIp); }
             for (var i = 0; i < ports.Length; i++)
             {
                 entries.Add("Передача данных " + ports[i].Name);
@@ -150,8 +154,16 @@ internal static class ReportSourceCatalog
 
         void AddSelftest()
         {
+            hasSelftest = true;
             entries.UnionWith(ProductionReportFields.SourceNames);
-            for (var i = 0; i < 10; i++)
+        }
+
+        Visit(root, Array.Empty<byte>());
+        if (hasSelftest)
+        {
+            // Retain the legacy suggestions when no port plan is present,
+            // and expose all ports represented by the profile's DataTest pairs.
+            for (var i = 0; i < Math.Max(10, dataTestAddresses.Count); i++)
             {
                 entries.Add($"link_{i}");
                 entries.Add($"poe_a_st_{i}");
@@ -161,7 +173,6 @@ internal static class ReportSourceCatalog
             }
         }
 
-        Visit(root, Array.Empty<byte>());
         if (observedNames != null && source == ReportSourceKind.Variable)
             variables.UnionWith(observedNames);
         foreach (var field in root.ReportTemplate?.Fields ?? Array.Empty<ReportField>())

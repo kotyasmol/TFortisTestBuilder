@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TestBuilder.Services;
 
@@ -30,8 +31,8 @@ public sealed class BenchNetworkPlan
     {
         var bits = ReadMask();
         var inverse = ~bits;
-        if (Addresses == null || Addresses.Count is < 1 or > 247 || Addresses.Any(a => a == null))
-            throw new InvalidOperationException("Добавьте от 1 до 247 адресов стенда.");
+        if (Addresses == null || Addresses.Count < 1 || Addresses.Any(a => a == null))
+            throw new InvalidOperationException("Добавьте хотя бы один адрес стенда.");
         var used = new Dictionary<string, (int Row, string Field)>();
         for (var index = 0; index < Addresses.Count; index++)
         {
@@ -60,7 +61,6 @@ public sealed class BenchNetworkPlan
     // Draft suggestions only: never changes Windows or existing plan rows.
     public BenchNetworkAddress CreateNextAddress()
     {
-        if (Addresses.Count >= 247) throw new InvalidOperationException("В плане может быть не более 247 карт.");
         var mask = ReadMask();
         var occupied = Addresses.SelectMany(a => new[] { a.Ip, a.TemporaryIp })
             .Where(ip => TryAddress(ip, out _)).Select(ip => ToNumber(IPAddress.Parse(ip))).ToHashSet();
@@ -111,13 +111,13 @@ public sealed class BenchNetworkPlan
         return ""; // A full subnet needs an explicit address in another subnet.
     }
 }
-public sealed class BenchNetworkAddress
+public sealed partial class BenchNetworkAddress : ObservableObject
 {
-    public string Name { get; set; } = "";
-    public string Role { get; set; } = "";
-    public string Pair { get; set; } = "";
-    public int TestMbps { get; set; } = 100;
-    public bool IncludeInDataTest { get; set; }
-    public string Ip { get; set; } = "";
-    public string TemporaryIp { get; set; } = "";
+    [ObservableProperty] private string name = "";
+    [ObservableProperty] private string role = "";
+    [ObservableProperty] private string pair = "";
+    [ObservableProperty] private int testMbps = 100;
+    [ObservableProperty] private bool includeInDataTest;
+    [ObservableProperty] private string ip = "";
+    [ObservableProperty] private string temporaryIp = "";
 }

@@ -129,6 +129,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
             row.Message = row.SelectedAdapter == null ? "Выберите карту" :
                 row.CurrentAddress == row.Ip ? "Адрес совпадает" : $"Будет назначен {row.Ip}";
         OnPropertyChanged(nameof(Summary));
+        UpdateVisibleRows();
         RefreshAvailability();
     }
     private void Reset()

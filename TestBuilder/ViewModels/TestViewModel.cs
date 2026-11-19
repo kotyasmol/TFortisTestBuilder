@@ -2251,6 +2251,13 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             _ => null
         };
 
+        if (node is RunDataTestNodeViewModel dataTest)
+        {
+            // Explicit creation only. Deserializing or cloning a profile must
+            // keep its saved pairs, independent of this workstation's plan.
+            dataTest.PortsText = "";
+            dataTest.ImportNetworkPlanCommand.Execute(null);
+        }
         if (node != null)
             _history.Execute(CurrentGraph, new AddNodeCommand(Nodes, node));
     }
