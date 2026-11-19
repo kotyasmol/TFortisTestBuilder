@@ -28,33 +28,87 @@ public sealed class BenchNetworkPlan
 
     public void Validate()
     {
+        var bits = ReadMask();
+        var inverse = ~bits;
+        if (Addresses == null || Addresses.Count is < 1 or > 247 || Addresses.Any(a => a == null))
+            throw new InvalidOperationException("Добавьте от 1 до 247 адресов стенда.");
+        var used = new Dictionary<string, (int Row, string Field)>();
+        for (var index = 0; index < Addresses.Count; index++)
+        {
+            var row = Addresses[index];
+            foreach (var (field, text) in new[] { ("Название порта", row.Name), ("Назначение / разъём", row.Role), ("Пара DataTest", row.Pair) })
+                if (text == null || text.Length > 100 || text.Any(char.IsControl) || field == "Пара DataTest" && text.Contains(','))
+                    throw new InvalidOperationException($"Строка {index + 1}, поле «{field}»: до 100 символов без переводов строки; имя пары не должно содержать запятых.");
+            if (row.TestMbps is < 1 or > 1000)
+                throw new InvalidOperationException($"Строка {index + 1}, поле «Мбит/с теста»: введите целое число от 1 до 1000.");
+            foreach (var (field, text) in new[] { ("Адрес карты", row.Ip), ("Временный адрес", row.TemporaryIp) })
+            {
+                var location = $"Строка {index + 1}, поле «{field}»";
+                if (string.IsNullOrWhiteSpace(text))
+                    throw new InvalidOperationException($"{location}: заполните адрес IPv4.");
+                if (!TryAddress(text, out var address) || IPAddress.Parse(text).ToString() != text)
+                    throw new InvalidOperationException($"{location}: некорректный адрес IPv4 «{text}».");
+                if (inverse > 1 && ((address & inverse) == 0 || (address & inverse) == inverse))
+                    throw new InvalidOperationException($"{location}: {text} — адрес сети или широковещательный адрес.");
+                if (used.TryGetValue(text, out var owner))
+                    throw new InvalidOperationException($"{location}: {text} уже указан в строке {owner.Row} (поле «{owner.Field}»). Основные и временные адреса должны быть уникальны.");
+                used.Add(text, (index + 1, field));
+            }
+        }
+    }
+
+    // Draft suggestions only: never changes Windows or existing plan rows.
+    public BenchNetworkAddress CreateNextAddress()
+    {
+        if (Addresses.Count >= 247) throw new InvalidOperationException("В плане может быть не более 247 карт.");
+        var mask = ReadMask();
+        var occupied = Addresses.SelectMany(a => new[] { a.Ip, a.TemporaryIp })
+            .Where(ip => TryAddress(ip, out _)).Select(ip => ToNumber(IPAddress.Parse(ip))).ToHashSet();
+        var defaults = new BenchNetworkPlan().Addresses[0];
+        var ip = Next(Addresses.Select(a => a.Ip), defaults.Ip, mask, occupied);
+        if (TryAddress(ip, out var number)) occupied.Add(number);
+        return new BenchNetworkAddress { Ip = ip, TemporaryIp = Next(Addresses.Select(a => a.TemporaryIp), defaults.TemporaryIp, mask, occupied) };
+    }
+
+    private uint ReadMask()
+    {
         if (!IPAddress.TryParse(Mask, out var mask) || mask.AddressFamily != AddressFamily.InterNetwork)
             throw new InvalidOperationException("Введите маску IPv4.");
-        var bits = mask.GetAddressBytes().Aggregate(0u, (a, b) => (a << 8) | b);
+        var bits = ToNumber(mask);
         var inverse = ~bits;
         if (bits == 0 || (inverse & (inverse + 1)) != 0)
             throw new InvalidOperationException("Маска должна содержать непрерывные единичные биты.");
-        if (Addresses == null || Addresses.Count is < 1 or > 247 || Addresses.Any(a => a == null))
-            throw new InvalidOperationException("Добавьте от 1 до 247 адресов стенда.");
-        foreach (var row in Addresses)
+        return bits;
+    }
+
+    private static bool TryAddress(string? text, out uint value)
+    {
+        value = 0;
+        if (!IPAddress.TryParse(text, out var ip) || ip.AddressFamily != AddressFamily.InterNetwork ||
+            ip.GetAddressBytes()[0] is 0 or 127 or >= 224) return false;
+        value = ToNumber(ip); return true;
+    }
+
+    private static uint ToNumber(IPAddress ip) => ip.GetAddressBytes().Aggregate(0u, (a, b) => (a << 8) | b);
+    private static string Next(IEnumerable<string> addresses, string fallback, uint mask, HashSet<uint> occupied)
+    {
+        var existing = addresses.Where(ip => TryAddress(ip, out _)).ToArray();
+        var anchor = ToNumber(IPAddress.Parse(existing.LastOrDefault() ?? fallback));
+        var inverse = ~mask;
+        var first = (ulong)(anchor & mask) + (inverse > 1 ? 1u : 0u);
+        var last = (ulong)(anchor & mask) + inverse - (inverse > 1 ? 1u : 0u);
+        first = Math.Max(first, 1UL << 24); // Exclude 0/8.
+        last = Math.Min(last, 0xDFFFFFFFUL); // Exclude multicast/reserved addresses.
+        if ((last >> 24) == 127) last = (127UL << 24) - 1;
+        if (first > last) return "";
+        var candidate = existing.Length == 0 ? Math.Clamp((ulong)anchor, first, last) : anchor < last ? anchor + 1UL : first;
+        for (ulong i = 0; i < Math.Min(last - first + 1, (ulong)occupied.Count + 1); i++)
         {
-            if (row.Name == null || row.Role == null || row.Pair == null || row.Name.Length > 100 || row.Role.Length > 100 || row.Pair.Length > 100 ||
-                row.Name.Any(char.IsControl) || row.Role.Any(char.IsControl) ||
-                row.Pair.Any(c => c == ',' || char.IsControl(c)) || row.TestMbps is < 1 or > 1000)
-                throw new InvalidOperationException("Названия: до 100 символов; пара без запятых; скорость теста 1–1000 Мбит/с.");
+            if (!occupied.Contains((uint)candidate))
+                return new IPAddress(new[] { (byte)(candidate >> 24), (byte)(candidate >> 16), (byte)(candidate >> 8), (byte)candidate }).ToString();
+            candidate = candidate == last ? first : candidate + 1;
         }
-        var all = Addresses.SelectMany(a => new[] { a.Ip, a.TemporaryIp }).ToArray();
-        foreach (var text in all)
-        {
-            if (!IPAddress.TryParse(text, out var ip) || ip.AddressFamily != AddressFamily.InterNetwork || ip.ToString() != text ||
-                ip.GetAddressBytes()[0] is 0 or 127 or >= 224)
-                throw new InvalidOperationException($"Некорректный адрес IPv4: {text}.");
-            var address = ip.GetAddressBytes().Aggregate(0u, (a, b) => (a << 8) | b);
-            if (inverse > 1 && ((address & inverse) == 0 || (address & inverse) == inverse))
-                throw new InvalidOperationException($"{text}: нельзя назначать адрес сети или широковещательный адрес.");
-        }
-        if (all.Distinct().Count() != all.Length)
-            throw new InvalidOperationException("Основные и временные адреса должны быть уникальны.");
+        return ""; // A full subnet needs an explicit address in another subnet.
     }
 }
 public sealed class BenchNetworkAddress

@@ -240,12 +240,24 @@ public partial class NetworkSetupViewModel : ViewModelBase
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
         {
-            var saved = await new TestBuilder.Views.NetworkPlanWindow().ShowDialog<bool>(desktop.MainWindow);
-            if (!saved) return;
-            RebuildRows();
-            LoadedPreset = null;
-            ProbeResults.Clear(); ProbeStatus = "План изменён. Повторите проверку связи.";
+            await new TestBuilder.Views.NetworkPlanWindow(AppSettings.Instance.NetworkPlan, SaveAddressPlan).ShowDialog<bool>(desktop.MainWindow);
         }
+    }
+
+    internal void SaveAddressPlan(BenchNetworkPlan source)
+    {
+        if (!CanEdit) throw new InvalidOperationException("Дождитесь завершения текущей операции перед изменением плана сети.");
+        var plan = TestViewModel.CopyDefinition(source);
+        plan.Validate();
+        var choices = ChoicesForPlan(plan);
+        var settings = AppSettings.Instance; var previous = settings.NetworkPlan;
+        settings.NetworkPlan = plan;
+        try { _saveNetworkSettings(); }
+        catch { settings.NetworkPlan = previous; throw; }
+        RebuildRows(choices);
+        LoadedPreset = null;
+        ProbeResults.Clear(); ProbeStatus = "План изменён. Повторите проверку связи.";
+        Status = $"План сохранён. Адресов: {Rows.Count}. Проверьте выбранные карты; IP Windows пока не менялись.";
     }
 
     private void Refresh()

@@ -61,23 +61,29 @@ public partial class NetworkSetupViewModel
         {
             item.Definition.Validate();
             var plan = item.Definition.CopyPlan();
-            var choices = Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter?.Id);
-            string? Choice(string ip)
-            {
-                if (choices.TryGetValue(ip, out var selected)) return selected;
-                if (settings.DataTestAdapterIds.TryGetValue(ip, out var saved)) return saved;
-                var owners = Adapters.Where(a => a.Ipv4.Split(", ").Contains(ip)).Take(2).ToArray();
-                return owners.Length == 1 ? owners[0].Id : null;
-            }
+            var choices = ChoicesForPlan(plan);
             settings.NetworkPlan = plan;
             try { _saveNetworkSettings(); }
             catch { settings.NetworkPlan = previous; throw; }
-            RebuildRows(plan.Addresses.ToDictionary(a => a.Ip, a => Choice(a.Ip)));
+            RebuildRows(choices);
             LoadedPreset = item;
             PresetStatus = $"Загружен «{item.Name}». Проверьте выбранные карты; IP Windows меняются кнопкой «Применить адреса».";
             ProbeResults.Clear(); ProbeStatus = "План изменён. Повторите проверку связи.";
         }
         catch (Exception ex) { PresetStatus = "Не удалось загрузить набор: " + ex.Message; }
+    }
+
+    private Dictionary<string, string?> ChoicesForPlan(BenchNetworkPlan plan)
+    {
+        var choices = _draft ?? Rows.ToDictionary(r => r.Ip, r => r.SelectedAdapter?.Id);
+        string? Choice(string ip)
+        {
+            if (choices.TryGetValue(ip, out var selected)) return selected;
+            if (AppSettings.Instance.DataTestAdapterIds?.TryGetValue(ip, out var saved) == true) return saved;
+            var owners = Adapters.Where(a => a.Ipv4.Split(", ").Contains(ip)).Take(2).ToArray();
+            return owners.Length == 1 ? owners[0].Id : null;
+        }
+        return plan.Addresses.ToDictionary(a => a.Ip, a => Choice(a.Ip));
     }
 
     private void RebuildRows(Dictionary<string, string?>? choices = null)
