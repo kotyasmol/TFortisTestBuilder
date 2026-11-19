@@ -33,7 +33,6 @@ public static class RussianUiText
         ["Send Test Report"] = "Отправка отчёта",
         ["Цикл For"] = "Цикл",
         ["For Slaves"] = "Цикл",
-        ["Retry Check"] = "Повтор проверки",
         ["Start"] = "Старт",
         ["End"] = "Конец",
         ["Delay"] = "Задержка",

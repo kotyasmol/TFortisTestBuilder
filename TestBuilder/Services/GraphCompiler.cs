@@ -285,7 +285,6 @@ namespace TestBuilder.Services
                 SendTestReportNodeViewModel report => report.CreateStep(_logger, ReportClientFactory),
                 SubtestNodeViewModel subtest => CreateSubtestStep(subtest, currentSlaves),
                 ForEachSlaveNodeViewModel forEachSlave => CreateForEachSlaveStep(forEachSlave, currentSlaves),
-                RetryCheckNodeViewModel retry => CreateRetryCheckStep(retry, currentSlaves),
                 _ => new PassThroughStep()
             };
         }
@@ -328,21 +327,8 @@ namespace TestBuilder.Services
                 _logger, node.RepeatOnSameSlave, node.RepeatCount, node.IndexVariable, node.UntilSuccess, node.RepeatDelayMs);
         }
 
-        private ITestStep CreateRetryCheckStep(RetryCheckNodeViewModel node, IReadOnlyCollection<byte>? currentSlaves)
-        {
-            GraphRepeatStep.Validate(node.MaxAttempts, node.DelayMs);
-            var body = CompileGraph(node.BodyGraph, null, false, currentSlaves);
-            return new RetryCheckStep(body, _logger, node.MaxAttempts, node.DelayMs);
-        }
-
         private static StepResult ResolveTransition(NodeViewModel node, ConnectorViewModel connector)
         {
-            if (node is RetryCheckNodeViewModel retry)
-            {
-                if (connector == retry.SuccessOut) return StepResult.Next;
-                if (connector == retry.ErrorOut) return StepResult.False;
-                throw new InvalidOperationException($"Неизвестный выход ноды '{node.DisplayTitle}'.");
-            }
             if (node is ForEachSlaveNodeViewModel loop)
             {
                 if (connector == loop.SuccessOut) return StepResult.Next;

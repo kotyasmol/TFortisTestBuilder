@@ -81,7 +81,6 @@ internal static class TestErrorCodes
         WaitVariableUntilStep => TestErrorCode.VariableWait,
         OperatorActionStep => TestErrorCode.OperatorAction,
         ForEachSlaveStep => TestErrorCode.Loop,
-        GraphRepeatStep or RetryCheckStep => TestErrorCode.Loop,
         ContinueOnErrorStep wrapper => ForStep(wrapper.Inner),
         BranchRecoveryCandidateStep wrapper => ForStep(wrapper.Inner),
         SubtestStep => TestErrorCode.Subtest,

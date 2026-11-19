@@ -87,7 +87,7 @@ internal static class ParallelGraphPlanner
 
         // An unconnected False aborts the branch, which is allowed. An unconnected
         // successful result would silently leave the region without joining.
-        var success = node.Source is ForEachSlaveNodeViewModel or RetryCheckNodeViewModel ? StepResult.Next
+        var success = node.Source is ForEachSlaveNodeViewModel ? StepResult.Next
             : node.Source is NodeViewModel vm && vm.Output.Count > 1 ? StepResult.True : StepResult.Next;
         if (!edges[node].ContainsKey(success)) return false;
         foreach (var next in edges[node].Values.SelectMany(x => x))

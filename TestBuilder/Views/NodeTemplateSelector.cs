@@ -21,7 +21,6 @@ namespace TestBuilder.Views
         public IDataTemplate? LabelTemplate { get; set; }
 
         public IDataTemplate? ForEachSlaveTemplate { get; set; }
-        public IDataTemplate? RetryCheckTemplate { get; set; }
 
         public IDataTemplate? SubtestTemplate { get; set; }
 
@@ -74,7 +73,6 @@ namespace TestBuilder.Views
                 LabelNodeViewModel => LabelTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SubtestNodeViewModel => SubtestTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 ForEachSlaveNodeViewModel => ForEachSlaveTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
-                RetryCheckNodeViewModel => RetryCheckTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 SelfTestCheckNodeViewModel => SelfTestCheckTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableEqualityNodeViewModel => CheckVariableEqualityTemplate?.Build(param) ?? DefaultTemplate?.Build(param),
                 CheckVariableRangeNodeViewModel => CheckVariableRangeTemplate?.Build(param) ?? DefaultTemplate?.Build(param),

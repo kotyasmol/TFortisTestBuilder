@@ -46,7 +46,6 @@ public class BranchRecoveryViewTests
                 Assert.NotEqual(before, saved); Layout(window); Assert.Equal(saved, GraphSerializer.Serialize(vm, "Ветвление"));
                 vm.UndoCommand.Execute(null); Assert.Null(link.RecoversFailureOf);
                 vm.RedoCommand.Execute(null); Assert.Same(first, link.RecoversFailureOf);
-                Assert.DoesNotContain(vm.AvailableNodes, n => n is RetryCheckNodeViewModel);
                 using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-branch-recovery-{dark}.png"));
                 GraphSerializer.Deserialize(saved, vm);
                 Assert.Single(vm.Connections.Where(c => c.RecoversFailureOf != null));

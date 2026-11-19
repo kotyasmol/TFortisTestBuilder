@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TestBuilder.Domain.Execution;
@@ -49,8 +50,7 @@ namespace TestBuilder.Domain.Steps
             TestContext context,
             CancellationToken cancellationToken)
         {
-            if (_repeat) return await new GraphRepeatStep(_bodyGraph, _logger, _repeatCount, _repeatDelayMs,
-                _untilSuccess, _stopOnError, _indexVariable, "Цикл For").ExecuteAsync(context, cancellationToken);
+            if (_repeat) return await RepeatAsync(context, cancellationToken);
             var stopOnError = _stopOnError;
             if (_fromSlaveId > _toSlaveId)
             {
@@ -79,8 +79,8 @@ namespace TestBuilder.Domain.Steps
                     _logger.Info($"[ШАГ] Итерация: устройство {slaveId}.");
 
                     var failureState = ExecutionFailureState.Capture(context);
-                    var result = await GraphRepeatStep.ExecuteIterationAsync(executor, _bodyGraph, context, cancellationToken,
-                        $"Цикл For: устройство {slaveId}", !stopOnError, _logger);
+                    var result = await ExecuteIterationAsync(executor, context, cancellationToken,
+                        $"Цикл For: устройство {slaveId}", tolerateException: !stopOnError);
 
                     if (result != ExecutionStatus.Completed)
                     {
@@ -105,6 +105,83 @@ namespace TestBuilder.Domain.Steps
                 $"[OK] Цикл For завершён. Диапазон {_fromSlaveId}..{_toSlaveId}.");
 
             return StepResult.Next;
+        }
+        private async Task<StepResult> RepeatAsync(TestContext context, CancellationToken token)
+        {
+            if (_repeatCount is < 1 or > 100000 || _repeatDelayMs is < 0 or > 3600000 ||
+                string.IsNullOrWhiteSpace(_indexVariable) || _indexVariable == "slaveId")
+            {
+                _logger.Warning("[ОШИБКА] For: число повторов 1..100000, задержка 0..3600000 мс; нужна отдельная переменная счётчика.");
+                context.AddReportEntry("Цикл For", false, "Некорректные параметры повторов.");
+                return _stopOnError ? StepResult.False : StepResult.Next;
+            }
+            var previousSlave = context.CurrentSlaveId;
+            var hadIndex = context.Variables.TryGetValue(_indexVariable, out var previousIndex);
+            var initialCritical = context.HasCriticalError;
+            var failureState = ExecutionFailureState.Capture(context);
+            var reportStart = context.ReportEntries.Count;
+            var anyFailure = false;
+            var executor = new TestExecutor();
+            try
+            {
+                for (var i = 1; i <= _repeatCount; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    await context.WaitWhilePausedAsync(token);
+                    if (i > 1 && _repeatDelayMs > 0) await Task.Delay(_repeatDelayMs, token);
+                    context.CurrentSlaveId = previousSlave;
+                    context.SetVariable(_indexVariable, i);
+                    _logger.Info($"[ШАГ] For: повтор {i}/{_repeatCount}, slave не меняется.");
+                    var iterationReportStart = context.ReportEntries.Count;
+                    var result = await ExecuteIterationAsync(executor, context, token,
+                        $"Цикл For: повтор {i}", tolerateException: !_stopOnError || _untilSuccess);
+                    token.ThrowIfCancellationRequested();
+                    var success = result == ExecutionStatus.Completed && context.HasCriticalError == initialCritical &&
+                        (!_untilSuccess || !context.ReportEntries.Skip(iterationReportStart).Any(entry => !entry.IsSuccess));
+                    if (success && _untilSuccess) return StepResult.Next;
+                    if (!success)
+                    {
+                        anyFailure = true;
+                        if (!_untilSuccess && _stopOnError) return StepResult.False;
+                        if (_untilSuccess && i < _repeatCount)
+                        {
+                            // Failed attempts are diagnostics, not final product failures.
+                            failureState.Restore(context);
+                            context.ReportEntries.RemoveRange(reportStart, context.ReportEntries.Count - reportStart);
+                        }
+                        else if (!_stopOnError) failureState.Restore(context);
+                    }
+                }
+                return anyFailure && _stopOnError ? StepResult.False : StepResult.Next;
+            }
+            finally
+            {
+                context.CurrentSlaveId = previousSlave;
+                if (hadIndex) context.Variables[_indexVariable] = previousIndex!;
+                else context.Variables.Remove(_indexVariable);
+            }
+        }
+
+        private async Task<ExecutionStatus> ExecuteIterationAsync(TestExecutor executor, TestContext context,
+            CancellationToken token, string name, bool tolerateException)
+        {
+            var reportStart = context.ReportEntries.Count;
+            var failureState = ExecutionFailureState.Capture(context);
+            ExecutionStatus result;
+            try { result = await executor.ExecuteAsync(_bodyGraph.StartNode, context, token); }
+            catch (Exception error) when (tolerateException && !token.IsCancellationRequested && !ExecutionCleanupException.Contains(error))
+            {
+                var code = context.Failure?.Code ?? TestErrorCodes.Resolve(error, TestErrorCode.Loop);
+                _logger.Warning($"[ОШИБКА] {name}: {error.Message}.", code);
+                context.AddReportEntry(name, false, error.Message, code);
+                result = ExecutionStatus.Failed;
+            }
+            token.ThrowIfCancellationRequested();
+            if (result == ExecutionStatus.Completed && failureState.HasNewFailure(context))
+                result = ExecutionStatus.Failed;
+            if (result != ExecutionStatus.Completed && !context.ReportEntries.Skip(reportStart).Any(entry => !entry.IsSuccess))
+                context.AddReportEntry(name, false, context.Failure?.Summary ?? "Проверка не пройдена.", context.Failure?.Code ?? TestErrorCode.Loop);
+            return result;
         }
     }
 }

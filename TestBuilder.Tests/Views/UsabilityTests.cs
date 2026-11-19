@@ -161,7 +161,7 @@ public class UsabilityTests
                     Assert.Equal(original, GraphSerializer.Serialize(vm.TestVM, "Исходный профиль"));
                 }
                 finally { hardware.Close(); Dispatcher.UIThread.RunJobs(); }
-                Assert.Equal(57, UserGuide.All.Count);
+                Assert.Equal(56, UserGuide.All.Count);
                 Assert.Equal("reference-catalog", Assert.Single(UserGuide.Search("Справочник изделий, плат и Modbus")).Id);
                 Assert.Equal("report-template", Assert.Single(UserGuide.Search("Выбрать строки и переменные отчёта")).Id);
                 foreach (var node in vm.TestVM.AvailableNodes.Concat(new[] { new BodyStartNodeViewModel(), (TestBuilder.ViewModels.NodifyVM.NodeViewModel)new BodyEndNodeViewModel() }))

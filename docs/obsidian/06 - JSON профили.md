@@ -23,16 +23,6 @@ Clipboard remaps ссылки на новые объекты; неполный �
 не копируется. Копирование тела составной ноды тоже сохраняет ссылки.
 
 
-## Самостоятельный повтор проверки — 2026-11-19
-
-Новый тип `Retry Check (v1)` → RetryCheckNodeViewModel. `repeatCount` хранит
-MaxAttempts (по умолчанию 2), `repeatDelayMs` — DelayMs (1000), `body` —
-внутренний граф Body Start/End. Коннекторы `In`, `Success`, `Error`;
-runtime успешного перехода Next. Старые EXE отклоняют неизвестный тип,
-а не запускают его как обычный цикл. Schema и имена старых For Slaves /
-For Slaves (repeat v1) не меняются, автоматической конвертации нет.
-Сохранение, deep clipboard и UI сохраняют параметры и вложенные связи.
-
 ## Назначение профиля — 2026-11-16
 
 `profilePurpose`: `production`/`diagnostic`, редактируется через **Ещё →
