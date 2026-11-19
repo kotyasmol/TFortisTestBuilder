@@ -5,35 +5,40 @@ using Microsoft.Win32.SafeHandles;
 
 namespace TestBuilder.Domain.Steps;
 
-// One timer per sender, used only between queues. Per-frame 100 Mbps pacing
-// retains its QPC loop. No process-wide timer resolution or thread priority changes.
+// One timer per sender. The caller selects a queue or per-packet QPC tail.
+// No process-wide timer resolution or thread priority changes.
 internal sealed class DataTestDeadlineWait : IDisposable
 {
     internal const double SpinTailMs = 0.25;
+    internal const double PacketSpinTailMs = 0.03;
     private const uint CreateHighResolutionTimer = 0x2;
     private const uint TimerModifyStateAndSynchronize = 0x00100002;
     private readonly SafeWaitHandle? _timer;
+    private readonly Action<double> _pause;
+    internal bool Available => _timer != null;
 
     internal DataTestDeadlineWait()
     {
+        _pause = Pause;
         if (!OperatingSystem.IsWindows()) return;
         var timer = CreateWaitableTimerExW(IntPtr.Zero, null, CreateHighResolutionTimer, TimerModifyStateAndSynchronize);
         if (timer.IsInvalid) timer.Dispose();
         else _timer = timer;
     }
 
-    internal void Wait(double deadlineMs, Func<double> elapsedMs, CancellationToken token) =>
-        Wait(deadlineMs, elapsedMs, Pause, token);
+    internal void Wait(double deadlineMs, Func<double> elapsedMs, CancellationToken token,
+        double spinTailMs = SpinTailMs, double minimumSleepMs = 0.1) =>
+        Wait(deadlineMs, elapsedMs, _pause, token, spinTailMs, minimumSleepMs);
 
     internal static void Wait(double deadlineMs, Func<double> elapsedMs, Action<double> pause,
-        CancellationToken token)
+        CancellationToken token, double spinTailMs = SpinTailMs, double minimumSleepMs = 0.1)
     {
         while (true)
         {
             token.ThrowIfCancellationRequested();
             var remaining = deadlineMs - elapsedMs();
             if (remaining <= 0) return;
-            if (remaining > SpinTailMs + 0.1) pause(Math.Min(20, remaining - SpinTailMs));
+            if (remaining > spinTailMs + minimumSleepMs) pause(Math.Min(20, remaining - spinTailMs));
             else Thread.SpinWait(16);
         }
     }

@@ -242,7 +242,7 @@ namespace TestBuilder.Domain.Steps
             }
 
             var requestedBandwidthMbps = port.TargetBandwidthMbps ?? _targetBandwidthMbps;
-            var targetBandwidthMbps = NormalizeBandwidth(requestedBandwidthMbps, _allowGigabit);
+            var targetBandwidthMbps = ResolveTargetBandwidthMbps(port);
 
             if (requestedBandwidthMbps != targetBandwidthMbps)
             {
@@ -311,6 +311,7 @@ namespace TestBuilder.Domain.Steps
             int targetBandwidthMbps,
             CancellationToken cancellationToken)
         {
+            var allowPacketTimer = true;
             return DataTestDirectionRetry.RunAsync(
                 token => RunDirectionAsync(
                         index,
@@ -325,10 +326,17 @@ namespace TestBuilder.Domain.Steps
                         sourceMac,
                         destinationMac,
                         targetBandwidthMbps,
-                        token),
+                        token, allowPacketTimer),
                 sourceIp, destinationIp, _maxPortTestTimeMs,
                 result =>
                 {
+                    if (result.AttemptCount < DataTestDirectionRetry.MaxAttempts &&
+                        DataTestPacketPacing.NeedsActiveRetry(result, _allowedTxDeficitPercent))
+                    {
+                        allowPacketTimer = false;
+                        _logger.Info($"DataTest {pairName}: {sourceIp} → {destinationIp}: таймер не выдержал скорость основного замера. " +
+                            "Повтор использует покадровое ожидание QPC; скорость и допуски сохраняются.");
+                    }
                     if (result.Passed)
                         _logger.Info($"DataTest {pairName}: {sourceIp} → {destinationIp}, попытка {result.AttemptCount}/{DataTestDirectionRetry.MaxAttempts}: успешно.");
                     else
@@ -352,7 +360,7 @@ namespace TestBuilder.Domain.Steps
             byte[] sourceMac,
             byte[] destinationMac,
             int targetBandwidthMbps,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, bool allowPacketTimer = true)
         {
             using var dedicatedCapture = receiveDevice is PcapDevice { Interface: { } captureAdapter }
                 ? new DataTestCaptureDevice(captureAdapter) : null;
@@ -401,6 +409,7 @@ namespace TestBuilder.Domain.Steps
                 await Task.Delay(CaptureStartSettleMs, cancellationToken);
 
                 var senderCount = 1;
+                var usePacketTimer = false;
                 var lineRate = highRateWindows && sendDevice is PcapDevice && IsNativeSendQueueAvailable() && DataTestLineRatePacer.CanUse(
                     targetBandwidthMbps, NetworkSpeedMbps(sendNetworkInterface));
                 _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: генератор " +
@@ -411,8 +420,8 @@ namespace TestBuilder.Domain.Steps
                 if (_warmupMs > 0)
                 {
                     phase = "прогрев";
-                    senderCount = await DataTestSenderCalibration.SelectAsync(
-                        async (lanes, token) =>
+                    var selection = await DataTestPacketPacing.SelectAsync(
+                        async (lanes, timed, token) =>
                         {
                             var probeId = CreateRunId();
                             var probe = new DataTestProbeReceiver(probeId,
@@ -424,7 +433,7 @@ namespace TestBuilder.Domain.Steps
                             try
                             {
                                 var sent = await SendPacedAsync(sendDevice, packet, targetBandwidthMbps, _warmupMs,
-                                    probeId, token, lanes, lineRate, probe.Start);
+                                    probeId, token, lanes, lineRate, probe.Start, timed);
                                 await WaitForCaptureDrainAsync(() => probe.Received, token, sent.SentPackets);
                                 dedicatedCapture?.ThrowIfFailed();
                                 var after = ReadCaptureStatistics(receiveDevice);
@@ -436,12 +445,18 @@ namespace TestBuilder.Domain.Steps
                             }
                             finally { Volatile.Write(ref activeReceiver, null); }
                         },
+                        allowPacketTimer && windowsSender && targetBandwidthMbps <= 100,
                         CalculateExpectedPackets(targetBandwidthMbps, packet.Length, _warmupMs), packet.Length,
                         targetBandwidthMbps, _allowedTxDeficitPercent,
                         windowsSender && sendDevice is PcapDevice &&
                             (targetBandwidthMbps <= 100 || IsNativeSendQueueAvailable()),
                         message => _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: {message}"), cancellationToken,
                         qualifyInLongerMeasurement: lineRate && _durationMs > _warmupMs);
+                    senderCount = selection.SenderCount;
+                    usePacketTimer = selection.UsesPacketTimer;
+                    if (windowsSender && targetBandwidthMbps <= 100)
+                        _logger.Info($"DataTest {pairName} {sourceIp} → {destinationIp}: выбрано отправителей {senderCount}, " +
+                            (usePacketTimer ? "покадровое ожидание с таймером." : "покадровое активное ожидание QPC."));
                     await Task.Delay(WarmupDrainMs, cancellationToken);
                 }
 
@@ -460,7 +475,7 @@ namespace TestBuilder.Domain.Steps
                     targetBandwidthMbps,
                     _durationMs,
                     runId,
-                    cancellationToken, senderCount, lineRate, measurement.Start);
+                    cancellationToken, senderCount, lineRate, measurement.Start, usePacketTimer);
                 var transmittedPackets = sendResult.SentPackets;
 
                 await WaitForCaptureDrainAsync(() => measurement.Received, cancellationToken, transmittedPackets);
@@ -550,7 +565,8 @@ namespace TestBuilder.Domain.Steps
                     infrastructureFailure,
                     1,
                     error) { SendElapsedMs = sendResult.ElapsedMs, ConfirmedElapsedMs = confirmedElapsedMs,
-                        CaptureLength = DataTestProbeReceiver.CaptureLength(packet.Length), SenderCount = senderCount };
+                        CaptureLength = DataTestProbeReceiver.CaptureLength(packet.Length), SenderCount = senderCount,
+                        UsesPacketTimer = sendResult.UsesPacketTimer };
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -656,13 +672,19 @@ namespace TestBuilder.Domain.Steps
             return Math.Max(1, targetBandwidthMbps) * 1_000_000.0 / (CalculateWireSizeBytes(packetSizeBytes) * 8.0);
         }
 
+        // Pairs in this node are a saved snapshot. The workstation network plan
+        // and physical link speed do not replace the selected pair's target.
+        internal int ResolveTargetBandwidthMbps(DataTestPortConfig port) =>
+            NormalizeBandwidth(port.TargetBandwidthMbps ?? _targetBandwidthMbps, _allowGigabit);
+
         private static async Task<PacedSendResult> SendPacedAsync(
             IInjectionDevice device,
             byte[] packet,
             int targetBandwidthMbps,
             int durationMs,
             ulong runId,
-            CancellationToken cancellationToken, int senderCount = 1, bool lineRate = false, Action? measurementStarted = null)
+            CancellationToken cancellationToken, int senderCount = 1, bool lineRate = false, Action? measurementStarted = null,
+            bool usePacketTimer = false)
         {
             var precisePackets = OperatingSystem.IsWindows() && targetBandwidthMbps <= 100;
             if (device is PcapDevice pcapDevice && (precisePackets || IsNativeSendQueueAvailable()))
@@ -682,7 +704,7 @@ namespace TestBuilder.Domain.Steps
                         var sender = lane == 0 ? pcapDevice : second;
                         if (precisePackets)
                             return Task.FromResult(SendPrecisePackets(lane == 0 ? device : second, (byte[])packet.Clone(),
-                                targetBandwidthMbps, durationMs, runId, token, lane, 2, startGate));
+                                targetBandwidthMbps, durationMs, runId, token, lane, 2, startGate, usePacketTimer: usePacketTimer));
                         return Task.FromResult(SendWithNpcapQueue(sender, (byte[])packet.Clone(),
                             targetBandwidthMbps, durationMs, runId, token, lane, 2, timer, lineRate, startGate));
                     }, CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs),
@@ -690,7 +712,7 @@ namespace TestBuilder.Domain.Steps
                 }
                 if (precisePackets)
                     return await DataTestWorker.Run(() => SendPrecisePackets(device, packet, targetBandwidthMbps,
-                        durationMs, runId, cancellationToken, measurementStarted: measurementStarted));
+                        durationMs, runId, cancellationToken, measurementStarted: measurementStarted, usePacketTimer: usePacketTimer));
                 return await DataTestWorker.Run(() => SendWithNpcapQueue(
                     pcapDevice,
                     packet,
@@ -711,20 +733,28 @@ namespace TestBuilder.Domain.Steps
 
         private static PacedSendResult SendPrecisePackets(IInjectionDevice device, byte[] packet,
             int targetBandwidthMbps, int durationMs, ulong runId, CancellationToken cancellationToken,
-            int lane = 0, int laneCount = 1, DataTestSendStartGate? startGate = null, Action? measurementStarted = null)
+            int lane = 0, int laneCount = 1, DataTestSendStartGate? startGate = null, Action? measurementStarted = null,
+            bool usePacketTimer = false)
         {
             var total = CalculateExpectedPackets(targetBandwidthMbps, packet.Length, durationMs);
             var count = CalculateLanePacketCount(total, lane, laneCount);
             var rate = CalculatePacketsPerSecond(targetBandwidthMbps, packet.Length) / laneCount;
+            using var deadlineWait = usePacketTimer ? new DataTestDeadlineWait() : null;
+            var usesTimer = deadlineWait?.Available == true;
+            var clock = new Stopwatch();
+            Func<double> elapsedMs = () => clock.Elapsed.TotalMilliseconds;
+            Action<double>? waitUntil = usesTimer ? deadline => deadlineWait!.Wait(deadline,
+                elapsedMs, cancellationToken, DataTestDeadlineWait.PacketSpinTailMs, 0.01) : null;
             startGate?.Wait(cancellationToken);
             if (startGate == null) measurementStarted?.Invoke();
-            var clock = Stopwatch.StartNew();
+            clock.Start();
             DataTestPacketTrain.Send(count, rate, sequence =>
             {
                 WriteProbeIdentity(packet, runId, sequence * laneCount + lane);
                 device.SendPacket(packet, packet.Length);
-            }, () => clock.Elapsed.TotalMilliseconds, () => Thread.SpinWait(32), cancellationToken);
-            return new PacedSendResult(count, Math.Max(1, clock.ElapsedMilliseconds), "PcapPacedPackets");
+            }, elapsedMs, () => Thread.SpinWait(32), cancellationToken, waitUntil);
+            return new PacedSendResult(count, Math.Max(1, clock.ElapsedMilliseconds),
+                usesTimer ? "PcapTimedPackets" : "PcapPacedPackets") { UsesPacketTimer = usesTimer };
         }
 
         private static PacedSendResult SendWithNpcapQueue(
@@ -1238,6 +1268,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable($"{prefix}.ConfirmedElapsedMs", result.ConfirmedElapsedMs);
             context.SetVariable($"{prefix}.CaptureLength", result.CaptureLength);
             context.SetVariable($"{prefix}.SenderCount", result.SenderCount);
+            context.SetVariable($"{prefix}.UsesPacketTimer", result.UsesPacketTimer);
             context.SetVariable($"{prefix}.InfrastructureFailure", result.InfrastructureFailure);
             context.SetVariable($"{prefix}.AttemptCount", result.AttemptCount);
             context.SetVariable($"{prefix}.Error", result.Error);
@@ -1489,6 +1520,7 @@ namespace TestBuilder.Domain.Steps
     internal sealed record PacedSendResult(int SentPackets, long ElapsedMs, string Engine)
     {
         internal DataTestReceiveQuality? ReceiveQuality { get; init; }
+        internal bool UsesPacketTimer { get; init; }
     }
 
     internal sealed record DataTestPortResult(
@@ -1520,6 +1552,7 @@ namespace TestBuilder.Domain.Steps
         public long ConfirmedElapsedMs { get; init; }
         public int CaptureLength { get; init; }
         public int SenderCount { get; init; }
+        public bool UsesPacketTimer { get; init; }
 
         internal string DescribeFailure(IPAddress source, IPAddress destination)
         {

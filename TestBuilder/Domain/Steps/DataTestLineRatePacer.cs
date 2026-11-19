@@ -8,7 +8,8 @@ namespace TestBuilder.Domain.Steps;
 // of wire time and pace queue boundaries, rather than delaying every frame
 // again in Npcap. A slow native call remains visible in the elapsed time.
 internal sealed class DataTestLineRatePacer(
-    double packetsPerSecond, Func<double> elapsedMs, Action idle, CancellationToken cancellationToken) : IDisposable
+    double packetsPerSecond, Func<double> elapsedMs, Action idle, CancellationToken cancellationToken,
+    Action<double>? waitUntil = null) : IDisposable
 {
     internal const int WindowMs = 10;
     private DataTestDeadlineWait? _deadlineWait;
@@ -37,7 +38,8 @@ internal sealed class DataTestLineRatePacer(
 
     internal void Drain()
     {
-        if (_deadlineWait != null) _deadlineWait.Wait(_nextQueueMs, elapsedMs, cancellationToken);
+        if (waitUntil != null) waitUntil(_nextQueueMs);
+        else if (_deadlineWait != null) _deadlineWait.Wait(_nextQueueMs, elapsedMs, cancellationToken);
         else WaitUntil(_nextQueueMs, elapsedMs, idle, cancellationToken);
     }
 

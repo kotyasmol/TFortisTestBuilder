@@ -8,9 +8,9 @@ namespace TestBuilder.Domain.Steps;
 internal static class DataTestPacketTrain
 {
     internal static void Send(int count, double packetsPerSecond, Action<int> send,
-        Func<double> elapsedMs, Action idle, CancellationToken cancellationToken)
+        Func<double> elapsedMs, Action idle, CancellationToken cancellationToken, Action<double>? waitUntil = null)
     {
-        var pacer = new DataTestLineRatePacer(packetsPerSecond, elapsedMs, idle, cancellationToken);
+        using var pacer = new DataTestLineRatePacer(packetsPerSecond, elapsedMs, idle, cancellationToken, waitUntil);
         for (var sequence = 0; sequence < count; sequence++)
         {
             pacer.BeginBatch();

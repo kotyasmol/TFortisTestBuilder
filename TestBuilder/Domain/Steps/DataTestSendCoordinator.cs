@@ -44,10 +44,12 @@ internal static class DataTestSendCoordinator
         // Await both lanes before disposing either handle, including on failure.
         var results = await Task.WhenAll(StartLane(0), StartLane(1));
         await WaitForSendDeadlineAsync(clock, durationMs, cancellationToken);
-        var engine = results[0].Engine == "PcapPacedPackets" && results[1].Engine == "PcapPacedPackets"
-            ? "PcapParallelPackets" : "PcapParallelQueues";
+        var usesTimer = results[0].UsesPacketTimer && results[1].UsesPacketTimer;
+        var packetPacing = (results[0].Engine is "PcapPacedPackets" or "PcapTimedPackets") &&
+            (results[1].Engine is "PcapPacedPackets" or "PcapTimedPackets");
+        var engine = usesTimer ? "PcapParallelTimedPackets" : packetPacing ? "PcapParallelPackets" : "PcapParallelQueues";
         return new PacedSendResult(results[0].SentPackets + results[1].SentPackets,
-            Math.Max(1, clock.ElapsedMilliseconds), engine);
+            Math.Max(1, clock.ElapsedMilliseconds), engine) { UsesPacketTimer = usesTimer };
     }
 
     internal static async Task WaitForSendDeadlineAsync(
