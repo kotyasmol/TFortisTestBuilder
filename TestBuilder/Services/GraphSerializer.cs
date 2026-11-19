@@ -44,6 +44,7 @@ namespace TestBuilder.Services
 
         private const string FirstRunPrefix = "First Run (v1): ";
         private const string ProfileOpenPrefix = "Profile Open (v2): ";
+        private const string BranchRecoveryPrefix = "Branch Recovery (v1): ";
         private const string ReadSelftestFieldType = "Read Selftest Field (v1)";
         private const string CaptureRegisterRangeType = "Check Register Range (capture v1)";
         private const string CaptureVariableEqualityType = "Check Variable Equality (capture v1)";
@@ -54,9 +55,17 @@ namespace TestBuilder.Services
         private const string RtlReportType = "Send Test Report (RTL v1)";
         internal const string ReportStartType = "Start (report v1)";
         internal const string CatalogSerialsStartType = "Start (catalog serials v1)";
-        private static string UnwrapNodeType(string? type) => type?.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal) == true
-            ? type[ProfileOpenPrefix.Length..] : type?.StartsWith(FirstRunPrefix, StringComparison.Ordinal) == true
-                ? type[FirstRunPrefix.Length..] : type ?? "";
+        private static string UnwrapNodeType(string? type)
+        {
+            var value = type ?? "";
+            while (true)
+            {
+                var prefix = new[] { ProfileOpenPrefix, FirstRunPrefix, BranchRecoveryPrefix }
+                    .FirstOrDefault(p => value.StartsWith(p, StringComparison.Ordinal));
+                if (prefix == null) return value;
+                value = value[prefix.Length..];
+            }
+        }
 
         // Маппинг ViewModel -> английский тип для JSON
         private static string GetNodeType(NodeViewModel node) => node switch
@@ -180,6 +189,7 @@ namespace TestBuilder.Services
 
         private static GraphDto SerializeGraph(GraphWorkspaceViewModel graph, string name)
         {
+            TestBuilder.Services.Graph.BranchRecoveryValidation.Validate(graph);
             var dto = new GraphDto { Name = name, ExtensionData = GetExtensions(graph) };
             var nodeIds = new Dictionary<NodeViewModel, string>();
             var requiresParallelRuntime = ContainsParallelConnections(graph, new HashSet<GraphWorkspaceViewModel>());
@@ -517,8 +527,19 @@ namespace TestBuilder.Services
                     SourceNodeId = nodeIds[src],
                     SourceConnector = conn.Source.Title,
                     TargetNodeId = nodeIds[tgt],
-                    TargetConnector = conn.Target.Title
+                    TargetConnector = conn.Target.Title,
+                    RecoversFailureOf = conn.RecoversFailureOf == null ? null : nodeIds[conn.RecoversFailureOf]
                 });
+            }
+
+            // An older runtime must reject the new branch semantics, rather than
+            // ignore the connection field and produce a different verdict.
+            foreach (var node in graph.Connections.Where(c => c.RecoversFailureOf != null).Select(c => c.Source.Parent!).Distinct())
+            {
+                var serialized = dto.Nodes.Single(n => n.Id == nodeIds[node]);
+                serialized.Type = serialized.Type.StartsWith(ProfileOpenPrefix, StringComparison.Ordinal)
+                    ? ProfileOpenPrefix + BranchRecoveryPrefix + serialized.Type[ProfileOpenPrefix.Length..]
+                    : BranchRecoveryPrefix + serialized.Type;
             }
 
             return dto;
@@ -1056,9 +1077,16 @@ namespace TestBuilder.Services
                     throw new InvalidOperationException($"Граф '{dto.Name}': неизвестный выход '{c.SourceConnector}' или вход '{c.TargetConnector}'.");
 
                 var connection = new ConnectionViewModel(srcConn, tgtConn);
+                if (c.RecoversFailureOf != null)
+                {
+                    if (!nodeMap.TryGetValue(c.RecoversFailureOf, out var recovered))
+                        throw new InvalidOperationException($"Связь устранения ошибки ссылается на отсутствующую ноду '{c.RecoversFailureOf}'.");
+                    connection.RecoversFailureOf = recovered;
+                }
                 SetExtensions(connection, c.ExtensionData);
                 graph.Connections.Add(connection);
             }
+            TestBuilder.Services.Graph.BranchRecoveryValidation.Validate(graph);
         }
 
         private static ModbusWriteNodeViewModel CreateModbusWriteNode(NodeDto n, Point location)

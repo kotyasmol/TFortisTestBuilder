@@ -35,7 +35,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         int SourceNodeIndex,
         int SourceConnectorIndex,
         int TargetNodeIndex,
-        int TargetConnectorIndex);
+        int TargetConnectorIndex,
+        int? RecoversNodeIndex);
 
     private readonly ModbusService _modbusService;
     private readonly SlaveManager _slaveManager;
@@ -206,7 +207,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         new LabelNodeViewModel(),
         new SubtestNodeViewModel(),
         new ForEachSlaveNodeViewModel(),
-        new RetryCheckNodeViewModel(),
         new WaitUntilNodeViewModel(),
         new OperatorActionNodeViewModel()
     };
@@ -392,7 +392,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             Find("Конец"),
             Find("Подтест"),
             Find("Цикл For"),
-            Find("Retry Check"),
             Find("Метка"),
             Find("Задержка")));
 
@@ -462,21 +461,29 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     public void DuplicateNodes()
     {
         if (!CanEditGraph || !SelectedNodes.Any(n => !IsProtectedBoundaryNode(n))) return;
-        CopyNodes();
-        PasteNodes();
+        if (CopyNodes()) PasteNodes();
     }
 
-    public void CopyNodes()
+    public bool CopyNodes()
     {
         var selected = SelectedNodes
             .Where(n => !IsProtectedBoundaryNode(n))
             .ToList();
 
-        if (selected.Count == 0) return;
+        if (selected.Count == 0) return false;
 
         var selectedIndexes = selected
             .Select((node, index) => new { node, index })
             .ToDictionary(x => x.node, x => x.index);
+
+        var recoveryOutsideSelection = Connections.FirstOrDefault(c => c.RecoversFailureOf != null &&
+            c.Source.Parent != null && c.Target.Parent != null && selectedIndexes.ContainsKey(c.Source.Parent) &&
+            selectedIndexes.ContainsKey(c.Target.Parent) && !selectedIndexes.ContainsKey(c.RecoversFailureOf));
+        if (recoveryOutsideSelection != null)
+        {
+            StatusMessage = $"Для копирования связи устранения ошибки выделите также ноду «{recoveryOutsideSelection.RecoversFailureOf!.DisplayTitle}».";
+            return false;
+        }
 
         var clipboardNodes = selected
             .Select(node => new ClipboardNode(CloneNodeDeep(node), node.Location))
@@ -493,13 +500,15 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 selectedIndexes[c.Source.Parent!],
                 GetConnectorIndex(c.Source),
                 selectedIndexes[c.Target.Parent!],
-                GetConnectorIndex(c.Target)))
+                GetConnectorIndex(c.Target),
+                c.RecoversFailureOf == null ? null : selectedIndexes[c.RecoversFailureOf]))
             .Where(c => c.SourceConnectorIndex >= 0 && c.TargetConnectorIndex >= 0)
             .ToList();
 
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CopiedNodeCount));
         StatusMessage = $"Скопировано нод: {CopiedNodeCount}. Можно вставить в другой профиль.";
+        return true;
     }
 
     public void PasteNodes(Point? location = null)
@@ -536,7 +545,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 var tgtConnector = tgtNode.Input.ElementAtOrDefault(conn.TargetConnectorIndex);
 
                 if (srcConnector != null && tgtConnector != null)
-                    newConnections.Add(new ConnectionViewModel(srcConnector, tgtConnector));
+                    newConnections.Add(new ConnectionViewModel(srcConnector, tgtConnector)
+                    { RecoversFailureOf = conn.RecoversNodeIndex is { } index ? pastedNodes[index] : null });
             }
         }
 
@@ -619,7 +629,8 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             var targetConnector = targetNode.Input.ElementAtOrDefault(GetConnectorIndex(connection.Target));
 
             if (sourceConnector != null && targetConnector != null)
-                target.Connections.Add(new ConnectionViewModel(sourceConnector, targetConnector));
+                target.Connections.Add(new ConnectionViewModel(sourceConnector, targetConnector)
+                { RecoversFailureOf = connection.RecoversFailureOf == null ? null : nodeMap[connection.RecoversFailureOf] });
         }
     }
 
@@ -2248,7 +2259,6 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
             "Метка" => new LabelNodeViewModel { Location = location },
             "Подтест" => new SubtestNodeViewModel { Location = location },
             "Цикл For" => new ForEachSlaveNodeViewModel { Location = location },
-            "Retry Check" => new RetryCheckNodeViewModel { Location = location },
             "Ожидание значения" => new WaitUntilNodeViewModel { Location = location },
             "Действие оператора" => new OperatorActionNodeViewModel { Location = location },
             _ => null

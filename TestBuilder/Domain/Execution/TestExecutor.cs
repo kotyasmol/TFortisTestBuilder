@@ -17,6 +17,14 @@ namespace TestBuilder.Domain.Execution
         private async Task<ExecutionStatus> ExecuteUntilAsync(TestNode startNode, TestNode? stopBefore,
             TestContext context, CancellationToken cancellationToken)
         {
+            using var recovery = new BranchRecoveryScope(context);
+            context.RecoveryScope = recovery;
+            return recovery.Complete(await ExecutePathAsync(startNode, stopBefore, context, cancellationToken));
+        }
+
+        private async Task<ExecutionStatus> ExecutePathAsync(TestNode startNode, TestNode? stopBefore,
+            TestContext context, CancellationToken cancellationToken)
+        {
             TestNode? current = startNode;
             while (current != null && !ReferenceEquals(current, stopBefore))
             {
@@ -24,7 +32,7 @@ namespace TestBuilder.Domain.Execution
                 await context.WaitWhilePausedAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var (result, failure) = await ExecuteNodeAsync(current, context, cancellationToken);
+                var (result, failure, passed) = await ExecuteNodeAsync(current, context, cancellationToken);
 
                 cancellationToken.ThrowIfCancellationRequested();
                 if (context.HasExecutionException && !context.IsCleanup)
@@ -45,6 +53,9 @@ namespace TestBuilder.Domain.Execution
                             .WithCode(TestErrorCode.ParallelGraph);
                     return ExecutionStatus.Completed;
                 }
+
+                if (passed && current.RecoveryConfirmations.TryGetValue(result, out var confirmations))
+                    foreach (var key in confirmations) context.RecoveryScope?.Confirm(key, current.DisplayName);
 
                 if (current.ParallelTransitions.TryGetValue(result, out var fork))
                 {
@@ -78,20 +89,22 @@ namespace TestBuilder.Domain.Execution
             return ExecutionStatus.Completed;
         }
 
-        private static async Task<(StepResult Result, ExecutionFailure? Failure)> ExecuteNodeAsync(TestNode node, TestContext context,
+        private static async Task<(StepResult Result, ExecutionFailure? Failure, bool Passed)> ExecuteNodeAsync(TestNode node, TestContext context,
             CancellationToken cancellationToken)
         {
             if (node.RunOnlyOnFirstRun && context.SkipFirstRunNodes)
             {
                 if (context.ExecutionObserver != null)
                     await context.ExecutionObserver.NodeSkippedAsync(node, context, cancellationToken);
-                return (node.SkippedResult, null);
+                return (node.SkippedResult, null, false);
             }
             using var diagnostics = new StepLogScope(TestErrorCodes.ForStep(node.Step));
             context.Failure = null;
             var stepName = string.IsNullOrWhiteSpace(node.DisplayName)
                 ? node.Step?.GetType().Name ?? "Неизвестный шаг" : node.DisplayName;
             var result = StepResult.Next;
+            var passed = false;
+            var failureState = ExecutionFailureState.Capture(context);
             Exception? failure = null;
             var failureNotificationAttempted = false;
             try
@@ -106,6 +119,8 @@ namespace TestBuilder.Domain.Execution
                 var failedCheck = context.ReportEntries.Skip(reportStart).FirstOrDefault(entry => !entry.IsSuccess);
                 var observedResult = failedCheck != null || (context.StopOnPreparationError && context.HasCriticalError)
                     ? StepResult.False : result;
+                passed = observedResult != StepResult.False && result != StepResult.False &&
+                    !failureState.HasNewFailure(context) && !context.HasExecutionException;
                 if (context.StopOnPreparationError && result == StepResult.False && failedCheck != null)
                 {
                     context.Failure ??= new ExecutionFailure(stepName, failedCheck.Value, context.CurrentSlaveId)
@@ -166,7 +181,7 @@ namespace TestBuilder.Domain.Execution
                 context.CriticalFailure ??= detail;
             // A handled False is an alternative path, not the cause of a failed run.
             context.Failure = null;
-            return (result, detail);
+            return (result, detail, passed);
         }
 
         private async Task<ExecutionStatus> ExecuteParallelAsync(ParallelFork fork, TestContext context,

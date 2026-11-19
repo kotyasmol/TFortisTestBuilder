@@ -304,10 +304,26 @@ public partial class GraphEditorView : UserControl, IDisposable
             new() { Header = title, Command = command };
         var items = new System.Collections.Generic.List<object>();
         if (connection != null)
+        {
             items.Add(Action("Удалить связь", (_, _) =>
             {
                 if (vm.CanEditGraph) vm.DeleteConnection(connection);
             }, vm.CanEditGraph));
+            var recoveries = new System.Collections.Generic.List<object>
+            {
+                Action(connection.RecoversFailureOf == null ? "✓ Обычная связь" : "Обычная связь",
+                    (_, _) => vm.SetBranchRecovery(connection, null), vm.CanEditGraph)
+            };
+            foreach (var candidate in vm.RecoveryCandidates(connection))
+            {
+                var number = vm.CurrentGraph.Nodes.IndexOf(candidate) + 1;
+                recoveries.Add(Action((connection.RecoversFailureOf == candidate ? "✓ " : "") + $"{number}. {candidate.DisplayTitle}",
+                    (_, _) => vm.SetBranchRecovery(connection, candidate), vm.CanEditGraph));
+            }
+            if (recoveries.Count == 1)
+                recoveries.Add(new MenuItem { Header = "Нет доступных нод с веткой False", IsEnabled = false });
+            items.Add(new MenuItem { Header = "Устраняет ошибку", ItemsSource = recoveries });
+        }
         items.Add(Action(_isMultiSelect ? "✓ Выбирать несколько" : "Выбирать несколько",
             (_, _) => { if (vm.CanEditGraph) _isMultiSelect = !_isMultiSelect; }, vm.CanEditGraph));
         items.Add(Action("Выделить всё", OnSelectAllClick, vm.CanEditGraph));

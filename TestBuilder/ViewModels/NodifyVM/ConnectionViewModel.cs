@@ -14,6 +14,8 @@ namespace TestBuilder.ViewModels.NodifyVM
         private static readonly IBrush SelectedOutlineBrush =
             new SolidColorBrush(Color.FromRgb(255, 214, 10), 0.35);
 
+        private static readonly IBrush RecoveryStrokeBrush = new SolidColorBrush(Color.Parse("#0284C7"));
+
         public ConnectionViewModel(
             ConnectorViewModel source,
             ConnectorViewModel target)
@@ -32,8 +34,20 @@ namespace TestBuilder.ViewModels.NodifyVM
         [ObservableProperty]
         private bool isSelected;
 
+        [ObservableProperty]
+        private NodeViewModel? recoversFailureOf;
+
+        public string? RecoveryDescription => RecoversFailureOf == null ? null :
+            $"При успехе устраняет ошибку: {RecoversFailureOf.DisplayTitle}";
+
+        partial void OnRecoversFailureOfChanged(NodeViewModel? value)
+        {
+            OnPropertyChanged(nameof(StrokeBrush));
+            OnPropertyChanged(nameof(RecoveryDescription));
+        }
+
         public IBrush StrokeBrush =>
-            IsSelected ? SelectedStrokeBrush : DefaultStrokeBrush;
+            IsSelected ? SelectedStrokeBrush : RecoversFailureOf != null ? RecoveryStrokeBrush : DefaultStrokeBrush;
 
         public double StrokeThickness =>
             IsSelected ? 6 : 4;

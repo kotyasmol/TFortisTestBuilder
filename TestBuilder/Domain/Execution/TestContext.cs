@@ -49,6 +49,7 @@ namespace TestBuilder.Domain.Execution
         public PreparedLabel? LastTestLabel { get; init; }
 
         public bool HasCriticalError { get; set; }
+        internal BranchRecoveryScope? RecoveryScope { get; set; }
 
         public ExecutionFailure? Failure { get; internal set; }
         public ExecutionFailure? CriticalFailure { get; internal set; }

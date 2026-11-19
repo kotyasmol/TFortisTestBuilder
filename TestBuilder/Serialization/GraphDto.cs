@@ -638,5 +638,9 @@ namespace TestBuilder.Serialization
 
         [JsonPropertyName("targetConnector")]
         public string TargetConnector { get; set; } = "";
+
+        [JsonPropertyName("recoversFailureOf")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RecoversFailureOf { get; set; }
     }
 }

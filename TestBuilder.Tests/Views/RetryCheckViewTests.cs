@@ -26,7 +26,8 @@ public class RetryCheckViewTests
         await session.Dispatch(() =>
         {
             using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus));
-            vm.IsOperatorView = false; vm.Nodes.Clear(); vm.AddNodeAtLocation("Retry Check", new Point(100, 80));
+            vm.IsOperatorView = false; vm.Nodes.Clear(); vm.Nodes.Add(new RetryCheckNodeViewModel { Location = new Point(100, 80) });
+            Assert.DoesNotContain(vm.AvailableNodes, n => n is RetryCheckNodeViewModel);
             var node = Assert.Single(vm.Nodes.OfType<RetryCheckNodeViewModel>());
             Assert.Equal("Повтор проверки", node.DisplayTitle);
             Assert.NotNull(UserGuide.ForNode(typeof(RetryCheckNodeViewModel)));

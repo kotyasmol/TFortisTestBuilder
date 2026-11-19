@@ -83,6 +83,7 @@ internal static class TestErrorCodes
         ForEachSlaveStep => TestErrorCode.Loop,
         GraphRepeatStep or RetryCheckStep => TestErrorCode.Loop,
         ContinueOnErrorStep wrapper => ForStep(wrapper.Inner),
+        BranchRecoveryCandidateStep wrapper => ForStep(wrapper.Inner),
         SubtestStep => TestErrorCode.Subtest,
         ClearArpCacheStep => TestErrorCode.Arp,
         ReadHttpVariableStep => TestErrorCode.HttpRead,

@@ -10,6 +10,7 @@ namespace TestBuilder.Services.Graph.Commands
         private readonly ObservableCollection<ConnectionViewModel> _connections;
         private readonly List<NodeViewModel> _deletedNodes;
         private readonly List<ConnectionViewModel> _deletedConnections;
+        private readonly List<(ConnectionViewModel Connection, NodeViewModel Target)> _recoveries = new();
 
         public DeleteNodesCommand(
             ObservableCollection<NodeViewModel> nodes,
@@ -21,10 +22,14 @@ namespace TestBuilder.Services.Graph.Commands
             _connections = connections;
             _deletedNodes = deletedNodes;
             _deletedConnections = deletedConnections;
+            foreach (var connection in connections)
+                if (connection.RecoversFailureOf is { } target && deletedNodes.Contains(target) && !deletedConnections.Contains(connection))
+                    _recoveries.Add((connection, target));
         }
 
         public void Execute()
         {
+            foreach (var (connection, _) in _recoveries) connection.RecoversFailureOf = null;
             foreach (var conn in _deletedConnections)
                 _connections.Remove(conn);
 
@@ -39,6 +44,7 @@ namespace TestBuilder.Services.Graph.Commands
 
             foreach (var conn in _deletedConnections)
                 _connections.Add(conn);
+            foreach (var (connection, target) in _recoveries) connection.RecoversFailureOf = target;
         }
     }
 }

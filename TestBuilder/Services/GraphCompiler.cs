@@ -39,6 +39,7 @@ namespace TestBuilder.Services
 
         public static void ValidateConnections(GraphWorkspaceViewModel graph, HardwareConfiguration? hardware)
         {
+            BranchRecoveryValidation.Validate(graph);
             foreach (var node in graph.Nodes)
             {
                 if (node is SerialConsoleNodeViewModel console && !string.IsNullOrEmpty(console.DeviceId) &&
@@ -143,10 +144,19 @@ namespace TestBuilder.Services
                 throw new InvalidOperationException($"В графе '{graph.Title}' должна быть ровно одна стартовая нода (найдено {starts.Count}).");
 
             var nodes = entry == null ? graph.Nodes.ToHashSet() : GetRunNodes(graph, entry, singleNode);
+            BranchRecoveryValidation.Validate(graph);
+            var recoverable = graph.Connections.Where(c => c.RecoversFailureOf != null)
+                .Select(c => c.RecoversFailureOf!).Distinct().ToDictionary(n => n, _ => Guid.NewGuid());
             if (!singleNode) ReportOrderValidation.Validate(graph, nodes);
             foreach (var node in nodes.Where(n => n.RunOnlyOnFirstRun && !n.CanRunOnlyOnFirstRun))
                 throw new InvalidOperationException($"Нода '{node.DisplayTitle}' не поддерживает выполнение при первом запуске.");
-            var map = nodes.ToDictionary(node => node, node => new TestNode(CreateStep(node, currentSlaves), node)
+            ITestStep CreateRecoverableStep(NodeViewModel node)
+            {
+                var step = CreateStep(node, currentSlaves);
+                return recoverable.TryGetValue(node, out var key)
+                    ? new BranchRecoveryCandidateStep(step, key, node.DisplayTitle, _logger) : step;
+            }
+            var map = nodes.ToDictionary(node => node, node => new TestNode(CreateRecoverableStep(node), node)
             {
                 RunOnlyOnFirstRun = node.RunOnlyOnFirstRun,
                 RequiresSuccessTransition = entry == null && node is not EndNodeViewModel and not BodyEndNodeViewModel,
@@ -188,6 +198,17 @@ namespace TestBuilder.Services
                 }
             }
             ParallelGraphPlanner.Plan(transitions, _activeHardware, currentSlaves);
+            BranchRecoveryValidation.ValidateExecutionScopes(graph, map, transitions);
+            foreach (var edge in graph.Connections.Where(c => c.RecoversFailureOf != null &&
+                map.ContainsKey(c.Source.Parent!) && map.ContainsKey(c.RecoversFailureOf!)))
+            {
+                var confirmation = map[edge.Source.Parent!];
+                var result = ResolveTransition(edge.Source.Parent!, edge.Source);
+                if (!confirmation.RecoveryConfirmations.TryGetValue(result, out var keys))
+                    confirmation.RecoveryConfirmations[result] = keys = new();
+                var key = recoverable[edge.RecoversFailureOf!];
+                if (!keys.Contains(key)) keys.Add(key);
+            }
             return new CompiledGraph(map[entry ?? starts[0]]);
         }
 

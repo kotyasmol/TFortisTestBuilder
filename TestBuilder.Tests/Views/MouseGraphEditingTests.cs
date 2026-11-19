@@ -154,6 +154,11 @@ public class MouseGraphEditingTests
                 Assert.Contains(a, vm.Nodes);
                 Assert.Contains(wire, vm.Connections);
 
+                // A pasted node may cover this wire. Connections intentionally
+                // render behind nodes; expose the wire before testing its menu.
+                foreach (var pasted in vm.Nodes.Where(n => n != a && n != b))
+                    pasted.Location = new Point(pasted.Location.X, Math.Max(a.Location.Y, b.Location.Y) + 500);
+                Layout();
                 var ports = view.GetVisualDescendants().OfType<Connector>().ToArray();
                 var sourcePort = ports.Single(c => c.DataContext == wire.Source);
                 var targetPort = ports.Single(c => c.DataContext == wire.Target);

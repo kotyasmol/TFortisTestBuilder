@@ -1862,6 +1862,7 @@
                                       ArrowSize="16,10"
                                       OutlineBrush="{Binding OutlineBrush}"
                                       OutlineThickness="{Binding OutlineThickness}"
+                                      ToolTip.Tip="{Binding RecoveryDescription}"
                                       PointerPressed="OnConnectionPressed"
                                       Disconnect="OnConnectionDisconnect" />
           </DataTemplate>
