@@ -319,8 +319,13 @@ namespace TestBuilder.Domain.Steps
             try { singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, printedShortSerial, printedMac); }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException or OverflowException)
             { return Fail(context, 6, ex.Message); }
-            if (LabelPreview.Parse(printTemplate, singleLabel).BarcodeError is { } barcodeError)
+            var parsedLabel = LabelPreview.Parse(printTemplate, singleLabel);
+            if (parsedLabel.BarcodeError is { } barcodeError)
                 return Fail(context, 6, barcodeError);
+            var encodedBarcodes = parsedLabel.Elements.Where(element => element.Bars.Length > 0).Select(element => element.EncodedData).ToArray();
+            context.SetVariable("PrintLabel.Barcodes", encodedBarcodes);
+            context.SetVariable("PrintLabel.Barcode", encodedBarcodes.FirstOrDefault() ?? "");
+            _logger.Info("Данные штрихкодов этикетки: " + string.Join("; ", encodedBarcodes));
 
             var printData = Repeat(singleLabel, _copies);
             var bytes = GetPrinterEncoding().GetBytes(printData);
@@ -477,6 +482,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.MacSource", string.Empty);
             context.SetVariable("PrintLabel.SerialShortSource", string.Empty);
             context.SetVariable("PrintLabel.Barcode", string.Empty);
+            context.SetVariable("PrintLabel.Barcodes", Array.Empty<string>());
             context.SetVariable("PrintLabel.Success", false);
             context.SetVariable("PrintLabel.TimedOut", false);
             context.SetVariable("PrintLabel.ErrorCode", 0);

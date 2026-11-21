@@ -4,8 +4,12 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Layout;
+using Avalonia.Platform.Storage;
+using System.IO;
+using System.Text.Json;
 using TestBuilder.Services;
 
 namespace TestBuilder.Views;
@@ -14,7 +18,20 @@ public sealed class LabelTemplatesWindow : Window
     public LabelTemplatesWindow(LabelTemplateDefinition? profileTemplate = null, bool settingsOnly = false)
     {
         Title = "Шаблоны этикеток"; Width = 1040; Height = 800; MinWidth = 800; MinHeight = 600;
-        var templates = new ObservableCollection<LabelTemplateDefinition>(AppSettings.Instance.LabelTemplates.Select(t => t.Copy()));
+        var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        var inputs = new List<TextBox>();
+        var catalogPath = LabelTemplateStore.LocalPath(AppSettings.Instance.ResolvedGraphsFolder);
+        var imported = false;
+        string? catalogRevision = null;
+        var templates = new ObservableCollection<LabelTemplateDefinition>();
+        try
+        {
+            catalogRevision = LabelTemplateStore.Revision(catalogPath);
+            var loaded = LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder, AppSettings.Instance.LabelTemplates);
+            if (LabelTemplateStore.Revision(catalogPath) != catalogRevision) throw new InvalidDataException("Каталог изменён во время чтения. Откройте окно заново.");
+            foreach (var t in loaded) templates.Add(t);
+        }
+        catch (Exception ex) { foreach (var t in AppSettings.Instance.LabelTemplates) templates.Add(t.Copy()); status.Text = "Каталог этикеток не загружен: " + ex.Message; }
         if (profileTemplate != null)
         {
             var existing = templates.FirstOrDefault(t => t.Id == profileTemplate.Id);
@@ -22,14 +39,15 @@ public sealed class LabelTemplatesWindow : Window
             templates.Add(profileTemplate.Copy());
         }
         var root = new DockPanel { Margin = new Thickness(20) };
-        var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         var footer = new StackPanel { Spacing = 8 };
         footer.Children.Add(status);
-        var save = new Button { Content = settingsOnly ? "Сохранить настройки" : "Сохранить и выбрать шаблон" }; footer.Children.Add(save);
+        footer.Children.Add(new SelectableTextBlock { Name = "LabelCatalogPath", Text = "Каталог: " + catalogPath, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var save = new Button { Content = settingsOnly ? "Сохранить каталог" : "Сохранить и выбрать шаблон" }; footer.Children.Add(save);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("260,16,*") };
         var left = new DockPanel(); var actions = new StackPanel { Spacing = 8 };
-        var list = new ListBox { ItemsSource = templates };
+        var list = new ListBox { ItemsSource = templates, ItemTemplate = new FuncDataTemplate<LabelTemplateDefinition>((_, _) =>
+        { var text = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap }; text.Bind(TextBlock.TextProperty, new Binding("Name")); return text; }) };
         var add = new Button { Content = "Новый шаблон" };
         add.Click += (_, _) => { var t = new LabelTemplateDefinition(); templates.Add(t); list.SelectedItem = t; };
         var copy = new Button { Content = "Создать копию" };
@@ -37,10 +55,57 @@ public sealed class LabelTemplatesWindow : Window
         var remove = new Button { Content = "Удалить шаблон" };
         remove.Click += (_, _) => { if (list.SelectedItem is LabelTemplateDefinition t) { templates.Remove(t); list.SelectedItem = templates.FirstOrDefault(); } };
         actions.Children.Add(add); actions.Children.Add(copy); actions.Children.Add(remove); DockPanel.SetDock(actions, Dock.Bottom); left.Children.Add(actions); left.Children.Add(list);
+        var export = new Button { Content = "Экспорт каталога…" };
+        export.Click += async (_, _) =>
+        {
+            try
+            {
+                if (inputs.Any(DataValidationErrors.GetHasErrors)) throw new InvalidOperationException("Исправьте значения шаблона перед экспортом.");
+                LabelTemplateCatalog.Validate(templates);
+                var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Экспорт каталога этикеток", SuggestedFileName = "label-templates.json" });
+                if (file == null) return;
+                await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
+                await JsonSerializer.SerializeAsync(stream, new LabelTemplateFile { IsComplete = true, Templates = templates.Select(t => t.Copy()).ToList() }, EquipmentCatalog.JsonOptions);
+                status.Text = "Каталог экспортирован. Он содержит макеты, элементы и правила формирования данных.";
+            }
+            catch (Exception ex) { status.Text = ex.Message; }
+        };
+        var import = new Button { Content = "Импорт каталога…" };
+        import.Click += async (_, _) =>
+        {
+            try
+            {
+                var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Импорт каталога этикеток", AllowMultiple = false });
+                if (files.Count == 0) return;
+                await using var stream = await files[0].OpenReadAsync();
+                if (stream.Length > 4_000_000) throw new InvalidDataException("Каталог больше 4 МБ.");
+                var file = await JsonSerializer.DeserializeAsync<LabelTemplateFile>(stream, EquipmentCatalog.JsonOptions) ?? throw new InvalidDataException("Пустой каталог.");
+                var merged = LabelTemplateStore.Merge(templates, file);
+                templates.Clear(); foreach (var t in merged) templates.Add(t); list.SelectedItem = templates.FirstOrDefault(); imported = true;
+                status.Text = "Каталог загружен в черновик. Совпадающие ID заменены. Для записи нажмите «Сохранить каталог»; прежний файл будет сохранён в .bak.";
+            }
+            catch (Exception ex) { status.Text = ex.Message; }
+        };
+        actions.Children.Add(import); actions.Children.Add(export);
         grid.Children.Add(left);
-        var fields = new StackPanel { Spacing = 6 }; var inputs = new List<TextBox>();
+        var fields = new StackPanel { Spacing = 6 };
+        var commandOnlyInputs = new List<TextBox>();
         var previewPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 12) };
         previewPanel.Children.Add(new TextBlock { Text = "Пример этикетки", FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        var editLayout = new Button { Content = "Редактор элементов…", Name = "EditLabelLayout" };
+        editLayout.Click += async (_, _) =>
+        {
+            try
+            {
+                if (inputs.Any(DataValidationErrors.GetHasErrors)) throw new InvalidOperationException("Исправьте значения шаблона перед открытием редактора.");
+                if (list.SelectedItem is not LabelTemplateDefinition selected) return;
+                var edited = await new LabelLayoutEditorWindow(selected).ShowDialog<LabelTemplateDefinition?>(this);
+                if (edited == null) return;
+                var index = templates.IndexOf(selected); templates[index] = edited; list.SelectedItem = edited;
+            }
+            catch (Exception ex) { status.Text = ex.Message; }
+        };
+        previewPanel.Children.Add(editLayout);
         var preview = new LabelPreviewControl { Height = 150, MaxWidth = 500 };
         var paperSize = new TextBlock();
         var previewMessage = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
@@ -72,6 +137,8 @@ public sealed class LabelTemplatesWindow : Window
         {
             fields.Children.Add(new TextBlock { Text = label });
             var box = new TextBox(); box.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box); inputs.Add(box);
+            if (property is "BarcodeModuleDots" or "BarcodeTopDots" or "BarcodeHeightDots" or "CabinetWidthDots" or "CabinetFontHeightDots")
+            { commandOnlyInputs.Add(box); ToolTip.SetTip(box, "Для визуального макета меняйте параметр у соответствующего элемента в редакторе."); }
             box.TextChanged += (_, _) => SchedulePreview();
         }
         foreach (var (label, property) in new[] { ("Использовать полный и короткий серийный номер", "UseShortSerial"),
@@ -84,7 +151,11 @@ public sealed class LabelTemplatesWindow : Window
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
         command.TextChanged += (_, _) => SchedulePreview();
-        list.SelectionChanged += (_, _) => { fields.DataContext = list.SelectedItem; UpdatePreview(); };
+        var useCommand = new Button { Content = "Вернуть исходную команду" };
+        useCommand.Click += (_, _) => { if (list.SelectedItem is LabelTemplateDefinition t) { t.Command = t.Layout?.OriginalCommand ?? t.Command; t.Layout = null; fields.DataContext = null; fields.DataContext = t; command.IsReadOnly = false; foreach (var box in commandOnlyInputs) box.IsEnabled = true; UpdatePreview(); status.Text = "Визуальные элементы убраны из черновика. Используется команда, сохранённая до визуального редактирования."; } };
+        fields.Children.Add(useCommand);
+        list.SelectionChanged += (_, _) => { fields.DataContext = list.SelectedItem; command.IsReadOnly = (list.SelectedItem as LabelTemplateDefinition)?.Layout != null;
+            foreach (var box in commandOnlyInputs) box.IsEnabled = !command.IsReadOnly; UpdatePreview(); };
         var right = new DockPanel(); DockPanel.SetDock(previewPanel, Dock.Top); right.Children.Add(previewPanel);
         right.Children.Add(new ScrollViewer { Content = fields }); Grid.SetColumn(right, 2); grid.Children.Add(right);
         root.Children.Add(grid); Content = root;
@@ -96,9 +167,8 @@ public sealed class LabelTemplatesWindow : Window
                 if (inputs.Any(DataValidationErrors.GetHasErrors)) throw new InvalidOperationException("Исправьте значения шаблона.");
                 LabelTemplateCatalog.Validate(templates);
                 var selected = list.SelectedItem as LabelTemplateDefinition ?? throw new InvalidOperationException("Выберите шаблон.");
-                var old = AppSettings.Instance.LabelTemplates;
+                LabelTemplateStore.Save(catalogPath, templates, preserveExisting: !imported, expectedRevision: catalogRevision);
                 AppSettings.Instance.LabelTemplates = templates.Select(t => t.Copy()).ToList();
-                try { AppSettings.Instance.SaveChecked(); } catch { AppSettings.Instance.LabelTemplates = old; throw; }
                 Close(selected.Copy());
             }
             catch (Exception ex) { status.Text = ex.Message; }

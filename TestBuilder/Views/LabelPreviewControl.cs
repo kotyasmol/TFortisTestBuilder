@@ -7,7 +7,7 @@ using TestBuilder.Services;
 
 namespace TestBuilder.Views;
 
-public sealed class LabelPreviewControl : Control
+public class LabelPreviewControl : Control
 {
     private static readonly Typeface PreviewTypeface = new("avares://Avalonia.Fonts.Inter/Assets#Inter");
     public static readonly StyledProperty<LabelPreview?> PreviewProperty =
@@ -15,13 +15,18 @@ public sealed class LabelPreviewControl : Control
     public LabelPreview? Preview { get => GetValue(PreviewProperty); set => SetValue(PreviewProperty, value); }
     static LabelPreviewControl() => AffectsRender<LabelPreviewControl>(PreviewProperty);
 
+    protected Rect PaperBounds(LabelPreview preview)
+    {
+        var scale = System.Math.Min((Bounds.Width - 4) / preview.Width, (Bounds.Height - 4) / preview.Height);
+        return new Rect((Bounds.Width - preview.Width * scale) / 2, (Bounds.Height - preview.Height * scale) / 2,
+            preview.Width * scale, preview.Height * scale);
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        if (Preview is not { HasContent: true } preview || Bounds.Width < 4 || Bounds.Height < 4) return;
-        var scale = System.Math.Min((Bounds.Width - 4) / preview.Width, (Bounds.Height - 4) / preview.Height);
-        var paper = new Rect((Bounds.Width - preview.Width * scale) / 2, (Bounds.Height - preview.Height * scale) / 2,
-            preview.Width * scale, preview.Height * scale);
+        if (Preview is not { Width: > 0, Height: > 0 } preview || Bounds.Width < 4 || Bounds.Height < 4) return;
+        var paper = PaperBounds(preview); var scale = paper.Width / preview.Width;
         context.DrawRectangle(Brushes.White, new Pen(Brushes.Silver, 1), paper, 3, 3);
         using (context.PushClip(paper))
         {

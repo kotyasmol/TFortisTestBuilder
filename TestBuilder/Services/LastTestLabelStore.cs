@@ -29,6 +29,7 @@ public sealed class LastTestLabelStore
 
     public void Save(LastTestLabelSnapshot snapshot)
     {
+        snapshot = snapshot.Copy();
         var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {

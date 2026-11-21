@@ -70,6 +70,7 @@ internal static class LabelPrintContent
 
     public static string Render(LabelTemplateDefinition template, string serial, int shortSerial, string mac)
     {
+        if (template.Layout != null) { template.Validate(); return template.Layout.Render(template, serial, shortSerial, mac); }
         if (template.Language == "ZPL" && template.Command.Contains("{{ZplBarcode}}", StringComparison.Ordinal))
         {
             var barcode = template.UseShortSerial ? template.Barcode(shortSerial) : serial;

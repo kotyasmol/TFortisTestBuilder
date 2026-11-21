@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 
 namespace TestBuilder.Services;
-public sealed class LabelTemplateDefinition
+public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPropertyChanged
 {
     private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD\{\{Name\}\}\^FS");
     private static readonly Regex FittedZplSerial = new(@"\^FO(\d+),(\d+)\^A0N?,\d+,\{\{SerialTextWidth\}\}\^FDSN: \{\{Serial\}\}\^FS");
@@ -18,7 +18,9 @@ public sealed class LabelTemplateDefinition
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string Name { get; set; } = "Новая этикетка";
+    private string _name = "Новая этикетка";
+    public string Name { get => _name; set { _name = value; PropertyChanged?.Invoke(this, new(nameof(Name))); } }
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public string Language { get; set; } = "ZPL";
     public bool UseShortSerial { get; set; }
     public bool RequiresMac { get; set; }
@@ -46,7 +48,19 @@ public sealed class LabelTemplateDefinition
     public int BarcodeHeightDots { get; set; } = 34;
     public int PrinterDpi { get; set; } = 300;
     public string Command { get; set; } = "^XA^FO20,20^A0N,30,30^FD{{Serial}}^FS^XZ";
-    public LabelTemplateDefinition Copy() => JsonSerializer.Deserialize<LabelTemplateDefinition>(JsonSerializer.Serialize(this))!;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public LabelLayoutDefinition? Layout { get; set; }
+    public LabelTemplateDefinition Copy()
+    {
+        var copy = JsonSerializer.Deserialize<LabelTemplateDefinition>(JsonSerializer.Serialize(this))!;
+        if (copy.Layout != null && copy.Command != "{{VisualLayoutV1}}")
+        {
+            copy.Layout.OriginalCommand ??= copy.Command;
+            // Old executables reject an unknown token instead of printing a stale raw layout.
+            copy.Command = "{{VisualLayoutV1}}";
+        }
+        return copy;
+    }
     public LabelTemplateDefinition CopyUpgraded()
     {
         var copy = Copy();
@@ -60,6 +74,7 @@ public sealed class LabelTemplateDefinition
 
     public void Validate()
     {
+        Layout?.Validate();
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||
             WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
             BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
@@ -70,7 +85,7 @@ public sealed class LabelTemplateDefinition
             string.IsNullOrWhiteSpace(Command) || Command.Length > 100000 || (RequiresMac && !UseShortSerial) || (MatchServerSerial && !UseShortSerial))
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийных номеров и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
-            if (!new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
+            if (!(Layout != null && token.Groups[1].Value == "VisualLayoutV1") && !new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
                     "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth", "Cabinet", "CabinetField", "SerialTextWidth" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (!IsSafeLabelText(Name) || VariantName != null && !IsSafeLabelText(VariantName) ||
@@ -144,7 +159,7 @@ public static class LabelTemplateCatalog
     // Only exact shipped commands are upgraded; user-authored commands and metadata survive.
     public static void UpgradeBuiltIn(LabelTemplateDefinition? template)
     {
-        if (template == null) return;
+        if (template == null || template.Layout != null) return;
         using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
         var previous = JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
         var previousTemplate = previous.FirstOrDefault(t => t.Id == template.Id && t.Language == template.Language && t.Command == template.Command);
@@ -175,7 +190,7 @@ public static class LabelTemplateCatalog
 
     internal static List<LabelTemplateDefinition> WorkstationTemplates(out EquipmentCatalog? catalog)
     {
-        var templates = AppSettings.Instance.LabelTemplates.Select(template => template.CopyUpgraded()).ToList();
+        var templates = LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder, AppSettings.Instance.LabelTemplates);
         try { catalog = EquipmentCatalog.Load(AppSettings.Instance.ResolvedGraphsFolder); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         {
@@ -206,7 +221,8 @@ public static class LabelTemplateCatalog
             if ((ranges[i].FirstSerialNumber ?? ranges[i].SerialOffset) <= (long)ranges[i - 1].SerialOffset + ranges[i - 1].ShortSerialMax)
                 throw new InvalidOperationException($"Диапазоны поиска шаблонов «{ranges[i - 1].Name}» и «{ranges[i].Name}» пересекаются.");
     }
-    public static LabelTemplateDefinition Legacy(string id) => AppSettings.Instance.LabelTemplates.FirstOrDefault(t => t.Id == id)?.Copy()
+    public static LabelTemplateDefinition Legacy(string id) => LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder,
+        AppSettings.Instance.LabelTemplates).FirstOrDefault(t => t.Id == id)?.Copy()
         ?? Defaults().FirstOrDefault(t => t.Id == id)
         ?? throw new InvalidOperationException($"Не найден шаблон этикетки {id}. Выберите шаблон в ноде.");
 }

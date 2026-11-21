@@ -3,10 +3,36 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-11-19
+updated: 2026-11-21
 ---
 
 # JSON профили
+
+## Визуальные макеты этикеток — 2026-11-21
+
+Необязательный `labelTemplate.layout` содержит version=1, darkness,
+originalCommand и elements. Каждый элемент хранит ID, name, kind
+(Text/Barcode/Box), visible, X/Y/Width/Height в точках, fontWidth/fitText,
+alignment L/C/R, module, stroke и value. Поля данных: Name, Serial,
+ShortSerial, Mac, Barcode, Variant, Cabinet в двойных фигурных скобках.
+Copy/Clone и JSON сохраняют всю структуру и extension data; метаданные модели,
+серии и MAC остаются у LabelTemplateDefinition и карточки изделия.
+
+Снимок с layout сериализуется как `Print Label (layout v1)`. Дополнительно Copy
+заменяет неиспользуемую raw-команду на `{{VisualLayoutV1}}`: старый валидатор
+отклоняет неизвестное поле, в том числе в истории последней этикетки. Исходная
+команда остаётся в layout.originalCommand для явного возврата режима. Экспорт
+профиля также ставит новый тип при вложении общего визуального макета. Старые
+профили без layout сериализуются как прежде и сами не преобразуются.
+
+Каталог: schemaVersion=1, isComplete и templates. Полный локальный снимок
+сохраняет удаления между запусками; слой без isComplete дополняет/заменяет ID.
+Порядок: прежние настройки → reference/labels/templates.json →
+<папка профилей>/catalog/label-templates.json. Слой поставки исходно пустой,
+штатные raw-макеты остаются резервом совместимости. GUI сохраняет только
+переносимый каталог; settings.settings не перезаписывается. Импорт сливает
+черновики по ID, экспорт сохраняет полный список. Запись атомарна, с .bak,
+проверкой версии/диапазонов/размера и ревизии для защиты параллельных изменений.
 
 
 ## Связь устранения ошибки — 2026-11-19

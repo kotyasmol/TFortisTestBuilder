@@ -21,6 +21,7 @@ internal static class ProfilePortableExport
                 : model.GetValueKind() == JsonValueKind.Number ? ((DeviceLabelModel)model.GetValue<int>()).ToString() : model.GetValue<string>();
             var template = LabelTemplateCatalog.Legacy(id).CopyUpgraded();
             node["labelTemplate"] = JsonSerializer.SerializeToNode(template, EquipmentCatalog.JsonOptions);
+            if (template.Layout != null) node["type"] = "Print Label (layout v1)";
         }
         var result = root.ToJsonString(EquipmentCatalog.JsonOptions);
         GraphSerializer.ValidateProfile(result);

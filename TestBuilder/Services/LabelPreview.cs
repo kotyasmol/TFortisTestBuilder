@@ -8,7 +8,10 @@ using System.Text;
 namespace TestBuilder.Services;
 
 public sealed record LabelPreviewElement(double X, double Y, double Width, double Height,
-    string Text = "", string Bars = "", double Stroke = 0, double QuietZone = 0);
+    string Text = "", string Bars = "", double Stroke = 0, double QuietZone = 0)
+{
+    public string EncodedData { get; init; } = "";
+}
 
 /// <summary>A bounded, offline approximation of the rendered printer command, never a print job.</summary>
 public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, double Left, double Top,
@@ -41,7 +44,8 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 if (!LabelPrintContent.TryNormalizeMac(mac, out mac)) return Empty("Введите корректный MAC-адрес для предпросмотра.");
             }
             else mac = "";
-            var preview = Parse(template, LabelPrintContent.Render(template, serial, shortSerial, mac));
+            var preview = Parse(template, template.Layout != null ? template.Layout.Render(template, serial, shortSerial, mac, validateBounds: false)
+                : LabelPrintContent.Render(template, serial, shortSerial, mac));
             return preview with { IsSample = sample, Message = (sample ? "Незаполненные поля показаны на примере. " : "") + preview.Message };
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or OverflowException)
@@ -106,7 +110,7 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 return;
             }
             var w = bars.Sum(c => c - '0') * module;
-            Add(new(x, y, w, height, Bars: bars, QuietZone: 10 * module));
+            Add(new(x, y, w, height, Bars: bars, QuietZone: 10 * module) { EncodedData = text });
             if (readable) Text(x, above ? y - 23 : y + height + 3, 20, Math.Min(12, w / Math.Max(1, text.Length)), text);
         }
 
@@ -198,6 +202,7 @@ public sealed record LabelPreview(IReadOnlyList<LabelPreviewElement> Elements, d
                 // Orientation relative to the feed does not change the readable layout.
                 if (line is "ZT" or "ZB") continue;
                 if (op is 'N' or 'I' or 'S' or 'D') continue;
+                if (op == 'X') { Add(new(Number(a, 0), Number(a, 1), Number(a, 3) - Number(a, 0), Number(a, 4) - Number(a, 1), Stroke: Number(a, 2, 1))); continue; }
                 if (op is not ('A' or 'B')) { _unsupported.Add(line[..Math.Min(2, line.Length)]); continue; }
                 var field = Regex.Match(line, "^[AB]([^\"]*)\"([^\"]*)\"$");
                 if (!field.Success) { _unsupported.Add("поле EPL"); continue; }

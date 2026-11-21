@@ -45,6 +45,8 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     public string LastTestMessage => _lastTest == null ? "" :
         _lastTest.Error + (HasLastTestLabel ? "" : " Данные этикетки в этом тесте не были подготовлены.");
     [ObservableProperty] private LabelPreview? preview;
+    public string BarcodeData => Preview == null ? "" : string.Join("\n", Preview.Elements.Where(e => e.Bars.Length > 0).Select(e => "Данные штрихкода: " + e.EncodedData));
+    partial void OnPreviewChanged(LabelPreview? value) => OnPropertyChanged(nameof(BarcodeData));
     [ObservableProperty] private LabelPreview? lastPreview;
     public bool HasLastPreview => LastPreview != null;
     [ObservableProperty] private int selectedType;
@@ -143,7 +145,14 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     internal void RefreshTemplates(string? selectedId = null)
     {
         selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-        _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates(out var catalog);
+        EquipmentCatalog? catalog;
+        try { _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates(out catalog); }
+        catch (Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or JsonException or InvalidOperationException)
+        {
+            _workstationTemplates.Clear(); LabelOptions.Clear(); TestLabelOptions = Array.Empty<TestLabelOption>(); SelectedTestLabel = null; Preview = null;
+            Status = "Каталог этикеток не загружен. Печать по каталогу недоступна: " + ex.Message;
+            OnPropertyChanged(nameof(HasMac)); return;
+        }
         var testId = SelectedTestLabel?.Id;
         TestLabelOptions = GetTestLabelOptions(catalog);
         SelectedTestLabel = TestLabelOptions.FirstOrDefault(option => option.Id == testId) ?? TestLabelOptions[0];

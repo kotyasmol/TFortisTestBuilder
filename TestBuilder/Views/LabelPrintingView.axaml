@@ -80,6 +80,7 @@
             <TextBlock Text="Предпросмотр" FontWeight="SemiBold"/>
             <views:LabelPreviewControl x:Name="CurrentLabelPreview" Preview="{Binding Preview}" Height="190" MaxWidth="560" HorizontalAlignment="Stretch" IsVisible="{Binding Preview.HasContent}"/>
             <TextBlock Text="{Binding Preview.Message}" IsVisible="{Binding Preview.HasMessage}" TextWrapping="Wrap"/>
+            <SelectableTextBlock Text="{Binding BarcodeData}" TextWrapping="Wrap" />
             <TextBlock Text="Приблизительный вид. Точные шрифты и поля зависят от принтера." TextWrapping="Wrap" FontSize="12"/>
           </StackPanel>
         </Border>
