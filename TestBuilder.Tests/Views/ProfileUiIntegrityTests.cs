@@ -160,12 +160,19 @@ public class ProfileUiIntegrityTests
             object row = register ? new RegisterDefinition { Name = "PoeMode" } : new BoardRegion { Name = "PoeMode" };
             string Name() => register ? ((RegisterDefinition)row).Name : ((BoardRegion)row).Name;
             var column = new TranslatedNameColumn { Header = "Название", Width = new DataGridLength(1, DataGridLengthUnitType.Star) };
-            var grid = new DataGrid { AutoGenerateColumns = false, ItemsSource = new[] { row } };
+            var rows = new[] { row }.Concat(Enumerable.Range(1, 100).Select(index => register
+                ? (object)new RegisterDefinition { Name = $"Регистр {index}" }
+                : new BoardRegion { Name = $"Область {index}" })).ToArray();
+            var grid = new DataGrid { AutoGenerateColumns = false, ItemsSource = rows };
             grid.Columns.Add(column);
             var window = new Window { Width = 600, Height = 400, Content = grid };
             try
             {
                 window.Show(); Layout(window);
+                grid.ScrollIntoView(rows[^1], column); Layout(window);
+                var lastRow = grid.GetVisualDescendants().OfType<DataGridRow>().Single(r => ReferenceEquals(r.DataContext, rows[^1]));
+                Assert.Contains(lastRow.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == (register ? "Регистр 100" : "Область 100"));
+                grid.ScrollIntoView(row, column); Layout(window);
                 Assert.Contains("Режим PoE", grid.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text));
                 Assert.Equal("PoeMode", Name());
                 grid.SelectedItem = row; grid.CurrentColumn = column;

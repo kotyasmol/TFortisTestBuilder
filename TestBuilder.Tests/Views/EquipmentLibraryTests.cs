@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Interactivity;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TestBuilder.Domain.Modbus;
@@ -14,6 +15,54 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class EquipmentLibraryTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ScrollingEquipmentKeepsNamesBoundToTheCurrentDevice(bool dark)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var oldTheme = Avalonia.Application.Current!.RequestedThemeVariant;
+            Avalonia.Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            var presets = HardwarePresets.Load();
+            var devices = Enumerable.Range(1, 100).Select(i =>
+            {
+                var device = TestViewModel.CopyDefinition(presets.Single(d => d.Name == (i % 2 == 0 ? "SIMBAT-24" : "EL-60v5")));
+                device.SlaveId = (byte)i; device.Name += $" / {i}";
+                return device;
+            }).ToList();
+            var expectedDevices = System.Text.Json.JsonSerializer.Serialize(devices);
+            vm.RootGraph.Hardware = new HardwareConfiguration { Devices = devices };
+            var window = new HardwareEditorWindow(vm);
+            try
+            {
+                window.Show(); Layout();
+                var grid = window.GetVisualDescendants().OfType<DataGrid>().Single(c => c.Name == "ProfileEquipmentGrid");
+                foreach (var index in new[] { 99, 40, 0, 70, 1 })
+                {
+                    var device = grid.ItemsSource.Cast<DeviceDefinition>().ElementAt(index);
+                    grid.SelectedItem = device; grid.ScrollIntoView(device, grid.Columns[1]); Layout();
+                    var row = grid.GetVisualDescendants().OfType<DataGridRow>().Single(r => ReferenceEquals(r.DataContext, device));
+                    var labels = row.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
+                    Assert.True(labels.Contains(device.Name), $"Ожидалось «{device.Name}», показано: {string.Join(" / ", labels)}");
+                    Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == $"Регистры: {device.Name}");
+                }
+                using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-equipment-scroll-{dark}.png"));
+                window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Применить к профилю"))
+                    .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.False(window.IsVisible);
+                Assert.Equal(expectedDevices, System.Text.Json.JsonSerializer.Serialize(vm.RootGraph.Hardware!.Devices));
+                GraphSerializer.Deserialize(GraphSerializer.Serialize(vm, "Проверка названий"), vm);
+                Assert.Equal(expectedDevices, System.Text.Json.JsonSerializer.Serialize(vm.RootGraph.Hardware!.Devices));
+            }
+            finally { window.Close(); Avalonia.Application.Current.RequestedThemeVariant = oldTheme; }
+            void Layout() { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); }
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task NewEquipmentDialogValidatesAndSavesReusableDefinition()
     {

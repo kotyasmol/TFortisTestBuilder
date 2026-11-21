@@ -13,8 +13,9 @@ public sealed class TranslatedNameColumn : DataGridTextColumn
     protected override Control GenerateElement(DataGridCell cell, object dataItem)
     {
         var control = base.GenerateElement(cell, dataItem);
+        // Recycled cells receive a new DataContext; never pin the label to the previous row.
         control.Bind(TextBlock.TextProperty, new Binding("Name") {
-            Source = dataItem, Mode = BindingMode.OneWay, Converter = new RussianUiTextConverter()
+            Mode = BindingMode.OneWay, Converter = new RussianUiTextConverter()
         });
         return control;
     }
