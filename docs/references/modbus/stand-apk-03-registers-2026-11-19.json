@@ -1,0 +1,390 @@
+{
+  "SourceSha256": "f17b71aaff4193e30e170d6347dc93c4423cf4c66552df32ac553cb387363dfa",
+  "Devices": [
+    {
+      "Name": "EL-60v5",
+      "Registers": [
+        {
+          "Address": 1400,
+          "Writable": false,
+          "Meaning": "Ток A, mA"
+        },
+        {
+          "Address": 1402,
+          "Writable": false,
+          "Meaning": "Напряжение A, mV"
+        },
+        {
+          "Address": 1412,
+          "Writable": true,
+          "Meaning": "Нагрузка A, mW"
+        },
+        {
+          "Address": 1414,
+          "Writable": true,
+          "Meaning": "ВКЛ нагрузки A"
+        },
+        {
+          "Address": 1401,
+          "Writable": false,
+          "Meaning": "Ток B, mA"
+        },
+        {
+          "Address": 1403,
+          "Writable": false,
+          "Meaning": "Напряжение B, mV"
+        },
+        {
+          "Address": 1413,
+          "Writable": true,
+          "Meaning": "Нагрузка B, mW"
+        },
+        {
+          "Address": 1415,
+          "Writable": true,
+          "Meaning": "ВКЛ нагрузки B"
+        },
+        {
+          "Address": 1416,
+          "Writable": false,
+          "Meaning": "TEMP А"
+        },
+        {
+          "Address": 1417,
+          "Writable": false,
+          "Meaning": "TEMP В"
+        },
+        {
+          "Address": 1418,
+          "Writable": true,
+          "Meaning": "TEMP TURBO FAN А"
+        },
+        {
+          "Address": 1419,
+          "Writable": true,
+          "Meaning": "TEMP TURBO FAN В"
+        },
+        {
+          "Address": 1420,
+          "Writable": true,
+          "Meaning": "Автономный режим A"
+        },
+        {
+          "Address": 1421,
+          "Writable": true,
+          "Meaning": "Автономный режим B"
+        },
+        {
+          "Address": 1422,
+          "Writable": true,
+          "Meaning": "Нагрузка в автономном режиме А"
+        },
+        {
+          "Address": 1423,
+          "Writable": true,
+          "Meaning": "Нагрузка в автономном режиме В"
+        },
+        {
+          "Address": 1424,
+          "Writable": true,
+          "Meaning": "Passive PoE A"
+        },
+        {
+          "Address": 1425,
+          "Writable": true,
+          "Meaning": "Passive PoE B"
+        },
+        {
+          "Address": 1426,
+          "Writable": false,
+          "Meaning": "T2P A"
+        },
+        {
+          "Address": 1427,
+          "Writable": false,
+          "Meaning": "T2P B"
+        },
+        {
+          "Address": 1428,
+          "Writable": false,
+          "Meaning": "Alert A"
+        },
+        {
+          "Address": 1429,
+          "Writable": false,
+          "Meaning": "Alert B"
+        },
+        {
+          "Address": 1430,
+          "Writable": true,
+          "Meaning": "Очистка статистики"
+        }
+      ]
+    },
+    {
+      "Name": "IO-2",
+      "Registers": [
+        {
+          "Address": 1500,
+          "Writable": true,
+          "Meaning": "OUT 1"
+        },
+        {
+          "Address": 1501,
+          "Writable": true,
+          "Meaning": "OUT 2"
+        },
+        {
+          "Address": 1502,
+          "Writable": true,
+          "Meaning": "OUT 3"
+        },
+        {
+          "Address": 1503,
+          "Writable": true,
+          "Meaning": "OUT 4"
+        },
+        {
+          "Address": 1504,
+          "Writable": true,
+          "Meaning": "OUT 5"
+        },
+        {
+          "Address": 1505,
+          "Writable": true,
+          "Meaning": "OUT 6"
+        },
+        {
+          "Address": 1506,
+          "Writable": true,
+          "Meaning": "OUT 7"
+        },
+        {
+          "Address": 1507,
+          "Writable": false,
+          "Meaning": "IN 1"
+        },
+        {
+          "Address": 1508,
+          "Writable": false,
+          "Meaning": "IN 2"
+        },
+        {
+          "Address": 1509,
+          "Writable": false,
+          "Meaning": "IN 3"
+        },
+        {
+          "Address": 1510,
+          "Writable": false,
+          "Meaning": "IN 4"
+        },
+        {
+          "Address": 1511,
+          "Writable": false,
+          "Meaning": "IN 5"
+        },
+        {
+          "Address": 1512,
+          "Writable": false,
+          "Meaning": "IN 6"
+        },
+        {
+          "Address": 1513,
+          "Writable": false,
+          "Meaning": "IN 7"
+        },
+        {
+          "Address": 1514,
+          "Writable": false,
+          "Meaning": "IN 8"
+        },
+        {
+          "Address": 1515,
+          "Writable": false,
+          "Meaning": "IN 9"
+        },
+        {
+          "Address": 1516,
+          "Writable": false,
+          "Meaning": "IN 10"
+        },
+        {
+          "Address": 1517,
+          "Writable": false,
+          "Meaning": "IN 11"
+        },
+        {
+          "Address": 1518,
+          "Writable": true,
+          "Meaning": "I2C Chip Addr"
+        },
+        {
+          "Address": 1519,
+          "Writable": true,
+          "Meaning": "I2C Reg Addr"
+        },
+        {
+          "Address": 1520,
+          "Writable": true,
+          "Meaning": "I2C Data"
+        },
+        {
+          "Address": 1521,
+          "Writable": false,
+          "Meaning": "I2C Ready flag"
+        },
+        {
+          "Address": 1522,
+          "Writable": true,
+          "Meaning": "I2C Read"
+        },
+        {
+          "Address": 1523,
+          "Writable": true,
+          "Meaning": "I2C Write"
+        },
+        {
+          "Address": 1524,
+          "Writable": true,
+          "Meaning": "RS485 Chip Addr"
+        },
+        {
+          "Address": 1525,
+          "Writable": true,
+          "Meaning": "RS485 Reg Addr"
+        },
+        {
+          "Address": 1526,
+          "Writable": true,
+          "Meaning": "RS485 Data"
+        },
+        {
+          "Address": 1527,
+          "Writable": false,
+          "Meaning": "RS485 Ready flag"
+        },
+        {
+          "Address": 1528,
+          "Writable": true,
+          "Meaning": "RS485 Read"
+        },
+        {
+          "Address": 1529,
+          "Writable": true,
+          "Meaning": "RS485 Write"
+        }
+      ]
+    },
+    {
+      "Name": "PS-3",
+      "Registers": [
+        {
+          "Address": 1200,
+          "Writable": true,
+          "Meaning": "Выход AC1"
+        },
+        {
+          "Address": 1201,
+          "Writable": true,
+          "Meaning": "Выход AC2"
+        },
+        {
+          "Address": 1215,
+          "Writable": true,
+          "Meaning": "Реле нагревателя 1"
+        },
+        {
+          "Address": 1220,
+          "Writable": true,
+          "Meaning": "Реле нагревателя 2"
+        },
+        {
+          "Address": 1216,
+          "Writable": false,
+          "Meaning": "Ток нагревателя 1, mA"
+        },
+        {
+          "Address": 1221,
+          "Writable": false,
+          "Meaning": "Ток нагревателя 2, mA"
+        },
+        {
+          "Address": 1219,
+          "Writable": true,
+          "Meaning": "Очистка статистики"
+        }
+      ]
+    },
+    {
+      "Name": "SIMBAT-24",
+      "Registers": [
+        {
+          "Address": 1700,
+          "Writable": true,
+          "Meaning": "Ключ заряд"
+        },
+        {
+          "Address": 1701,
+          "Writable": false,
+          "Meaning": "V заряд"
+        },
+        {
+          "Address": 1702,
+          "Writable": false,
+          "Meaning": "I заряд"
+        },
+        {
+          "Address": 1705,
+          "Writable": true,
+          "Meaning": "Установка сопротивления (13 - 200)"
+        },
+        {
+          "Address": 1706,
+          "Writable": true,
+          "Meaning": "Ключ разряд"
+        },
+        {
+          "Address": 1707,
+          "Writable": false,
+          "Meaning": "V разряд"
+        },
+        {
+          "Address": 1708,
+          "Writable": false,
+          "Meaning": "I разряд"
+        },
+        {
+          "Address": 1711,
+          "Writable": false,
+          "Meaning": "TEMP 1"
+        },
+        {
+          "Address": 1712,
+          "Writable": false,
+          "Meaning": "TEMP 2"
+        },
+        {
+          "Address": 1713,
+          "Writable": true,
+          "Meaning": "TEMP TURBO FAN"
+        },
+        {
+          "Address": 1714,
+          "Writable": false,
+          "Meaning": "Сигнал INT"
+        },
+        {
+          "Address": 1715,
+          "Writable": false,
+          "Meaning": "FAN ON/OFF"
+        },
+        {
+          "Address": 1716,
+          "Writable": true,
+          "Meaning": "Очистка статистики"
+        }
+      ]
+    }
+  ]
+}

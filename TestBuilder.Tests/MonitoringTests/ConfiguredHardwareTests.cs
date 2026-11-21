@@ -141,7 +141,7 @@ public class ConfiguredHardwareTests
     }
 
     [Fact]
-    public void Apk03PresetsPreserveAllLegacyRegisterAddressesAndAccessModes()
+    public void UnchangedPresetsPreserveLegacyRegisterAddressesAndAccessModes()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../reference/modbus/hardware-presets.json"));
         var presets = System.Text.Json.JsonSerializer.Deserialize<List<DeviceDefinition>>(File.ReadAllText(path))!;
@@ -151,6 +151,9 @@ public class ConfiguredHardwareTests
             new Ps3Model(1,bus),new Simbat24Model(1,bus),new Simbat48Model(1,bus)};
         for (var index=0;index<legacy.Length;index++)
         {
+            // Types 4/8/9 now follow the authoritative 19.11.2026 specification,
+            // rather than the historic C# maps. They have separate source-based checks.
+            if (index + 1 is 4 or 8 or 9) continue;
             var preset = Assert.Single(presets.Where(p=>p.IdentificationValue==index+1));
             Assert.Equal(legacy[index].RegisterItems.Select(r=>(r.Address,!r.IsReadOnly)).OrderBy(x=>x.Address),
                 preset.Registers.Select(r=>(r.Address,r.Writable)).OrderBy(x=>x.Address));

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TestBuilder.Domain.Modbus.Models;
-using TestBuilder.Services.Modbus;
 
 namespace TestBuilder.Domain.Modbus;
 
@@ -39,7 +38,7 @@ public static class RegisterReference
     {
         if (hardware != null)
             return hardware.Devices.Where(d => !slaveId.HasValue || d.SlaveId == slaveId.Value)
-                .SelectMany(d => d.Registers.Select(r => new Entry(d.Name, r.Address, r.Name, !r.Writable, r.Area)));
+                .SelectMany(d => d.Registers.Select(r => new Entry(d.Name, r.Address, NameWithUnit(r), !r.Writable, r.Area)));
         if (connectedSlave != null)
             return connectedSlave.RegisterItems.Select(r => new Entry(connectedSlave.DeviceType, r.Address, r.Name, r.IsReadOnly, r.Area));
         return Entries.Value;
@@ -50,18 +49,12 @@ public static class RegisterReference
 
     private static IReadOnlyList<Entry> CreateEntries()
     {
-        // Model constructors only build their register maps. No port is opened.
-        using var modbus = new ModbusService();
-        SlaveModelBase[] models =
-        {
-            new El60Model(0, modbus), new PS1Model(0, modbus),
-            new PS2Model(0, modbus), new El60v5Model(0, modbus),
-            new IO2Model(0, modbus), new StandRpsModel(0, modbus),
-            new StandPwr180Model(0, modbus), new Ps3Model(0, modbus),
-            new Simbat24Model(0, modbus), new Simbat48Model(0, modbus)
-        };
-        return models.SelectMany(model => model.RegisterItems.Select(register => new Entry(
-            model is Simbat24Model ? "SIMBAT 24" : model is Simbat48Model ? "SIMBAT 48" : model.DeviceType,
-            register.Address, register.Name, register.IsReadOnly, register.Area))).ToArray();
+        // The editor, discovery and offline help use the same supplied maps.
+        // Historical C# models retain their old maps for compatibility only.
+        return HardwarePresets.Load().SelectMany(device => device.Registers.Select(register => new Entry(
+            device.Name, register.Address, NameWithUnit(register), !register.Writable, register.Area))).ToArray();
     }
+
+    private static string NameWithUnit(RegisterDefinition register) => register.Name +
+        (string.IsNullOrWhiteSpace(register.Unit) ? "" : ", " + register.Unit);
 }

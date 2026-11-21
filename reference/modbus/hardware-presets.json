@@ -28,54 +28,6 @@
         "Category": "Измерения"
       },
       {
-        "Address": 1404,
-        "Name": "Макс. ток, канал A, мА",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1405,
-        "Name": "Макс. ток, канал B, мА",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1406,
-        "Name": "Макс. напряжение, канал A",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1407,
-        "Name": "Макс. напряжение, канал B",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1408,
-        "Name": "Мин. ток, канал A, мА",
-        "Writable": true,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1409,
-        "Name": "Мин. ток, канал B, мА",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1410,
-        "Name": "Мин. напряжение, канал A",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
-        "Address": 1411,
-        "Name": "Мин. напряжение, канал B",
-        "Writable": false,
-        "Category": "Статистика"
-      },
-      {
         "Address": 1412,
         "Name": "Установка нагрузки, канал A, мВт",
         "Writable": true,
@@ -113,39 +65,39 @@
       },
       {
         "Address": 1418,
-        "Name": "Макс. температура радиатора, канал A",
+        "Name": "Температура включения турбовентилятора, канал A",
         "Writable": true,
         "Category": "Управление температурой"
       },
       {
         "Address": 1419,
-        "Name": "Макс. температура радиатора, канал B",
+        "Name": "Температура включения турбовентилятора, канал B",
         "Writable": true,
         "Category": "Управление температурой"
       },
       {
         "Address": 1420,
-        "Name": "Авт. включение нагрузки, канал A",
+        "Name": "Автономный режим, канал A",
         "Writable": true,
         "RetryWriteOnMismatch": true,
         "Category": "Автоуправление"
       },
       {
         "Address": 1421,
-        "Name": "Авт. включение нагрузки, канал B",
+        "Name": "Автономный режим, канал B",
         "Writable": true,
         "RetryWriteOnMismatch": true,
         "Category": "Автоуправление"
       },
       {
         "Address": 1422,
-        "Name": "Авт. установка нагрузки, канал A",
+        "Name": "Нагрузка в автономном режиме, канал A",
         "Writable": true,
         "Category": "Автоуправление"
       },
       {
         "Address": 1423,
-        "Name": "Авт. установка нагрузки, канал B",
+        "Name": "Нагрузка в автономном режиме, канал B",
         "Writable": true,
         "Category": "Автоуправление"
       },
@@ -193,7 +145,12 @@
       }
     ],
     "IdentificationValue": 4,
-    "IdentificationAddress": 0
+    "IdentificationAddress": 0,
+    "RegisterMapSource": {
+      "Document": "Карта регистров СТЕНД-АПК-03.docx",
+      "DocumentDate": "2026-11-19",
+      "Sha256": "f17b71aaff4193e30e170d6347dc93c4423cf4c66552df32ac553cb387363dfa"
+    }
   },
   {
     "Name": "PWR-Tester",
@@ -853,7 +810,12 @@
       }
     ],
     "IdentificationValue": 5,
-    "IdentificationAddress": 0
+    "IdentificationAddress": 0,
+    "RegisterMapSource": {
+      "Document": "Карта регистров СТЕНД-АПК-03.docx",
+      "DocumentDate": "2026-11-19",
+      "Sha256": "f17b71aaff4193e30e170d6347dc93c4423cf4c66552df32ac553cb387363dfa"
+    }
   },
   {
     "Name": "SIMBAT-24",
@@ -878,20 +840,8 @@
         "Category": "Зарядка"
       },
       {
-        "Address": 1703,
-        "Name": "Макс. напряжение зарядки, мВ",
-        "Writable": false,
-        "Category": "Статистика зарядки"
-      },
-      {
-        "Address": 1704,
-        "Name": "Мин. напряжение зарядки, мВ",
-        "Writable": false,
-        "Category": "Статистика зарядки"
-      },
-      {
         "Address": 1705,
-        "Name": "Сопротивление контроля тока, Ом",
+        "Name": "Установка сопротивления (13–200)",
         "Writable": true,
         "Category": "Управление"
       },
@@ -912,18 +862,6 @@
         "Name": "Ток разрядки, мА",
         "Writable": false,
         "Category": "Разрядка"
-      },
-      {
-        "Address": 1709,
-        "Name": "Макс. напряжение разрядки, мВ",
-        "Writable": false,
-        "Category": "Статистика разрядки"
-      },
-      {
-        "Address": 1710,
-        "Name": "Мин. напряжение разрядки, мВ",
-        "Writable": false,
-        "Category": "Статистика разрядки"
       },
       {
         "Address": 1711,
@@ -963,7 +901,12 @@
       }
     ],
     "IdentificationValue": 9,
-    "IdentificationAddress": 0
+    "IdentificationAddress": 0,
+    "RegisterMapSource": {
+      "Document": "Карта регистров СТЕНД-АПК-03.docx",
+      "DocumentDate": "2026-11-19",
+      "Sha256": "f17b71aaff4193e30e170d6347dc93c4423cf4c66552df32ac553cb387363dfa"
+    }
   },
   {
     "Name": "Stand Rps",
@@ -1318,84 +1261,6 @@
         "Category": "Выходы"
       },
       {
-        "Address": 1202,
-        "Name": "Выход Sensor1",
-        "Writable": false,
-        "Category": "Сенсоры"
-      },
-      {
-        "Address": 1203,
-        "Name": "Выход Sensor2",
-        "Writable": false,
-        "Category": "Сенсоры"
-      },
-      {
-        "Address": 1204,
-        "Name": "Ключ зарядки",
-        "Writable": true,
-        "Category": "Зарядка"
-      },
-      {
-        "Address": 1205,
-        "Name": "Напряжение зарядки, мВ",
-        "Writable": false,
-        "Category": "Зарядка"
-      },
-      {
-        "Address": 1206,
-        "Name": "Ток зарядки, мА",
-        "Writable": false,
-        "Category": "Зарядка"
-      },
-      {
-        "Address": 1207,
-        "Name": "Макс. напряжение зарядки, мВ",
-        "Writable": false,
-        "Category": "Статистика зарядки"
-      },
-      {
-        "Address": 1208,
-        "Name": "Мин. напряжение зарядки, мВ",
-        "Writable": false,
-        "Category": "Статистика зарядки"
-      },
-      {
-        "Address": 1209,
-        "Name": "Сопротивление контроля тока, Ом",
-        "Writable": true,
-        "Category": "Управление"
-      },
-      {
-        "Address": 1210,
-        "Name": "Ключ разрядки",
-        "Writable": true,
-        "Category": "Разрядка"
-      },
-      {
-        "Address": 1211,
-        "Name": "Напряжение разрядки, мВ",
-        "Writable": false,
-        "Category": "Разрядка"
-      },
-      {
-        "Address": 1212,
-        "Name": "Ток разрядки, мА",
-        "Writable": false,
-        "Category": "Разрядка"
-      },
-      {
-        "Address": 1213,
-        "Name": "Макс. напряжение разрядки, мВ",
-        "Writable": false,
-        "Category": "Статистика разрядки"
-      },
-      {
-        "Address": 1214,
-        "Name": "Мин. напряжение разрядки, мВ",
-        "Writable": false,
-        "Category": "Статистика разрядки"
-      },
-      {
         "Address": 1215,
         "Name": "Реле нагревателя 1",
         "Writable": true,
@@ -1406,18 +1271,6 @@
         "Name": "Ток нагревателя 1, мА",
         "Writable": false,
         "Category": "Нагреватели"
-      },
-      {
-        "Address": 1217,
-        "Name": "Температура радиатора ЭН",
-        "Writable": false,
-        "Category": "Температура"
-      },
-      {
-        "Address": 1218,
-        "Name": "Макс. температура радиатора",
-        "Writable": true,
-        "Category": "Защита"
       },
       {
         "Address": 1219,
@@ -1439,7 +1292,12 @@
       }
     ],
     "IdentificationValue": 8,
-    "IdentificationAddress": 0
+    "IdentificationAddress": 0,
+    "RegisterMapSource": {
+      "Document": "Карта регистров СТЕНД-АПК-03.docx",
+      "DocumentDate": "2026-11-19",
+      "Sha256": "f17b71aaff4193e30e170d6347dc93c4423cf4c66552df32ac553cb387363dfa"
+    }
   },
   {
     "Name": "PS-2",
