@@ -161,7 +161,7 @@ public class UsabilityTests
                     Assert.Equal(original, GraphSerializer.Serialize(vm.TestVM, "Исходный профиль"));
                 }
                 finally { hardware.Close(); Dispatcher.UIThread.RunJobs(); }
-                Assert.Equal(56, UserGuide.All.Count);
+                Assert.Equal(UserGuide.All.Count, UserGuide.All.Select(a => a.Id).Distinct().Count());
                 Assert.Equal("reference-catalog", Assert.Single(UserGuide.Search("Справочник изделий, плат и Modbus")).Id);
                 Assert.Equal("report-template", Assert.Single(UserGuide.Search("Выбрать строки и переменные отчёта")).Id);
                 foreach (var node in vm.TestVM.AvailableNodes.Concat(new[] { new BodyStartNodeViewModel(), (TestBuilder.ViewModels.NodifyVM.NodeViewModel)new BodyEndNodeViewModel() }))
@@ -175,6 +175,20 @@ public class UsabilityTests
                 {
                     guide.Show(); Layout(guide); Capture(guide, $"guide-{dark}");
                     var search = guide.GetVisualDescendants().OfType<TextBox>().Single();
+                    var section = guide.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "GuideSection");
+                    var articles = guide.GetVisualDescendants().OfType<ListBox>().Single(c => c.Name == "GuideArticles");
+                    section.SelectedItem = "Профили"; Layout(guide);
+                    Assert.All(articles.Items.OfType<GuideArticle>(), a => Assert.Equal("Профили", a.Group));
+                    articles.SelectedItem = articles.Items.OfType<GuideArticle>().Single(a => a.Id == "profile-new"); Layout(guide);
+                    Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("пустой граф"));
+                    Capture(guide, $"guide-new-profile-{dark}");
+                    guide.Width = 850; guide.Height = 600; Layout(guide); Capture(guide, $"guide-narrow-{dark}");
+                    guide.Width = 1120; guide.Height = 820; Layout(guide);
+                    search.Text = "фотодатчиков"; Layout(guide);
+                    Assert.Empty(articles.Items);
+                    guide.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "ResetGuideSearch").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(guide);
+                    Assert.Equal("", search.Text); Assert.Equal(UserGuide.All.Count, articles.Items.Count);
+                    section.SelectedItem = "Справочник нод"; Layout(guide);
                     search.Text = "Проверка цвета светодиода"; Layout(guide);
                     Assert.Single(guide.GetVisualDescendants().OfType<ListBox>().Single().Items);
                     Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("фотодатчиков"));

@@ -36,6 +36,10 @@ public sealed class UserGuideWindow : Window
             Margin = new Thickness(0, 0, 0, 12)
         };
         var articles = errors ? TestErrorHelp.All : UserGuide.All;
+        const string allGroups = "Все разделы";
+        var groups = new ComboBox { Name = "GuideSection", ItemsSource = new[] { allGroups }.Concat(articles.Select(a => a.Group).Distinct()).ToArray(),
+            SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = !errors, Margin = new Thickness(0, 0, 0, 10) };
+        var matchCount = new TextBlock { Name = "GuideMatchCount", Margin = new Thickness(0, 0, 0, 8) };
         var list = new ListBox { ItemsSource = articles, Name = "GuideArticles" };
         list.ItemTemplate = new FuncDataTemplate<GuideArticle>((article, _) =>
         {
@@ -52,13 +56,23 @@ public sealed class UserGuideWindow : Window
         content.Children.Add(title); content.Children.Add(body);
         var scroll = new ScrollViewer { Content = content, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
         list.SelectionChanged += (_, _) => { if (list.SelectedItem is GuideArticle article) { title.Text = article.Title; body.ShowArticle(article); scroll.Offset = default; } };
-        search.TextChanged += (_, _) => {
+        void RefreshArticles()
+        {
             var query = search.Text?.Trim() ?? "";
+            var group = groups.SelectedItem as string;
+            var previous = list.SelectedItem as GuideArticle;
             var matches = articles.Where(article =>
+                (group == null || group == allGroups || article.Group == group) &&
                 (article.Title + "\n" + article.Group + "\n" + article.BodyText).Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-            list.ItemsSource = matches; list.SelectedIndex = matches.Length > 0 ? 0 : -1;
+            list.ItemsSource = matches; list.SelectedItem = matches.Contains(previous) ? previous : matches.FirstOrDefault();
+            matchCount.Text = $"Статей: {matches.Length} из {articles.Count}";
             if (matches.Length == 0) { title.Text = "Ничего не найдено"; body.Children.Clear(); }
-        };
+        }
+        search.TextChanged += (_, _) => RefreshArticles();
+        groups.SelectionChanged += (_, _) => RefreshArticles();
+        var resetSearch = new Button { Content = "Все разделы и статьи", Name = "ResetGuideSearch", IsVisible = !errors,
+            Margin = new Thickness(0, 0, 0, 10), HorizontalAlignment = HorizontalAlignment.Stretch };
+        resetSearch.Click += (_, _) => { search.Text = ""; groups.SelectedIndex = 0; RefreshArticles(); };
         var status = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
         var copy = new Button { Content = "Копировать статью" };
         copy.Click += async (_, _) => {
@@ -82,13 +96,17 @@ public sealed class UserGuideWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         buttons.Children.Add(copy); buttons.Children.Add(save); buttons.Children.Add(close);
         var footer = new StackPanel { Spacing = 8, Margin = new Thickness(0, 12, 0, 0) }; footer.Children.Add(status); footer.Children.Add(buttons);
-        var sidebar = new DockPanel { Margin = new Thickness(0, 0, 12, 0) }; DockPanel.SetDock(search, Dock.Top); sidebar.Children.Add(search); sidebar.Children.Add(list);
-        var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("280,*") }; columns.Children.Add(sidebar);
+        var navigation = new StackPanel();
+        if (!errors) navigation.Children.Add(new TextBlock { Text = "Раздел", Margin = new Thickness(0, 0, 0, 4) });
+        navigation.Children.Add(groups); navigation.Children.Add(search); navigation.Children.Add(resetSearch); navigation.Children.Add(matchCount);
+        var sidebar = new DockPanel { Margin = new Thickness(0, 0, 12, 0) }; DockPanel.SetDock(navigation, Dock.Top); sidebar.Children.Add(navigation); sidebar.Children.Add(list);
+        var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("300,*") }; columns.Children.Add(sidebar);
         var paper = new Border { Child = scroll, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1) };
         paper.Bind(Border.BackgroundProperty, new DynamicResourceExtension("SurfaceBrush")); paper.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("BorderBrush"));
         Grid.SetColumn(paper, 1); columns.Children.Add(paper);
         var root = new DockPanel { Margin = new Thickness(20) }; DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer); root.Children.Add(columns);
         Content = root;
+        RefreshArticles();
         list.SelectedItem = articles.FirstOrDefault(article => article.Id == selectedError?.Format()) ?? articles.FirstOrDefault();
         if (selectedError.HasValue && list.SelectedItem is { } selected)
             Opened += (_, _) => list.ScrollIntoView(selected);
