@@ -33,10 +33,10 @@ public class DeviceProfileTests
             try
             {
                 Layout(catalog);
-                Assert.Single(catalog.GetVisualDescendants().OfType<TextBox>()).Text = "026";
+                catalog.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch").Text = "026";
                 Layout(catalog);
-                var list = Assert.Single(catalog.GetVisualDescendants().OfType<ListBox>());
-                Assert.Equal("PSW-2G8F+Box", Assert.IsType<EquipmentModel>(Assert.Single(list.Items)).Name);
+                var list = catalog.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels");
+                Assert.Equal("PSW-2G8F+Box", Assert.IsType<EquipmentCatalogDataView.CatalogRow>(Assert.Single(list.ItemsSource.Cast<object>())).Name);
                 catalog.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-026.png"));
                 Press(catalog, "Редактировать изделие…");
                 var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
@@ -92,8 +92,17 @@ public class DeviceProfileTests
             {
                 catalog.Show();
                 Layout(catalog);
+                var dataSearch = catalog.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch");
+                dataSearch.Text = "нет такой модели в справочнике"; Layout(catalog);
+                var models = catalog.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels");
+                Assert.Empty(models.ItemsSource.Cast<object>());
+                Assert.True(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddCatalogDataModel").IsEnabled);
+                Assert.False(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "EditCatalogDataModel").IsEnabled);
                 Press(catalog, "Добавить изделие…");
                 var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                Assert.False(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddCatalogDataModel").IsEnabled);
+                Press(catalog, "Добавить изделие…");
+                Assert.Same(card, Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>()));
                 Layout(card);
                 Field(card, "Название изделия").Text = "Тестовая плата X1";
                 Field(card, "Альтернативные названия").Text = "Fixture X1";
@@ -110,15 +119,17 @@ public class DeviceProfileTests
                 Press(card, "Сохранить в справочник");
                 Assert.False(card.IsVisible);
                 var created = Assert.IsType<EquipmentModel>(EquipmentCatalog.Load(folder.Path).Resolve(null, "Fixture X1"));
+                Assert.Equal("", dataSearch.Text);
+                Assert.Equal(created.Id, Assert.IsType<EquipmentCatalogDataView.CatalogRow>(models.SelectedItem).Model.Id);
                 Assert.Equal("RTL-X1", created.EffectiveServerDeviceType);
                 Assert.Equal(321, created.LabelCode);
                 Assert.Equal("DIN", created.LabelVariants![2]);
                 Assert.Equal(new RtlReportSettings(17, true) { DeviceIdentifierVariable = "McuId", FailureDeviceIdentifier = "fixture-failures" }, created.RtlReport);
 
-                var search = Assert.Single(catalog.GetVisualDescendants().OfType<TextBox>());
+                var search = catalog.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch");
                 search.Text = "Fixture X1";
                 Layout(catalog);
-                Assert.Equal(created.Id, Assert.IsType<EquipmentModel>(Assert.Single(catalog.GetVisualDescendants().OfType<ListBox>()).SelectedItem).Id);
+                Assert.Equal(created.Id, Assert.IsType<EquipmentCatalogDataView.CatalogRow>(catalog.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels").SelectedItem).Model.Id);
                 Press(catalog, "Редактировать изделие…");
                 card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
                 Layout(card);

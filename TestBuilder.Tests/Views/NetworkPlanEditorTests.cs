@@ -1,3 +1,4 @@
+using TestBuilder.Tests.Support;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Interactivity;
@@ -30,7 +31,7 @@ public class NetworkPlanEditorTests
             var previous = settings.NetworkPlan;
             var oldTheme = Avalonia.Application.Current!.RequestedThemeVariant;
             Avalonia.Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
-            var plan = new BenchNetworkPlan();
+            var plan = NetworkTestPlans.TenPorts();
             plan.Addresses.Add(new() { Name = "Новая карта", Ip = "192.168.0.12" });
             settings.NetworkPlan = plan;
             var window = new NetworkPlanWindow { Width = 900 };
@@ -62,13 +63,13 @@ public class NetworkPlanEditorTests
         {
             var oldTheme = Avalonia.Application.Current!.RequestedThemeVariant;
             Avalonia.Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
-            var source = new BenchNetworkPlan();
+            var source = NetworkTestPlans.TenPorts();
             BenchNetworkPlan? saved = null;
             var window = new NetworkPlanWindow(source, plan => saved = plan) { Width = width };
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
-                Click(window, "Добавить карту"); Click(window, "Добавить карту");
+                Click(window, "Добавить порт"); Click(window, "Добавить порт");
                 window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 Assert.Equal(12, Grid(window).ItemsSource.Cast<BenchNetworkAddress>().Count());
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
@@ -94,7 +95,7 @@ public class NetworkPlanEditorTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            var source = new BenchNetworkPlan(); BenchNetworkPlan? saved = null;
+            var source = NetworkTestPlans.TenPorts(); BenchNetworkPlan? saved = null;
             var window = new NetworkPlanWindow(source, plan => saved = plan);
             try
             {
@@ -121,7 +122,7 @@ public class NetworkPlanEditorTests
         {
             var settings = AppSettings.Instance; var previous = settings.NetworkPlan;
             var oldBindings = settings.DataTestAdapterIds; var oldApplied = settings.AppliedDataTestAdapterIds;
-            var source = new BenchNetworkPlan(); settings.NetworkPlan = source;
+            var source = NetworkTestPlans.TenPorts(); settings.NetworkPlan = source;
             var cards = Enumerable.Range(2, 11).Select(i => new BenchAdapter($"card-{i}", $"Card {i}", "", "Down", $"192.168.0.{i}", 0)).ToArray();
             settings.DataTestAdapterIds = cards.Take(10).ToDictionary(c => c.Ipv4, c => c.Id);
             settings.AppliedDataTestAdapterIds = new() { ["10.1.1.2"] = "previous-card" };
@@ -135,7 +136,7 @@ public class NetworkPlanEditorTests
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
-                Click(window, "Добавить карту"); Click(window, "Сохранить план");
+                Click(window, "Добавить порт"); Click(window, "Сохранить план");
                 Assert.True(window.IsVisible);
                 Assert.Contains("Нет места на диске", window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "NetworkPlanError").Text);
                 Assert.Same(source, settings.NetworkPlan); Assert.Equal(10, vm.Rows.Count);
@@ -161,12 +162,12 @@ public class NetworkPlanEditorTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            var source = new BenchNetworkPlan(); var saves = 0;
+            var source = NetworkTestPlans.TenPorts(); var saves = 0;
             var window = new NetworkPlanWindow(source, _ => saves++);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
-                Click(window, "Добавить карту"); Click(window, "Отмена");
+                Click(window, "Добавить порт"); Click(window, "Отмена");
                 Assert.Equal(0, saves); Assert.Equal(10, source.Addresses.Count); Assert.False(window.IsVisible);
             }
             finally { window.Close(); }
@@ -179,7 +180,7 @@ public class NetworkPlanEditorTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            var source = new BenchNetworkPlan(); var saves = 0;
+            var source = NetworkTestPlans.TenPorts(); var saves = 0;
             var window = new NetworkPlanWindow(source, _ => saves++);
             try
             {
@@ -202,7 +203,7 @@ public class NetworkPlanEditorTests
     public void EditingPlanPreservesTheRememberedIdOfATemporarilyMissingCard()
     {
         var settings = AppSettings.Instance; var previous = settings.NetworkPlan; var bindings = settings.DataTestAdapterIds;
-        var source = new BenchNetworkPlan(); settings.NetworkPlan = source; settings.DataTestAdapterIds = new();
+        var source = NetworkTestPlans.TenPorts(); settings.NetworkPlan = source; settings.DataTestAdapterIds = new();
         var all = Enumerable.Range(2, 10).Select(i => new BenchAdapter($"card-{i}", $"Card {i}", "", "Up", $"192.168.0.{i}", 1000)).ToArray();
         var cards = all;
         try

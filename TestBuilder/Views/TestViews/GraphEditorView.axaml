@@ -220,25 +220,24 @@
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto">
         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,6" IsVisible="{Binding !IsActionGraphEditor}">
-          <TextBlock Text="Устройство" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+          <TextBlock Text="Изделие профиля" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondaryBrush}" />
           <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,0,6,0" VerticalAlignment="Center">
             <ComboBox x:Name="DeviceModelPicker" ItemsSource="{Binding EquipmentModels}"
                       SelectedItem="{Binding SelectedEquipmentModel, Mode=TwoWay}" PlaceholderText="{Binding EquipmentPlaceholder}"
                       HorizontalAlignment="Stretch" VerticalAlignment="Center" HorizontalContentAlignment="Stretch"
                       VerticalContentAlignment="Center" MinHeight="32" Padding="10,5"
                       IsEnabled="{Binding CanEditGraph}" AutomationProperties.Name="Устройство"
-                      ToolTip.Tip="Выберите устройство из справочника. Если его нет, нажмите «+».">
+                      ToolTip.Tip="Выберите устройство из справочника. Если нужной модели нет, нажмите «Новое изделие…».">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="services:EquipmentModel">
                   <TextBlock Text="{Binding Name}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <Button Grid.Column="1" x:Name="AddCatalogModelButton" Classes="graphTool icon" Margin="4,0,0,0"
+            <Button Grid.Column="1" x:Name="AddCatalogModelButton" Classes="graphTool" Margin="6,0,0,0"
+                    Content="Новое изделие…"
                     Click="OnAddCatalogModel" IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                    ToolTip.Tip="Добавить изделие в справочник" AutomationProperties.Name="Добавить изделие в справочник">
-              <PathIcon Width="16" Height="16" Data="M11 4 H13 V11 H20 V13 H13 V20 H11 V13 H4 V11 H11 Z" />
-            </Button>
+                    ToolTip.Tip="Создать модель в общем справочнике и выбрать её для текущего профиля" AutomationProperties.Name="Добавить изделие в справочник" />
           </Grid>
           <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource PrimarySoftBrush}" CornerRadius="6"
                   Margin="6,6,0,0" Padding="7,4" VerticalAlignment="Center"
@@ -290,9 +289,16 @@
           <Button Content="Состав отчёта…" Click="OnConfigureReportTemplate" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
                   ToolTip.Tip="Выбрать строки штатного и аварийного отчётов" AutomationProperties.Name="Состав отчёта" />
-          <Button x:Name="CatalogToolsButton" Content="Параметры" Classes="graphTool"
+          <Button x:Name="ProfileHardwareButton" Content="Оборудование профиля…" Click="OnOpenProfileHardware" Classes="graphTool"
+                  IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditHardware}"
+                  ToolTip.Tip="Устройства, регистры, линия Modbus и консоли. Сохраняются в JSON текущего профиля." />
+          <StackPanel IsVisible="{Binding ShowQuickActionTools}">
+            <Button x:Name="ProfileBoardButton" Content="Плата профиля…" Click="OnOpenProfileBoard" Classes="graphTool"
+                    IsVisible="{Binding IsBoardProfile}" IsEnabled="{Binding CanEditGraph}" ToolTip.Tip="Изображение и области платы текущего профиля" />
+          </StackPanel>
+          <Button x:Name="CatalogToolsButton" Content="Серия и этикетка" Classes="graphTool"
                   IsVisible="{Binding ShowQuickActionTools}" IsEnabled="{Binding CanEditQuickActions}"
-                  ToolTip.Tip="Серийные номера и этикетки выбранного изделия" AutomationProperties.Name="Параметры изделия">
+                  ToolTip.Tip="Серия и комплектация этикетки в текущем профиле" AutomationProperties.Name="Параметры изделия">
             <Button.Flyout>
               <Flyout Placement="Bottom">
                 <StackPanel Width="300" Spacing="8" x:DataType="vm:TestViewModel">

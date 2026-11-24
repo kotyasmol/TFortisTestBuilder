@@ -28,6 +28,7 @@ public partial class TestViewModel
     [RelayCommand(CanExecute = nameof(CanRetryProfilePreparation))]
     private async Task RetryProfilePreparationAsync()
     {
+        if (!CheckEditorInputs()) return;
         if (!CanRetryProfilePreparation) return;
         // Keep the open graph and unsaved edits. Recheck equipment only if its
         // previous validation was lost; preparation never starts the device test.

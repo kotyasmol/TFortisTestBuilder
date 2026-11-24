@@ -97,7 +97,7 @@ namespace TestBuilder.Domain.Steps
             IRawLabelPrinter printer,
             int printerTimeoutMs,
             DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
-            LabelTemplateDefinition? template = null, bool useLastTestLabel = false)
+            LabelTemplateDefinition? template = null, bool useLastTestLabel = false, bool preserveTemplate = false)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
@@ -115,8 +115,9 @@ namespace TestBuilder.Domain.Steps
             _manualMacAddress = manualMacAddress?.Trim() ?? string.Empty;
             _copies = Math.Max(1, copies);
             _useLastTestLabel = useLastTestLabel;
-            _template = (useLastTestLabel ? new LabelTemplateDefinition() :
-                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl")).CopyUpgraded();
+            var source = useLastTestLabel ? new LabelTemplateDefinition() :
+                template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl");
+            _template = preserveTemplate ? source.Copy() : source.CopyUpgraded();
             _template.Validate();
             _failOnPrinterError = failOnPrinterError;
             _printer = printer ?? throw new ArgumentNullException(nameof(printer));
@@ -138,7 +139,7 @@ namespace TestBuilder.Domain.Steps
             _logger.Info($"Повтор этикетки последнего теста: {label.Template.Name}, SN {label.Serial}, MAC {label.Mac}.");
             var step = new PrintLabelStep(_logger, printer, "", "", "", true, label.Serial, label.Mac,
                 _copies, label.Template.UseShortSerial, _failOnPrinterError, _printer, _printerTimeoutMs,
-                template: label.Template);
+                template: label.Template, preserveTemplate: true);
             var result = await step.ExecuteCoreAsync(context, cancellationToken, preserveTemplateName: true);
             context.SetVariable("PrintLabel.SerialSource", "LastTest");
             return result;
@@ -280,13 +281,12 @@ namespace TestBuilder.Domain.Steps
                     return Fail(context, 6, seriesError);
                 if (printTemplate.RequiresMac && series?.CheckMac(mac, fullSerial) is { } macError)
                     return Fail(context, 6, macError);
-                var barcode = printTemplate.Barcode(shortSerial);
                 printedSerial = fullSerial == 0 ? serial : fullSerial.ToString(CultureInfo.InvariantCulture);
                 printedMac = mac;
                 printedShortSerial = shortSerial;
                 language = printTemplate.Language;
                 logDescription =
-                    $"этикеток {printTemplate.Name}: SN={printedSerial}, MAC={mac}, barcode={barcode}";
+                    $"этикеток {printTemplate.Name}: полный SN={printedSerial}, MAC={mac}";
 
                 context.SetVariable("PrintLabel.Template", _template.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
@@ -296,12 +296,13 @@ namespace TestBuilder.Domain.Steps
                 context.SetVariable("PrintLabel.Mac", mac);
                 context.SetVariable("PrintLabel.MacSource", macSource);
                 context.SetVariable("PrintLabel.SerialShortSource", shortSerialSource);
-                context.SetVariable("PrintLabel.Barcode", barcode);
             }
             else
             {
                 if (model != null)
                 {
+                    if (LabelPrintContent.CheckBoardSerial(model, serial) is { } boardError)
+                        return Fail(context, 6, boardError);
                     if (model.RtlReport != null && !context.IssuedSerialNumber.HasValue)
                         return Fail(context, 6, "Сервер ещё не выдал номер для платы в текущем прогоне.");
                     if (!long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var fullSerial) || fullSerial <= 0)
@@ -316,7 +317,11 @@ namespace TestBuilder.Domain.Steps
             }
 
             string singleLabel;
-            try { singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, printedShortSerial, printedMac); }
+            try
+            {
+                singleLabel = LabelPrintContent.Render(printTemplate, printedSerial, printedShortSerial, printedMac);
+                context.SetVariable("PrintLabel.SerialText", printTemplate.RenderSerialText(printedSerial, printedShortSerial, printedMac));
+            }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException or OverflowException)
             { return Fail(context, 6, ex.Message); }
             var parsedLabel = LabelPreview.Parse(printTemplate, singleLabel);
@@ -472,6 +477,7 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.CompletionStatus", string.Empty);
             context.SetVariable("PrintLabel.PrinterName", string.Empty);
             context.SetVariable("PrintLabel.Serial", string.Empty);
+            context.SetVariable("PrintLabel.SerialText", string.Empty);
             context.SetVariable("PrintLabel.SerialSource", string.Empty);
             context.SetVariable("PrintLabel.Template", string.Empty);
             context.SetVariable("PrintLabel.FullSerial", 0);

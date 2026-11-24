@@ -20,7 +20,7 @@ namespace TestBuilder.Tests.Views;
 public class ProfileListMenuTests
 {
     [Fact]
-    public async Task NewIsByDateAndManualCurrentKeepsProductionVisibleInBothMenus()
+    public async Task MarkedAndNewProfilesStayHiddenUntilTheGroupIsExpanded()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
@@ -36,6 +36,10 @@ public class ProfileListMenuTests
             Assert.True(vm.Profiles.Single(p => p.IsDiagnostic).IsLatest);
             Assert.False(source.IsMarkedCurrent);
             await vm.ToggleProfileCurrentCommand.ExecuteAsync(source);
+            Assert.Empty(Assert.Single(vm.EngineerProfileGroups).VisibleProfiles);
+            Assert.Empty(Assert.Single(vm.StationProfileGroups).VisibleProfiles);
+            vm.EngineerProfileGroups.Single().ToggleExpandedCommand.Execute(null);
+            vm.StationProfileGroups.Single().ToggleExpandedCommand.Execute(null);
             Assert.Equal(2, Assert.Single(vm.EngineerProfileGroups).VisibleProfiles.Count());
             Assert.Equal(2, Assert.Single(vm.StationProfileGroups).VisibleProfiles.Count());
             Assert.True(source.IsMarkedCurrent);
@@ -49,7 +53,7 @@ public class ProfileListMenuTests
     }
 
     [Fact]
-    public async Task NewestProfilePerModel_IsVisibleInBothMenus_AndUpdatesOnlyItsGroup()
+    public async Task NewestProfilesAppearOnlyAfterExpansionInBothMenus()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
@@ -76,18 +80,30 @@ public class ProfileListMenuTests
                 Assert.Equal(modelA.ModelGroupKey, vm.EngineerProfileGroups.First().Key);
                 var engineerGroup = vm.EngineerProfileGroups.Single(g => g.Key == latest.ModelGroupKey);
                 Assert.False(engineerGroup.IsExpanded);
-                Assert.Same(latest, Assert.Single(engineerGroup.VisibleProfiles));
-                Assert.Equal(2, Badges(engineer).Count());
-                var row = engineer.GetVisualDescendants().OfType<ListBoxItem>()
-                    .Single(item => ReferenceEquals(item.DataContext, latest));
-                Click(window, row);
-                Assert.Same(latest, vm.SelectedProfile);
-                engineerGroup.ToggleExpandedCommand.Execute(null);
-                Layout(window);
+                Assert.Empty(engineerGroup.VisibleProfiles);
+                Assert.Empty(Badges(engineer));
+                Assert.DoesNotContain(engineer.GetVisualDescendants().OfType<ListBoxItem>(), item => item.IsEffectivelyVisible);
+                var engineerHeader = engineer.GetVisualDescendants().OfType<Button>()
+                    .Single(button => ReferenceEquals(button.Command, engineerGroup.ToggleExpandedCommand));
+                Click(window, engineerHeader);
+                Assert.True(engineerGroup.IsExpanded);
+                Assert.Single(Badges(engineer));
                 Assert.Equal(new[] { newestPath, oldPath, legacyPath }, engineer.GetVisualDescendants().OfType<ListBoxItem>()
                     .Select(item => (GraphProfile)item.DataContext!)
                     .Where(profile => profile.ModelGroupKey == latest.ModelGroupKey)
                     .Select(profile => profile.FilePath));
+                var row = engineer.GetVisualDescendants().OfType<ListBoxItem>()
+                    .Single(item => ReferenceEquals(item.DataContext, latest));
+                Click(window, row);
+                Assert.Same(latest, vm.SelectedProfile);
+                var opened = GraphSerializer.Serialize(vm, vm.CurrentProfileName);
+                Click(window, engineerHeader);
+                Layout(window);
+                Assert.False(engineerGroup.IsExpanded);
+                Assert.Empty(engineerGroup.VisibleProfiles);
+                Assert.Empty(Badges(engineer));
+                Assert.Same(latest, vm.SelectedProfile);
+                Assert.Equal(opened, GraphSerializer.Serialize(vm, vm.CurrentProfileName));
 
                 vm.IsOperatorView = true;
                 window.Content = station;
@@ -95,8 +111,17 @@ public class ProfileListMenuTests
                 Assert.Equal(modelA.ModelGroupKey, vm.StationProfileGroups.First().Key);
                 var stationGroup = vm.StationProfileGroups.Single(g => g.Key == latest.ModelGroupKey);
                 Assert.False(stationGroup.IsExpanded);
-                Assert.Same(latest, Assert.Single(stationGroup.VisibleProfiles).Profile);
-                Assert.Equal(2, Badges(station).Count());
+                Assert.Empty(stationGroup.VisibleProfiles);
+                Assert.Empty(Badges(station));
+                var stationHeader = station.GetVisualDescendants().OfType<Button>()
+                    .Single(button => ReferenceEquals(button.Command, stationGroup.ToggleExpandedCommand));
+                Click(window, stationHeader);
+                Assert.Equal(3, stationGroup.VisibleProfiles.Count());
+                Assert.Single(Badges(station));
+                Click(window, stationHeader);
+                Assert.Empty(stationGroup.VisibleProfiles);
+                Assert.Same(latest, vm.SelectedProfile);
+                Assert.Equal(opened, GraphSerializer.Serialize(vm, vm.CurrentProfileName));
                 vm.StationProfileSearch = "Архив";
                 Layout(window);
                 Assert.Empty(Badges(station));
@@ -110,7 +135,7 @@ public class ProfileListMenuTests
                 Assert.True(modelA.IsLatest);
                 Assert.Equal(legacyPath, engineerGroup.Profiles.First().FilePath);
                 Assert.Equal(legacyPath, stationGroup.Profiles.First().Profile.FilePath);
-                Assert.Equal(2, Badges(station).Count());
+                Assert.Single(Badges(station));
                 var badge = Badges(station).Single(b => ((StationProfileOptionViewModel)b.DataContext!).Profile.FilePath == legacyPath);
                 Assert.Same(latest, vm.SelectedProfile);
                 var button = badge.GetVisualAncestors().OfType<Button>().First();
@@ -260,6 +285,7 @@ public class ProfileListMenuTests
 
             Task OpenDeleteMenu(GraphProfile profile)
             {
+                foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true;
                 Layout(window);
                 var item = view.GetVisualDescendants().OfType<ListBoxItem>().Single(x => ReferenceEquals(x.DataContext, profile));
                 var point = item.TranslatePoint(new Point(30, item.Bounds.Height / 2), window)!.Value;

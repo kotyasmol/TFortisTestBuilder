@@ -22,6 +22,7 @@ public sealed record EquipmentTemplate(string Id, DeviceDefinition Device, bool 
 public sealed class EquipmentLibrary
 {
     private readonly string _path;
+    public string StoragePath => Path.GetFullPath(_path);
     public EquipmentLibrary(string? path = null) => _path = path ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TFortisTestBuilder", "equipment-library.json");
     private static T Copy<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value))!;
@@ -33,16 +34,63 @@ public sealed class EquipmentLibrary
         if (!File.Exists(_path)) return new();
         var entries = JsonSerializer.Deserialize<List<EquipmentTemplate>>(File.ReadAllText(_path))
             ?? throw new InvalidOperationException("Каталог оборудования пуст или повреждён.");
+        ValidateEntries(entries);
+        return entries;
+    }
+    private static void ValidateEntries(List<EquipmentTemplate> entries)
+    {
         foreach (var entry in entries)
         {
             if (entry == null || entry.IsBuiltIn || !Guid.TryParse(entry.Id, out _))
                 throw new InvalidOperationException("Некорректная запись каталога оборудования.");
             Validate(entry.Device);
         }
-        if (entries.Select(e => e.Id).Distinct().Count() != entries.Count)
+        if (entries.Select(e => e.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entries.Count)
             throw new InvalidOperationException("В каталоге повторяются идентификаторы оборудования.");
-        return entries;
+        if (entries.Select(e => e.Device.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entries.Count)
+            throw new InvalidOperationException("В каталоге повторяются названия оборудования.");
     }
+
+    public string ExportJson() => JsonSerializer.Serialize(new Transfer(1, ReadCustom()), new JsonSerializerOptions { WriteIndented = true });
+
+    public EquipmentLibraryImport PreviewImport(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        List<EquipmentTemplate> incoming;
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+            incoming = JsonSerializer.Deserialize<List<EquipmentTemplate>>(json) ?? throw new InvalidOperationException("Пустой каталог.");
+        else
+        {
+            var transfer = JsonSerializer.Deserialize<Transfer>(json) ?? throw new InvalidOperationException("Пустой каталог.");
+            if (transfer.SchemaVersion != 1) throw new InvalidOperationException("Неизвестная версия каталога оборудования.");
+            incoming = transfer.Entries ?? throw new InvalidOperationException("В файле нет записей каталога.");
+        }
+        ValidateEntries(incoming);
+        var current = ReadCustom();
+        var original = JsonSerializer.Serialize(current);
+        var added = 0; var updated = 0; var unchanged = 0;
+        var changes = new List<string>();
+        foreach (var entry in incoming)
+        {
+            var copy = Copy(entry); copy.Device.SlaveId = 1; copy.Device.Name = copy.Device.Name.Trim();
+            var index = current.FindIndex(e => e.Id.Equals(entry.Id, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) { current.Add(copy); added++; changes.Add("Добавить: " + copy.Device.Name); }
+            else if (JsonSerializer.Serialize(current[index]) == JsonSerializer.Serialize(copy)) unchanged++;
+            else { current[index] = copy; updated++; changes.Add("Обновить: " + copy.Device.Name); }
+        }
+        ValidateEntries(current);
+        return new EquipmentLibraryImport(added, updated, unchanged, original, current, changes);
+    }
+
+    public void ApplyImport(EquipmentLibraryImport preview)
+    {
+        if (JsonSerializer.Serialize(ReadCustom()) != preview.Original)
+            throw new InvalidOperationException("Каталог изменился. Отмените импорт и выберите файл заново.");
+        ValidateEntries(preview.Entries);
+        Write(Copy(preview.Entries));
+    }
+
+    private sealed record Transfer(int SchemaVersion, List<EquipmentTemplate> Entries);
     public EquipmentTemplate Save(DeviceDefinition device, string? id = null)
     {
         var snapshot = Copy(device);
@@ -84,3 +132,6 @@ public sealed class EquipmentLibrary
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 }
+
+public sealed record EquipmentLibraryImport(int Added, int Updated, int Unchanged,
+    string Original, List<EquipmentTemplate> Entries, List<string> Changes);

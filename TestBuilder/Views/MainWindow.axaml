@@ -14,7 +14,7 @@
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Image Source="/Assets/Brand/tfortis-test-icon.png" Width="28" Height="28" Margin="0,0,16,0" ToolTip.Tip="TFortis TestBuilder" />
-        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding !IsSettingsOpen}">
+        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsWorkspaceOpen}">
           <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsEngineerWorkspace}">
             <Button Content="Редактор" Classes="workspaceNav" Padding="7,7" Classes.active="{Binding IsEditorPage}" Command="{Binding SelectPageCommand}" CommandParameter="Editor" />
             <Button Content="Регистры" Classes="workspaceNav" Padding="7,7" Classes.active="{Binding IsRegistersPage}" Command="{Binding SelectPageCommand}" CommandParameter="Registers" />
@@ -25,17 +25,20 @@
           </WrapPanel>
           <TextBlock Text="Пульт" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding !IsEngineerWorkspace}" />
         </StackPanel>
-        <TextBlock Grid.Column="1" Text="Настройки" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsSettingsOpen}" />
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsSettingsOpen}">
-          <Button Content="Оборудование" Click="OnOpenHardware" IsVisible="{Binding IsEngineerWorkspace}" ToolTip.Tip="Устройства и регистры этого профиля" />
-          <Button Content="Плата" Click="OnOpenBoard" IsVisible="{Binding ShowBoardEditor}" />
+        <TextBlock Grid.Column="1" Text="Настройки компьютера" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsSettingsOpen}" />
+        <TextBlock Grid.Column="1" Text="Оборудование профиля" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsHardwareOpen}" />
+        <TextBlock Grid.Column="1" Text="Каталог оборудования" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsEquipmentLibraryOpen}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsWorkspaceOpen}">
+          <Button x:Name="EquipmentLibraryNavigationButton" Content="Каталог оборудования" Click="OnOpenEquipmentLibrary" IsVisible="{Binding IsEngineerWorkspace}" ToolTip.Tip="Общие шаблоны устройств, импорт и экспорт каталога" />
           <Button Content="{Binding SwitchWorkspaceTitle}" Command="{Binding SwitchWorkspaceCommand}" />
-          <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" />
+          <Button Content="Настройки компьютера" Command="{Binding OpenSettingsCommand}" />
         </StackPanel>
         <Button Grid.Column="2" Content="Вернуться к работе" Command="{Binding CloseSettingsCommand}" IsVisible="{Binding IsSettingsOpen}" />
+        <Button Grid.Column="2" Content="Отменить изменения оборудования" Click="OnCancelHardware" IsVisible="{Binding IsHardwareOpen}" />
+        <Button Grid.Column="2" Content="Вернуться к работе" Click="OnCloseEquipmentLibrary" IsVisible="{Binding IsEquipmentLibraryOpen}" />
       </Grid>
     </Border>
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" IsVisible="{Binding !IsSettingsOpen}">
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" IsVisible="{Binding IsWorkspaceOpen}">
       <views:ProfileActionBar x:Name="OperatorQuickActions" Grid.Column="1" IsRightDocked="True"
                               DataContext="{Binding TestVM}" IsVisible="{Binding IsOperatorView}" />
       <Grid x:Name="WorkspaceContent">
@@ -52,6 +55,8 @@
         </Grid>
       </Grid>
     </Grid>
+    <ContentControl x:Name="HardwareWorkspaceHost" Grid.Row="1" IsVisible="{Binding IsHardwareOpen}" />
+    <ContentControl x:Name="EquipmentLibraryWorkspaceHost" Grid.Row="1" IsVisible="{Binding IsEquipmentLibraryOpen}" />
     <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding IsSettingsOpen}">
       <views:SettingsView x:Name="ShellSettingsViewControl" />
       <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16" Margin="16,8">

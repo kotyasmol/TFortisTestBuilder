@@ -17,7 +17,7 @@ public sealed class NetworkPresetItem
     public NetworkConfigurationPreset Definition { get; }
     public bool IsCustom { get; }
     public string Name => Definition.Name;
-    public string Description => $"Карт: {Definition.Plan.Addresses.Count}; пар: {Definition.Plan.Addresses.Count(a => a.IncludeInDataTest) / 2}";
+    public string Description => $"Адресов плана: {Definition.Plan.Addresses.Count}; пар: {Definition.Plan.Addresses.Count(a => a.IncludeInDataTest) / 2}";
     public IRelayCommand LoadCommand { get; }
     internal NetworkPresetItem(NetworkConfigurationPreset definition, bool custom, Action<NetworkPresetItem> load, Func<bool> allowed)
     {
@@ -31,7 +31,10 @@ public partial class NetworkSetupViewModel
     private Action _saveNetworkSettings = () => AppSettings.Instance.SaveChecked();
     private Func<IReadOnlyList<NetworkConfigurationPreset>> _loadBundledPresets = NetworkPresetCatalog.LoadBundled;
     public ObservableCollection<NetworkPresetItem> Presets { get; } = new();
-    [ObservableProperty] private string presetStatus = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPresetStatus))]
+    private string presetStatus = "";
+    public bool HasPresetStatus => !string.IsNullOrWhiteSpace(PresetStatus);
     [ObservableProperty] private NetworkPresetItem? loadedPreset;
     public bool CanDeletePreset => CanEdit && LoadedPreset?.IsCustom == true;
     partial void OnLoadedPresetChanged(NetworkPresetItem? value) => DeletePresetCommand.NotifyCanExecuteChanged();
@@ -80,7 +83,7 @@ public partial class NetworkSetupViewModel
         {
             if (choices.TryGetValue(ip, out var selected)) return selected;
             if (AppSettings.Instance.DataTestAdapterIds?.TryGetValue(ip, out var saved) == true) return saved;
-            var owners = Adapters.Where(a => a.Ipv4.Split(", ").Contains(ip)).Take(2).ToArray();
+            var owners = TestAdapters.Where(a => a.Ipv4.Split(", ").Contains(ip)).Take(2).ToArray();
             return owners.Length == 1 ? owners[0].Id : null;
         }
         return plan.Addresses.ToDictionary(a => a.Ip, a => Choice(a.Ip));

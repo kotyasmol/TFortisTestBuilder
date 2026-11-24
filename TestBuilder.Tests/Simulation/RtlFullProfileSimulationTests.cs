@@ -6,6 +6,7 @@ using TestBuilder.Domain.Execution;
 using TestBuilder.Domain.Modbus;
 using TestBuilder.Domain.Monitoring;
 using TestBuilder.Services;
+using TestBuilder.Services.Graph;
 using TestBuilder.Services.Modbus;
 using TestBuilder.Tests.SerializationTests;
 using TestBuilder.Tests.Support;
@@ -41,7 +42,7 @@ public class RtlFullProfileSimulationTests
         await session.Dispatch<bool>(async () =>
         {
             var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
-            var name = $"RTL_{board}_board.json";
+            var name = $"RTL-{board} · Проверка платы · 11.11.26.json";
             var source = File.ReadAllText(Path.Combine(root, "profiles", name));
             var key = $"{board}-{fault}-{(originalTiming ? "original" : "fast")}";
             var evidenceRoot = Environment.GetEnvironmentVariable("TFORTIS_RTL_EVIDENCE") ?? Path.Combine(Path.GetTempPath(), "tfortis-rtl-simulation");
@@ -75,7 +76,10 @@ public class RtlFullProfileSimulationTests
             changes.Add(originalTiming ? "Все задержки и период опроса исходные" : "Паузы ≤50 мс, интервалы повторов ≤15 мс, опрос 10 мс");
             changes.Add("Имитация длительности K5/VCC (UART в 4 раза быстрее): " + (originalTiming ? "3 с" : "200 мс") + "; переход состояния зависит от времени, не от числа чтений");
             changes.Add("HTTP и принтер перехвачены в памяти; локальные отчёты в папке сценария; Stand ID = SIMULATION");
-            var settings = AppSettings.Instance; var oldStand = settings.StandId; settings.StandId = "SIMULATION";
+            var settings = AppSettings.Instance; var oldStand = settings.StandId; var oldServer = settings.ServerBaseUrl;
+            var oldStartup = App.StartupOptions;
+            settings.StandId = "SIMULATION"; settings.ServerBaseUrl = "http://simulation.invalid";
+            App.ConfigureStartupArguments(new[] { "simulation-session", "Оператор" });
             var rig = new RtlSimulatedRig(board == "SW", fault, originalTiming ? TimeSpan.FromSeconds(3) : TimeSpan.FromMilliseconds(200));
             var manager = new SlaveManager(rig);
             var state = new RegisterState();
@@ -96,6 +100,8 @@ public class RtlFullProfileSimulationTests
                     RequireFreshMonitoring = true, MaxRegisterAgeMs = 10000,
                     ModbusRegisters = new(manager.GetSlavesSnapshot()), RegisterMonitor = monitor,
                     CancellationToken = cts.Token, IsConnected = true, ProfileName = vm.CurrentProfileName,
+                    ProductionModel = vm.ReadCatalogModelForEditing(), DeviceModel = vm.RootGraph.DeviceModel,
+                    LabelVariant = vm.RootGraph.LabelVariant,
                     OperatorPrompt = message => { rig.Record("operator-confirmed", message); return Task.FromResult(true); },
                     OperatorInput = (message, _) => { rig.Record("operator-input", message); return Task.FromResult<string?>(RtlSimulatedRig.CpuId); },
                     ExecutionObserver = new TraceObserver(vm, rig)
@@ -108,6 +114,7 @@ public class RtlFullProfileSimulationTests
                 catch (OperationCanceledException) when (cts.IsCancellationRequested) { status = ExecutionStatus.Cancelled; }
                 if (status != ExecutionStatus.Completed)
                 {
+                    ctx.SetVariable("Execution.SendFailureReport", FailureReportPolicy.ShouldSend(status, ctx, false, false, false));
                     // Same top-level RunOnFailure policy as TestViewModel: preserve failure,
                     // run every enabled cleanup in profile order with a fresh cancellation token.
                     ctx.HasCriticalError = true; ctx.SkipFirstRunNodes = false; ctx.IsCleanup = true; rig.Cleanup = true;
@@ -142,11 +149,12 @@ public class RtlFullProfileSimulationTests
                 {
                     Assert.Equal(ExecutionStatus.Completed, status); Assert.False(ctx.HasCriticalError);
                     Assert.All(ctx.ReportEntries, e => Assert.True(e.IsSuccess, e.Name));
-                    Assert.Single(rig.SerialRequests); Assert.Contains(RtlSimulatedRig.CpuId, rig.SerialRequests[0]);
+                    if (board == "SW") { Assert.Single(rig.SerialRequests); Assert.Contains(RtlSimulatedRig.CpuId, rig.SerialRequests[0]); }
+                    else Assert.Empty(rig.SerialRequests); // PoE receives its number in the report response.
                     if (fault == "as-shipped") { Assert.Empty(rig.Reports); Assert.Empty(rig.Labels); }
                     else
                     {
-                        Assert.Single(rig.Reports); Assert.Contains("test_result=true=1", rig.Reports[0]);
+                        Assert.Single(rig.Reports); AssertReportSuccess(rig.Reports[0], true);
                         Assert.Equal("Sent", ctx.GetVariable<string>("ReportDelivery.Status"));
                         Assert.NotEmpty(Directory.GetFiles(Path.Combine(folder, "local-reports")));
                     }
@@ -166,27 +174,39 @@ public class RtlFullProfileSimulationTests
                     foreach (var a in board == "SW" ? new[] { 2324, 2326, 2328, 2331 } : new[] { 2494 })
                     { Assert.Contains((a, 1), rig.StatusSamples); Assert.Contains((a, 2), rig.StatusSamples); }
                     if (board == "SW" && fault != "as-shipped" || fault == "print-enabled")
-                    { Assert.Single(rig.Labels); Assert.Contains("123456", rig.Labels[0]); Assert.Contains("P1", rig.Labels[0]); }
+                    { Assert.Single(rig.Labels); Assert.Contains(rig.ProductSerial.ToString(), rig.Labels[0]); Assert.Contains("P1", rig.Labels[0]); }
                     else Assert.Empty(rig.Labels);
                 }
                 else
                 {
-                    if (fault != "server") Assert.NotEqual(ExecutionStatus.Completed, status);
-                    if (fault == "server") { Assert.Equal("Failed", ctx.GetVariable<string>("ReportDelivery.Status")); Assert.True(rig.Reports.Count >= 3); }
+                    if (fault != "server" && !(board == "POE" && fault == "serial")) Assert.NotEqual(ExecutionStatus.Completed, status);
+                    if (fault == "server")
+                    {
+                        Assert.Equal("Failed", ctx.GetVariable<string>("ReportDelivery.Status"));
+                        Assert.Single(rig.Reports); // Both current profiles explicitly disable report retries.
+                    }
                     if (fault == "firmware") Assert.Contains("PoeFirmware", ctx.CriticalFailure?.Summary ?? ctx.Failure?.Summary ?? "");
                     if (fault == "poe-line") { Assert.Contains(ctx.ReportEntries, e => e.Name == "PoE 1A" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "PoE 8B" && e.IsSuccess); }
                     if (fault == "k5") { Assert.Contains(ctx.ReportEntries, e => e.Name == "K5 VMAIN" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "K5 VRES" && e.IsSuccess); }
                     if (fault == "led") { Assert.Contains(ctx.ReportEntries, e => e.Name == "Цвет Led1A" && !e.IsSuccess); Assert.Contains(ctx.ReportEntries, e => e.Name == "Цвет Led8B" && e.IsSuccess); }
-                    if (board == "POE" && fault is "voltage" or "poe-line" or "led" or "uart" or "uart-voltage" or "cancel" or "disconnect" or "bus-lost" or "short-read" or "write")
-                    { Assert.Single(rig.Reports); Assert.Contains("test_result=true=0", rig.Reports[0]); }
-                    if (fault == "serial") Assert.Empty(rig.Reports);
+                    if (board == "POE" && fault is "voltage" or "poe-line" or "led" or "uart" or "uart-voltage" or "write")
+                    { Assert.Single(rig.Reports); AssertReportSuccess(rig.Reports[0], false); }
+                    if (fault is "cancel" or "disconnect" or "bus-lost" or "short-read")
+                    {
+                        if (status == ExecutionStatus.Cancelled) Assert.Empty(rig.Reports);
+                        else { Assert.Single(rig.Reports); AssertReportSuccess(rig.Reports[0], false); }
+                    }
+                    if (fault == "serial") Assert.NotEmpty(rig.Reports);
                     if (fault == "printer") Assert.Single(rig.Labels);
                 }
                 verified = true;
             }
             finally
             {
-                await monitor.StopAsync(); settings.StandId = oldStand;
+                await monitor.StopAsync(); settings.StandId = oldStand; settings.ServerBaseUrl = oldServer;
+                App.ConfigureStartupArguments(oldStartup.LauncherHelpType is { } help
+                    ? new[] { oldStartup.SessionId, oldStartup.UserName, help.ToString(System.Globalization.CultureInfo.InvariantCulture) }
+                    : new[] { oldStartup.SessionId, oldStartup.UserName });
                 var opts = new JsonSerializerOptions { WriteIndented = true };
                 File.WriteAllText(Path.Combine(folder, "result.json"), JsonSerializer.Serialize(new
                 {
@@ -203,6 +223,12 @@ public class RtlFullProfileSimulationTests
             }
             return true;
         }, CancellationToken.None);
+    }
+
+    private static void AssertReportSuccess(string body, bool expected)
+    {
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal(expected, json.RootElement.GetProperty("result").GetProperty("isSuccess").GetBoolean());
     }
 
     sealed class TraceObserver(TestViewModel vm, RtlSimulatedRig rig) : IExecutionObserver

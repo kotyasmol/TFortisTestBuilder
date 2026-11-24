@@ -26,6 +26,7 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
     readonly TimeSpan operationTime;
     readonly Stopwatch clock = Stopwatch.StartNew();
     readonly bool sw;
+    public int ProductSerial => sw ? 31312345 : 31212345;
     public string Fault { get; }
     public ConcurrentQueue<object> Trace { get; } = new();
     public List<(int Address, int Value)> Writes { get; } = new();
@@ -195,7 +196,7 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
     public Task<HttpRequestResult> GetAsync(string url, TimeSpan timeout, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested(); SerialRequests.Add(url); Record("serial-number-request", url);
-        return Task.FromResult(HttpRequestResult.Success(200, Fault == "serial" ? "not-a-number" : "123456", TimeSpan.Zero));
+        return Task.FromResult(HttpRequestResult.Success(200, Fault == "serial" ? "not-a-number" : ProductSerial.ToString(System.Globalization.CultureInfo.InvariantCulture), TimeSpan.Zero));
     }
     public HttpClient CreateReportClient() => new(new ReportHandler(this));
     sealed class ReportHandler(RtlSimulatedRig rig) : HttpMessageHandler
@@ -206,7 +207,8 @@ internal sealed class RtlSimulatedRig : IModbusService, IHttpRequestService, ISe
             var body = await request.Content!.ReadAsStringAsync(ct);
             rig.Reports.Add(body); rig.Record("report", new { url = request.RequestUri.ToString(), contentType = request.Content.Headers.ContentType?.ToString(), body });
             return new HttpResponseMessage(rig.Fault == "server" ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
-                { Content = new StringContent(rig.Fault == "server" ? "Unavailable" : "Ok") };
+                { Content = new StringContent(rig.Fault == "server" ? "Unavailable" : JsonSerializer.Serialize(new
+                    { id = 10, serialNumber = rig.Fault == "serial" ? 0 : rig.ProductSerial, deviceType = rig.sw ? 5 : 6 })) };
         }
     }
     public RawLabelPrintResult Print(string printerName, byte[] bytes, CancellationToken ct)

@@ -404,7 +404,7 @@ public partial class EngineerProfileGroup : ViewModelBase
     public string Name { get; }
     public string Key { get; }
     public ObservableCollection<GraphProfile> Profiles { get; } = new();
-    public IEnumerable<GraphProfile> VisibleProfiles => IsExpanded ? Profiles : Profiles.Where(p => p.IsMarkedCurrent || p.IsLatest);
+    public IEnumerable<GraphProfile> VisibleProfiles => IsExpanded ? Profiles : Array.Empty<GraphProfile>();
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VisibleProfiles))]
     private bool isExpanded;

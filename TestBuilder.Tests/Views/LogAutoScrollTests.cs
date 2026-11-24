@@ -212,7 +212,8 @@ public class LogAutoScrollTests
                 Assert.True(startWasVisibleDuringRun);
                 Assert.True(toggle.IsChecked);
                 var entries = list.Items.Cast<LogEntry>().ToArray();
-                Assert.StartsWith("Запуск теста:", entries.First().Message);
+                Assert.StartsWith("Среда запуска:", entries.First().Message);
+                Assert.Contains(entries, entry => entry.Message.StartsWith("Запуск теста:"));
                 Assert.DoesNotContain(entries, entry => entry.Message.StartsWith("Previous "));
                 Assert.Contains(entries, entry => entry.Message.Contains("[OK] Тест завершён."));
                 Assert.Equal(previousContents, File.ReadAllText(previousFile));

@@ -5,104 +5,158 @@
              x:Class="TestBuilder.Views.NetworkSetupView"
              x:DataType="vm:NetworkSetupViewModel">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Margin="20,10" Spacing="8">
-      <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-      <WrapPanel>
-        <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}" Margin="0,0,12,6"/>
-        <Button Content="Применить адреса" Command="{Binding ApplyCommand}" Margin="0,0,12,6"/>
-        <TextBlock Text="Для изменения IP нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center" TextWrapping="Wrap"/>
-      </WrapPanel>
+    <StackPanel DockPanel.Dock="Bottom" Margin="20,10" Spacing="8" IsVisible="{Binding HasNetworkActivity}">
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
+      <Button Content="Остановить проверку связи" Command="{Binding CancelProbeCommand}" IsVisible="{Binding CanCancelProbe}" HorizontalAlignment="Left"/>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="15"/>
     </StackPanel>
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="14" MinWidth="760" MaxWidth="1400">
-      <TextBlock Text="Сеть стенда" Classes="pageTitle"/>
-      <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
+      <TextBlock Text="Сетевые карты компьютера" Classes="pageTitle"/>
       <WrapPanel Classes="actions" IsEnabled="{Binding CanEdit}">
         <Button Content="Обновить состояние" Command="{Binding RefreshCommand}"/>
-        <Button Content="Названия, порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
-        <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
-      </WrapPanel>
-      <Expander Header="Наборы, связь и компоненты" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="14">
-      <Border Classes="card" Padding="12">
-        <StackPanel Spacing="8">
-          <TextBlock Text="Быстрая настройка" FontWeight="SemiBold"/>
-          <ItemsControl ItemsSource="{Binding Presets}" IsEnabled="{Binding CanEdit}">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:NetworkPresetItem">
-                <Button Content="{Binding Name}" Command="{Binding LoadCommand}" ToolTip.Tip="{Binding Description}" Margin="0,0,8,8"/>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <WrapPanel>
-            <Button Content="Сохранить свой набор…" Command="{Binding SavePresetCommand}" Margin="0,0,8,6"/>
-            <Button Content="Импорт наборов…" Command="{Binding ImportNetworkPresetsCommand}" Margin="0,0,8,6"/>
-            <Button Content="Экспорт плана…" Command="{Binding ExportNetworkPlanCommand}" Margin="0,0,8,6"/>
-            <Button Content="Удалить свой набор" Command="{Binding DeletePresetCommand}" Margin="0,0,8,6"/>
-          </WrapPanel>
-          <TextBlock Text="{Binding PresetStatus}" TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-      <Border Classes="card" Padding="12">
-        <StackPanel Spacing="8">
-          <TextBlock Text="Связь между портами" FontWeight="SemiBold"/>
-          <TextBlock Text="Короткая передача пакетов в обе стороны по парам плана сети. Включите изделие и дождитесь его загрузки. Полную скорость проверяет DataTest профиля." TextWrapping="Wrap"/>
-          <WrapPanel>
-            <Button Content="Проверить связь" Command="{Binding ProbeConnectionsCommand}" Margin="0,0,8,0"/>
-            <Button Content="Остановить" Command="{Binding CancelProbeCommand}"/>
-          </WrapPanel>
-          <TextBlock Text="{Binding ProbeStatus}" TextWrapping="Wrap"/>
-          <ItemsControl ItemsSource="{Binding ProbeResults}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="services:NetworkProbeResult">
-                <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="0,6">
-                  <StackPanel Spacing="3">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Details}" TextWrapping="Wrap" FontSize="12"/>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-      </Border>
-      <Border Classes="card" Padding="12">
-        <StackPanel Spacing="8">
-          <TextBlock Text="{Binding RuntimeSummary}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-          <Button Content="Проверить компьютер" Command="{Binding CheckRuntimeCommand}" HorizontalAlignment="Left"/>
-          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCheckingRuntime}"/>
-          <Expander Header="Версия программы и компоненты захвата">
-            <TextBlock Text="{Binding RuntimeDetails}" TextWrapping="Wrap"/>
-          </Expander>
-        </StackPanel>
-      </Border>
+        <Button Content="Тестовые порты и пары…" Command="{Binding EditAddressPlanCommand}"/>
+        <Button Content="Системные настройки сети…" Click="OnSystemNetworkSettings"/>
+        <Button x:Name="NetworkPresetsButton" Content="Наборы…">
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <StackPanel Width="360" Spacing="10" x:DataType="vm:NetworkSetupViewModel">
+                <TextBlock Text="Загрузить набор портов" FontWeight="SemiBold"/>
+                <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding Presets}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:NetworkPresetItem">
+                        <Button Click="OnPresetAction" Command="{Binding LoadCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4">
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <Separator/>
+                <WrapPanel IsEnabled="{Binding CanEdit}">
+                  <Button Content="Сохранить свой набор…" Click="OnPresetAction" Command="{Binding SavePresetCommand}" Margin="0,0,6,6"/>
+                  <Button Content="Импорт наборов…" Click="OnPresetAction" Command="{Binding ImportNetworkPresetsCommand}" Margin="0,0,6,6"/>
+                  <Button Content="Экспорт плана…" Click="OnPresetAction" Command="{Binding ExportNetworkPlanCommand}" Margin="0,0,6,6"/>
+                  <Button Content="Удалить свой набор" Click="OnPresetAction" Command="{Binding DeletePresetCommand}" ToolTip.Tip="Удалить загруженный пользовательский набор; текущие порты сохранятся" Margin="0,0,6,0"/>
+                </WrapPanel>
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <ToggleButton x:Name="NetworkDiagnosticsToggle" Content="Диагностика" IsCheckedChanged="OnDiagnosticsToggled"
+                      Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}"/>
 
-      <Expander x:Name="IdentifyCableSection" Header="Определить карту по кабелю" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="8">
-          <TextBlock Text="При включённом DUT запомните линки, отключите один кабель и сравните. После определения подключите кабель обратно. Несколько изменений не доказывают соответствие порту." TextWrapping="Wrap"/>
-          <WrapPanel>
-            <Button Content="Запомнить линки" Command="{Binding RememberLinksCommand}" Margin="0,0,8,0"/>
-            <Button Content="Найти изменение линка" Command="{Binding CompareLinksCommand}"/>
-          </WrapPanel>
-          <TextBlock Text="{Binding LinkChanges}" TextWrapping="Wrap"/>
-        </StackPanel>
-      </Expander>
-        </StackPanel>
-      </Expander>
+      </WrapPanel>
+      <Border Name="NetworkDiagnosticsPanel" IsVisible="{Binding #NetworkDiagnosticsToggle.IsChecked}"
+              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+        <TabControl Name="NetworkDiagnosticsTabs">
+          <TabItem Header="Связь портов" IsVisible="{Binding SupportsNetworkGenerator}">
+            <StackPanel Spacing="8" Margin="0,12,0,0">
+              <TextBlock Text="Короткая проверка настроенных пар в обе стороны. Дождитесь загрузки изделия. Полную скорость проверяет DataTest профиля." TextWrapping="Wrap"/>
+              <Button Content="Проверить связь" Command="{Binding ProbeConnectionsCommand}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{Binding ProbeStatus}" TextWrapping="Wrap"/>
+              <ScrollViewer MaxHeight="220" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding ProbeResults}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="services:NetworkProbeResult">
+                      <StackPanel Spacing="3" Margin="0,6">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Details}" FontSize="12" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Найти карту по кабелю">
+            <StackPanel Spacing="8" Margin="0,12,0,0">
+              <TextBlock Text="Запомните состояние, отключите один кабель и найдите изменившуюся карту. Затем подключите кабель обратно." TextWrapping="Wrap"/>
+              <WrapPanel IsEnabled="{Binding CanEdit}">
+                <Button Content="Запомнить линки" Command="{Binding RememberLinksCommand}" Margin="0,0,8,0"/>
+                <Button Content="Найти изменение линка" Command="{Binding CompareLinksCommand}"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding LinkChanges}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Компоненты DataTest" IsVisible="{Binding SupportsNetworkGenerator}">
+            <StackPanel Spacing="8" Margin="0,12,0,0">
+              <TextBlock Text="{Binding RuntimeSummary}" TextWrapping="Wrap"/>
+              <Button Content="Проверить компьютер" Command="{Binding CheckRuntimeCommand}" HorizontalAlignment="Left"/>
+              <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCheckingRuntime}"/>
+              <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding RuntimeDetails}" TextWrapping="Wrap"/></ScrollViewer>
+            </StackPanel>
+          </TabItem>
+        </TabControl>
+      </Border>
       <Grid ColumnDefinitions="*,190">
+        <TextBox Name="ComputerAdapterSearch" Text="{Binding AdapterSearch}" Watermark="Поиск по названию карты, MAC, IPv4 или порту" Margin="0,0,12,0"/>
+        <ComboBox Name="ComputerAdapterFilter" Grid.Column="1" ItemsSource="{Binding AdapterFilters}" SelectedIndex="{Binding AdapterFilterIndex}" HorizontalAlignment="Stretch"/>
+      </Grid>
+      <TextBlock Text="{Binding PresetStatus}" IsVisible="{Binding HasPresetStatus}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding VisibleComputerSummary}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+      <TextBlock Text="Сетевые карты не найдены. Подключите адаптер и нажмите «Обновить состояние»." IsVisible="{Binding HasNoComputerAdapters}" TextWrapping="Wrap"/>
+      <DataGrid Name="NetworkAdaptersGrid" ItemsSource="{Binding VisibleComputerAdapters}" IsEnabled="{Binding CanEdit}"
+                IsVisible="{Binding !HasNoComputerAdapters}" AutoGenerateColumns="False" CanUserSortColumns="False" MaxHeight="440"
+                HeadersVisibility="Column" GridLinesVisibility="Horizontal" MinColumnWidth="80">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="Сетевая карта" Width="*" MinWidth="220">
+            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:ComputerNetworkAdapterViewModel">
+              <StackPanel Spacing="4" Margin="6" ToolTip.Tip="{Binding Description}">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Mac}" FontSize="12"/>
+                <TextBlock Text="{Binding Kind}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Связь" Width="140">
+            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:ComputerNetworkAdapterViewModel">
+              <TextBlock Text="{Binding Link}" TextWrapping="Wrap" Margin="6" VerticalAlignment="Center"/>
+            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Текущий IPv4" Width="150">
+            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:ComputerNetworkAdapterViewModel">
+              <TextBlock Text="{Binding Ipv4}" TextWrapping="Wrap" Margin="6" VerticalAlignment="Center"/>
+            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Тестовый порт" Width="165">
+            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:ComputerNetworkAdapterViewModel">
+              <TextBlock Text="{Binding Assignment}" TextWrapping="Wrap" Margin="6" VerticalAlignment="Center"/>
+            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Настройки" Width="135">
+            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:ComputerNetworkAdapterViewModel">
+              <Button Content="Настроить…" Click="OnConfigureAdapter" Margin="6"/>
+            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </DataGrid>
+      <Expander x:Name="NetworkPlanSection" Header="Тестовые порты и пары" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="12">
+          <TextBlock Text="{Binding Summary}" FontWeight="SemiBold"/>
+          <TextBlock Text="План — ваш список тестовых портов: название разъёма, IPv4, пара и скорость. У каждого порта выберите сетевую карту компьютера. Добавляйте нужное количество строк; появление новой карты не меняет существующие назначения." TextWrapping="Wrap"/>
+          <TextBlock Text="Тестовых портов пока нет. Нажмите «Добавить пары…» или создайте отдельные порты через «Изменить тестовые порты…». Готовый набор доступен в «Наборы…»." IsVisible="{Binding HasNoTestPorts}" TextWrapping="Wrap"/>
+          <WrapPanel IsEnabled="{Binding CanEdit}">
+            <Button x:Name="AddNetworkPairs" Content="Добавить пары…" Click="OnAddNetworkPairs" Margin="0,0,8,0"/>
+            <Button Content="Изменить тестовые порты…" Command="{Binding EditAddressPlanCommand}" Margin="0,0,8,0"/>
+            <Button Content="Сбросить выбор" Command="{Binding ResetCommand}" ToolTip.Tip="Вернуть сохранённые привязки или текущие адреса карт"/>
+          </WrapPanel>
+          <ContentControl x:Name="NetworkPairEditorHost" IsVisible="False" IsEnabled="{Binding CanEdit}"/>
+      <Grid ColumnDefinitions="*,190" IsVisible="{Binding !HasNoTestPorts}">
         <TextBox Name="NetworkPortSearch" Text="{Binding RowSearch}" Watermark="Поиск по порту, IP, названию карты или MAC" Margin="0,0,12,0"/>
         <ComboBox Name="NetworkPortFilter" Grid.Column="1" ItemsSource="{Binding RowFilters}" SelectedIndex="{Binding RowFilterIndex}" HorizontalAlignment="Stretch"/>
       </Grid>
-      <TextBlock Text="{Binding VisibleRowsSummary}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-      <DataGrid Name="NetworkAdaptersGrid" ItemsSource="{Binding VisibleRows}" IsEnabled="{Binding CanEdit}"
+      <TextBlock Text="{Binding VisibleRowsSummary}" IsVisible="{Binding !HasNoTestPorts}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+      <DataGrid Name="NetworkPlanAdaptersGrid" ItemsSource="{Binding VisibleRows}" IsEnabled="{Binding CanEdit}" IsVisible="{Binding !HasNoTestPorts}"
                 AutoGenerateColumns="False" CanUserSortColumns="False" Height="440"
                 HeadersVisibility="Column" GridLinesVisibility="Horizontal" MinColumnWidth="80">
         <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Порт / адрес плана" Width="150">
+          <DataGridTemplateColumn Header="Тестовый порт / IPv4" Width="150">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
                 <StackPanel Spacing="3" Margin="6" ToolTip.Tip="{Binding TestAssignment}">
@@ -113,7 +167,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Сетевая карта Windows" Width="*" MinWidth="220">
+          <DataGridTemplateColumn Header="Сетевая карта" Width="*" MinWidth="220">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:NetworkSetupRowViewModel">
                 <ComboBox Margin="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -156,11 +210,15 @@
       </DataGrid>
       <TextBlock Text="Выберите физическую карту для каждого адреса плана. Выбор занятой карты меняет две привязки местами. Фильтр скрывает строки только на экране." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
-      <Expander x:Name="NetworkJournalSection" Header="Журнал применения" HorizontalAlignment="Stretch">
-        <ItemsControl ItemsSource="{Binding Journal}">
-          <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,3"/></DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
+      <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+      <WrapPanel>
+        <Button Content="Сохранить привязки" Command="{Binding SaveBindingsCommand}" Margin="0,0,12,6"/>
+        <Button Content="Применить адреса" Command="{Binding ApplyCommand}" Margin="0,0,12,6"/>
+        <TextBlock Text="Для изменения IP нужен запуск TestBuilder от имени администратора." VerticalAlignment="Center" TextWrapping="Wrap"/>
+      </WrapPanel>
+        </StackPanel>
       </Expander>
+
     </StackPanel>
   </ScrollViewer>
   </DockPanel>

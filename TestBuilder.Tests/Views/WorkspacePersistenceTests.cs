@@ -46,7 +46,7 @@ public class WorkspacePersistenceTests
                 vm.TestVM.AvailableNodeCategories[0].IsExpanded = false;
                 vm.SelfTestPageVM.Categories[0].IsExpanded = false;
                 var network = first.FindControl<NetworkSetupView>("NetworkSetupViewControl")!;
-                network.FindControl<Expander>("IdentifyCableSection")!.IsExpanded = true;
+                network.FindControl<Avalonia.Controls.Primitives.ToggleButton>("NetworkDiagnosticsToggle")!.IsChecked = true;
                 Layout(first);
                 var editor = first.FindControl<TestView>("TestViewControl")!;
                 var grid = editor.FindControl<Grid>("EditorLogLayout")!;
@@ -91,7 +91,7 @@ public class WorkspacePersistenceTests
                 Assert.Equal(70, restored.TestVM.RegisterIndicatorsZoom);
                 Assert.False(restored.TestVM.AvailableNodeCategories[0].IsExpanded);
                 Assert.False(restored.SelfTestPageVM.Categories[0].IsExpanded);
-                Assert.True(second.FindControl<NetworkSetupView>("NetworkSetupViewControl")!.FindControl<Expander>("IdentifyCableSection")!.IsExpanded);
+                Assert.True(second.FindControl<NetworkSetupView>("NetworkSetupViewControl")!.FindControl<Avalonia.Controls.Primitives.ToggleButton>("NetworkDiagnosticsToggle")!.IsChecked == true);
                 Assert.Equal(selectedPage, restored.SelectedPage);
                 Assert.Equal(1320, second.Width, 1); Assert.Equal(840, second.Height, 1);
                 restored.SelectedPage = "Editor"; Layout(second);

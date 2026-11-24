@@ -66,10 +66,10 @@ public class LabelPreviewTests
         Assert.Equal((510d, 70d, 25d), (mac.X, mac.Y, mac.Height));
         Assert.Equal((510d, 95d), (sn.X, sn.Y));
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
-        Assert.Equal(Code128Encoding.EncodeAuto("003200428"), bars.Bars);
-        Assert.Equal(202, bars.Width);
-        Assert.InRange(bars.X - preview.Left - bars.QuietZone, 0, 28);
-        Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 0, 28);
+        Assert.Equal(Code128Encoding.EncodeAuto("03200428"), bars.Bars);
+        Assert.Equal(158, bars.Width);
+        Assert.InRange(bars.X - preview.Left - bars.QuietZone, 48, 49);
+        Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 48, 49);
         Assert.True(bars.Y + bars.Height <= preview.Height);
         Assert.Null(preview.BarcodeError);
     }
@@ -121,8 +121,8 @@ public class LabelPreviewTests
     }
 
     [Theory]
-    [InlineData(0, "3200428", "SN: 3200428")]
-    [InlineData(1, "612447", "SN: 612447")]
+    [InlineData(0, "3200428", "SN: 00428")]
+    [InlineData(1, "612447", "SN: 12447")]
     [InlineData(2, "12345678", "12345678")]
     public void BuiltInTemplates_UseDataAndRealCommandLayout(int index, string serial, string expected)
     {

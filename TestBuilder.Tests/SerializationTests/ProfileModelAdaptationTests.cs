@@ -21,6 +21,14 @@ namespace TestBuilder.Tests.SerializationTests;
 [Collection(AppSettingsTestCollection.Name)]
 public class ProfileModelAdaptationTests
 {
+    [Theory]
+    [InlineData("Name", "Name: {{Name}} / Name", "{{Name}}: {{Name}} / {{Name}}")]
+    [InlineData("PSW-A", "Модель PSW-A; {{Serial}}; {{Name}}", "Модель {{Name}}; {{Serial}}; {{Name}}")]
+    public void ModelNamesAreReplacedOnlyOutsideExistingPlaceholders(string name, string text, string expected)
+    {
+        Assert.Equal(expected, ProfileModelAdaptation.ParameterizeText(text, new[] { name }));
+    }
+
     const string Pro = "PSW+UPS-Box 8x2Pro · Параллельная проверка с SFP · 11.11.26.json";
     static NodeViewModel[] Nodes(TestViewModel vm) => ProfileModelAdaptation.All(vm.RootGraph).ToArray();
     static string Save(TestViewModel vm) => GraphSerializer.Serialize(vm, vm.CurrentProfileName);
@@ -95,8 +103,8 @@ public class ProfileModelAdaptationTests
     }
 
     [Theory]
-    [InlineData("psw-plus-box-8x2pro", 3300579, "C0:11:A6:21:02:43", "003300579")]
-    [InlineData("psw-2g8f-plus-box", 2600579, "C0:11:A6:1A:02:43", "002600579")]
+    [InlineData("psw-plus-box-8x2pro", 3300579, "C0:11:A6:21:02:43", "03300579")]
+    [InlineData("psw-2g8f-plus-box", 2600579, "C0:11:A6:1A:02:43", "02600579")]
     public async Task RetargetedLabelsUseTheNewModelSerialMacAndBarcode(string id, int serial, string mac, string barcode)
     {
         using var bus = new ModbusService();
@@ -116,7 +124,7 @@ public class ProfileModelAdaptationTests
         Assert.Equal(model.Name, context.GetVariable<string>("PrintLabel.DeviceName"));
         Assert.Equal(barcode, context.GetVariable<string>("PrintLabel.Barcode"));
         var command = Encoding.Latin1.GetString(printer.Bytes);
-        Assert.Contains(model.Name, command); Assert.Contains(serial.ToString(), command);
+        Assert.Contains(model.Name, command); Assert.Contains((serial - model.SerialSeries!.SerialOffset).ToString("D5"), command);
         Assert.DoesNotContain("PSW+UPS-Box 8x2Pro", command); Assert.DoesNotContain("3200428", command);
     }
 

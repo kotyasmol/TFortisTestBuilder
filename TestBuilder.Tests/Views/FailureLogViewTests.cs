@@ -82,7 +82,12 @@ public class FailureLogViewTests
                 Assert.Contains(logView.GetVisualDescendants().OfType<Border>(), b => b.BorderThickness.Left == 3 && b.Background != null);
                 var link = logView.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "TB1201"));
                 Assert.True(link.IsVisible);
+                // A wrapped cause can exceed the viewport. Reading its beginning
+                // pauses following, just as a user's scroll does in the real UI.
+                view.FindControl<Avalonia.Controls.Primitives.ToggleButton>("FollowLogsToggle")!.IsChecked = false;
+                link.BringIntoView(); Layout(window);
                 var click = link.TranslatePoint(new Point(link.Bounds.Width / 2, link.Bounds.Height / 2), window)!.Value;
+                Assert.InRange(click.Y, 0, window.Bounds.Height);
                 window.MouseDown(click, MouseButton.Left);
                 window.MouseUp(click, MouseButton.Left);
                 Layout(window);
@@ -187,6 +192,8 @@ public class FailureLogViewTests
         window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
         Dispatcher.UIThread.RunJobs();
     }
 }

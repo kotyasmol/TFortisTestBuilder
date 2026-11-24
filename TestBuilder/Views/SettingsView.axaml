@@ -5,9 +5,9 @@
              x:Name="SettingsRoot" x:Class="TestBuilder.Views.SettingsView" x:DataType="vm:SettingsViewModel">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Center">
     <StackPanel Margin="16" Spacing="16" MaxWidth="800" HorizontalAlignment="Stretch">
-      <TextBlock Text="Настройки" Classes="pageTitle" />
+      <TextBlock Text="Настройки компьютера" Classes="pageTitle" />
       <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" TextWrapping="Wrap" />
-      <TextBlock Text="{Binding ProfileContext}" TextWrapping="Wrap" />
+      <TextBlock Text="Параметры этого рабочего места сохраняются отдельно от JSON-профилей." TextWrapping="Wrap" />
       <Button Content="Полная инструкция" Click="OnOpenUserGuide" AutomationProperties.Name="Открыть полную инструкцию" />
       <Button Content="Коды ошибок" Click="OnOpenErrorHelp" />
       <Button Content="Интерактивное обучение" Click="OnOpenTutorial" IsEnabled="{Binding CanStartTutorial}" AutomationProperties.Name="Пройти интерактивное обучение" />
@@ -17,16 +17,16 @@
           <TextBlock Text="COM стенда (пусто — автоматически)" TextWrapping="Wrap" />
           <TextBox Text="{Binding StandPort}" Watermark="Например, COM3" />
           <Button Content="Параметры открытия COM-порта…" Command="{Binding ConfigureDiscoveryCommand}"/>
-          <TextBlock Text="COM консоли (отдельный USB-UART)" IsVisible="{Binding ShowConsoleSettings}" />
-          <TextBox Text="{Binding ConsolePort}" Watermark="COM4" IsVisible="{Binding ShowConsoleSettings}" />
-          <TextBlock Text="COM стенда выбирается на этом компьютере. Состав оборудования и параметры консольных устройств задаются в профиле." TextWrapping="Wrap" />
+          <TextBlock Text="Резервный COM консоли на этом компьютере" />
+          <TextBox Text="{Binding ConsolePort}" Watermark="COM4" />
+          <TextBlock Text="COM стенда выбирается на этом компьютере. Состав устройств, параметры Modbus и консоли проверки задаются в «Оборудование профиля…» рядом с сохранением графа." TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Border Classes="panel">
         <StackPanel Spacing="8">
           <TextBlock Text="Принтер по умолчанию" Classes="sectionTitle" />
           <views:PrinterPicker x:Name="DefaultPrinterPicker" PrinterName="{Binding DefaultPrinterName, Mode=TwoWay}" />
-          <Button Content="Настроить печать этикеток…" Click="OnOpenLabelTemplates" />
+          <Button Content="Каталог этикеток…" Click="OnOpenLabelTemplates" />
           <StackPanel x:Name="WindowsPrinterManagement" Spacing="4">
             <Button Content="Добавить принтер в Windows…" Click="OnOpenWindowsPrinters" />
             <TextBlock x:Name="WindowsPrinterSettingsError" IsVisible="False" TextWrapping="Wrap"

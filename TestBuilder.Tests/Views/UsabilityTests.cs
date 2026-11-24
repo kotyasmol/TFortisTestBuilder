@@ -184,6 +184,11 @@ public class UsabilityTests
                     Capture(guide, $"guide-new-profile-{dark}");
                     guide.Width = 850; guide.Height = 600; Layout(guide); Capture(guide, $"guide-narrow-{dark}");
                     guide.Width = 1120; guide.Height = 820; Layout(guide);
+                    section.SelectedItem = "Каталог и хранение данных"; search.Text = "PROD"; Layout(guide);
+                    articles.SelectedItem = articles.Items.OfType<GuideArticle>().Single(a => a.Id == "catalog-to-prod"); Layout(guide);
+                    Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("Карточка из профиля"));
+                    Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("isComplete: true"));
+                    section.SelectedItem = "Профили"; Layout(guide);
                     search.Text = "фотодатчиков"; Layout(guide);
                     Assert.Empty(articles.Items);
                     guide.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "ResetGuideSearch").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(guide);
@@ -198,6 +203,7 @@ public class UsabilityTests
                     var exported = UserGuide.ExportHtml();
                     Assert.Contains("id=\"reference-catalog\"", exported);
                     Assert.Contains("id=\"report-template\"", exported);
+                    Assert.Contains("id=\"catalog-to-prod\"", exported);
                     File.WriteAllText(Path.Combine(Output(), "TFortis-инструкция.html"), exported);
                 }
                 finally { guide.Close(); Dispatcher.UIThread.RunJobs(); }

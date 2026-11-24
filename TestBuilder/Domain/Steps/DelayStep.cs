@@ -12,6 +12,8 @@ namespace TestBuilder.Domain.Steps
 
         public DelayStep(int milliseconds, ILogger logger)
         {
+            if (milliseconds < 0)
+                throw new System.ArgumentOutOfRangeException(nameof(milliseconds), "Задержка должна быть неотрицательным числом миллисекунд.");
             Milliseconds = milliseconds;
             _logger = logger;
         }

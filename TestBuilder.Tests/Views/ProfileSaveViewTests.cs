@@ -75,7 +75,8 @@ public class ProfileSaveViewTests
 
                 Click(view.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand)));
                 await vm.SaveGraphCommand.ExecutionTask!;
-                Assert.Contains("\"comparisonType\": \"VersionAtLeast\"", File.ReadAllText(path));
+                var savedPath = Assert.Single(vm.AllProfiles).FilePath;
+                Assert.Contains("\"comparisonType\": \"VersionAtLeast\"", File.ReadAllText(savedPath));
                 Assert.Same(body, vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single());
                 await vm.RunGraphCommand.ExecuteAsync(null);
                 Assert.True(check.HasExecutionSucceeded);

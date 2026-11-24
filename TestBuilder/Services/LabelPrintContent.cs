@@ -9,6 +9,12 @@ namespace TestBuilder.Services;
 /// <summary>Shared data normalization and command formatting for printing and preview.</summary>
 internal static class LabelPrintContent
 {
+    internal static string? CheckBoardSerial(EquipmentModel model, string serial)
+    {
+        if (model.RtlReport == null || model.LabelCode is not { } code) return null;
+        return long.TryParse(serial, NumberStyles.None, CultureInfo.InvariantCulture, out var full) && full / 100000 == code
+            ? null : $"Серийный номер не относится к «{model.Name}»: ожидается тип {code:D3} и 5 цифр номера. Выберите нужную плату или проверьте SN.";
+    }
     public static LabelTemplateDefinition ForDevice(LabelTemplateDefinition template, string? deviceModel)
     {
         var copy = template.Copy();
@@ -21,16 +27,39 @@ internal static class LabelPrintContent
     {
         var copy = ForDevice(template, model.Name);
         copy.CabinetName = model.LabelCabinets?.GetValueOrDefault(variant);
-        if (!copy.UseShortSerial) return copy;
+        copy.VariantCode = variant;
+        copy.DeviceCode = model.LabelCode ?? copy.DeviceCode;
+        copy.VariantName = model.LabelVariants?.GetValueOrDefault(variant);
+        if (!copy.UseShortSerial)
+        {
+            // Board server numbers already contain the type and a five-digit counter.
+            // Adapt the unconfigured stock EPL only; explicit user rules remain authoritative.
+            var stock = LabelTemplateCatalog.Defaults().Single(t => t.Id == "SerialOnlyEpl");
+            if (model.LabelCode.HasValue && copy.SerialTextFormat == null && copy.BarcodeFormat == null &&
+                (copy.Layout?.OriginalCommand ?? copy.Command) == stock.Command)
+            {
+                copy.SerialTextFormat = "{{SerialTail:5}}";
+                copy.BarcodeFormat = "{{DeviceCode:3}}{{SerialTail:5}}";
+                if (copy.Layout != null)
+                {
+                    foreach (var e in copy.Layout.Elements)
+                    {
+                        if (e.Kind == "Text" && e.Value == "{{Serial}}") e.Value = "{{SerialText}}";
+                        if (e.Kind == "Barcode" && e.Value == "{{Serial}}") e.Value = "{{Barcode}}";
+                    }
+                }
+                else copy.Command = Regex.Replace(copy.Command, @"(?m)^[AB][^\r\n]+", m =>
+                    m.Value.Replace("{{Serial}}", m.Value[0] == 'A' ? "{{SerialText}}" : "{{Barcode}}"));
+            }
+            copy.Validate();
+            return copy;
+        }
         if (model.LabelCode is not { } code || model.SerialSeries is not { } series)
             throw new InvalidOperationException($"Для «{model.Name}» укажите код этикетки и серию в справочнике.");
-        copy.DeviceCode = code;
         copy.SerialOffset = series.SerialOffset;
         copy.FirstSerialNumber = series.FirstSerialNumber;
         copy.ShortSerialMax = series.LastSerialNumber - series.SerialOffset;
-        copy.ShortSerialDigits = 5;
-        copy.BarcodePrefix = variant.ToString(CultureInfo.InvariantCulture) + code.ToString("D3", CultureInfo.InvariantCulture);
-        copy.VariantName = model.LabelVariants?.GetValueOrDefault(variant);
+        if (copy.BarcodeFormat == null) copy.BarcodePrefix = variant.ToString(CultureInfo.InvariantCulture) + code.ToString("D3", CultureInfo.InvariantCulture);
         copy.Validate();
         return copy;
     }
@@ -73,7 +102,7 @@ internal static class LabelPrintContent
         if (template.Layout != null) { template.Validate(); return template.Layout.Render(template, serial, shortSerial, mac); }
         if (template.Language == "ZPL" && template.Command.Contains("{{ZplBarcode}}", StringComparison.Ordinal))
         {
-            var barcode = template.UseShortSerial ? template.Barcode(shortSerial) : serial;
+            var barcode = template.RenderBarcode(serial, shortSerial, mac);
             var bars = Code128Encoding.EncodeAuto(barcode)
                 ?? throw new InvalidOperationException("Данные штрихкода Code 128 недопустимы.");
             var width = bars.Sum(c => c - '0') * template.BarcodeModuleDots;
@@ -81,7 +110,9 @@ internal static class LabelPrintContent
             return template.Render(serial, shortSerial, mac, x, template.OriginXDots + 8);
         }
         if (template.UseShortSerial) return template.Render(serial, shortSerial, mac);
-        var kind = Code128Encoding.CanUseC(serial) ? "1C" : "1B";
+        var payload = template.RenderBarcode(serial, shortSerial, mac);
+        var printedText = template.RenderSerialText(serial, shortSerial, mac);
+        var kind = Code128Encoding.CanUseC(payload) ? "1C" : "1B";
         var module = 2;
         var font = 3;
         var multiplier = 1;
@@ -99,11 +130,11 @@ internal static class LabelPrintContent
             font = int.Parse(text.Groups[1].Value, CultureInfo.InvariantCulture);
             multiplier = int.Parse(text.Groups[2].Value, CultureInfo.InvariantCulture);
         }
-        var eplBars = kind == "1" ? Code128Encoding.EncodeAuto(serial)
-            : Code128Encoding.Encode(serial, kind == "1C");
+        var eplBars = kind == "1" ? Code128Encoding.EncodeAuto(payload)
+            : Code128Encoding.Encode(payload, kind == "1C");
         var barcodeWidth = (eplBars?.Sum(c => c - '0') ?? 0) * (long)module;
-        var textWidth = (long)EplFontMetrics.Size(font, template.PrinterDpi).Width * multiplier * serial.Length;
-        return template.Render(serial, 0, "", (int)Math.Max(0, (template.WidthDots - barcodeWidth) / 2),
+        var textWidth = (long)EplFontMetrics.Size(font, template.PrinterDpi).Width * multiplier * printedText.Length;
+        return template.Render(serial, shortSerial, mac, (int)Math.Max(0, (template.WidthDots - barcodeWidth) / 2),
             (int)Math.Max(0, (template.WidthDots - textWidth) / 2));
     }
 }

@@ -610,6 +610,13 @@
 
   <Style Selector="Border.profileSidebar Button.listHeader">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Border.profileSidebar Button.listHeader:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
+  </Style>
+  <Style Selector="Border.profileSidebar Button.listHeader:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
   </Style>
 </Styles>

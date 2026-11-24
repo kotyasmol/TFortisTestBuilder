@@ -25,8 +25,10 @@ internal sealed class EquipmentCatalogDataView : UserControl
     private readonly SelectableTextBlock _paths = new() { Name = "CatalogDataPaths", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private CatalogRow[] _rows = Array.Empty<CatalogRow>();
     private readonly Func<bool> _canEdit;
+    private readonly Button _add = new() { Content = "Добавить изделие…", Name = "AddCatalogDataModel" };
     private readonly Button _edit = new() { Content = "Редактировать изделие…", Name = "EditCatalogDataModel" };
     public event EventHandler? ReloadRequested;
+    public event Action? AddRequested;
     public event Action<EquipmentModel>? EditRequested;
 
     public EquipmentCatalogDataView(string localPath, Func<bool> canEdit)
@@ -48,10 +50,12 @@ internal sealed class EquipmentCatalogDataView : UserControl
             Width = new DataGridLength(1, DataGridLengthUnitType.Star), MinWidth = 300 });
         var reload = new Button { Content = "Обновить", Name = "ReloadCatalogData" };
         reload.Click += (_, _) => ReloadRequested?.Invoke(this, EventArgs.Empty);
+        _add.Click += (_, _) => { if (_canEdit()) AddRequested?.Invoke(); };
         _edit.Click += (_, _) => { if (_canEdit() && _models.SelectedItem is CatalogRow row) EditRequested?.Invoke(row.Model); };
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,Auto,8,Auto") };
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,Auto,8,Auto,8,Auto") };
         toolbar.Children.Add(_search);
-        Grid.SetColumn(reload, 2);
+        Grid.SetColumn(_add, 2); toolbar.Children.Add(_add);
+        Grid.SetColumn(reload, 6);
         toolbar.Children.Add(reload);
         Grid.SetColumn(_edit, 4); toolbar.Children.Add(_edit);
         var header = new StackPanel { Spacing = 8, Children = { toolbar, _summary, _status } };
@@ -93,15 +97,30 @@ internal sealed class EquipmentCatalogDataView : UserControl
 
     private string RevisionText { get; set; } = "";
     private void UpdatePaths(string localPath) => _paths.Text = $"Поставка: {EquipmentCatalog.BundledPath}\nЛокальные изменения: {localPath}";
-    internal void RefreshAvailability() => _edit.IsEnabled = _models.SelectedItem != null && _canEdit();
+    internal void RefreshAvailability()
+    {
+        _add.IsEnabled = _canEdit();
+        _edit.IsEnabled = _models.SelectedItem != null && _canEdit();
+    }
     private static string Version(string revision) => string.IsNullOrWhiteSpace(revision) ? "не указана" : revision;
+
+    internal void RevealModel(string id)
+    {
+        var row = _rows.FirstOrDefault(item => item.Model.Id == id);
+        if (row == null) return;
+        if (!Matches(row, (_search.Text ?? "").Trim())) _search.Text = "";
+        Filter(id);
+        _models.ScrollIntoView(row, _models.Columns[0]);
+    }
+
+    private static bool Matches(CatalogRow row, string query) => EquipmentCatalog.Matches(row.Model, query) ||
+        row.Fields.Any(field => field.Value.Contains(query, StringComparison.OrdinalIgnoreCase));
 
     private void Filter(string? selected = null)
     {
         selected ??= (_models.SelectedItem as CatalogRow)?.Model.Id;
         var query = (_search.Text ?? "").Trim();
-        var visible = _rows.Where(row => EquipmentCatalog.Matches(row.Model, query) ||
-            row.Fields.Any(field => field.Value.Contains(query, StringComparison.OrdinalIgnoreCase))).ToArray();
+        var visible = _rows.Where(row => Matches(row, query)).ToArray();
         _models.ItemsSource = visible;
         _models.SelectedItem = visible.FirstOrDefault(row => row.Model.Id == selected) ?? visible.FirstOrDefault();
         _details.ItemsSource = (_models.SelectedItem as CatalogRow)?.Fields;

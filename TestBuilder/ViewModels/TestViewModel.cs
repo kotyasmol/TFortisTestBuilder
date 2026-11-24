@@ -746,6 +746,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     [RelayCommand]
     private void OpenCompositeNodeBody(NodeViewModel? node)
     {
+        if (!CheckEditorInputs()) return;
         if (node is not ICompositeNodeViewModel composite)
             return;
 
@@ -764,6 +765,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private void GoBackGraph()
     {
+        if (!CheckEditorInputs()) return;
         if (_graphStack.Count == 0)
             return;
 
@@ -937,6 +939,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         if (IsTraining) return;
         if (IsConnected ? !CanDisconnectStation : !CanConnectStation) return;
+        if (!IsConnected && !CheckEditorInputs()) return;
         IsConnecting = true;
         try
         {
@@ -1178,6 +1181,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     private async Task RunGraphAsync()
     {
+        if (!CheckEditorInputs()) return;
         if (!CanRunTrainingGraph() || !CanStartRun) return;
         try { InvalidateChangedProfilePreparation(); }
         catch (Exception ex)
@@ -2135,6 +2139,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
 
     internal async Task SaveGraphToPathAsync(string filePath, bool createNew = false, bool renameConfiguration = false, bool alignFileName = false)
     {
+        if (!CheckEditorInputs()) return;
         if (!IsAllowedProfilePath(filePath)) { StatusMessage = "Учебные профили сохраняются только в папке обучения."; return; }
         if (!CanEditGraph || string.IsNullOrWhiteSpace(CurrentProfileName)) { StatusMessage = "Введите название профиля."; return; }
         try

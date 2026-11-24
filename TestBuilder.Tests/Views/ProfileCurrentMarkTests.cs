@@ -62,6 +62,11 @@ public class ProfileCurrentMarkTests
                 await vm.ToggleProfileCurrentCommand.ExecuteAsync(profiles[2]);
                 vm.EngineerProfileGroups.Single().IsExpanded = false; Layout(window);
                 Assert.Equal(3, vm.Profiles.Count(p => p.IsMarkedCurrent));
+                Assert.Empty(vm.EngineerProfileGroups.Single().VisibleProfiles);
+                Assert.Empty(Badges(engineer, "Актуальный"));
+                Assert.Empty(Badges(engineer, "Новый"));
+                Capture(window, $"profile-collapsed-engineer-{(dark ? "dark" : "light")}.png");
+                vm.EngineerProfileGroups.Single().IsExpanded = true; Layout(window);
                 Assert.Equal(3, vm.EngineerProfileGroups.Single().VisibleProfiles.Count());
                 Assert.Equal(3, Badges(engineer, "Актуальный").Count());
                 Assert.Single(Badges(engineer, "Новый"));
@@ -69,6 +74,10 @@ public class ProfileCurrentMarkTests
                 Capture(window, $"profile-current-engineer-{(dark ? "dark" : "light")}.png");
 
                 vm.IsOperatorView = true; window.Width = 1250; window.Height = 850; window.Content = station; Layout(window);
+                Assert.Empty(vm.StationProfileGroups.Single().VisibleProfiles);
+                Assert.Empty(Badges(station, "Актуальный"));
+                Capture(window, $"profile-collapsed-station-{(dark ? "dark" : "light")}.png");
+                vm.StationProfileGroups.Single().IsExpanded = true; Layout(window);
                 var button = station.GetVisualDescendants().OfType<Button>().First(b =>
                     b.DataContext is StationProfileOptionViewModel option && ReferenceEquals(option.Profile, profiles[0]));
                 RightClick(window, button);
@@ -79,7 +88,7 @@ public class ProfileCurrentMarkTests
                 await ((IAsyncRelayCommand)stationItem.Command!).ExecuteAsync(stationItem.CommandParameter);
                 Layout(window);
                 Assert.False(profiles[0].IsMarkedCurrent);
-                Assert.Equal(2, vm.StationProfileGroups.Single().VisibleProfiles.Count());
+                Assert.Equal(3, vm.StationProfileGroups.Single().VisibleProfiles.Count());
                 Assert.Equal(2, Badges(station, "Актуальный").Count());
                 Assert.Single(Badges(station, "Новый"));
                 CheckMetadataLayout(station, window);

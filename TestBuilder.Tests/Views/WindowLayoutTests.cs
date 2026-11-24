@@ -119,7 +119,7 @@ public class WindowLayoutTests
                 shellVm.OpenSettingsCommand.Execute(null);
                 Layout(shell);
                 Assert.True(shellVm.IsSettingsOpen);
-                Assert.Equal("Настройки", shellVm.WorkspaceTitle);
+                Assert.Equal("Настройки компьютера", shellVm.WorkspaceTitle);
                 Capture(shell, "shell-settings", width, dark);
                 shellVm.CloseSettingsCommand.Execute(null);
                 shellVm.TestVM.RootGraph.QuickActions.Add(new TestBuilder.Models.ProfileActionDefinition { Name = "Питание" });

@@ -17,6 +17,14 @@ namespace TestBuilder.Services;
 public sealed record BenchAdapter(string Id, string Name, string Mac, string Status, string Ipv4,
     double SpeedMbps = 0, bool HasIpv4Gateway = false)
 {
+    public string Description { get; init; } = "";
+    public NetworkInterfaceType NetworkType { get; init; } = NetworkInterfaceType.Ethernet;
+    public string Mask { get; init; } = "";
+    public string Gateway { get; init; } = "";
+    public string Dns { get; init; } = "";
+    public bool? DhcpEnabled { get; init; }
+    public bool CanUseForDataTest => NetworkType is NetworkInterfaceType.Ethernet or NetworkInterfaceType.GigabitEthernet;
+    public string Kind => NetworkType == NetworkInterfaceType.Wireless80211 ? "Wi-Fi" : "Ethernet";
     public string ChoiceDisplay => $"{Name} · {Mac}";
     public string LinkDisplay => Status.Equals("Up", StringComparison.OrdinalIgnoreCase)
         ? $"Подключена · {SpeedMbps:F0} Мбит/с" : $"Нет соединения ({Status})";
@@ -29,21 +37,38 @@ public sealed record AdapterAssignment(string Ip, string AdapterId);
 public static class DataTestNetworkConfigurator
 {
     public static IReadOnlyList<string> BenchIps => AppSettings.Instance.NetworkPlan.Addresses.Select(a => a.Ip).ToArray();
-    public static IReadOnlyList<BenchAdapter> GetAdapters() => NetworkInterface.GetAllNetworkInterfaces()
+    public static IReadOnlyList<BenchAdapter> GetAdapters() => GetComputerAdapters().Where(a => a.CanUseForDataTest).ToArray();
+
+    public static IReadOnlyList<BenchAdapter> GetComputerAdapters() => NetworkInterface.GetAllNetworkInterfaces()
         .Where(adapter => adapter.NetworkInterfaceType is NetworkInterfaceType.Ethernet or
-            NetworkInterfaceType.GigabitEthernet)
-        .Select(adapter => new BenchAdapter(
+            NetworkInterfaceType.GigabitEthernet or NetworkInterfaceType.Wireless80211)
+        .Select(ReadAdapter)
+        .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
+        .ToArray();
+
+    private static BenchAdapter ReadAdapter(NetworkInterface adapter)
+    {
+        var properties = adapter.GetIPProperties();
+        bool? dhcp = null;
+        if (OperatingSystem.IsWindows())
+            try { dhcp = properties.GetIPv4Properties()?.IsDhcpEnabled; } catch (NetworkInformationException) { }
+        return new BenchAdapter(
             adapter.Id,
             adapter.Name,
             adapter.GetPhysicalAddress().ToString(),
             adapter.OperationalStatus.ToString(),
-            string.Join(", ", adapter.GetIPProperties().UnicastAddresses
+            string.Join(", ", properties.UnicastAddresses
                 .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
                 .Select(address => address.Address.ToString())),
-            GetSpeedMbps(adapter), adapter.GetIPProperties().GatewayAddresses.Any(g =>
-                g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any))))
-        .OrderBy(adapter => adapter.Name, StringComparer.CurrentCultureIgnoreCase)
-        .ToArray();
+            GetSpeedMbps(adapter), properties.GatewayAddresses.Any(g =>
+                g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any)))
+        {
+            Description = adapter.Description, NetworkType = adapter.NetworkInterfaceType, DhcpEnabled = dhcp,
+            Mask = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == AddressFamily.InterNetwork)?.IPv4Mask?.ToString() ?? "",
+            Gateway = string.Join(", ", properties.GatewayAddresses.Where(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any)).Select(g => g.Address)),
+            Dns = string.Join(", ", properties.DnsAddresses.Where(a => a.AddressFamily == AddressFamily.InterNetwork))
+        };
+    }
 
     public static async Task<string?> RenameAsync(string adapterId, string newName)
     {
@@ -76,6 +101,7 @@ public static class DataTestNetworkConfigurator
         managedAddresses ??= AppSettings.Instance.AppliedDataTestAdapterIds ?? AppSettings.Instance.DataTestAdapterIds;
         try { plan.Validate(); } catch (InvalidOperationException ex) { return ex.Message; }
         var benchIps = plan.Addresses.Select(a => a.Ip).ToArray();
+        if (benchIps.Length == 0) return "Тестовые порты не настроены. Добавьте их в разделе «Тестовые порты и пары».";
         if (assignments.Count != benchIps.Length ||
             !benchIps.SequenceEqual(assignments.Select(assignment => assignment.Ip)))
             return "Нужно выбрать адаптер для каждого адреса плана сети.";
@@ -96,6 +122,7 @@ public static class DataTestNetworkConfigurator
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var adapter in adapters.Where(item => selectedIds.Contains(item.Id)))
         {
+            if (!adapter.CanUseForDataTest) return $"Карта {adapter.Name}: для DataTest нужен Ethernet-адаптер.";
             var assignment = assignments.Single(item =>
                 string.Equals(item.AdapterId, adapter.Id, StringComparison.OrdinalIgnoreCase));
             var otherIp = adapter.Ipv4.Split(", ").FirstOrDefault(ip =>
@@ -285,7 +312,7 @@ public static class DataTestNetworkConfigurator
         return false;
     }
 
-    private static async Task<string?> RunNetshAsync(IEnumerable<string> arguments,
+    internal static async Task<string?> RunNetshAsync(IEnumerable<string> arguments,
         CancellationToken cancellationToken)
     {
         var start = new ProcessStartInfo("netsh")

@@ -8,6 +8,13 @@ namespace TestBuilder.Tests.StepTests;
 
 public class DelayStepTests
 {
+    [Theory]
+    [InlineData(-1)] [InlineData(int.MinValue)]
+    public void NegativeDurationIsRejectedBeforeExecution(int milliseconds)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new DelayStep(milliseconds, NullLogger.Instance));
+    }
+
     [Fact]
     public async Task DelayStep_WaitsAtLeastSpecifiedTime()
     {

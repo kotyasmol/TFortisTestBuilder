@@ -129,6 +129,15 @@ public class RunDurationTests
                 }
                 await run;
                 Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
+                if (outcome == "compileError")
+                {
+                    // Preflight rejection is not an executed product check.
+                    Assert.False(vm.Station.HasResult);
+                    Assert.False(vm.Station.HasDuration);
+                    Assert.Contains(vm.TestingLogger.Entries, entry => entry.Code == TestBuilder.Domain.Execution.TestErrorCode.GraphInvalid);
+                    Assert.False(cleanupDelay.HasExecutionSucceeded);
+                    return true;
+                }
                 Assert.True(vm.Station.HasResult);
                 Assert.True(vm.Station.HasDuration);
                 Assert.Contains(vm.Station.DurationText, vm.StatusMessage);

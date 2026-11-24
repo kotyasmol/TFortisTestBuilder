@@ -28,9 +28,9 @@ public class BoardShutdownTests
     {
         using var bus = new ModbusService();
         using var vm = new TestViewModel(bus, new SlaveManager(bus));
-        GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"RTL_{board}_board.json")), vm);
+        GraphSerializer.Deserialize(File.ReadAllText(TestProfilePaths.Find($"RTL-{board} · Проверка платы · 11.11.26.json")), vm);
         foreach (var loop in BoardProfileTests.All(vm.RootGraph).OfType<ForEachSlaveNodeViewModel>()) loop.RepeatDelayMs = 0;
-        var shutdown = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.RunOnFailure && n.IsEnabled);
+        var shutdown = vm.RootGraph.Nodes.OfType<SubtestNodeViewModel>().Single(n => n.RunOnFailure && n.IsEnabled && n.Name.StartsWith("Снятие питания"));
         int[] addresses = board == "SW" ? [2301,2302,2303,2304,2305,2307,2308,2385] : [2403,2492,2487,2489,2511];
         var rig = new ShutdownRig(addresses, fault);
         using var compiler = new GraphCompiler(rig, NullLogger.Instance);

@@ -1,3 +1,4 @@
+using TestBuilder.Tests.Support;
 using TestBuilder.Services;
 
 namespace TestBuilder.Tests.Services;
@@ -49,7 +50,7 @@ public class NetworkPlanAddressTests
     [InlineData(true, "Временный адрес")]
     public void MissingAddressNamesTheExactFieldAndRow(bool temporary, string field)
     {
-        var plan = new BenchNetworkPlan();
+        var plan = NetworkTestPlans.TenPorts();
         if (temporary) plan.Addresses[3].TemporaryIp = ""; else plan.Addresses[3].Ip = "";
         var error = Assert.Throws<InvalidOperationException>(plan.Validate);
         Assert.Contains("Строка 4", error.Message); Assert.Contains(field, error.Message); Assert.Contains("заполните", error.Message);
@@ -58,7 +59,7 @@ public class NetworkPlanAddressTests
     [Fact]
     public void DuplicateAddressExplainsBothLocations()
     {
-        var plan = new BenchNetworkPlan();
+        var plan = NetworkTestPlans.TenPorts();
         plan.Addresses.Add(new() { Ip = "192.168.0.12", TemporaryIp = "192.168.0.2" });
         var error = Assert.Throws<InvalidOperationException>(plan.Validate);
         Assert.Contains("Строка 11", error.Message); Assert.Contains("Временный адрес", error.Message);

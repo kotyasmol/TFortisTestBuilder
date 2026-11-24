@@ -80,6 +80,18 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     public void SelectAllNodes() => Editor.SelectAll();
 
+    private void OnOpenProfileHardware(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel vm && TopLevel.GetTopLevel(this) is MainWindow shell)
+            shell.OpenProfileHardware(vm);
+    }
+
+    private async void OnOpenProfileBoard(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is TestViewModel { CanEditGraph: true, IsBoardProfile: true } vm && TopLevel.GetTopLevel(this) is Window owner)
+            await new BoardWindow(vm, true).ShowDialog(owner);
+    }
+
     private async void OnConfigurePing(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel vm && TopLevel.GetTopLevel(this) is Window owner)
@@ -97,6 +109,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         if (DataContext is not TestViewModel { CanEditQuickActions: true } vm || TopLevel.GetTopLevel(this) is not Window owner)
             return;
         CatalogToolsButton.Flyout?.Hide();
+        DeviceModelPicker.IsDropDownOpen = false;
         try
         {
             await new CatalogSerialsWindow(vm, vm.NewCatalogModel(), createNew: true).ShowDialog(owner);
@@ -382,6 +395,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         if (_viewModel != null)
         {
             _viewModel.CurrentGraphOpened += FitCurrentGraph;
+            _viewModel.ValidateEditorInputs += ValidateInputs;
             FitCurrentGraph();
         }
     }
@@ -389,10 +403,38 @@ public partial class GraphEditorView : UserControl, IDisposable
     private void DetachViewModel()
     {
         if (_viewModel != null)
+        {
             _viewModel.CurrentGraphOpened -= FitCurrentGraph;
+            _viewModel.ValidateEditorInputs -= ValidateInputs;
+        }
 
         _viewModel = null;
         _fitPending = false;
+    }
+
+    private string? ValidateInputs()
+    {
+        var controls = this.GetVisualDescendants().OfType<Control>().ToArray();
+        bool ActiveError(Control control) => control.IsVisible && control.IsEnabled && DataValidationErrors.GetHasErrors(control) &&
+            control.GetVisualAncestors().TakeWhile(parent => parent != this).OfType<Control>().All(parent => parent.IsVisible && parent.IsEnabled);
+        // Avalonia 11.1 can retain a conversion error when the user restores exactly
+        // the previous value (the model setter has no change to notify). Reevaluate
+        // those bindings, preserving every entered text including invalid inputs.
+        foreach (var field in controls.OfType<TextBox>().Where(ActiveError).Where(t => t.DataContext is NodeViewModel))
+        {
+            var entered = field.Text;
+            // A disposable higher-priority value restores the original inherited
+            // context/binding; it must never pin a node as the field's local context.
+            using (field.SetValue(DataContextProperty, null, Avalonia.Data.BindingPriority.Animation)) { }
+            field.Text = entered;
+        }
+        var invalid = controls.FirstOrDefault(ActiveError);
+        if (invalid == null) return null;
+        invalid.BringIntoView();
+        invalid.Focus();
+        var node = new[] { invalid }.Concat(invalid.GetVisualAncestors().OfType<Control>())
+            .Select(control => control.DataContext).OfType<NodeViewModel>().FirstOrDefault();
+        return node == null ? "Исправьте выделенное поле редактора." : $"Нода «{node.DisplayTitle}»: исправьте выделенное поле.";
     }
 
     private void FitCurrentGraph()

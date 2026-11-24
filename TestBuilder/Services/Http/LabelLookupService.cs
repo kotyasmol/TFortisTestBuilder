@@ -54,7 +54,7 @@ public sealed class LabelLookupService(IHttpRequestService http, List<LabelTempl
             throw new InvalidOperationException("Сервер вернул неизвестный формат истории изделия.");
         if (document.RootElement.GetArrayLength() == 0)
             throw new InvalidOperationException("Сервер не нашёл изделие. Проверьте серийный номер или MAC.");
-        var templates = workstationTemplates ?? AppSettings.Instance.LabelTemplates;
+        var templates = workstationTemplates ?? LabelTemplateCatalog.ConfiguredTemplates();
         LabelTemplateCatalog.Validate(templates);
         var match = byMac ? NormalizeMac(query) : query.TrimStart('0');
         var matches = new List<LabelData>();

@@ -27,7 +27,7 @@ public static class LabelTemplateStore
             foreach (var template in catalog.Templates)
             {
                 var index = result.FindIndex(t => t.Id == template.Id);
-                if (index >= 0) result[index] = template.Copy(); else result.Add(template.Copy());
+                if (index >= 0) result[index] = template.CopyUpgraded(); else result.Add(template.CopyUpgraded());
             }
         }
         LabelTemplateCatalog.Validate(result);
@@ -70,7 +70,7 @@ public static class LabelTemplateStore
         foreach (var template in incoming.Templates)
         {
             var index = result.FindIndex(t => t.Id == template.Id);
-            if (index >= 0) result[index] = template.Copy(); else result.Add(template.Copy());
+            if (index >= 0) result[index] = template.CopyUpgraded(); else result.Add(template.CopyUpgraded());
         }
         LabelTemplateCatalog.Validate(result); return result;
     }

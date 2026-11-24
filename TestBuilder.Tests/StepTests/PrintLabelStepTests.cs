@@ -189,8 +189,8 @@ public class PrintLabelStepTests
         const string singleLabel =
             "^XA^MD10^FO494,35^A0,36,15^FDPSW+UPS-Box 8x2Pro^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 3200428^FS" +
-            "^FO540,117^BY2^BCN,34,N,N,N^FD>;00320042>68^FS^XZ ";
+            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
+            "^FO562,117^BY2^BCN,34,N,N,N^FD>;03200428^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
@@ -200,7 +200,8 @@ public class PrintLabelStepTests
         Assert.Equal(3200428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(428, context.GetVariable<int>("PrintLabel.SerialShort"));
         Assert.Equal("C0:11:A6:20:01:AC", context.GetVariable<string>("PrintLabel.Mac"));
-        Assert.Equal("003200428", context.GetVariable<string>("PrintLabel.Barcode"));
+        Assert.Equal("03200428", context.GetVariable<string>("PrintLabel.Barcode"));
+        Assert.Equal("00428", context.GetVariable<string>("PrintLabel.SerialText"));
         Assert.Equal(string.Empty, context.GetVariable<string>("PrintLabel.Epl"));
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), context.GetVariable<string>("PrintLabel.Zpl"));
     }
@@ -220,14 +221,14 @@ public class PrintLabelStepTests
 
         Assert.Equal(StepResult.True, result);
         Assert.Contains("MAC: C0:11:A6:20:01:AC", printer.GetText());
-        Assert.Contains("SN: 3200428", printer.GetText());
+        Assert.Contains("SN: 00428", printer.GetText());
         Assert.Equal("Dut.default_mac", context.GetVariable<string>("PrintLabel.MacSource"));
         Assert.Equal("SerialShort", context.GetVariable<string>("PrintLabel.SerialShortSource"));
         Assert.DoesNotContain("1790000123", printer.GetText());
     }
 
     [Theory]
-    [InlineData(241, 154, 2)]
+    [InlineData(197, 154, 2)]
     [InlineData(295, 145, 2)]
     [InlineData(295, 154, 3)]
     public async Task Code128OutsideThePaperOrQuietZoneNeverReachesThePrinter(int width, int height, int module)
@@ -346,7 +347,7 @@ public class PrintLabelStepTests
     [Theory]
     [InlineData("600428")]
     [InlineData("00428")]
-    public async Task Psw2G6FPlusPrintsFullSerialAndDocumentedBarcode(string serial)
+    public async Task Psw2G6FPlusPrintsShortSerialAndTypeWithoutServicePrefix(string serial)
     {
         var printer = new CapturingPrinter(RawLabelPrintResult.Ok());
         var context = new TestContext(new RegisterState());
@@ -355,8 +356,8 @@ public class PrintLabelStepTests
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
         const string expected = "^XA^MD10^FO559,35^A0,36,23^FDPSW-2G6F+^FS" +
             "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 600428^FS" +
-            "^FO540,117^BY2^BCN,34,N,N,N^FD>;00060042>68^FS^XZ ";
+            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
+            "^FO562,117^BY2^BCN,34,N,N,N^FD>;00600428^FS^XZ ";
         Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
         Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));
@@ -388,9 +389,9 @@ public class PrintLabelStepTests
         if (prints)
         {
             Assert.Contains("^FDPSW+Box 8x2Pro^FS", printer.GetText());
-            Assert.Contains("^FDSN: 3300579^FS", printer.GetText());
+            Assert.Contains("^FDSN: 00579^FS", printer.GetText());
             Assert.DoesNotContain("TYPE:", printer.GetText());
-            Assert.Contains("^FD>;10330057>69^FS", printer.GetText());
+            Assert.Contains("^FD>;03300579^FS", printer.GetText());
         }
     }
 

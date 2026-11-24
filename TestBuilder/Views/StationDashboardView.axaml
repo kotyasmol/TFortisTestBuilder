@@ -125,7 +125,7 @@
                                    FontSize="{StaticResource FontSection}" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" />
                       </Grid>
                     </Button>
-                    <ItemsControl ItemsSource="{Binding VisibleProfiles}">
+                    <ItemsControl IsVisible="{Binding IsExpanded}" ItemsSource="{Binding VisibleProfiles}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:StationProfileOptionViewModel">
                           <Button Classes="program" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"

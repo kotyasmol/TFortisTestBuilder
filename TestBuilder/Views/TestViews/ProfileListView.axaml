@@ -31,7 +31,7 @@
           <ItemsControl ItemsSource="{Binding EngineerProfileGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:EngineerProfileGroup">
-                <StackPanel Margin="0,4,0,8">
+                <StackPanel Margin="0,0,0,8">
                   <Button Classes="listHeader" Command="{Binding ToggleExpandedCommand}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Name}"
                           ToolTip.Tip="{Binding Profiles.Count, StringFormat='Профилей: {0}'}">
                     <Grid ColumnDefinitions="Auto,*">
@@ -42,7 +42,7 @@
                       <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0" />
                     </Grid>
                   </Button>
-                  <ListBox ItemContainerTheme="{StaticResource ProfileItemTheme}" ItemsSource="{Binding VisibleProfiles}" SelectionChanged="OnGroupSelectionChanged"
+                  <ListBox IsVisible="{Binding IsExpanded}" ItemContainerTheme="{StaticResource ProfileItemTheme}" ItemsSource="{Binding VisibleProfiles}" SelectionChanged="OnGroupSelectionChanged"
                            Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="services:GraphProfile">

@@ -185,7 +185,7 @@ public class SwitchQualificationProfileTests
     }
 
     [Theory, MemberData(nameof(Models))]
-    public async Task OptionalLabelUsesFullSerialCatalogCodeAndActualDeviceMac(string model, int code, int boardType, int copper, int optical)
+    public async Task OptionalLabelUsesShortSerialCatalogCodeAndActualDeviceMac(string model, int code, int boardType, int copper, int optical)
     {
         var settings = AppSettings.Instance;
         var oldPrinter = settings.DefaultPrinterName;
@@ -211,11 +211,11 @@ public class SwitchQualificationProfileTests
             Assert.Equal("QUALIFICATION-PRINTER", printer.Queue);
             Assert.Equal(1, printer.Calls);
             var command = Encoding.Latin1.GetString(printer.Bytes);
-            Assert.Contains(serial.ToString(), command);
+            Assert.Contains("^FDSN: 00579^FS", command);
             var barcodeField = Regex.Match(command, @"\^BC[^\^]*\^FD(?<data>[^\^]*)\^FS").Groups["data"].Value;
             Assert.NotEmpty(barcodeField);
             Assert.NotNull(Code128Encoding.EncodeZpl(barcodeField, false, out var barcode));
-            Assert.Equal($"0{code:D3}00579", barcode);
+            Assert.Equal($"{code:D3}00579", barcode);
             Assert.Contains($"C0:11:A6:{code:X2}:02:43", command);
             Assert.DoesNotContain("C0:11:A6:FF:00:01", command); // The source is the actual device MAC.
             var evidence = Environment.GetEnvironmentVariable("TFORTIS_QUALIFICATION_EVIDENCE");

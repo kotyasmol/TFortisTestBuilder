@@ -41,7 +41,12 @@ public class StandDiscoveryTests
         await session.Dispatch<bool>(async () =>
         {
             var manager = new SlaveManager(new DiscoveryBus((ushort)type, 2300, 86) { Incomplete = incomplete });
-            Assert.Equal(0, await manager.ScanAsync());
+            if (incomplete)
+            {
+                var error = await Assert.ThrowsAsync<InvalidOperationException>(() => manager.ScanAsync());
+                Assert.Contains("Неполный ответ Modbus", error.Message);
+            }
+            else Assert.Equal(0, await manager.ScanAsync());
             Assert.Empty(manager.Slaves);
             return true;
         }, CancellationToken.None);
@@ -53,11 +58,13 @@ public class StandDiscoveryTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
         {
-            var bus = new DiscoveryBus(1, 0, 0);
+            var bus = new DiscoveryBus(1, 1000, 17);
             var manager = new SlaveManager(bus);
             Assert.Equal(1, await manager.ScanAsync());
-            Assert.IsType<El60Model>(Assert.Single(manager.Slaves));
-            Assert.All(bus.Reads, r => Assert.Equal((ushort)0, r.Address));
+            var model = Assert.IsType<ConfiguredSlaveModel>(Assert.Single(manager.Slaves));
+            Assert.Equal("EL-60", model.DeviceType);
+            Assert.Equal(Enumerable.Range(1000, 17), model.RegisterItems.Select(r => r.Address));
+            Assert.All(bus.Reads, r => Assert.Contains(r.Address, new ushort[] { 0, 1000 }));
             return true;
         }, CancellationToken.None);
     }

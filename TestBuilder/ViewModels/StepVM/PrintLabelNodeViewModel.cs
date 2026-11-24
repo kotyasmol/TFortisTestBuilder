@@ -66,7 +66,7 @@ namespace TestBuilder.ViewModels.StepVM
         {
             if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
             {
-                var selected = await new TestBuilder.Views.LabelTemplatesWindow(LabelTemplate).ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
+                var selected = await new TestBuilder.Views.LabelTemplatesWindow(LabelTemplate, profileOnly: true).ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
                 if (selected != null) LabelTemplate = selected.Copy();
             }
         }

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
@@ -9,12 +10,74 @@ using TestBuilder.Services;
 using TestBuilder.Services.Modbus;
 using TestBuilder.ViewModels;
 using TestBuilder.Views;
+using TestBuilder.Presentation;
+using System.Text.Json;
 
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
 public class EquipmentLibraryTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CatalogPreviewsBuiltInAndCustomMapsWithoutAddingOrChangingEquipment(bool dark)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            using var clean = new FreshUserJourneyTests.CleanWorkstation();
+            var theme = Application.Current!.RequestedThemeVariant; Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+            var library = new EquipmentLibrary(path);
+            var custom = library.Save(new DeviceDefinition { Name = "Свой шаблон для просмотра", IdentificationValues = new() { 5, 8 }, StandSerialNumberAddress = 3,
+                Registers = new() { new() { Address = 3, Name = "Номер стенда" }, new() { Address = 12, Name = "PoeMode", Writable = true, RetryWriteOnMismatch = true, Unit = "мА", Category = "Контроль" } } });
+            var bytes = File.ReadAllBytes(path); var catalogBefore = JsonSerializer.Serialize(library.Load());
+            using var bus = new ModbusService();
+            using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
+            var graph = GraphSerializer.Serialize(vm, vm.CurrentProfileName);
+            var window = new Window { Content = new EquipmentLibraryView(library), Width = dark ? 1180 : 1000, Height = dark ? 780 : 650 };
+            try
+            {
+                window.Show(); Layout();
+                var catalog = Find<ListBox>("EquipmentCatalogList"); var grid = Find<DataGrid>("CatalogPreviewRegisters");
+                Assert.NotEmpty(grid.ItemsSource.Cast<object>()); // First template is immediately visible.
+                Find<TextBox>("CatalogRegisterSearch").Text = "not found";
+                catalog.SelectedItem = catalog.Items.OfType<EquipmentTemplate>().Single(e => e.Id == custom.Id); Layout();
+                Assert.Equal("", Find<TextBox>("CatalogRegisterSearch").Text);
+                Assert.Equal(2, grid.ItemsSource.Cast<object>().Count());
+                Assert.Contains("5, 8", Find<TextBlock>("CatalogPreviewDetails").Text);
+                Assert.Contains("стенда (хранения): 3", Find<TextBlock>("CatalogPreviewDetails").Text);
+                grid.ScrollIntoView(grid.ItemsSource.Cast<object>().Last(), grid.Columns[1]); Layout();
+                Assert.Contains(grid.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == RussianUiText.Display("PoeMode"));
+                Assert.True(grid.IsReadOnly); Assert.All(grid.Columns, column => Assert.True(column.IsReadOnly));
+                Assert.False(grid.BeginEdit());
+                Find<TextBox>("CatalogRegisterSearch").Text = "12"; Layout();
+                var register = Assert.Single(grid.ItemsSource.Cast<EquipmentTemplateBrowser.CatalogRegisterPreview>());
+                Assert.Equal("PoeMode", register.Name); Assert.Equal("RW · запись", register.Access); Assert.Equal("Да", register.Repeat); Assert.Equal("мА", register.Unit);
+                catalog.SelectedItem = catalog.Items.OfType<EquipmentTemplate>().Single(e => e.Device.Name == "PS-3"); Layout();
+                Assert.Equal(7, grid.ItemsSource.Cast<object>().Count());
+                Assert.Equal("PS-3", Find<TextBlock>("CatalogPreviewTitle").Text);
+                Find<TextBox>("CatalogRegisterSearch").Text = "1216"; Layout();
+                register = Assert.Single(grid.ItemsSource.Cast<EquipmentTemplateBrowser.CatalogRegisterPreview>());
+                Assert.Equal("RO · чтение", register.Access);
+                Find<TextBox>("CatalogRegisterSearch").Text = ""; Layout();
+                Assert.Equal(7, grid.ItemsSource.Cast<object>().Count());
+                using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-equipment-preview-{dark}.png"));
+                Find<TextBox>("CatalogRegisterSearch").Text = "absent register"; Layout();
+                Assert.Empty(grid.ItemsSource.Cast<object>()); Assert.Contains("не найдены", Find<TextBlock>("CatalogRegisterCount").Text);
+                Find<TextBox>("CatalogRegisterSearch").Text = "";
+                window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Watermark?.ToString() == "Найти оборудование по названию").Text = "absent equipment"; Layout();
+                Assert.Null(catalog.SelectedItem); Assert.Empty(grid.ItemsSource.Cast<object>()); Assert.False(Find<TextBox>("CatalogRegisterSearch").IsEnabled);
+                Assert.Equal(graph, GraphSerializer.Serialize(vm, vm.CurrentProfileName));
+                Assert.Equal(bytes, File.ReadAllBytes(path)); Assert.Equal(catalogBefore, JsonSerializer.Serialize(library.Load()));
+            }
+            finally { window.Close(); File.Delete(path); Application.Current.RequestedThemeVariant = theme; }
+            T Find<T>(string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+            void Layout() { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -82,6 +145,7 @@ public class EquipmentLibraryTests
                 save.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.False(completion.IsCompleted);
                 editor.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "EquipmentName").Text = "Мой SIMBAT";
+                editor.GetVisualDescendants().OfType<Expander>().Single().IsExpanded = true; editor.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 editor.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "EquipmentIdentificationValuesText").Text = "9, 10";
                 editor.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
@@ -158,13 +222,16 @@ public class EquipmentLibraryTests
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
-                var catalog = window.GetVisualDescendants().OfType<ListBox>().Single(c => c.Name == "EquipmentCatalogList");
-                Assert.NotEmpty(catalog.Items);
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
                 window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-equipment-catalog.png"));
-                var add = window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "AddCatalogEquipment");
-                add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                for (var i = 0; i < 2; i++)
+                {
+                    var add = window.GetVisualDescendants().OfType<Button>().Single(c => c.IsEffectivelyVisible && c.Name == (i == 0 ? "AddFirstProfileEquipment" : "AddProfileEquipment"));
+                    add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                    var picker = Assert.Single(window.GetVisualDescendants().OfType<AddProfileEquipmentView>()); picker.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                    picker.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "ConfirmAddEquipment").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Dispatcher.UIThread.RunJobs();
+                }
                 window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 var grid = window.GetVisualDescendants().OfType<DataGrid>().Single(c => c.Name == "ProfileEquipmentGrid");
                 var devices = grid.ItemsSource.Cast<DeviceDefinition>().ToArray();

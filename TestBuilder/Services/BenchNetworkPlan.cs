@@ -10,8 +10,7 @@ namespace TestBuilder.Services;
 public sealed class BenchNetworkPlan
 {
     public string Mask { get; set; } = "255.255.255.0";
-    public List<BenchNetworkAddress> Addresses { get; set; } = Enumerable.Range(2, 10)
-        .Select(i => new BenchNetworkAddress { Ip = $"192.168.0.{i}", TemporaryIp = $"192.0.2.{i}" }).ToList();
+    public List<BenchNetworkAddress> Addresses { get; set; } = new();
     public string BuildDataTestPairs()
     {
         Validate();
@@ -31,8 +30,8 @@ public sealed class BenchNetworkPlan
     {
         var bits = ReadMask();
         var inverse = ~bits;
-        if (Addresses == null || Addresses.Count < 1 || Addresses.Any(a => a == null))
-            throw new InvalidOperationException("Добавьте хотя бы один адрес стенда.");
+        if (Addresses == null || Addresses.Any(a => a == null))
+            throw new InvalidOperationException("Список тестовых портов повреждён.");
         var used = new Dictionary<string, (int Row, string Field)>();
         for (var index = 0; index < Addresses.Count; index++)
         {
@@ -64,10 +63,9 @@ public sealed class BenchNetworkPlan
         var mask = ReadMask();
         var occupied = Addresses.SelectMany(a => new[] { a.Ip, a.TemporaryIp })
             .Where(ip => TryAddress(ip, out _)).Select(ip => ToNumber(IPAddress.Parse(ip))).ToHashSet();
-        var defaults = new BenchNetworkPlan().Addresses[0];
-        var ip = Next(Addresses.Select(a => a.Ip), defaults.Ip, mask, occupied);
+        var ip = Next(Addresses.Select(a => a.Ip), "192.168.0.2", mask, occupied);
         if (TryAddress(ip, out var number)) occupied.Add(number);
-        return new BenchNetworkAddress { Ip = ip, TemporaryIp = Next(Addresses.Select(a => a.TemporaryIp), defaults.TemporaryIp, mask, occupied) };
+        return new BenchNetworkAddress { Ip = ip, TemporaryIp = Next(Addresses.Select(a => a.TemporaryIp), "192.0.2.2", mask, occupied) };
     }
 
     private uint ReadMask()

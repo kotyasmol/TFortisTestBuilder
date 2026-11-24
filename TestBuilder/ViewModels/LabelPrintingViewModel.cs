@@ -120,7 +120,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     {
         _lastTest = snapshot?.Copy();
         LastTestPreview = _lastTest?.Label is { } label
-            ? LabelPreview.FromInput(label.Template.CopyUpgraded(), label.Serial, label.Mac) : null;
+            ? LabelPreview.FromInput(label.Template, label.Serial, label.Mac) : null;
         foreach (var property in new[] { nameof(HasLastTest), nameof(HasLastTestLabel), nameof(LastTestDescription), nameof(LastTestResult), nameof(LastTestMessage) })
             OnPropertyChanged(property);
         RefreshAvailability();
@@ -131,6 +131,21 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             t.Id.StartsWith("catalog:", StringComparison.Ordinal));
     private static string OptionId(LabelTemplateDefinition t) => IsDeviceTemplate(t) ? "DeviceZpl" : t.Id;
     private LabelTemplateDefinition? SelectedTemplate => ResolveSelectedTemplate(SerialNumber);
+    private EquipmentCatalog? _modelCatalog;
+    private LabelTemplateDefinition ForProduct(LabelTemplateDefinition template, string serial)
+    {
+        var model = _modelCatalog?.Resolve(null, ProfileDeviceName);
+        if (model != null && !string.IsNullOrWhiteSpace(serial) && LabelPrintContent.CheckBoardSerial(model, serial) is { } error)
+            throw new InvalidOperationException(error);
+        if (!template.UseShortSerial && model?.SerialSeries is { } series && !string.IsNullOrWhiteSpace(serial))
+        {
+            if (!long.TryParse(serial, out var full)) throw new InvalidOperationException("Введите полный серийный номер изделия.");
+            if (series.Check(full) is { } seriesError) throw new InvalidOperationException(seriesError);
+        }
+        return model?.LabelCode != null && !template.UseShortSerial
+            ? LabelPrintContent.ForModel(template, model, 0)
+            : LabelPrintContent.ForDevice(template, ProfileDeviceName);
+    }
 
     private LabelTemplateDefinition? ResolveSelectedTemplate(string serialNumber)
     {
@@ -154,6 +169,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(HasMac)); return;
         }
         var testId = SelectedTestLabel?.Id;
+        _modelCatalog = catalog;
         TestLabelOptions = GetTestLabelOptions(catalog);
         SelectedTestLabel = TestLabelOptions.FirstOrDefault(option => option.Id == testId) ?? TestLabelOptions[0];
         var selected = _workstationTemplates.FirstOrDefault(t => t.Id == selectedId);
@@ -186,7 +202,10 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         {
             if (!modelTemplates.TryGetValue(model.Id, out var template))
             {
-                template = LabelPrintContent.ForDevice(model.RtlReport == null ? switchLayout : boardLayout, model.Name);
+                template = model.SerialSeries != null || model.RtlReport != null
+                    ? LabelPrintContent.ForModel(model.RtlReport == null ? switchLayout : boardLayout, model, 0)
+                    : LabelPrintContent.ForDevice(model.RtlReport == null ? switchLayout : boardLayout, model.Name);
+                template.DeviceCode = model.LabelCode!.Value;
                 template.CabinetName = model.LabelCabinets?.GetValueOrDefault(0);
                 if (template.UseShortSerial)
                     template.BarcodePrefix = "0" + model.LabelCode!.Value.ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
@@ -196,6 +215,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             foreach (var (code, name) in model.LabelVariants)
             {
                 var variant = template.Copy();
+                variant.VariantCode = code;
                 variant.VariantName = name;
                 variant.CabinetName = model.LabelCabinets?.GetValueOrDefault(code);
                 if (variant.UseShortSerial)
@@ -211,7 +231,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 
     private LabelPreview PreviewFor(LabelTemplateDefinition template, string serial, string mac)
     {
-        try { return LabelPreview.FromInput(LabelPrintContent.ForDevice(template, ProfileDeviceName), serial, mac); }
+        try { return LabelPreview.FromInput(ForProduct(template, serial), serial, mac); }
         catch (InvalidOperationException ex) { return new LabelPreview(Array.Empty<LabelPreviewElement>(), 0, 0, 354, 150, ex.Message); }
     }
 
@@ -295,14 +315,15 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         if (!testPrint && _profiles != null && selected?.Language == "ZPL" &&
             (SelectedProductName == null || !ProductNames.Contains(SelectedProductName)))
             throw new InvalidOperationException("Выберите изделие из профилей. Название изделия задаётся в редакторе профиля.");
-        var template = savedTemplate?.CopyUpgraded() ?? LabelPrintContent.ForDevice(
-            selected ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), ProfileDeviceName);
+        var template = savedTemplate?.Copy() ?? ForProduct(
+            selected ?? throw new InvalidOperationException("Выберите этикетку. Для ZPL укажите полный серийный номер или выберите изделие."), data.Serial);
         if (testPrint && template.UseShortSerial)
         {
             template.SerialOffset = 0;
             template.FirstSerialNumber = null;
             template.BarcodePrefix = new string('0', template.BarcodePrefix.Length);
         }
+        if (testPrint) { template.DeviceCode = 0; template.VariantCode = 0; }
         template.Validate();
         var count = testPrint ? 1 : Copies;
         if (count is < 1 or > 100) throw new InvalidOperationException("Количество этикеток должно быть от 1 до 100.");
@@ -312,7 +333,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         var context = new TestContext(new RegisterState());
         var step = new PrintLabelStep(_logger, printer, "SerialNumber", "SerialShort", "Mac",
             true, data.Serial, data.Mac, count, template.UseShortSerial, true, _printer, 30000,
-            DeviceLabelModel.PswUpsBox8x2Pro, template);
+            DeviceLabelModel.PswUpsBox8x2Pro, template, preserveTemplate: savedTemplate != null);
         var result = await step.ExecuteAsync(context, token);
         if (result == StepResult.False) throw new InvalidOperationException(context.GetVariable<string>("PrintLabel.Error"));
         if (!testPrint)

@@ -43,7 +43,7 @@ public class EquipmentCatalogDataTests
             try
             {
                 window.Show(); Layout(window);
-                MainTabs(window).SelectedIndex = 1; Layout(window);
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<TabControl>(), tab => tab.Name == "EquipmentCatalogTabs");
                 var models = Grid(window, "CatalogDataModels");
                 Assert.True(models.IsReadOnly);
                 Assert.Equal(profile.EquipmentModels.Count, models.ItemsSource.Cast<object>().Count());
@@ -57,7 +57,7 @@ public class EquipmentCatalogDataTests
                 Assert.Contains(fields, field => field.Name == "Номер для аварийного отчёта" && field.Value == "2600001");
                 Assert.Contains(fields, field => field.Name == "Дополнительное поле изделия: fixtureData" && field.Value == "keep-me");
                 window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-all-catalog-data-{dark}.png"));
-                window.GetVisualDescendants().OfType<TabControl>().Single(tab => tab.Name != "EquipmentCatalogTabs").SelectedIndex = 1;
+                window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = 1;
                 Layout(window);
                 var json = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataJson");
                 Assert.True(json.IsReadOnly);
@@ -97,7 +97,7 @@ public class EquipmentCatalogDataTests
             window.Show(); Layout(window);
             try
             {
-                MainTabs(window).SelectedIndex = 1; Layout(window);
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<TabControl>(), tab => tab.Name == "EquipmentCatalogTabs");
                 Search(window).Text = "026"; Layout(window);
                 var model = EquipmentCatalog.Load(folder.Path).Resolve("psw-2g8f-plus-box", null)!;
                 EquipmentCatalog.SaveModel(folder.Path, model with { IsFullOverride = true, LabelCabinets = new() { [0] = "UpdatedCase" } });
@@ -145,7 +145,6 @@ public class EquipmentCatalogDataTests
     }
 
     private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
-    private static TabControl MainTabs(Window window) => window.GetVisualDescendants().OfType<TabControl>().Single(tab => tab.Name == "EquipmentCatalogTabs");
     private static DataGrid Grid(Window window, string name) => window.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == name);
     private static TextBox Search(Window window) => window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch");
     private static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>().Single(box => AutomationProperties.GetName(box) == caption);

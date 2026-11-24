@@ -34,7 +34,7 @@ public class NetworkPortBatchTests
     [InlineData("too-many")]
     public void InvalidBatchNeverPartlyChangesTheOriginalPlan(string problem)
     {
-        var source = new BenchNetworkPlan(); source.Addresses[0].Name = "Порт 11";
+        var source = NetworkTestPlans.TenPorts(); source.Addresses[0].Name = "Порт 11";
         var before = JsonSerializer.Serialize(source);
         var batch = new NetworkPortBatch(12, 12, "Порт", "Медь", 100, "192.168.0.12", "192.0.2.12", true);
         batch = problem switch

@@ -125,6 +125,9 @@ public sealed class LabelLayoutEditorWindow : Window
         var diagnostics = new SelectableTextBlock { Name = "LabelBarcodeDiagnostics", TextWrapping = TextWrapping.Wrap };
         diagnostics.Bind(SelectableTextBlock.TextProperty, new Binding("Diagnostics"));
         var dataPanel = new StackPanel { Spacing = 8 };
+        var dataSettings = new LabelDataSettingsView { DataContext = Editor.Template };
+        dataSettings.Changed += Editor.Refresh;
+        dataPanel.Children.Add(new Expander { Header = "Формирование SN и штрихкода", Content = dataSettings, HorizontalAlignment = HorizontalAlignment.Stretch });
         dataPanel.Children.Add(new Expander { Header = "Данные для примера и сканер", Content = samples, HorizontalAlignment = HorizontalAlignment.Stretch });
         dataPanel.Children.Add(diagnostics);
         var tabs = new TabControl { Items = { new TabItem { Header = "Данные и проверка", Content = new ScrollViewer { Content = dataPanel } },
@@ -144,7 +147,7 @@ public sealed class LabelLayoutEditorWindow : Window
         fit.Bind(IsVisibleProperty, new Binding("HasTextOptions"));
         Combo(fields, "Выравнивание", "SelectedAlignment", LabelLayoutEditorViewModel.Alignments.Cast<object>().ToArray(), "HasTextOptions");
         var fieldPicker = new ComboBox { Name = "LabelFieldPicker", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = new[] {
-            new Field("Название изделия", "{{Name}}"), new Field("Полный серийный номер", "{{Serial}}"), new Field("Короткий номер", "{{ShortSerial}}"),
+            new Field("Название изделия", "{{Name}}"), new Field("SN по настройкам этикетки", "{{SerialText}}"), new Field("Полный серийный номер", "{{Serial}}"), new Field("Короткий номер", "{{ShortSerial}}"),
             new Field("MAC", "{{Mac}}"), new Field("Составной штрихкод изделия", "{{Barcode}}"), new Field("Шкаф", "{{Cabinet}}"), new Field("Комплектация", "{{Variant}}") } };
         var valueLabel = new TextBlock { Text = "Вставить данные" }; valueLabel.Bind(IsVisibleProperty, new Binding("HasValue")); fields.Children.Add(valueLabel); fields.Children.Add(fieldPicker);
         fieldPicker.Bind(IsVisibleProperty, new Binding("HasValue"));

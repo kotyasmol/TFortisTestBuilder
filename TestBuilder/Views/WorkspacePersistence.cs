@@ -59,8 +59,16 @@ internal sealed class WorkspacePersistence : IDisposable
         WatchGroups(_vm.SelfTestPageVM.Categories, g => "selftest/" + g.Key,
             g => g.IsExpanded, (g, value) => g.IsExpanded = value, g => g.DefaultIsExpanded, () => false);
         var network = window.FindControl<NetworkSetupView>("NetworkSetupViewControl")!;
-        WatchExpander(network.FindControl<Expander>("IdentifyCableSection")!, "network/cable");
-        WatchExpander(network.FindControl<Expander>("NetworkJournalSection")!, "network/journal");
+        var diagnostics = network.FindControl<Avalonia.Controls.Primitives.ToggleButton>("NetworkDiagnosticsToggle")!;
+        diagnostics.IsChecked = _state.ExpandedSections.GetValueOrDefault("network/diagnostics");
+        EventHandler<AvaloniaPropertyChangedEventArgs> diagnosticChanged = (_, e) =>
+        {
+            if (e.Property != Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty) return;
+            _state.ExpandedSections["network/diagnostics"] = diagnostics.IsChecked == true;
+            SaveSoon();
+        };
+        diagnostics.PropertyChanged += diagnosticChanged;
+        _unsubscribe.Add(() => diagnostics.PropertyChanged -= diagnosticChanged);
 
         var editor = window.FindControl<TestView>("TestViewControl")!;
         _logLayout = editor.FindControl<Grid>("EditorLogLayout")!;
@@ -117,18 +125,6 @@ internal sealed class WorkspacePersistence : IDisposable
         return () => { foreach (var group in groups) Restore(group); };
     }
 
-    private void WatchExpander(Expander expander, string key)
-    {
-        expander.IsExpanded = _state.ExpandedSections.GetValueOrDefault(key);
-        EventHandler<AvaloniaPropertyChangedEventArgs> changed = (_, e) =>
-        {
-            if (e.Property != Expander.IsExpandedProperty) return;
-            _state.ExpandedSections[key] = expander.IsExpanded;
-            SaveSoon();
-        };
-        expander.PropertyChanged += changed;
-        _unsubscribe.Add(() => expander.PropertyChanged -= changed);
-    }
 
     private void OnTestPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

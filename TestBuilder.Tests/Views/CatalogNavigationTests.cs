@@ -31,8 +31,7 @@ public class CatalogNavigationTests
                 window.Show(); Layout(window);
                 shell.SelectPageCommand.Execute("Catalog"); Layout(window);
                 var page = window.FindControl<EquipmentCatalogView>("EquipmentCatalogViewControl")!;
-                var tabs = page.GetVisualDescendants().OfType<TabControl>().Single(tab => tab.Name == "EquipmentCatalogTabs");
-                tabs.SelectedIndex = 1; Layout(window);
+                Assert.DoesNotContain(page.GetVisualDescendants().OfType<TabControl>(), tab => tab.Name == "EquipmentCatalogTabs");
                 using var currentFolder = new ProfileCopyTests.ProfileFolder();
                 EquipmentCatalog.SaveModel(currentFolder.Path, new EquipmentModel("folder-fixture", "Изделие нового каталога"));
                 shell.SelectPageCommand.Execute("Editor");
@@ -73,17 +72,12 @@ public class CatalogNavigationTests
                 Assert.Empty(window.OwnedWindows);
                 Assert.False(window.FindControl<TestView>("TestViewControl")!.IsEffectivelyVisible);
 
-                var hardware = window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Оборудование"));
+                var hardware = window.FindControl<Button>("EquipmentLibraryNavigationButton")!;
                 var hardwareLeft = hardware.TranslatePoint(default, window)!.Value.X;
-                var network = window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Сеть"));
-                Assert.True(Math.Abs(network.TranslatePoint(default, window)!.Value.Y - navigation.TranslatePoint(default, window)!.Value.Y) < 1,
-                    string.Join("; ", window.GetVisualDescendants().OfType<Button>().Where(button => ReferenceEquals(button.Command, shell.SelectPageCommand))
-                        .Select(button => $"{button.Content}: classes={string.Join(',', button.Classes)}, width={button.Bounds.Width}, padding={button.Padding}, margin={button.Margin}")));
                 foreach (var button in window.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("workspaceNav") && button.IsEffectivelyVisible))
                     Assert.True(button.TranslatePoint(default, window)!.Value.X + button.Bounds.Width <= hardwareLeft);
 
-                var tabs = page.GetVisualDescendants().OfType<TabControl>().Single(tab => tab.Name == "EquipmentCatalogTabs");
-                tabs.SelectedIndex = 1; Layout(window);
+                Assert.DoesNotContain(page.GetVisualDescendants().OfType<TabControl>(), tab => tab.Name == "EquipmentCatalogTabs");
                 var models = page.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels");
                 Assert.Equal(shell.TestVM.EquipmentModels.Count, models.ItemsSource.Cast<object>().Count());
                 var edit = page.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "EditCatalogDataModel");

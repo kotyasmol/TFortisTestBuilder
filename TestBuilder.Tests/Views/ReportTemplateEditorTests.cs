@@ -165,6 +165,7 @@ public class ReportTemplateEditorTests
 
     private static void Click(Window window, Button button)
     {
+        button.BringIntoView(); Layout(window);
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
         window.MouseDown(point, MouseButton.Left);
         window.MouseUp(point, MouseButton.Left);
@@ -175,6 +176,8 @@ public class ReportTemplateEditorTests
     {
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
         Dispatcher.UIThread.RunJobs();
     }
 

@@ -49,7 +49,6 @@ namespace TestBuilder.ViewModels
             OnPropertyChanged(nameof(IsCatalogPage));
             if (IsLabelsPage) TestVM.RefreshProfiles();
             if (IsCatalogPage) TestVM.ReloadCatalogForViewing();
-            if (IsNetworkPage) _ = NetworkSetupVM?.CheckRuntimeAsync();
         }
         [RelayCommand]
         private void SelectPage(string page)
@@ -59,7 +58,7 @@ namespace TestBuilder.ViewModels
             SelectedPage = page;
         }
 
-        public string WorkspaceTitle => IsSettingsOpen ? "Настройки" :
+        public string WorkspaceTitle => IsEquipmentLibraryOpen ? "Каталог оборудования" : IsHardwareOpen ? "Оборудование профиля" : IsSettingsOpen ? "Настройки компьютера" :
             IsEngineerWorkspace ? "Инженерный режим" : "Пульт стенда";
         public string SwitchWorkspaceTitle => IsEngineerWorkspace ? "Перейти в пульт" : "Открыть редактор";
         [RelayCommand]
@@ -69,14 +68,28 @@ namespace TestBuilder.ViewModels
         }
 
         [ObservableProperty] private bool isSettingsOpen;
+        [ObservableProperty] private bool isHardwareOpen;
+        [ObservableProperty] private bool isEquipmentLibraryOpen;
+        public bool IsWorkspaceOpen => !IsSettingsOpen && !IsHardwareOpen && !IsEquipmentLibraryOpen;
+        partial void OnIsEquipmentLibraryOpenChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsWorkspaceOpen));
+            OnPropertyChanged(nameof(WorkspaceTitle));
+        }
+        partial void OnIsHardwareOpenChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsWorkspaceOpen));
+            OnPropertyChanged(nameof(WorkspaceTitle));
+        }
         partial void OnIsSettingsOpenChanged(bool value)
         {
+            OnPropertyChanged(nameof(IsWorkspaceOpen));
             OnPropertyChanged(nameof(WorkspaceTitle));
             if (!value && IsLabelsPage) LabelPrintingVM.RefreshTemplates();
         }
 
         [RelayCommand]
-        private void OpenSettings() => IsSettingsOpen = true;
+        private void OpenSettings() { if (IsWorkspaceOpen) IsSettingsOpen = true; }
 
         [RelayCommand]
         private void CloseSettings() => IsSettingsOpen = false;
@@ -92,7 +105,7 @@ namespace TestBuilder.ViewModels
             ModbusVM.CanWrite = () => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting;
             SelfTestPageVM = new SelfTestPageViewModel(TestVM.SelfTestPageState);
             SettingsVM = new SettingsViewModel(() => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
-            NetworkSetupVM = new NetworkSetupViewModel(DataTestNetworkConfigurator.GetAdapters,
+            NetworkSetupVM = new NetworkSetupViewModel(DataTestNetworkConfigurator.GetComputerAdapters,
                 () => IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting,
                 canInspectRuntime: () => !TestVM.IsTestRunning && !TestVM.HasRunningQuickActions && !TestVM.IsConnecting);
             NetworkSetupVM.PropertyChanged += OnNetworkSetupChanged;
@@ -117,6 +130,12 @@ namespace TestBuilder.ViewModels
 
         private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName == nameof(SettingsVM.GraphsFolder))
+            {
+                TestVM.RefreshProfiles();
+                LabelPrintingVM.RefreshTemplates();
+                return;
+            }
             if (e.PropertyName != nameof(SettingsVM.IsEngineerMode)) return;
             TestVM.IsOperatorView = !IsEngineerWorkspace;
             if (!IsEngineerWorkspace && !TestVM.IsTestRunning && !TestVM.Station.HasResult)

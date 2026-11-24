@@ -112,7 +112,10 @@ public class ManyPortNetworkTests
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                var grid = Find<DataGrid>(window, "NetworkAdaptersGrid");
+                window.GetVisualDescendants().OfType<Expander>().Single(e => e.Name == "NetworkPlanSection").IsExpanded = true;
+                window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
+                var grid = Find<DataGrid>(window, "NetworkPlanAdaptersGrid");
+                grid.BringIntoView(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 Assert.Equal(24, grid.ItemsSource.Cast<object>().Count());
                 Assert.InRange(grid.GetVisualDescendants().OfType<DataGridRow>().Count(), 1, 15);
                 using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-24-{dark}.png"));

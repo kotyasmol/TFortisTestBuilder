@@ -17,14 +17,14 @@ public sealed class NetworkPlanWindow : Window
 
     internal NetworkPlanWindow(BenchNetworkPlan source, Action<BenchNetworkPlan> savePlan)
     {
-        Title = "План сети стенда"; Width = 1200; MinWidth = 900; Height = 600;
+        Title = "Тестовые порты и пары"; Width = 1200; MinWidth = 900; Height = 600;
         var plan = TestViewModel.CopyDefinition(source);
         var addresses = new ObservableCollection<BenchNetworkAddress>(plan.Addresses);
         var root = new DockPanel { Margin = new Thickness(20) };
         var top = new StackPanel { Spacing = 8, Margin = new Thickness(0, 0, 0, 12) };
         top.Children.Add(new TextBlock { Text = "Маска IPv4" });
         var mask = new TextBox { Name = "NetworkPlanMask", Text = plan.Mask }; top.Children.Add(mask);
-        top.Children.Add(new TextBlock { Text = "«Добавить карту» подставляет адреса, которых ещё нет в плане. Проверьте основной и временный адреса перед сохранением. Затем выберите физическую карту в разделе «Сеть»; IP Windows меняются кнопкой «Применить адреса».", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        top.Children.Add(new TextBlock { Text = "Создайте строку на каждый тестовый порт. «Добавить порт» предлагает свободные адреса, «Добавить пары…» создаёт по два порта на пару, «Добавить порты…» — группу с указанным количеством строк. Назначьте физические карты в разделе «Сеть». Сохранение списка не меняет IP системы.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         top.Children.Add(new TextBlock { Text = "Задайте название, разъём и пару для каждого порта. Для DataTest отметьте по два порта с одинаковым именем пары и скоростью. Назначение разъёма подтверждается кабелем, а не IP или скоростью линка.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         var grid = new DataGrid { Name = "NetworkPlanAddresses", AutoGenerateColumns = false, ItemsSource = addresses };
@@ -72,7 +72,7 @@ public sealed class NetworkPlanWindow : Window
             };
             buttons.Children.Add(b);
         }
-        Button("Добавить карту", () =>
+        Button("Добавить порт", () =>
         {
             plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList();
             var row = plan.CreateNextAddress(); addresses.Add(row);
@@ -86,6 +86,7 @@ public sealed class NetworkPlanWindow : Window
                 Commit(); plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList();
                 var result = await new NetworkPortBatchWindow(TestViewModel.CopyDefinition(plan)).ShowDialog<BenchNetworkPlan?>(this);
                 if (result == null) return;
+                mask.Text = result.Mask;
                 addresses.Clear(); foreach (var row in result.Addresses) addresses.Add(row);
                 var last = addresses.LastOrDefault(); if (last != null) { grid.SelectedItem = last; grid.ScrollIntoView(last, grid.Columns[4]); }
                 status.Text = ""; errorBox.IsVisible = false;
@@ -93,10 +94,34 @@ public sealed class NetworkPlanWindow : Window
             catch (Exception ex) { status.Text = "Изменения не сохранены. " + ex.Message; errorBox.IsVisible = true; }
         };
         buttons.Children.Add(bulk);
+        var addPairs = new Button { Content = "Добавить пары…", Margin = new Thickness(0, 0, 8, 0) };
+        addPairs.Click += (_, _) =>
+        {
+            try
+            {
+                Commit(); plan.Mask = mask.Text?.Trim() ?? ""; plan.Addresses = addresses.ToList();
+                var editor = new NetworkPortBatchEditor(TestViewModel.CopyDefinition(plan), result =>
+                {
+                    mask.Text = result.Mask;
+                    addresses.Clear(); foreach (var row in result.Addresses) addresses.Add(row);
+                    Content = root; grid.SelectedItem = addresses.LastOrDefault();
+                    status.Text = ""; errorBox.IsVisible = false;
+                }, pairCount: true) { Margin = new Thickness(20) };
+                editor.Cancelled += () => Content = root;
+                Content = editor;
+            }
+            catch (Exception ex) { status.Text = "Изменения не сохранены. " + ex.Message; errorBox.IsVisible = true; }
+        };
+        buttons.Children.Add(addPairs);
         Button("Удалить строку", () =>
         {
             grid.CancelEdit(DataGridEditingUnit.Cell); grid.CancelEdit(DataGridEditingUnit.Row);
             if (grid.SelectedItem is BenchNetworkAddress row) addresses.Remove(row);
+        }, commit: false);
+        Button("Удалить все порты", () =>
+        {
+            grid.CancelEdit(DataGridEditingUnit.Cell); grid.CancelEdit(DataGridEditingUnit.Row);
+            addresses.Clear();
         }, commit: false);
         Button("Всем 100 Мбит/с", () => { foreach (var row in addresses) row.TestMbps = 100; });
         Button("Всем 1000 Мбит/с", () => { foreach (var row in addresses) row.TestMbps = 1000; });

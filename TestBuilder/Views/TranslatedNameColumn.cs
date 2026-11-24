@@ -8,6 +8,7 @@ namespace TestBuilder.Views;
 // standard DataGridTextColumn editor, including its commit/cancel behavior.
 public sealed class TranslatedNameColumn : DataGridTextColumn
 {
+    public bool WrapText { get; set; }
     public TranslatedNameColumn() => Binding = new Binding("Name") { Mode = BindingMode.TwoWay };
 
     protected override Control GenerateElement(DataGridCell cell, object dataItem)
@@ -17,6 +18,12 @@ public sealed class TranslatedNameColumn : DataGridTextColumn
         control.Bind(TextBlock.TextProperty, new Binding("Name") {
             Mode = BindingMode.OneWay, Converter = new RussianUiTextConverter()
         });
+        if (WrapText && control is TextBlock text)
+        {
+            text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+            text.Margin = new Avalonia.Thickness(8, 6);
+            text.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
+        }
         return control;
     }
 }

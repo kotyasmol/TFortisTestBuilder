@@ -15,9 +15,10 @@ using TestBuilder.Services;
 namespace TestBuilder.Views;
 public sealed class LabelTemplatesWindow : Window
 {
-    public LabelTemplatesWindow(LabelTemplateDefinition? profileTemplate = null, bool settingsOnly = false)
+    public LabelTemplatesWindow(LabelTemplateDefinition? profileTemplate = null, bool settingsOnly = false, bool profileOnly = false)
     {
-        Title = "Шаблоны этикеток"; Width = 1040; Height = 800; MinWidth = 800; MinHeight = 600;
+        Title = profileOnly ? "Этикетка ноды профиля" : settingsOnly ? "Каталог этикеток" : "Шаблоны для ручной печати";
+        Width = 1040; Height = 800; MinWidth = 800; MinHeight = 600;
         var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         var inputs = new List<TextBox>();
         var catalogPath = LabelTemplateStore.LocalPath(AppSettings.Instance.ResolvedGraphsFolder);
@@ -36,13 +37,17 @@ public sealed class LabelTemplatesWindow : Window
         {
             var existing = templates.FirstOrDefault(t => t.Id == profileTemplate.Id);
             if (existing != null) templates.Remove(existing);
-            templates.Add(profileTemplate.Copy());
+            templates.Add(profileTemplate.CopyUpgraded());
         }
         var root = new DockPanel { Margin = new Thickness(20) };
+        var scope = new TextBlock { Text = profileOnly ? "Изменения применяются только к ноде текущего профиля. После применения сохраните профиль." :
+            "Общий каталог макетов. Сохранённые ноды используют свои копии шаблонов.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
+        DockPanel.SetDock(scope, Dock.Top); root.Children.Add(scope);
         var footer = new StackPanel { Spacing = 8 };
         footer.Children.Add(status);
-        footer.Children.Add(new SelectableTextBlock { Name = "LabelCatalogPath", Text = "Каталог: " + catalogPath, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        var save = new Button { Content = settingsOnly ? "Сохранить каталог" : "Сохранить и выбрать шаблон" }; footer.Children.Add(save);
+        footer.Children.Add(new SelectableTextBlock { Name = "LabelCatalogPath", Text = "Каталог: " + catalogPath, IsVisible = !profileOnly, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var save = new Button { Content = profileOnly ? "Применить к ноде" : settingsOnly ? "Сохранить каталог" : "Сохранить каталог и выбрать шаблон" }; footer.Children.Add(save);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("260,16,*") };
         var left = new DockPanel(); var actions = new StackPanel { Spacing = 8 };
@@ -52,10 +57,10 @@ public sealed class LabelTemplatesWindow : Window
         add.Click += (_, _) => { var t = new LabelTemplateDefinition(); templates.Add(t); list.SelectedItem = t; };
         var copy = new Button { Content = "Создать копию" };
         copy.Click += (_, _) => { if (list.SelectedItem is LabelTemplateDefinition t) { var c = t.Copy(); c.Id = Guid.NewGuid().ToString(); c.Name += " (копия)"; c.MatchServerSerial = false; templates.Add(c); list.SelectedItem = c; } };
-        var remove = new Button { Content = "Удалить шаблон" };
+        var remove = new Button { Content = "Удалить шаблон", IsVisible = !profileOnly };
         remove.Click += (_, _) => { if (list.SelectedItem is LabelTemplateDefinition t) { templates.Remove(t); list.SelectedItem = templates.FirstOrDefault(); } };
         actions.Children.Add(add); actions.Children.Add(copy); actions.Children.Add(remove); DockPanel.SetDock(actions, Dock.Bottom); left.Children.Add(actions); left.Children.Add(list);
-        var export = new Button { Content = "Экспорт каталога…" };
+        var export = new Button { Content = "Экспорт каталога…", IsVisible = !profileOnly };
         export.Click += async (_, _) =>
         {
             try
@@ -70,7 +75,7 @@ public sealed class LabelTemplatesWindow : Window
             }
             catch (Exception ex) { status.Text = ex.Message; }
         };
-        var import = new Button { Content = "Импорт каталога…" };
+        var import = new Button { Content = "Импорт каталога…", IsVisible = !profileOnly };
         import.Click += async (_, _) =>
         {
             try
@@ -127,13 +132,16 @@ public sealed class LabelTemplatesWindow : Window
         void SchedulePreview() { previewTimer.Stop(); previewTimer.Start(); }
         cabinetSample.TextChanged += (_, _) => SchedulePreview();
         Closed += (_, _) => previewTimer.Stop();
+        var dataSettings = new LabelDataSettingsView();
+        dataSettings.Changed += SchedulePreview;
+        fields.Children.Add(new Expander { Header = "Формирование SN и штрихкода", Content = dataSettings, HorizontalAlignment = HorizontalAlignment.Stretch, IsExpanded = true });
         foreach (var (label, property) in new[] { ("Название изделия / шаблона", "Name"), ("Язык (ZPL или EPL)", "Language"),
             ("Разрешение принтера, dpi (203 или 300)", "PrinterDpi"), ("Ширина этикетки, точки", "WidthDots"), ("Высота этикетки, точки", "HeightDots"),
             ("Левый край этикетки, точки", "OriginXDots"), ("Ширина узкой полосы ZPL, точки", "BarcodeModuleDots"),
             ("Отступ штрихкода ZPL сверху, точки", "BarcodeTopDots"), ("Высота штрихкода ZPL, точки", "BarcodeHeightDots"),
             ("Ширина поля шкафа ZPL, точки", "CabinetWidthDots"), ("Высота текста шкафа ZPL, точки", "CabinetFontHeightDots"),
             ("Смещение полного серийного номера", "SerialOffset"), ("Максимум короткого номера", "ShortSerialMax"),
-            ("Цифр короткого номера", "ShortSerialDigits"), ("Код изделия для отчёта", "DeviceCode"), ("Префикс штрихкода", "BarcodePrefix") })
+            ("Цифр короткого номера по умолчанию", "ShortSerialDigits"), ("Код типа устройства", "DeviceCode"), ("Префикс старого формата (если новый формат не задан)", "BarcodePrefix") })
         {
             fields.Children.Add(new TextBlock { Text = label });
             var box = new TextBox(); box.Bind(TextBox.TextProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box); inputs.Add(box);
@@ -147,7 +155,7 @@ public sealed class LabelTemplatesWindow : Window
             var box = new CheckBox { Content = label }; box.Bind(CheckBox.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay }); fields.Children.Add(box);
             box.PropertyChanged += (_, e) => { if (e.Property == CheckBox.IsCheckedProperty) SchedulePreview(); };
         }
-        fields.Children.Add(new TextBlock { Text = "Команда принтера. Данные: {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Variant}}, {{Cabinet}}, {{Barcode}}. ZPL: {{ZplBarcode}} — компактный Code 128; {{CabinetField}} — шкаф рядом с SN с шириной {{SerialTextWidth}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        fields.Children.Add(new TextBlock { Text = "Команда принтера. {{SerialText}} — SN по настройкам выше; {{Barcode}} — данные штрихкода; {{Name}}, {{Serial}}, {{ShortSerial}}, {{Mac}}, {{Variant}}, {{Cabinet}} — исходные поля. ZPL: {{ZplBarcode}} — компактный Code 128; {{CabinetField}} — шкаф рядом с SN с шириной {{SerialTextWidth}}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var command = new TextBox { AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 180 };
         command.Bind(TextBox.TextProperty, new Binding("Command") { Mode = BindingMode.TwoWay }); fields.Children.Add(command);
         command.TextChanged += (_, _) => SchedulePreview();
@@ -165,10 +173,14 @@ public sealed class LabelTemplatesWindow : Window
             try
             {
                 if (inputs.Any(DataValidationErrors.GetHasErrors)) throw new InvalidOperationException("Исправьте значения шаблона.");
-                LabelTemplateCatalog.Validate(templates);
                 var selected = list.SelectedItem as LabelTemplateDefinition ?? throw new InvalidOperationException("Выберите шаблон.");
-                LabelTemplateStore.Save(catalogPath, templates, preserveExisting: !imported, expectedRevision: catalogRevision);
-                AppSettings.Instance.LabelTemplates = templates.Select(t => t.Copy()).ToList();
+                selected.CommitDataFormats();
+                if (profileOnly) LabelTemplateCatalog.Validate(new[] { selected });
+                else
+                {
+                    LabelTemplateCatalog.Validate(templates);
+                    LabelTemplateStore.Save(catalogPath, templates, preserveExisting: !imported, expectedRevision: catalogRevision);
+                }
                 Close(selected.Copy());
             }
             catch (Exception ex) { status.Text = ex.Message; }

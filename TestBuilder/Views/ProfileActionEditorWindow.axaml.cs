@@ -84,6 +84,8 @@ public partial class ProfileActionEditorWindow : Window
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();
     internal ProfileActionDefinition BuildResult()
     {
+        if (!_on.CheckEditorInputs()) throw new InvalidOperationException(_on.StatusMessage);
+        if (!_off.CheckEditorInputs()) throw new InvalidOperationException(_off.StatusMessage);
         var result = new ProfileActionDefinition {
             Id = _id, Name = NameInput.Text?.Trim() ?? "", Color = SelectedColor,
             Display = (ProfileActionDisplay)DisplayInput.SelectedIndex,

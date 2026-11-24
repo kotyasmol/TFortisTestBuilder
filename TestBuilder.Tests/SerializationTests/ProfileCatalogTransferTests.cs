@@ -299,7 +299,7 @@ public class ProfileCatalogTransferTests
         var printer = new CapturePrinter();
         Assert.Equal(StepResult.True, await prints[0].CreateStep(NullLogger.Instance, printer).ExecuteAsync(context, default));
         Assert.Equal(Card.Name, context.GetVariable<string>("PrintLabel.DeviceName"));
-        Assert.Equal("009000123", context.GetVariable<string>("PrintLabel.Barcode"));
+        Assert.Equal("09000123", context.GetVariable<string>("PrintLabel.Barcode"));
         Assert.Contains("9000123", Encoding.Latin1.GetString(printer.Bytes));
         var report = new BuildTestReportStep(NullLogger.Instance, "Report", "Test-stand", "SerialNumber", "test-session", "1", false);
         Assert.Equal(StepResult.True, await report.ExecuteAsync(context, default));

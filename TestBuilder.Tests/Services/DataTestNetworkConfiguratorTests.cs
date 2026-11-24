@@ -1,3 +1,4 @@
+using TestBuilder.Tests.Support;
 using TestBuilder.Services;
 using static TestBuilder.Services.DataTestNetworkConfigurator;
 
@@ -5,18 +6,19 @@ namespace TestBuilder.Tests.Services;
 
 public class DataTestNetworkConfiguratorTests
 {
-    private static readonly BenchAdapter[] Adapters = DataTestNetworkConfigurator.BenchIps
+    private static readonly BenchNetworkPlan Plan = NetworkTestPlans.TenPorts();
+    private static readonly BenchAdapter[] Adapters = Plan.Addresses.Select(p => p.Ip)
         .Select((ip, index) => new BenchAdapter($"adapter-{index}", $"Ethernet {index}",
             $"0000000000{index:00}", "Down", index == 0 ? ip : string.Empty))
         .ToArray();
 
-    private static AdapterAssignment[] ValidAssignments() => DataTestNetworkConfigurator.BenchIps
+    private static AdapterAssignment[] ValidAssignments() => Plan.Addresses.Select(p => p.Ip)
         .Select((ip, index) => new AdapterAssignment(ip, Adapters[index].Id)).ToArray();
 
     [Fact]
     public void ValidAssignments_AcceptDownAdapters()
     {
-        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(ValidAssignments(), Adapters));
+        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(ValidAssignments(), Adapters, Plan));
     }
 
     [Fact]
@@ -25,7 +27,7 @@ public class DataTestNetworkConfiguratorTests
         var assignments = ValidAssignments();
         assignments[1] = assignments[1] with { AdapterId = assignments[0].AdapterId };
 
-        Assert.Contains("нескольких", DataTestNetworkConfigurator.ValidateAssignments(assignments, Adapters));
+        Assert.Contains("нескольких", DataTestNetworkConfigurator.ValidateAssignments(assignments, Adapters, Plan));
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public class DataTestNetworkConfiguratorTests
         var extra = new BenchAdapter("management", "Management", "001122334455", "Up", "192.168.0.5");
 
         Assert.Contains("192.168.0.5", DataTestNetworkConfigurator.ValidateAssignments(
-            ValidAssignments(), [.. Adapters, extra]));
+            ValidAssignments(), [.. Adapters, extra], Plan));
     }
 
     [Fact]
@@ -80,7 +82,7 @@ public class DataTestNetworkConfiguratorTests
         assignments[0] = assignments[0] with { AdapterId = internet.Id };
 
         Assert.Contains("служебное", DataTestNetworkConfigurator.ValidateAssignments(
-            assignments, [.. Adapters, internet]));
+            assignments, [.. Adapters, internet], Plan));
     }
 
     [Fact]
@@ -89,7 +91,7 @@ public class DataTestNetworkConfiguratorTests
         var adapters = Adapters.ToArray();
         adapters[0] = adapters[0] with { Ipv4 = "192.0.2.2" };
 
-        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(ValidAssignments(), adapters));
+        Assert.Null(DataTestNetworkConfigurator.ValidateAssignments(ValidAssignments(), adapters, Plan));
     }
 
     [Fact]
@@ -99,7 +101,7 @@ public class DataTestNetworkConfiguratorTests
         adapters[0] = adapters[0] with { Ipv4 = "192.0.2.3" };
 
         Assert.Contains("вне сети стенда", DataTestNetworkConfigurator.ValidateAssignments(
-            ValidAssignments(), adapters));
+            ValidAssignments(), adapters, Plan));
     }
 
     [Theory]

@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-21",
+  "platform": "macOS arm64; .NET 8; Avalonia 11.1 headless with Skia",
+  "new_regressions": "TestBuilder.Tests/Views/FreshUserJourneyTests.cs",
+  "palette_nodes_rendered": 30,
+  "numeric_inputs_checked": 55,
+  "runs": [
+    {
+      "scope": "fresh user journey including portable family format and corrupt catalog; built-in help",
+      "total": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "final focused regressions, mandatory UI checks, help and repeated profile",
+      "total": 59,
+      "passed": 59,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "models, serialization, profile actions, reports, labels and network services",
+      "total": 597,
+      "passed": 596,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "NetworkConnectivityHardwareTests requires Windows and TFORTIS_NETWORK_PROBE_PAIR"
+    },
+    {
+      "scope": "all Views except ProfileLayoutTests; last broad run",
+      "total": 381,
+      "passed": 380,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "Inter glyphTypeface creation in ProductionProfile_AllNestedEditorsPreserveData: PSW-2G6F+ diagnostic profile",
+      "isolated_repeat": "same case passed in final focused run"
+    },
+    {
+      "scope": "ProfileLayoutTests, separate process",
+      "total": 6,
+      "passed": 5,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "Inter glyphTypeface creation for RTL-POE",
+      "isolated_repeat": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    }
+  ],
+  "generated_profiles_layout": {
+    "profiles": 2,
+    "graphs": 2,
+    "nodes": 6,
+    "spacing_conflicts": 0
+  },
+  "external_actions_not_performed": [
+    "physical Modbus",
+    "Windows IP or driver changes",
+    "wire-speed traffic",
+    "physical printing and barcode scanning",
+    "live corporate report upload",
+    "Windows launcher update"
+  ],
+  "published": false,
+  "screenshots": [
+    "network-24.png",
+    "new-equipment.png",
+    "new-switch-profile.png",
+    "retargeted-label.png"
+  ],
+  "fresh_journey_cases": 14
+}

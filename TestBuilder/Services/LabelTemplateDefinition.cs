@@ -12,7 +12,7 @@ namespace TestBuilder.Services;
 public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPropertyChanged
 {
     private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD\{\{Name\}\}\^FS");
-    private static readonly Regex FittedZplSerial = new(@"\^FO(\d+),(\d+)\^A0N?,\d+,\{\{SerialTextWidth\}\}\^FDSN: \{\{Serial\}\}\^FS");
+    private static readonly Regex FittedZplSerial = new(@"\^FO(\d+),(\d+)\^A0N?,\d+,\{\{SerialTextWidth\}\}\^FDSN: \{\{(?:Serial|SerialText)\}\}\^FS");
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
@@ -32,6 +32,12 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
     public int ShortSerialDigits { get; set; } = 5;
     public int DeviceCode { get; set; }
     public string BarcodePrefix { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SerialTextFormat { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BarcodeFormat { get; set; }
+    public string ServicePrefix { get; set; } = "0";
+    public int VariantCode { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? VariantName { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -68,13 +74,38 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
         return copy;
     }
     public override string ToString() => Name;
-    public string Barcode(int shortSerial) => BarcodePrefix + shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture);
+    internal void CommitDataFormats()
+    {
+        // An explicit editor save preserves the rules shown to the user, including legacy full SN.
+        SerialTextFormat ??= "{{Serial}}";
+        BarcodeFormat ??= UseShortSerial ? "{{BarcodePrefix}}{{ShortSerial}}" : "{{Serial}}";
+    }
+    public string Barcode(int shortSerial) => RenderBarcode(((long)SerialOffset + shortSerial).ToString(CultureInfo.InvariantCulture), shortSerial, "");
+    public string RenderSerialText(string serial, int shortSerial, string mac)
+    {
+        var value = SerialTextFormat == null ? serial : LabelDataFormat.Resolve(this, SerialTextFormat, serial, shortSerial, mac);
+        if (!IsSafeLabelText(value)) throw new InvalidOperationException("Надпись SN не должна содержать команды принтера.");
+        return value;
+    }
+    public string RenderBarcode(string serial, int shortSerial, string mac)
+    {
+        var value = BarcodeFormat == null
+            ? UseShortSerial ? BarcodePrefix + shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture) : serial
+            : LabelDataFormat.Resolve(this, BarcodeFormat, serial, shortSerial, mac);
+        if (value.Length is < 1 or > 256 || value.Any(c => c is < ' ' or > '~') || value.IndexOfAny(new[] { '^', '~', '>', '"' }) >= 0)
+            throw new InvalidOperationException("Штрихкод: от 1 до 256 цифр или печатных латинских символов без команд принтера.");
+        return value;
+    }
     internal bool MatchesServerSerial(int serial) =>
         MatchServerSerial && serial >= (FirstSerialNumber ?? SerialOffset) && (long)serial <= (long)SerialOffset + ShortSerialMax;
 
     public void Validate()
     {
         Layout?.Validate();
+        if (SerialTextFormat != null) LabelDataFormat.Validate(SerialTextFormat);
+        if (BarcodeFormat != null) LabelDataFormat.Validate(BarcodeFormat);
+        if (ServicePrefix == null || ServicePrefix.Length > 10 || ServicePrefix.Any(c => !char.IsAsciiDigit(c)) || DeviceCode < 0 || VariantCode is < 0 or > 999)
+            throw new InvalidOperationException("Служебный префикс — до 10 цифр; код изделия и комплектации не могут быть отрицательными.");
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||
             WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
             BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
@@ -86,7 +117,7 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
             throw new InvalidOperationException("Проверьте имя, язык ZPL/EPL, размеры, диапазон серийных номеров и команду этикетки. MAC и поиск по диапазону требуют короткого номера.");
         foreach (Match token in Regex.Matches(Command, @"\{\{(.*?)\}\}"))
             if (!(Layout != null && token.Groups[1].Value == "VisualLayoutV1") && !new[] { "Serial", "ShortSerial", "Mac", "Barcode", "Name", "Variant", "WidthDots", "BarcodeX", "TextX", "BarcodeType",
-                    "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth", "Cabinet", "CabinetField", "SerialTextWidth" }.Contains(token.Groups[1].Value))
+                    "SerialText", "DeviceCode", "VariantCode", "ServicePrefix", "ZplBarcode", "BarcodeModuleDots", "BarcodeTopDots", "BarcodeHeightDots", "FitNameWidth", "Cabinet", "CabinetField", "SerialTextWidth" }.Contains(token.Groups[1].Value))
                 throw new InvalidOperationException("Неизвестная подстановка: " + token.Value);
         if (!IsSafeLabelText(Name) || VariantName != null && !IsSafeLabelText(VariantName) ||
             CabinetName != null && !IsSafeLabelText(CabinetName) ||
@@ -97,19 +128,22 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
     public string Render(string serial, int shortSerial, string mac, int barcodeX = 0, int textX = 0)
     {
         Validate();
-        var barcode = UseShortSerial ? Barcode(shortSerial) : serial;
+        var barcode = RenderBarcode(serial, shortSerial, mac);
+        var serialText = RenderSerialText(serial, shortSerial, mac);
         var values = new Dictionary<string, string> {
             ["Serial"] = serial, ["ShortSerial"] = shortSerial.ToString("D" + ShortSerialDigits, CultureInfo.InvariantCulture),
+            ["SerialText"] = serialText, ["DeviceCode"] = DeviceCode.ToString("D3", CultureInfo.InvariantCulture),
+            ["VariantCode"] = VariantCode.ToString(CultureInfo.InvariantCulture), ["ServicePrefix"] = ServicePrefix,
             ["Mac"] = mac, ["Barcode"] = barcode, ["Name"] = Name,
             ["Variant"] = string.IsNullOrWhiteSpace(VariantName) ? "" : $"TYPE: {VariantName}",
             ["ZplBarcode"] = Code128Encoding.ZplData(barcode), ["BarcodeModuleDots"] = BarcodeModuleDots.ToString(CultureInfo.InvariantCulture),
             ["BarcodeTopDots"] = BarcodeTopDots.ToString(CultureInfo.InvariantCulture), ["BarcodeHeightDots"] = BarcodeHeightDots.ToString(CultureInfo.InvariantCulture),
-            ["BarcodeType"] = Code128Encoding.CanUseC(serial) ? "1C" : "1B",
+            ["BarcodeType"] = Code128Encoding.CanUseC(barcode) ? "1C" : "1B",
             ["WidthDots"] = WidthDots.ToString(CultureInfo.InvariantCulture), ["BarcodeX"] = barcodeX.ToString(CultureInfo.InvariantCulture),
             ["TextX"] = textX.ToString(CultureInfo.InvariantCulture) };
         if (Command.Contains("{{FitNameWidth}}", StringComparison.Ordinal))
             values["FitNameWidth"] = FitNameWidth().ToString(CultureInfo.InvariantCulture);
-        var (serialWidth, cabinetField) = CabinetLayout(serial);
+        var (serialWidth, cabinetField) = CabinetLayout(serialText);
         values["Cabinet"] = CabinetName ?? "";
         values["CabinetField"] = cabinetField;
         values["SerialTextWidth"] = serialWidth.ToString(CultureInfo.InvariantCulture);
@@ -159,13 +193,27 @@ public static class LabelTemplateCatalog
     // Only exact shipped commands are upgraded; user-authored commands and metadata survive.
     public static void UpgradeBuiltIn(LabelTemplateDefinition? template)
     {
-        if (template == null || template.Layout != null) return;
+        if (template == null) return;
         using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
         var previous = JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
-        var previousTemplate = previous.FirstOrDefault(t => t.Id == template.Id && t.Language == template.Language && t.Command == template.Command);
+        var original = template.Layout?.OriginalCommand ?? template.Command;
+        var previousTemplate = previous.FirstOrDefault(t => t.Language == template.Language && t.Command == original &&
+            (t.Id == template.Id || t.UseShortSerial && template.UseShortSerial));
         if (previousTemplate != null)
         {
-            var current = Defaults().Single(t => t.Id == template.Id);
+            var current = Defaults().Single(t => t.Id == previousTemplate.Id);
+            if (template.SerialTextFormat == null && template.BarcodeFormat == null && current.UseShortSerial)
+            {
+                template.SerialTextFormat = current.SerialTextFormat;
+                template.BarcodeFormat = current.BarcodeFormat;
+                if (template.Layout != null)
+                {
+                    foreach (var element in template.Layout.Elements.Where(e => e.Kind == "Text" && e.Value == "SN: {{Serial}}"))
+                        element.Value = "SN: {{SerialText}}";
+                    template.Layout.OriginalCommand = current.Command;
+                }
+            }
+            if (template.Layout != null) return;
             template.Command = current.Command;
             if (template.Language == "ZPL" && template.HeightDots == null)
             {
@@ -177,9 +225,6 @@ public static class LabelTemplateCatalog
                 template.OriginXDots = current.OriginXDots;
             if (template.Language == "ZPL" && template.BarcodeTopDots == previousTemplate.BarcodeTopDots)
                 template.BarcodeTopDots = current.BarcodeTopDots;
-            if (current.UseShortSerial && template.BarcodePrefix.Length == 3 &&
-                current.BarcodePrefix == "0" + template.BarcodePrefix)
-                template.BarcodePrefix = current.BarcodePrefix;
         }
     }
     public static List<LabelTemplateDefinition> Defaults()
@@ -188,9 +233,12 @@ public static class LabelTemplateCatalog
         return JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!;
     }
 
+    internal static List<LabelTemplateDefinition> ConfiguredTemplates() =>
+        LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder, AppSettings.Instance.LabelTemplates);
+
     internal static List<LabelTemplateDefinition> WorkstationTemplates(out EquipmentCatalog? catalog)
     {
-        var templates = LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder, AppSettings.Instance.LabelTemplates);
+        var templates = ConfiguredTemplates();
         try { catalog = EquipmentCatalog.Load(AppSettings.Instance.ResolvedGraphsFolder); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         {
@@ -221,8 +269,7 @@ public static class LabelTemplateCatalog
             if ((ranges[i].FirstSerialNumber ?? ranges[i].SerialOffset) <= (long)ranges[i - 1].SerialOffset + ranges[i - 1].ShortSerialMax)
                 throw new InvalidOperationException($"Диапазоны поиска шаблонов «{ranges[i - 1].Name}» и «{ranges[i].Name}» пересекаются.");
     }
-    public static LabelTemplateDefinition Legacy(string id) => LabelTemplateStore.Load(AppSettings.Instance.ResolvedGraphsFolder,
-        AppSettings.Instance.LabelTemplates).FirstOrDefault(t => t.Id == id)?.Copy()
+    public static LabelTemplateDefinition Legacy(string id) => ConfiguredTemplates().FirstOrDefault(t => t.Id == id)?.Copy()
         ?? Defaults().FirstOrDefault(t => t.Id == id)
         ?? throw new InvalidOperationException($"Не найден шаблон этикетки {id}. Выберите шаблон в ноде.");
 }

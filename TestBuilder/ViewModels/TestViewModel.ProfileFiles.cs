@@ -72,7 +72,7 @@ public partial class TestViewModel
     private async Task<bool> CanDiscardProfileChangesAsync(Func<Task<bool>> confirm)
     {
         if (_confirmingProfileDiscard) return false;
-        if (!HasUnsavedProfileChanges()) return true;
+        if (!HasUnsavedProfileChanges() && CheckEditorInputs()) return true;
         _confirmingProfileDiscard = true;
         try { return await confirm(); }
         catch (InvalidOperationException error)
@@ -181,6 +181,7 @@ public partial class TestViewModel
     private async Task ExportProfile(GraphProfile? profile)
     {
         if (profile == null || !CanManageProfile(profile)) return;
+        if (IsCurrentProfile(profile) && !CheckEditorInputs()) return;
         try
         {
             var json = IsCurrentProfile(profile) && _profileLoadError.Length == 0
@@ -214,6 +215,7 @@ public partial class TestViewModel
     private async Task CopyProfile(GraphProfile? profile)
     {
         if (!CanManageProfile(profile)) return;
+        if (profile != null && IsCurrentProfile(profile) && !CheckEditorInputs()) return;
         try
         {
             var source = IsCurrentProfile(profile!) && _profileLoadError.Length == 0
@@ -233,7 +235,7 @@ public partial class TestViewModel
             var copy = _profileCatalog.FirstOrDefault(p => p.FilePath == copyPath);
             // Keep another edited document and any connected stand untouched.
             var canOpen = !IsConnected && CanManageProfile(profile) && _currentProfilePath == currentPath &&
-                (copyCurrent ? MatchesCurrentProfile(json) : !HasUnsavedProfileChanges());
+                (copyCurrent ? MatchesCurrentProfile(json) : !HasUnsavedProfileChanges() && CheckEditorInputs());
             if (copy != null && canOpen) await SelectProfileAsync(copy, discardChangesConfirmed: copyCurrent);
             StatusMessage = canOpen ? $"Создана копия профиля: {copy?.DisplayName ?? description}" :
                 $"Создана копия профиля: {copy?.DisplayName ?? description}. Выберите её в списке для редактирования.";

@@ -1,3 +1,4 @@
+using TestBuilder.Tests.Support;
 using System.Text.Json;
 using TestBuilder.Services;
 using TestBuilder.ViewModels;
@@ -55,6 +56,7 @@ public class NetworkPlanTests
     [Fact]
     public void LinkIdentificationUsesStableIdAndPreservesAssignments()
     {
+        using var planScope = NetworkTestPlans.UseTenPorts();
         var cards = DataTestNetworkConfigurator.BenchIps.Select((ip, i) => new BenchAdapter($"card-{i}", $"Card {i}", $"MAC{i}", "Up", ip, 1000)).ToArray();
         var vm = new NetworkSetupViewModel(() => cards, () => true);
         vm.Rows[0].SelectedAdapter = cards[1];

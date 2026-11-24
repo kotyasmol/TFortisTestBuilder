@@ -183,6 +183,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     }
     public LabelTemplateDefinition Apply()
     {
+        Template.CommitDataFormats();
         Refresh(); Template.Validate();
         if (Preview is not { HasContent: true } || Preview.BarcodeError != null || string.IsNullOrEmpty(Command))
             throw new InvalidOperationException(Preview?.Message ?? "Проверьте данные макета.");

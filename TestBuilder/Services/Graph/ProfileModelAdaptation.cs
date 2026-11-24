@@ -137,15 +137,32 @@ internal sealed class ProfileModelAdaptation
         var oldFlags = print.DataSourceFlags;
         var oldSerial = print.ManualSerialNumber;
         var oldMac = print.ManualMacAddress;
-        var templates = AppSettings.Instance.LabelTemplates.Concat(LabelTemplateCatalog.Defaults()).ToArray();
         var board = target.RtlReport != null;
         var template = oldTemplate?.Copy();
         if (template != null && template.UseShortSerial == board)
+        {
+            IEnumerable<LabelTemplateDefinition> templates = LabelTemplateCatalog.Defaults();
+            try { templates = LabelTemplateCatalog.ConfiguredTemplates().Concat(templates).ToArray(); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException)
+            {
+                reasons.Add("Не удалось прочитать каталог макетов: " + ex.Message + " Выбран встроенный макет; проверьте этикетку.");
+            }
             template = templates.First(t => board ? !t.UseShortSerial && t.Language == "EPL" : t.UseShortSerial && t.RequiresMac && t.Language == "ZPL").Copy();
+        }
         if (template != null)
         {
             var names = new[] { source?.Name, oldTemplate?.Name }.OfType<string>().Where(n => n.Length > 0 && !n.Equals(target.Name, StringComparison.OrdinalIgnoreCase)).Distinct().ToArray();
             template.Command = ParameterizeNames(template.Command, names);
+            if (template.Layout is { } layout)
+            {
+                foreach (var element in layout.Elements.Where(e => e.Kind == "Text"))
+                {
+                    element.Value = ParameterizeText(element.Value, names);
+                    if (names.Contains(element.Name, StringComparer.OrdinalIgnoreCase)) element.Name = target.Name;
+                }
+                if (layout.OriginalCommand != null)
+                    layout.OriginalCommand = ParameterizeNames(layout.OriginalCommand, names);
+            }
             template.Name = target.Name;
             if (target.SerialSeries != null && target.LabelCode.HasValue)
                 template = LabelPrintContent.ForModel(template, target, variant);
@@ -168,13 +185,17 @@ internal sealed class ProfileModelAdaptation
 
     internal static string ParameterizeNames(string command, IEnumerable<string> names)
     {
-        string Replace(string text)
-        {
-            foreach (var name in names.OrderByDescending(n => n.Length)) text = text.Replace(name, "{{Name}}", StringComparison.OrdinalIgnoreCase);
-            return text;
-        }
         // Replace only printable text, never paths, JSON selectors, IDs, scripts or graph labels.
-        command = Regex.Replace(command, @"(\^FD)([^\^]*)(\^FS)", m => m.Groups[1].Value + Replace(m.Groups[2].Value) + m.Groups[3].Value);
-        return Regex.Replace(command, "(?m)^(A[^\\r\\n]*,\")([^\"]*)(\")$", m => m.Groups[1].Value + Replace(m.Groups[2].Value) + m.Groups[3].Value);
+        command = Regex.Replace(command, @"(\^FD)([^\^]*)(\^FS)", m => m.Groups[1].Value + ParameterizeText(m.Groups[2].Value, names) + m.Groups[3].Value);
+        return Regex.Replace(command, "(?m)^(A[^\\r\\n]*,\")([^\"]*)(\")$", m => m.Groups[1].Value + ParameterizeText(m.Groups[2].Value, names) + m.Groups[3].Value);
+    }
+
+    internal static string ParameterizeText(string text, IEnumerable<string> names)
+    {
+        var literals = names.Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(n => n.Length).Select(Regex.Escape).ToArray();
+        if (literals.Length == 0) return text;
+        // One pass preserves existing placeholders and never replaces text inside a newly inserted placeholder.
+        return Regex.Replace(text, @"\{\{[^{}]*\}\}|(?:" + string.Join("|", literals) + ")",
+            m => m.Value.StartsWith("{{", StringComparison.Ordinal) ? m.Value : "{{Name}}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 }

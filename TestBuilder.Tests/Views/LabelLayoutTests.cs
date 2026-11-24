@@ -100,6 +100,7 @@ public class LabelLayoutTests
 
     [Theory]
     [InlineData("003200428")]
+    [InlineData("03200428")]
     [InlineData("000000000")]
     [InlineData("3300001")]
     [InlineData("12345678")]
@@ -125,7 +126,7 @@ public class LabelLayoutTests
             var number = serial - model.SerialSeries.SerialOffset;
             var command = LabelPrintContent.Render(t, serial.ToString(), number, "C0:11:A6:20:01:AC");
             var preview = LabelPreview.Parse(t, command);
-            Assert.Contains(preview.Elements, e => e.Text == "SN: " + serial);
+            Assert.Contains(preview.Elements, e => e.Text == "SN: " + number.ToString("D5"));
             Assert.Equal(t.Barcode(number), Decode(Assert.Single(preview.Elements.Where(e => e.Bars.Length > 0))));
         }
         baseTemplate.CabinetName = "Шкаф ^~\"";
@@ -236,7 +237,7 @@ public class LabelLayoutTests
             try { bitmap.CopyPixels(new PixelRect(0, 0, w, h), pointer, pixels.Length, w * 4); Marshal.Copy(pointer, pixels, 0, pixels.Length); }
             finally { Marshal.FreeHGlobal(pointer); }
             var reader = new BarcodeReaderGeneric { Options = new DecodingOptions { PossibleFormats = new[] { BarcodeFormat.CODE_128 }, TryHarder = true } };
-            Assert.Equal("003200428", Assert.IsType<Result>(reader.Decode(pixels, w, h, RGBLuminanceSource.BitmapFormat.BGRA32)).Text);
+            Assert.Equal("03200428", Assert.IsType<Result>(reader.Decode(pixels, w, h, RGBLuminanceSource.BitmapFormat.BGRA32)).Text);
             bitmap.Save(Path.Combine(Path.GetTempPath(), "tfortis-label-decode-proof.png"));
         }, CancellationToken.None);
     }

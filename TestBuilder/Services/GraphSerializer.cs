@@ -108,7 +108,9 @@ namespace TestBuilder.Services
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
             BuildTestReportNodeViewModel report when !string.IsNullOrWhiteSpace(report.ExpectedSerialPrefix) => ReportWithSerialPrefixType,
             BuildTestReportNodeViewModel => "Build Test Report",
-            PrintLabelNodeViewModel p => p.LabelTemplate?.Layout != null ? "Print Label (layout v1)" : p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
+            PrintLabelNodeViewModel p => p.LabelTemplate?.Layout != null ? "Print Label (layout v1)"
+                : p.LabelTemplate is { SerialTextFormat: not null } or { BarcodeFormat: not null } ? "Print Label (data v1)"
+                : p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
             SendTestReportNodeViewModel n => RtlTestReport.IsEndpoint(n.Endpoint) ? RtlReportType : "Send Test Report",
             SubtestNodeViewModel { FailureOrder: not null } => "Subtest (cleanup order v1)",
             SubtestNodeViewModel => "Subtest",
@@ -960,7 +962,7 @@ namespace TestBuilder.Services
                         IncludeAllVariables = n.IncludeAllVariables ?? false
                     },
 
-                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" or "Print Label (last test v1)" or "Print Label (layout v1)" => new PrintLabelNodeViewModel
+                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" or "Print Label (last test v1)" or "Print Label (layout v1)" or "Print Label (data v1)" => new PrintLabelNodeViewModel
                     {
                         Location = location,
                         UseLastTestLabel = n.UseLastTestLabel ?? (type == "Print Label (last test v1)"),

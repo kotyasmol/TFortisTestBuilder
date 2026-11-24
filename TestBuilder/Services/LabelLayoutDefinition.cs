@@ -38,7 +38,6 @@ public sealed class LabelLayoutDefinition
     public string? OriginalCommand { get; set; }
     public List<LabelLayoutElement> Elements { get; set; } = new();
     [JsonExtensionData] public Dictionary<string, JsonElement>? ExtensionData { get; set; }
-    private static readonly string[] Tokens = { "Name", "Serial", "ShortSerial", "Mac", "Barcode", "Variant", "Cabinet" };
 
     public void Validate()
     {
@@ -53,19 +52,13 @@ public sealed class LabelLayoutDefinition
                 e.Module is < 1 or > 10 || e.Stroke is < 1 or > 100 || e.Value == null || e.Value.Length > 1000 ||
                 e.Value.Any(char.IsControl))
                 throw new InvalidOperationException($"Элемент «{e.Name}»: проверьте координаты, размеры и текст.");
-            foreach (Match token in Regex.Matches(e.Value, @"\{\{(.*?)\}\}"))
-                if (!Tokens.Contains(token.Groups[1].Value))
-                    throw new InvalidOperationException($"Элемент «{e.Name}»: неизвестное поле {token.Value}.");
+            if (e.Value.Length > 0) LabelDataFormat.Validate(e.Value, computed: true);
         }
     }
 
     internal static string Resolve(LabelTemplateDefinition t, LabelLayoutElement e, string serial, int shortSerial, string mac)
     {
-        var values = new Dictionary<string, string> { ["Name"] = t.Name, ["Serial"] = serial,
-            ["ShortSerial"] = shortSerial.ToString("D" + t.ShortSerialDigits, CultureInfo.InvariantCulture),
-            ["Mac"] = mac, ["Barcode"] = t.UseShortSerial ? t.Barcode(shortSerial) : serial,
-            ["Variant"] = t.VariantName ?? "", ["Cabinet"] = t.CabinetName ?? "" };
-        return Regex.Replace(e.Value, @"\{\{(.*?)\}\}", m => values.TryGetValue(m.Groups[1].Value, out var value) ? value : throw new InvalidOperationException("Неизвестное поле макета."));
+        return e.Value.Length == 0 ? "" : LabelDataFormat.Resolve(t, e.Value, serial, shortSerial, mac, computed: true);
     }
 
     internal string Render(LabelTemplateDefinition t, string serial, int shortSerial, string mac, bool validateBounds = true)
@@ -155,14 +148,14 @@ public sealed class LabelLayoutDefinition
                 var value = data.Value.Length == 0 ? "" : data.Groups[1].Value.Replace("{{ZplBarcode}}", "{{Barcode}}");
                 if (barcode && (value.StartsWith(">;", StringComparison.Ordinal) || value.StartsWith(">:", StringComparison.Ordinal))) value = value[2..];
                 var e = new LabelLayoutElement { X = Math.Max(0, x - t.OriginXDots), Y = y, Value = value,
-                    Kind = barcode ? "Barcode" : box.Success ? "Box" : "Text", Name = barcode ? "Штрихкод" : box.Success ? "Рамка" : value.Contains("{{Name}}") ? "Название изделия" : value.Contains("{{Mac}}") ? "MAC" : value.Contains("{{Serial}}") ? "Серийный номер" : value,
+                    Kind = barcode ? "Barcode" : box.Success ? "Box" : "Text", Name = barcode ? "Штрихкод" : box.Success ? "Рамка" : value.Contains("{{Name}}") ? "Название изделия" : value.Contains("{{Mac}}") ? "MAC" : value.Contains("{{Serial}}") || value.Contains("{{SerialText}}") ? "Серийный номер" : value,
                     Width = Math.Max(1, t.WidthDots - Math.Max(0, x - t.OriginXDots) - 8), Height = 25, Module = t.BarcodeModuleDots };
                 if (barcode)
                 {
                     var height = Regex.Match(body, @"\^BCN,([^,]+),");
                     e.Height = height.Groups[1].Value == "{{BarcodeHeightDots}}" ? t.BarcodeHeightDots : int.Parse(height.Groups[1].Value, CultureInfo.InvariantCulture);
                     var module = Regex.Match(body, @"\^BY(\d+)"); if (module.Success) e.Module = int.Parse(module.Groups[1].Value, CultureInfo.InvariantCulture);
-                    var sample = t.UseShortSerial ? t.Barcode(42) : "12345678";
+                    var sample = t.RenderBarcode(t.UseShortSerial ? ((long)t.SerialOffset + 42).ToString(CultureInfo.InvariantCulture) : "12345678", 42, "");
                     var width = Code128Encoding.EncodeAuto(sample)!.Sum(c => c - '0') * e.Module;
                     if (m.Groups[1].Value == "{{BarcodeX}}") e.X = Math.Max(10 * e.Module, (t.WidthDots - width) / 2);
                 }
@@ -178,7 +171,7 @@ public sealed class LabelLayoutDefinition
             }
             if (t.Command.Contains("{{CabinetField}}", StringComparison.Ordinal))
                 layout.Elements.Add(new() { Name = "Шкаф", Value = "{{Cabinet}}", X = Math.Max(0, t.WidthDots - t.CabinetWidthDots),
-                    Y = layout.Elements.FirstOrDefault(e => e.Value.Contains("{{Serial}}"))?.Y ?? 95,
+                    Y = layout.Elements.FirstOrDefault(e => e.Value.Contains("{{Serial}}") || e.Value.Contains("{{SerialText}}"))?.Y ?? 95,
                     Width = t.CabinetWidthDots, Height = t.CabinetFontHeightDots, FontWidth = 12 });
             var leftovers = Regex.Replace(t.Command, @"\^FO[^\^]+.*?\^FS", "", RegexOptions.Singleline).Replace("{{CabinetField}}", "");
             if (Regex.Matches(leftovers, @"[\^~]([A-Za-z0-9]{2})").Cast<Match>().Any(m => m.Groups[1].Value is not ("XA" or "XZ" or "MD" or "PW" or "LL" or "PQ")))

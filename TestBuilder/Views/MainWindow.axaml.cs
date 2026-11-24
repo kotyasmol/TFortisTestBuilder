@@ -7,6 +7,10 @@ namespace TestBuilder.Views
     public partial class MainWindow : Window
     {
         private WorkspacePersistence? _workspacePersistence;
+        private HardwareEditorView? _hardwareEditor;
+        private EquipmentLibraryView? _equipmentLibrary;
+        internal System.Func<TestViewModel, HardwareEditorView> HardwareEditorFactory { get; set; } = vm => new HardwareEditorView(vm);
+        internal System.Func<EquipmentLibraryView> EquipmentLibraryFactory { get; set; } = () => new EquipmentLibraryView();
 
         internal void EnableWorkspacePersistence(Services.AppSettings settings, System.Action? save = null)
         {
@@ -36,25 +40,40 @@ namespace TestBuilder.Views
             ShellSettingsViewControl.DataContext = vm.SettingsVM;
         }
 
-        private async void OnOpenHardware(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        internal void OpenProfileHardware(TestViewModel source)
         {
             if (DataContext is not MainWindowViewModel vm) return;
+            if (!ReferenceEquals(source, vm.TestVM) || !vm.IsEngineerWorkspace) return;
+            if (_hardwareEditor != null) { vm.IsHardwareOpen = true; return; }
+            if (!vm.IsWorkspaceOpen) return;
             if (!vm.TestVM.CanEditHardware) { vm.TestVM.TestingLogger.Warning("Остановите тест и отключите стенд для редактирования оборудования."); return; }
-            await new HardwareEditorWindow(vm.TestVM).ShowDialog(this);
+            _hardwareEditor = HardwareEditorFactory(vm.TestVM);
+            _hardwareEditor.Finished += () =>
+            {
+                HardwareWorkspaceHost.Content = null;
+                _hardwareEditor = null;
+                vm.IsHardwareOpen = false;
+            };
+            HardwareWorkspaceHost.Content = _hardwareEditor;
+            vm.IsHardwareOpen = true;
         }
+        private void OnCancelHardware(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _hardwareEditor?.Finish();
+        private void OnOpenEquipmentLibrary(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel { IsEngineerWorkspace: true } vm) return;
+            if (_equipmentLibrary != null) { vm.IsEquipmentLibraryOpen = true; return; }
+            if (!vm.IsWorkspaceOpen) return;
+            _equipmentLibrary = EquipmentLibraryFactory();
+            _equipmentLibrary.Finished += () =>
+            { EquipmentLibraryWorkspaceHost.Content = null; _equipmentLibrary = null; vm.IsEquipmentLibraryOpen = false; };
+            EquipmentLibraryWorkspaceHost.Content = _equipmentLibrary; vm.IsEquipmentLibraryOpen = true;
+        }
+        private void OnCloseEquipmentLibrary(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _equipmentLibrary?.Finish();
         protected override void OnOpened(System.EventArgs e)
         {
             base.OnOpened(e);
             if (DataContext is MainWindowViewModel vm) vm.TestVM.SetPingMonitoringActive(true);
         }
-        private async void OnOpenBoard(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-        {
-            if (DataContext is MainWindowViewModel vm)
-                if (vm.IsEngineerWorkspace && vm.TestVM.CanEditGraph)
-                    await new BoardWindow(vm.TestVM, true).ShowDialog(this);
-                else new BoardWindow(vm.TestVM, false).Show(this);
-        }
-
         protected override void OnClosed(System.EventArgs e)
         {
             _workspacePersistence?.Dispose();

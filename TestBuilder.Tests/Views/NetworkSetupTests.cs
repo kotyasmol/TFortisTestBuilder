@@ -1,3 +1,4 @@
+using TestBuilder.Tests.Support;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
@@ -8,8 +9,10 @@ using TestBuilder.Views;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class NetworkSetupTests
+public class NetworkSetupTests : IDisposable
 {
+    private readonly IDisposable plan = NetworkTestPlans.UseTenPorts();
+    public void Dispose() => plan.Dispose();
     private static BenchAdapter[] Cards() => DataTestNetworkConfigurator.BenchIps.Select((ip, i) =>
         new BenchAdapter($"card-{i}", $"Ethernet {i + 1}", $"0011223344{i:00}", "Up", ip, 1000)).ToArray();
 

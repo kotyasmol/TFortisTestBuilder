@@ -6,9 +6,9 @@ namespace TestBuilder.Tests.StepTests;
 public class EquipmentCatalogTests
 {
     [Theory]
-    [InlineData(0, "Fibox", "002600579")]
-    [InlineData(1, "Plastim", "102600579")]
-    [InlineData(3, "Наш шкаф", "302600579")]
+    [InlineData(0, "Fibox", "02600579")]
+    [InlineData(1, "Plastim", "02600579")]
+    [InlineData(3, "Наш шкаф", "02600579")]
     public void Model026UsesOneCatalogEntryForSerialMacAndCabinet(int variant, string cabinet, string barcode)
     {
         var model = EquipmentCatalog.LoadBundled().Resolve("psw-2g8f-plus-box", null)!;
@@ -26,7 +26,7 @@ public class EquipmentCatalogTests
         var preview = LabelPreview.Parse(template, command);
         Assert.Null(preview.BarcodeError);
         Assert.Contains(preview.Elements, element => element.Text == cabinet);
-        Assert.Contains(preview.Elements, element => element.Text == "SN: 2600579");
+        Assert.Contains(preview.Elements, element => element.Text == "SN: 00579");
         var bars = Assert.Single(preview.Elements.Where(element => element.Bars.Length > 0));
         Assert.Equal(Code128Encoding.EncodeAuto(barcode), bars.Bars);
         var withoutCabinet = LabelPreview.Parse(template, LabelPrintContent.Render(
