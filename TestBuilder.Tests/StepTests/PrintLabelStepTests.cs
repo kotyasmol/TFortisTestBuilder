@@ -7,8 +7,11 @@ using TestBuilder.Tests.Support;
 
 namespace TestBuilder.Tests.StepTests;
 
-public class PrintLabelStepTests
+[Collection("Graph editor UI")]
+public class PrintLabelStepTests : IDisposable
 {
+    private readonly TestBuilder.Tests.Views.FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     [Theory]
     [InlineData("Profile product", true)]
     [InlineData("Bad^XZ", false)]
@@ -187,10 +190,10 @@ public class PrintLabelStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         const string singleLabel =
-            "^XA^MD10^FO494,35^A0,36,15^FDPSW+UPS-Box 8x2Pro^FS" +
-            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:20:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
-            "^FO562,117^BY2^BCN,34,N,N,N^FD>;03200428^FS^XZ ";
+            "^XA^MD10^FO494,0^A0,36,17^FDPSW+UPS-Box 8x2Pro^FS" +
+            "^FO500,44^A0,25,18^FDMAC: C0:11:A6:20:01:AC^FS" +
+            "^FO500,70^A0,25,20^FDSN: 00428^FS" +
+            "^FO525,104^BY3^BCN,50,N,N,N^FD>;03200428^FS^XZ ";
         Assert.Equal(StepResult.True, result);
         Assert.Equal(1, printer.Calls);
         Assert.Equal(string.Concat(Enumerable.Repeat(singleLabel, 4)), printer.GetText());
@@ -354,10 +357,10 @@ public class PrintLabelStepTests
         var step = CreateStep(printer, 4, manualSerial: serial, manualMacAddress: "C0:11:A6:06:01:AC",
             useQtProZplFormat: true, labelModel: DeviceLabelModel.Psw2G6FPlus);
         Assert.Equal(StepResult.True, await step.ExecuteAsync(context, CancellationToken.None));
-        const string expected = "^XA^MD10^FO559,35^A0,36,23^FDPSW-2G6F+^FS" +
-            "^FO510,70^A0,25,20^FDMAC: C0:11:A6:06:01:AC^FS" +
-            "^FO510,95^A0,25,20^FDSN: 00428^FS" +
-            "^FO562,117^BY2^BCN,34,N,N,N^FD>;00600428^FS^XZ ";
+        const string expected = "^XA^MD10^FO494,0^A0,36,17^FDPSW-2G6F+^FS" +
+            "^FO500,44^A0,25,18^FDMAC: C0:11:A6:06:01:AC^FS" +
+            "^FO500,70^A0,25,20^FDSN: 00428^FS" +
+            "^FO525,104^BY3^BCN,50,N,N,N^FD>;00600428^FS^XZ ";
         Assert.Equal(string.Concat(Enumerable.Repeat(expected, 4)), printer.GetText());
         Assert.Equal(600428, context.GetVariable<int>("PrintLabel.FullSerial"));
         Assert.Equal(6, context.GetVariable<int>("PrintLabel.DeviceType"));

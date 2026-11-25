@@ -179,7 +179,8 @@ namespace TestBuilder.ViewModels
 
         private void OnLabelPrintingChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(LabelPrintingVM.IsBusy)) TestVM.IsLabelToolBusy = LabelPrintingVM.IsBusy;
+            if (e.PropertyName is nameof(LabelPrintingVM.IsBusy) or nameof(LabelPrintingVM.IsTypePrinting))
+                TestVM.IsLabelToolBusy = LabelPrintingVM.IsBusy || LabelPrintingVM.IsTypePrinting;
         }
 
         private void OnLastTestCompleted(LastTestLabelSnapshot snapshot)

@@ -67,7 +67,7 @@ public sealed class LabelLayoutEditorWindow : Window
                 if (string.IsNullOrWhiteSpace(printer.PrinterName)) throw new InvalidOperationException("Выберите принтер.");
                 printing = new(); print.IsEnabled = false; status.Text = "Пробная печать…";
                 var step = new PrintLabelStep(LoggingService.Instance.CreateLogger("Пробная этикетка"), printer.PrinterName, "SerialNumber", "SerialShort", "Mac",
-                    true, Editor.Serial, Editor.Mac, 1, template.UseShortSerial, true, template: template);
+                    true, Editor.Serial, Editor.Mac, 1, template.UseShortSerial, true, WindowsRawLabelPrinter.Shared, 30000, template: template, preserveTemplate: true);
                 var context = new TestContext(new RegisterState());
                 var result = await step.ExecuteAsync(context, printing.Token);
                 status.Text = result == StepResult.False ? context.GetVariable<string>("PrintLabel.Error") : "Этикетка передана принтеру. Проверьте считывание сканером.";

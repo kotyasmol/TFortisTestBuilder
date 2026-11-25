@@ -20,8 +20,10 @@ using TestBuilder.Views;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class LastTestLabelTests
+public class LastTestLabelTests : IDisposable
 {
+    private readonly FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     [Fact]
     public async Task ProductList_UsesAllProfileModels_Deduplicates_AndPrintsSelectedName()
     {

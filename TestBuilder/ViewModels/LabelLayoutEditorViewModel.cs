@@ -126,6 +126,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
         if (Selected == null) return;
         var bounds = BoundsOf(Selected); Selected.X = Math.Max(0, (int)((Template.WidthDots - bounds.Width) / 2)); NotifyFields(); Refresh();
     }
+    public void RefreshFields() { NotifyFields(); Refresh(); }
     public Rect BoundsOf(LabelLayoutElement e)
     {
         double width = e.Width;

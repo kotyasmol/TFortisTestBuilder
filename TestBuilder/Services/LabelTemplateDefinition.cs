@@ -53,9 +53,15 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
     public int BarcodeTopDots { get; set; } = 112;
     public int BarcodeHeightDots { get; set; } = 34;
     public int PrinterDpi { get; set; } = 300;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? NameFontMaxWidthDots { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? NameCharacterWidthFactor { get; set; }
     public string Command { get; set; } = "^XA^FO20,20^A0N,30,30^FD{{Serial}}^FS^XZ";
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public LabelLayoutDefinition? Layout { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public LabelDataBindings? DataBindings { get; set; }
     public LabelTemplateDefinition Copy()
     {
         var copy = JsonSerializer.Deserialize<LabelTemplateDefinition>(JsonSerializer.Serialize(this))!;
@@ -101,6 +107,7 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
 
     public void Validate()
     {
+        DataBindings?.Validate();
         Layout?.Validate();
         if (SerialTextFormat != null) LabelDataFormat.Validate(SerialTextFormat);
         if (BarcodeFormat != null) LabelDataFormat.Validate(BarcodeFormat);
@@ -110,6 +117,7 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
             WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
             BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
             PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
+            NameFontMaxWidthDots is < 1 or > 1000 || NameCharacterWidthFactor is < .1m or > 2m ||
             CabinetWidthDots is < 1 or > 10000 || CabinetFontHeightDots is < 1 or > 32000 ||
             (long)SerialOffset + ShortSerialMax > int.MaxValue || ShortSerialDigits is < 1 or > 10 ||
             FirstSerialNumber.HasValue && (FirstSerialNumber < SerialOffset || FirstSerialNumber > (long)SerialOffset + ShortSerialMax) ||
@@ -171,18 +179,18 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
         return (serialWidth, $"^CI28^FO{cabinetX},{y}^A0N,{CabinetFontHeightDots},{cabinetWidth}^FH^FD{hex}^FS^CI0");
     }
 
-    private int FitNameWidth()
+    internal int FitNameWidth()
     {
         var field = FittedZplName.Match(Command);
         if (Language != "ZPL" || !int.TryParse(field.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var x) || x > 32000)
             throw new InvalidOperationException("Для подгонки названия укажите координату X в ^FO и ширину {{FitNameWidth}} в ^A0.");
 
         const int rightMargin = 20;
-        const int standardWidth = 25;
+        var standardWidth = NameFontMaxWidthDots ?? 25;
         const int minimumWidth = 10;
         var available = OriginXDots + WidthDots - Math.Max(x, OriginXDots) - rightMargin;
-        // Budget the full requested width per character because the printer's font is proportional.
-        var width = Math.Min(standardWidth, available / Name.Length);
+        // Older snapshots retain the original full-width budget; current stock uses its measured ratio.
+        var width = Math.Min(standardWidth, (int)Math.Floor(available / (Name.Length * (NameCharacterWidthFactor ?? 1m))));
         if (width < minimumWidth)
             throw new InvalidOperationException($"Название «{Name}» не помещается. Проверьте ширину этикетки или выберите другой макет.");
         return width;
@@ -215,7 +223,18 @@ public static class LabelTemplateCatalog
             }
             if (template.Layout != null) return;
             template.Command = current.Command;
-            if (template.Language == "ZPL" && template.HeightDots == null)
+            var missingHeight = template.HeightDots == null;
+            // Move only stock dimensions to the new default. Explicit custom sizes survive.
+            if (template.Language == "ZPL")
+            {
+                if (template.WidthDots == previousTemplate.WidthDots || missingHeight && template.WidthDots == 295) template.WidthDots = current.WidthDots;
+                if (template.HeightDots == previousTemplate.HeightDots) template.HeightDots = current.HeightDots;
+                if (template.BarcodeModuleDots == previousTemplate.BarcodeModuleDots) template.BarcodeModuleDots = current.BarcodeModuleDots;
+                if (template.BarcodeHeightDots == previousTemplate.BarcodeHeightDots) template.BarcodeHeightDots = current.BarcodeHeightDots;
+                if (template.NameFontMaxWidthDots == previousTemplate.NameFontMaxWidthDots) template.NameFontMaxWidthDots = current.NameFontMaxWidthDots;
+                if (template.NameCharacterWidthFactor == previousTemplate.NameCharacterWidthFactor) template.NameCharacterWidthFactor = current.NameCharacterWidthFactor;
+            }
+            if (template.Language == "ZPL" && missingHeight)
             {
                 if (template.WidthDots == 354) template.WidthDots = current.WidthDots;
                 template.HeightDots = current.HeightDots;
@@ -223,7 +242,7 @@ public static class LabelTemplateCatalog
             }
             if (previousTemplate.OriginXDots != 0 && template.OriginXDots == previousTemplate.OriginXDots)
                 template.OriginXDots = current.OriginXDots;
-            if (template.Language == "ZPL" && template.BarcodeTopDots == previousTemplate.BarcodeTopDots)
+            if (template.Language == "ZPL" && (template.BarcodeTopDots == previousTemplate.BarcodeTopDots || missingHeight && template.BarcodeTopDots == 117))
                 template.BarcodeTopDots = current.BarcodeTopDots;
         }
     }
@@ -239,6 +258,8 @@ public static class LabelTemplateCatalog
     internal static List<LabelTemplateDefinition> WorkstationTemplates(out EquipmentCatalog? catalog)
     {
         var templates = ConfiguredTemplates();
+        var file = LabelTypeStore.LoadFile(AppSettings.Instance.ResolvedGraphsFolder);
+        var types = file.Types;
         try { catalog = EquipmentCatalog.Load(AppSettings.Instance.ResolvedGraphsFolder); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         {
@@ -256,6 +277,27 @@ public static class LabelTemplateCatalog
             var template = LabelPrintContent.ForModel(stock, model, 0);
             template.Id = "catalog:" + model.Id;
             templates.Add(template);
+        }
+        if (types.Count > 0 || file.Assignments.Count > 0)
+        {
+            for (var i = 0; i < templates.Count; i++)
+            {
+                var model = catalog.Resolve(null, templates[i].Name);
+                var resolved = LabelTypeStore.Resolve(templates[i], model, model?.Name, file: file);
+                resolved.Id = templates[i].Id;
+                // Lookup identifies an actual product; constant display text is applied at printing.
+                if (model != null) resolved.Name = model.Name;
+                templates[i] = resolved;
+            }
+            foreach (var model in catalog.Models.Where(m => m.RtlReport != null && m.LabelCode.HasValue))
+            {
+                if (LabelTypeStore.AssignedTypeId(file, model.Id) == null && !types.Any(t => string.Equals(t.ProductModelId, model.Id, StringComparison.OrdinalIgnoreCase) || t.Id == LabelTypeStore.BoardTypeId)) continue;
+                var resolved = LabelTypeStore.Resolve(LabelTypeStore.FamilyDefault(true), model, model.Name, file: file);
+                resolved.Id = "catalog:" + model.Id;
+                resolved.Name = model.Name;
+                templates.RemoveAll(t => EquipmentCatalog.Normalize(t.Name) == EquipmentCatalog.Normalize(model.Name));
+                templates.Add(resolved);
+            }
         }
         return templates;
     }

@@ -48,6 +48,7 @@ namespace TestBuilder.Domain.Steps
         private readonly DeviceLabelModel _labelModel;
         private readonly LabelTemplateDefinition _template;
         private readonly bool _useLastTestLabel;
+        private readonly bool _preserveTemplate;
         private string DeviceName => _template.Name;
 
         public PrintLabelStep(
@@ -117,6 +118,7 @@ namespace TestBuilder.Domain.Steps
             _useLastTestLabel = useLastTestLabel;
             var source = useLastTestLabel ? new LabelTemplateDefinition() :
                 template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl");
+            _preserveTemplate = preserveTemplate;
             _template = preserveTemplate ? source.Copy() : source.CopyUpgraded();
             _template.Validate();
             _failOnPrinterError = failOnPrinterError;
@@ -155,6 +157,32 @@ namespace TestBuilder.Domain.Steps
             context.SetVariable("PrintLabel.Language", _template.Language);
             context.SetVariable("PrintLabel.Template", _template.Id);
 
+            var model = preserveTemplateName ? null : context.ProductionModel;
+            var series = model?.SerialSeries;
+            LabelTemplateDefinition printTemplate;
+            var serialVariable = _serialVariableName;
+            var shortVariable = _serialShortVariableName;
+            var macVariable = _macVariableName;
+            LabelDataBindings? bindings;
+            try
+            {
+                printTemplate = !_preserveTemplate && !preserveTemplateName
+                    ? LabelTypeStore.Resolve(_template, model, context.DeviceModel, context.LabelVariant)
+                    : model != null ? LabelPrintContent.ForModel(_template, model, context.LabelVariant)
+                    : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
+                // Manual entry, samples and history already supply their own values.
+                bindings = _preserveTemplate || preserveTemplateName ? null : printTemplate.DataBindings;
+                bindings?.ApplyPresentation(printTemplate, context);
+                if (bindings?.Serial.Source == "Variable") serialVariable = bindings.Serial.Value;
+                if (bindings?.ShortSerial.Source == "Variable") shortVariable = bindings.ShortSerial.Value;
+                if (bindings?.Mac.Source == "Variable") macVariable = bindings.Mac.Value;
+                printTemplate.Validate();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.IO.IOException or System.IO.InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            { return Fail(context, 6, ex.Message); }
+            context.SetVariable("PrintLabel.Template", printTemplate.Id);
+            context.SetVariable("PrintLabel.Language", printTemplate.Language);
+
             string serial;
             string serialSource;
 
@@ -170,16 +198,16 @@ namespace TestBuilder.Domain.Steps
             }
             else
             {
-                if (!context.Variables.TryGetValue(_serialVariableName, out var rawSerial))
+                if (!context.Variables.TryGetValue(serialVariable, out var rawSerial))
                 {
                     return Fail(
                         context,
                         6,
-                        $"Переменная серийного номера '{_serialVariableName}' не найдена.");
+                        $"Переменная серийного номера '{serialVariable}' не найдена.");
                 }
 
                 serial = rawSerial?.ToString()?.Trim() ?? string.Empty;
-                serialSource = _serialVariableName;
+                serialSource = serialVariable;
             }
 
             if (string.IsNullOrWhiteSpace(serial))
@@ -192,15 +220,6 @@ namespace TestBuilder.Domain.Steps
                 return Fail(context, 6, "Серийный номер должен содержать только цифры 0-9.");
             }
 
-            var model = preserveTemplateName ? null : context.ProductionModel;
-            var series = model?.SerialSeries;
-            LabelTemplateDefinition printTemplate;
-            try
-            {
-                printTemplate = model != null ? LabelPrintContent.ForModel(_template, model, context.LabelVariant)
-                    : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
-            }
-            catch (InvalidOperationException ex) { return Fail(context, 6, ex.Message); }
             string language;
             string logDescription;
 
@@ -240,14 +259,15 @@ namespace TestBuilder.Domain.Steps
                         return Fail(context, 6, $"Серийный номер '{serial}' слишком большой или имеет неверный формат.");
                     }
 
-                    if (series != null)
+                    var automaticShort = bindings?.ShortSerial.Source == "Automatic" || bindings?.ShortSerial.Source != "Variable" && series != null;
+                    if (automaticShort)
                         shortSerial = fullSerial - printTemplate.SerialOffset;
-                    else if (!TryReadIntVariable(context, _serialShortVariableName, out shortSerial))
+                    else if (!TryReadIntVariable(context, shortVariable, out shortSerial))
                     {
                         return Fail(
                             context,
                             6,
-                            $"Переменная короткого серийного номера '{_serialShortVariableName}' не найдена или не является целым числом.");
+                            $"Переменная короткого серийного номера '{shortVariable}' не найдена или не является целым числом.");
                     }
 
                     if (shortSerial < 0 || shortSerial > printTemplate.ShortSerialMax)
@@ -260,21 +280,21 @@ namespace TestBuilder.Domain.Steps
                         return Fail(
                             context,
                             6,
-                            $"Серийные номера не согласованы: {_serialVariableName}={fullSerial}, " +
-                            $"{_serialShortVariableName}={shortSerial}.");
+                            $"Серийные номера не согласованы: {serialVariable}={fullSerial}, " +
+                            $"{shortVariable}={shortSerial}.");
                     }
 
-                    if (printTemplate.RequiresMac && (!context.Variables.TryGetValue(_macVariableName, out var rawMac) ||
+                    if (printTemplate.RequiresMac && (!context.Variables.TryGetValue(macVariable, out var rawMac) ||
                         !LabelPrintContent.TryNormalizeMac(rawMac?.ToString() ?? string.Empty, out mac)))
                     {
                         return Fail(
                             context,
                             6,
-                            $"Переменная MAC '{_macVariableName}' не найдена или содержит некорректный адрес.");
+                            $"Переменная MAC '{macVariable}' не найдена или содержит некорректный адрес.");
                     }
 
-                    shortSerialSource = series == null ? _serialShortVariableName : "Catalog";
-                    macSource = _macVariableName;
+                    shortSerialSource = automaticShort ? "Catalog" : shortVariable;
+                    macSource = macVariable;
                 }
 
                 if (series?.Check(fullSerial, context.IssuedSerialNumber) is { } seriesError)
@@ -288,7 +308,7 @@ namespace TestBuilder.Domain.Steps
                 logDescription =
                     $"этикеток {printTemplate.Name}: полный SN={printedSerial}, MAC={mac}";
 
-                context.SetVariable("PrintLabel.Template", _template.Id);
+                context.SetVariable("PrintLabel.Template", printTemplate.Id);
                 context.SetVariable("PrintLabel.FullSerial", fullSerial);
                 context.SetVariable("PrintLabel.SerialShort", shortSerial);
                 context.SetVariable("PrintLabel.DeviceName", printTemplate.Name);

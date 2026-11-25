@@ -160,7 +160,7 @@ public sealed class LabelLayoutDefinition
                     if (m.Groups[1].Value == "{{BarcodeX}}") e.X = Math.Max(10 * e.Module, (t.WidthDots - width) / 2);
                 }
                 else if (box.Success) { e.Width = int.Parse(box.Groups[1].Value); e.Height = int.Parse(box.Groups[2].Value); e.Stroke = int.Parse(box.Groups[3].Value); }
-                else { e.Height = int.Parse(font.Groups[1].Value); e.FontWidth = int.TryParse(font.Groups[2].Value, out var fw) ? fw : font.Groups[2].Value == "{{SerialTextWidth}}" ? 20 : Math.Max(1, Math.Min(25, (e.Width - 12) / Math.Max(1, t.Name.Length))); }
+                else { e.Height = int.Parse(font.Groups[1].Value); e.FontWidth = int.TryParse(font.Groups[2].Value, out var fw) ? fw : font.Groups[2].Value == "{{SerialTextWidth}}" ? 20 : t.FitNameWidth(); }
                 if (!barcode && !box.Success && body.Contains("^FB", StringComparison.Ordinal))
                 {
                     var block = Regex.Match(body, @"\^FB(\d+),1,0,([LCR]),0");

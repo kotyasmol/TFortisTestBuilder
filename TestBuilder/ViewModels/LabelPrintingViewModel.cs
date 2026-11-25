@@ -19,6 +19,9 @@ namespace TestBuilder.ViewModels;
 
 public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
 {
+    public LabelTypesViewModel Types { get; }
+    [ObservableProperty] private int selectedSection;
+    partial void OnSelectedSectionChanged(int value) { if (value == 1) Types.EnsureLoaded(); }
     public ObservableCollection<LabelTemplatePreviewItem> LabelOptions { get; } = new();
     public ObservableCollection<string> ProductNames { get; } = new();
     [ObservableProperty] private IReadOnlyList<TestLabelOption> testLabelOptions = Array.Empty<TestLabelOption>();
@@ -26,6 +29,9 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string? selectedProductName;
     private readonly Func<IReadOnlyList<GraphProfile>>? _profiles;
     private List<LabelTemplateDefinition> _workstationTemplates = new();
+    private LabelTypeDefinition[] _universalTypes = LabelTypeStore.UniversalDefaults();
+    private LabelTypeFile _typeFile = new();
+    private IReadOnlyList<LabelTypeDefinition> _savedUniversalTypes = Array.Empty<LabelTypeDefinition>();
     private readonly Action? _refreshProfiles;
     private bool _refreshingProducts;
     private string? _lookupProductName;
@@ -67,7 +73,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private LabelData? _last;
     private LabelTemplateDefinition? _lastTemplate;
     private bool _disposed;
-    public bool CanEdit => !IsBusy && !_disposed && _canUse();
+    public bool CanEdit => !IsBusy && Types?.IsBusy != true && !_disposed && _canUse();
     public bool CanRepeat => CanEdit && _last != null;
     public bool HasMac => SelectedTemplate?.RequiresMac == true;
     partial void OnSelectedTypeChanged(int value) { OnPropertyChanged(nameof(HasMac)); UpdatePreview(); }
@@ -90,8 +96,12 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     {
         _logger = logger; _canUse = canUse; _http = http; _printer = printer;
         _deviceModel = deviceModel ?? (() => null); _profiles = profiles; _refreshProfiles = refreshProfiles;
+        Types = new(() => CanEdit, logger, printer, () => RefreshTemplates());
+        Types.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(LabelTypesViewModel.IsBusy)) { OnPropertyChanged(nameof(IsTypePrinting)); RefreshAvailability(); } };
         RefreshProductNames();
     }
+
+    public bool IsTypePrinting => Types.IsBusy;
 
     internal void RefreshProductNames(string? preferred = null)
     {
@@ -129,7 +139,13 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
     private static bool IsDeviceTemplate(LabelTemplateDefinition t) =>
         t.Language == "ZPL" && (t.Id is "PswUpsBox8x2Pro" or "Psw2G6FPlus" ||
             t.Id.StartsWith("catalog:", StringComparison.Ordinal));
-    private static string OptionId(LabelTemplateDefinition t) => IsDeviceTemplate(t) ? "DeviceZpl" : t.Id;
+    private static string CardId(string typeId) => typeId == LabelTypeStore.DeviceTypeId ? "DeviceZpl" : typeId == LabelTypeStore.BoardTypeId ? "SerialOnlyEpl" : typeId;
+    private string OptionId(LabelTemplateDefinition t)
+    {
+        var assigned = LabelTypeStore.AssignedTypeId(_typeFile, _modelCatalog?.Resolve(null, t.Name)?.Id);
+        return assigned != null ? CardId(assigned) : t.UseShortSerial
+            ? string.IsNullOrWhiteSpace(t.CabinetName) ? "DeviceZpl" : LabelTypeStore.CabinetTypeId : "SerialOnlyEpl";
+    }
     private LabelTemplateDefinition? SelectedTemplate => ResolveSelectedTemplate(SerialNumber);
     private EquipmentCatalog? _modelCatalog;
     private LabelTemplateDefinition ForProduct(LabelTemplateDefinition template, string serial)
@@ -142,27 +158,56 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
             if (!long.TryParse(serial, out var full)) throw new InvalidOperationException("Введите полный серийный номер изделия.");
             if (series.Check(full) is { } seriesError) throw new InvalidOperationException(seriesError);
         }
-        return model?.LabelCode != null && !template.UseShortSerial
+        var resolved = model?.LabelCode != null && !template.UseShortSerial
             ? LabelPrintContent.ForModel(template, model, 0)
             : LabelPrintContent.ForDevice(template, ProfileDeviceName);
+        resolved.DataBindings?.ApplyPresentation(resolved);
+        return resolved;
     }
 
     private LabelTemplateDefinition? ResolveSelectedTemplate(string serialNumber)
     {
         var id = LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
-        var candidates = _workstationTemplates.Where(t => OptionId(t) == id).ToArray();
-        return candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
+        var customType = _typeFile.Types.FirstOrDefault(t => t.Id == id && !LabelTypeStore.IsUniversal(t.Id) && t.ProductModelId == null);
+        var board = id == "SerialOnlyEpl" || customType?.Template.UseShortSerial == false;
+        var candidates = _workstationTemplates.Where(t => board ? !t.UseShortSerial : t.UseShortSerial).ToArray();
+        var source = candidates.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase))
             ?? candidates.FirstOrDefault(t => int.TryParse(serialNumber, out var serial)
                 && t.MatchesServerSerial(serial))
             ?? (candidates.Length == 1 || string.IsNullOrWhiteSpace(serialNumber) ? candidates.FirstOrDefault() : null);
+        if (source == null && !board && string.IsNullOrWhiteSpace(ProfileDeviceName) && int.TryParse(serialNumber, out var shortNumber))
+        {
+            var custom = candidates.Where(t => !IsDeviceTemplate(t) && shortNumber <= t.ShortSerialMax).ToArray();
+            if (custom.Length == 1) source = custom[0];
+        }
+        if (source == null) return null;
+        var model = _modelCatalog?.Resolve(null, ProfileDeviceName);
+        if (model == null && string.IsNullOrWhiteSpace(ProfileDeviceName)) model = _modelCatalog?.Resolve(null, source.Name);
+        // The serial-only fallback remains usable when no model or type code is known.
+        if (board && model == null && source.DeviceCode == 0 && customType == null) return source;
+        if (customType != null) return LabelTypeStore.ApplyPresentation(customType.Template, source, model, ProfileDeviceName);
+        var typeId = board ? LabelTypeStore.BoardTypeId : id == LabelTypeStore.CabinetTypeId ? LabelTypeStore.CabinetTypeId : LabelTypeStore.DeviceTypeId;
+        if (typeId != LabelTypeStore.CabinetTypeId && !_savedUniversalTypes.Any(t => t.Id == typeId) &&
+            LabelTypeStore.AssignedTypeId(_typeFile, model?.Id) != typeId) return source;
+        var template = _universalTypes.Single(t => t.Id == typeId).Template;
+        return LabelTypeStore.ApplyPresentation(template, source, model, ProfileDeviceName);
     }
 
     internal void RefreshTemplates(string? selectedId = null)
     {
         selectedId ??= LabelOptions.ElementAtOrDefault(SelectedType)?.Id;
         EquipmentCatalog? catalog;
-        try { _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates(out catalog); }
-        catch (Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or JsonException or InvalidOperationException)
+        try
+        {
+            _workstationTemplates = LabelTemplateCatalog.WorkstationTemplates(out catalog);
+            _typeFile = LabelTypeStore.LoadFile(AppSettings.Instance.ResolvedGraphsFolder);
+            var stored = _typeFile.Types;
+            _savedUniversalTypes = stored.Where(t => LabelTypeStore.IsUniversal(t.Id)).ToArray();
+            _universalTypes = LabelTypeStore.UniversalDefaults().Select(type => type with {
+                Template = LabelTypeStore.UniversalTemplate(type.Id, stored.FirstOrDefault(t => t.Id == type.Id)?.Template ?? type.Template)
+            }).ToArray();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or System.UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
             _workstationTemplates.Clear(); LabelOptions.Clear(); TestLabelOptions = Array.Empty<TestLabelOption>(); SelectedTestLabel = null; Preview = null;
             Status = "Каталог этикеток не загружен. Печать по каталогу недоступна: " + ex.Message;
@@ -174,14 +219,17 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         SelectedTestLabel = TestLabelOptions.FirstOrDefault(option => option.Id == testId) ?? TestLabelOptions[0];
         var selected = _workstationTemplates.FirstOrDefault(t => t.Id == selectedId);
         if (selected != null) selectedId = OptionId(selected);
+        var assigned = LabelTypeStore.AssignedTypeId(_typeFile, catalog?.Resolve(null, ProfileDeviceName)?.Id);
+        if (assigned != null) selectedId = CardId(assigned);
         LabelOptions.Clear();
-        foreach (var group in _workstationTemplates.GroupBy(OptionId))
+        foreach (var id in new[] { LabelTypeStore.DeviceTypeId, LabelTypeStore.BoardTypeId, LabelTypeStore.CabinetTypeId })
         {
-            var template = group.FirstOrDefault(t => string.Equals(t.Name, ProfileDeviceName, StringComparison.OrdinalIgnoreCase)) ?? group.First();
-            var name = group.Key == "DeviceZpl" ? "ZPL · Изделие, MAC, SN" :
-                template.Id == "SerialOnlyEpl" ? "EPL · Серийный номер" : template.Name;
-            LabelOptions.Add(new(group.Key, name, PreviewFor(template, "", "")));
+            var type = _universalTypes.Single(t => t.Id == id);
+            LabelOptions.Add(new(id == LabelTypeStore.DeviceTypeId ? "DeviceZpl" : id == LabelTypeStore.BoardTypeId ? "SerialOnlyEpl" : id,
+                type.Name, LabelPreview.FromInput(type.Template, "00000", "00:00:00:00:00:00")));
         }
+        foreach (var type in _typeFile.Types.Where(t => t.ProductModelId == null && !LabelTypeStore.IsUniversal(t.Id)))
+            LabelOptions.Add(new(type.Id, type.Name, LabelPreview.FromInput(type.Template, "00000", "00:00:00:00:00:00")));
         SelectedType = Math.Max(0, LabelOptions.ToList().FindIndex(t => t.Id == selectedId));
         OnPropertyChanged(nameof(ProfileDeviceName));
         OnPropertyChanged(nameof(HasMac));
@@ -250,17 +298,11 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         PrintCommand.NotifyCanExecuteChanged(); RepeatLastCommand.NotifyCanExecuteChanged();
         PrintTestLabelCommand.NotifyCanExecuteChanged();
         FindBySerialCommand.NotifyCanExecuteChanged(); FindByMacCommand.NotifyCanExecuteChanged();
+        Types.RefreshAvailability();
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private async Task EditTemplates()
-    {
-        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
-        {
-            var selected = await new TestBuilder.Views.LabelTemplatesWindow().ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
-            RefreshTemplates(selected?.Id);
-        }
-    }
+    private void EditTemplates() => SelectedSection = 1;
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private Task FindBySerial() => Find(false);
@@ -333,7 +375,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         var context = new TestContext(new RegisterState());
         var step = new PrintLabelStep(_logger, printer, "SerialNumber", "SerialShort", "Mac",
             true, data.Serial, data.Mac, count, template.UseShortSerial, true, _printer, 30000,
-            DeviceLabelModel.PswUpsBox8x2Pro, template, preserveTemplate: savedTemplate != null);
+            DeviceLabelModel.PswUpsBox8x2Pro, template, preserveTemplate: true);
         var result = await step.ExecuteAsync(context, token);
         if (result == StepResult.False) throw new InvalidOperationException(context.GetVariable<string>("PrintLabel.Error"));
         if (!testPrint)
@@ -360,7 +402,7 @@ public partial class LabelPrintingViewModel : ViewModelBase, IDisposable
         finally { _operation = null; IsBusy = false; }
     }
     [RelayCommand] private void Cancel() => _operation?.Cancel();
-    public void Dispose() { _disposed = true; _operation?.Cancel(); (_http as IDisposable)?.Dispose(); }
+    public void Dispose() { _disposed = true; _operation?.Cancel(); Types.Dispose(); (_http as IDisposable)?.Dispose(); }
 }
 
 public sealed record LabelTemplatePreviewItem(string Id, string Name, LabelPreview Preview)

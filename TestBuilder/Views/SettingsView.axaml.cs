@@ -28,10 +28,14 @@ namespace TestBuilder.Views
 
         private void OnOpenErrorHelp(object? sender, RoutedEventArgs e) => UserGuideWindow.ShowErrorHelp(this);
 
-        private async void OnOpenLabelTemplates(object? sender, RoutedEventArgs e)
+        private void OnOpenLabelTemplates(object? sender, RoutedEventArgs e)
         {
-            if (TopLevel.GetTopLevel(this) is Window owner)
-                await new LabelTemplatesWindow(settingsOnly: true).ShowDialog(owner);
+            if (TopLevel.GetTopLevel(this)?.DataContext is TestBuilder.ViewModels.MainWindowViewModel main)
+            {
+                main.IsSettingsOpen = false;
+                main.SelectedPage = "Labels";
+                main.LabelPrintingVM.SelectedSection = 1;
+            }
         }
 
         private async void OnOpenWindowsPrinters(object? sender, RoutedEventArgs e)

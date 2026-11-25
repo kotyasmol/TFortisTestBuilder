@@ -14,8 +14,10 @@ using TestBuilder.Views;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class LabelPrintingTests
+public class LabelPrintingTests : IDisposable
 {
+    private readonly FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     [Theory]
     [InlineData(0, "3200428", "03200428")]
     [InlineData(0, "612447", "00612447")]
@@ -78,7 +80,7 @@ public class LabelPrintingTests
         var printer = new Printer();
         using var vm = new LabelPrintingViewModel(NullLogger.Instance, () => true, new Http(), printer, () => device)
             { SerialNumber = "12447", MacAddress = "C0:11:A6:06:01:AC", PrinterName = "Label printer" };
-        Assert.Equal(2, vm.LabelOptions.Count);
+        Assert.Equal(3, vm.LabelOptions.Count);
         Assert.Contains(vm.Preview!.Elements, e => e.Text == device);
         await vm.PrintCommand.ExecuteAsync(null);
         Assert.Contains("00612447", Assert.Single(printer.Jobs));
@@ -239,7 +241,7 @@ public class LabelPrintingTests
             }
 
             Assert.Equal(2, printer.Jobs.Count);
-            Assert.All(printer.Jobs, job => Assert.Contains("^FO571,117^BY2^BCN,30,N,N,N", job));
+            Assert.All(printer.Jobs, job => Assert.Contains("^FO531,104^BY3^BCN,30,N,N,N", job));
         }
         finally { AppSettings.Instance.LabelTemplates = original; }
     }

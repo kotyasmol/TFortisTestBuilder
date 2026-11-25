@@ -25,8 +25,10 @@ using ZXing.Common;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class LabelLayoutTests
+public class LabelLayoutTests : IDisposable
 {
+    private readonly FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     private static LabelTemplateDefinition Template()
     {
         var template = LabelTemplateCatalog.Defaults()[0];
@@ -142,7 +144,7 @@ public class LabelLayoutTests
     public async Task PrintAndPreviewUseTheEditedBarcodeSourceAndRejectOverflow()
     {
         var template = Template(); var bar = template.Layout!.Elements.Single(e => e.Kind == "Barcode");
-        bar.Value = "{{Serial}}";
+        bar.Value = "{{Serial}}"; bar.Module = 2;
         var printer = new Printer(); var context = new TestContext(new RegisterState());
         PrintLabelStep Step() => new(NullLogger.Instance, "Test", "SerialNumber", "SerialShort", "Mac", true,
             "3200428", "C0:11:A6:20:01:AC", 1, true, true, printer, 1000, template: template);
@@ -202,12 +204,13 @@ public class LabelLayoutTests
                 var moved = point + new Vector(3 * scale, -scale);
                 window.MouseDown(point, MouseButton.Left); window.MouseMove(moved); window.MouseUp(moved, MouseButton.Left); Layout(window);
                 Assert.Equal(previous + 4, vm.Selected!.X);
-                Assert.Equal(116, vm.Selected.Y);
+                Assert.Equal(source.BarcodeTopDots - 1, vm.Selected.Y);
                 window.GetVisualDescendants().OfType<NumericUpDown>().Single(c => c.Name == "LayoutHeight").Value = 2.54m; Layout(window);
                 Assert.Equal(30, vm.Selected.Height);
+                vm.Center(); // The larger default barcode has only one spare dot beyond each quiet zone.
                 vm.ScannedCode = "wrong"; Assert.Contains("не совпадает", vm.Diagnostics);
                 vm.ScannedCode = vm.Template.Barcode(42); Assert.Contains("совпадает", vm.Diagnostics);
-                vm.Center(); var applied = vm.Apply(); Assert.NotNull(applied.Layout);
+                var applied = vm.Apply(); Assert.NotNull(applied.Layout);
                 Assert.Throws<InvalidOperationException>(() => vm.Module = 2.5m);
                 var picker = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "LabelFieldPicker");
                 var field = picker.Items[0]; picker.SelectedItem = field; Layout(window);

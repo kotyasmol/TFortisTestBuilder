@@ -22,13 +22,15 @@ using TestBuilder.Views;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class LabelDataFormattingTests
+public class LabelDataFormattingTests : IDisposable
 {
+    private readonly FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     private const string Mac = "C0:11:A6:20:01:AC";
     private static LabelTemplateDefinition Legacy()
     {
         using var stream = typeof(LabelTemplateCatalog).Assembly.GetManifestResourceStream("TestBuilder.label-template-upgrades.json")!;
-        return JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!.Last(t => t.Id == "PswUpsBox8x2Pro");
+        return JsonSerializer.Deserialize<List<LabelTemplateDefinition>>(stream)!.Last(t => t.Id == "PswUpsBox8x2Pro" && t.SerialTextFormat == null);
     }
     private static PrintLabelStep Step(LabelTemplateDefinition template, Printer printer, bool last = false) =>
         new(NullLogger.Instance, "Test", "SerialNumber", "SerialShort", "Mac", true, "3200428", Mac, 1, true,

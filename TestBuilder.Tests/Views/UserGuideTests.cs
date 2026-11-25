@@ -1,6 +1,10 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Avalonia.Headless;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using TestBuilder.Views;
 using TestBuilder.Services.Help;
 
 namespace TestBuilder.Tests.Views;
@@ -16,7 +20,7 @@ public class UserGuideTests
         {
             Assert.Equal(UserGuide.All.Count, UserGuide.All.Select(a => a.Id).Distinct().Count());
             foreach (var id in new[] { "guide-overview", "profile-new", "profile-copy", "profile-transfer", "catalog-rules", "storage",
-                "hardware-maps", "data-scopes", "node-controls", "network-fields", "datatest-algorithm", "label-data", "label-layout", "label-transfer", "update-and-release", "catalog-to-prod", "recipes" })
+                "hardware-maps", "data-scopes", "node-controls", "network-fields", "datatest-algorithm", "label-types", "label-data", "label-layout", "label-transfer", "update-and-release", "catalog-to-prod", "recipes" })
                 Assert.Single(UserGuide.All, a => a.Id == id);
             foreach (var article in UserGuide.All)
             {
@@ -46,15 +50,56 @@ public class UserGuideTests
         {
             var article = Assert.Single(UserGuide.Search("SerialTail", "Этикетки"), a => a.Id == "label-data");
             Assert.DoesNotContain(UserGuide.Search("SerialTail", "Справочник нод"), a => a.Id == article.Id);
-            foreach (var term in new[] { "Формирование SN и штрихкода", "Что печатать в строке SN", "Что кодировать в штрихкоде",
-                         "Цифр SN в тексте", "Формат данных штрихкода", "03200428", "00600428", "00428", "catalog/label-templates.json",
-                         "Применить к ноде", "Сохранить каталог", "полный SN", "сканером", "последнего теста", "не обрезается молча" })
+            foreach (var term in new[] { "Типы этикеток", "Что печатать в строке SN", "Что кодировать в штрихкоде",
+                         "Цифр SN в тексте", "Формат данных штрихкода", "03200428", "00600428", "00428", "catalog/label-types.json",
+                         "Сохранить тип", "полный SN", "сканером", "последнего теста", "не обрезается молча" })
                 Assert.Contains(term, article.BodyText);
             var node = Assert.Single(UserGuide.All, a => a.Id == "PrintLabelNodeViewModel");
             Assert.Contains("03200428", node.BodyText);
             Assert.DoesNotContain("целиком печатается", node.BodyText);
             Assert.Contains("id=\"label-data\"", UserGuide.ExportHtml());
-            Assert.Contains("SerialTextFormat", UserGuide.PlainText());
+            Assert.Contains("SerialTail", UserGuide.PlainText());
+        }, default);
+    }
+
+    [Fact]
+    public async Task SharedLabelTypesHelpDescribesTheMainInterfacePriorityAndDraftTransfer()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
+        await session.Dispatch(() =>
+        {
+            var article = Assert.Single(UserGuide.Search("Отступ всего макета", "Этикетки"), a => a.Id == "label-types");
+            foreach (var term in new[] { "Этикетки → Типы этикеток", "Высота штрихкода, мм", "Ширина полосы, точек",
+                "SN и штрихкод", "Пробная печать: 1 шт.", "Сохранить тип", "catalog/label-types.json", "reference/labels/types.json",
+                "Импорт типов…", "черновики", "приоритет", "Повтор", "Новая печать", "старые программы", "не публикует",
+                "три универсальных типа", "название устройства", "00:00:00:00:00:00", "00000000", "Шкаф 1",
+                "Макет по умолчанию", "25,4 × 13,4 мм", "4,23 мм" })
+                Assert.Contains(term, article.BodyText);
+            foreach (var term in new[] { "Новый тип", "Создать копию", "Название типа", "Источники данных", "Имя переменной",
+                "Привязки изделий", "Сохранить привязки", "Автоматически по изделию", "schemaVersion=2", "Dut.default_mac",
+                "Постоянное значение", "успешный шаг до печати", "Ручная печать", "снимок" })
+                Assert.Contains(term, article.BodyText);
+            Assert.Contains(UserGuide.Search("Привязки изделий", "Этикетки"), a => a.Id == article.Id);
+            Assert.DoesNotContain(UserGuide.Search("Привязки изделий", "Сеть и DataTest"), a => a.Id == article.Id);
+            var html = WebUtility.HtmlDecode(UserGuide.ExportHtml());
+            Assert.Contains("id=\"label-types\"", html); Assert.Contains(article.Title, html);
+            Assert.DoesNotContain(UserGuide.Search("Отступ всего макета", "Справочник нод"), a => a.Id == article.Id);
+            Assert.DoesNotContain("выберите обновлённый макет в ноде заново", UserGuide.PlainText());
+            var window = new UserGuideWindow();
+            try
+            {
+                window.Show(); Dispatcher.UIThread.RunJobs();
+                var section = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "GuideSection");
+                var search = window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "GuideSearch");
+                var articles = window.GetVisualDescendants().OfType<ListBox>().Single(c => c.Name == "GuideArticles");
+                section.SelectedItem = "Этикетки"; search.Text = "Имя переменной"; Dispatcher.UIThread.RunJobs();
+                Assert.Equal(article.Id, Assert.IsType<GuideArticle>(articles.SelectedItem).Id);
+                section.SelectedItem = "Сеть и DataTest"; Dispatcher.UIThread.RunJobs();
+                Assert.Empty(articles.ItemsSource!.Cast<GuideArticle>()); Assert.Null(articles.SelectedItem);
+                section.SelectedItem = "Этикетки"; Dispatcher.UIThread.RunJobs();
+                Assert.Equal(article.Id, Assert.IsType<GuideArticle>(articles.SelectedItem).Id);
+            }
+            finally { window.Close(); }
         }, default);
     }
 

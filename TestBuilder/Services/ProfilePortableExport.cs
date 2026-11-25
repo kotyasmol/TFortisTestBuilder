@@ -11,17 +11,24 @@ internal static class ProfilePortableExport
     {
         var root = JsonNode.Parse(ProfileCatalogLink.Attach(json, catalog, profile), new JsonNodeOptions { PropertyNameCaseInsensitive = true })!.AsObject();
         root["name"] ??= profile?.Name ?? "Новый профиль";
+        var types = LabelTypeStore.LoadFile(AppSettings.Instance.ResolvedGraphsFolder);
+        var product = ProfileCatalogLink.Resolve(catalog, root["catalogModel"]?.Deserialize<EquipmentModel>(EquipmentCatalog.JsonOptions),
+            root["deviceModelId"]?.GetValue<string>() ?? profile?.DeviceModelId, root["deviceModel"]?.GetValue<string>() ?? profile?.DeviceModel);
         foreach (var node in Nodes(root))
         {
             var type = node["type"]?.GetValue<string>() ?? node["NodeType"]?.GetValue<string>();
-            if (!(type?.Contains("Print Label") == true || type is "PRINT_LABEL" or "Печать этикетки") || node["labelTemplate"] != null) continue;
+            if (!(type?.Contains("Print Label") == true || type is "PRINT_LABEL" or "Печать этикетки") || node["useLastTestLabel"]?.GetValue<bool>() == true) continue;
             var pro = node["useQtProZplFormat"]?.GetValue<bool>() == true;
             var model = node["labelModel"];
             var id = !pro ? "SerialOnlyEpl" : model == null ? "PswUpsBox8x2Pro"
                 : model.GetValueKind() == JsonValueKind.Number ? ((DeviceLabelModel)model.GetValue<int>()).ToString() : model.GetValue<string>();
-            var template = LabelTemplateCatalog.Legacy(id).CopyUpgraded();
+            var template = node["labelTemplate"]?.Deserialize<LabelTemplateDefinition>(EquipmentCatalog.JsonOptions)
+                ?? LabelTemplateCatalog.Legacy(id).CopyUpgraded();
+            if (types.Types.Count > 0 || types.Assignments.Count > 0) template = LabelTypeStore.Resolve(template, product, product?.Name, file: types);
             node["labelTemplate"] = JsonSerializer.SerializeToNode(template, EquipmentCatalog.JsonOptions);
-            if (template.Layout != null) node["type"] = "Print Label (layout v1)";
+            if (template.DataBindings != null) node["type"] = "Print Label (bindings v1)";
+            else if (template.Layout != null) node["type"] = "Print Label (layout v1)";
+            else if (template.SerialTextFormat != null || template.BarcodeFormat != null) node["type"] = "Print Label (data v1)";
         }
         var result = root.ToJsonString(EquipmentCatalog.JsonOptions);
         GraphSerializer.ValidateProfile(result);

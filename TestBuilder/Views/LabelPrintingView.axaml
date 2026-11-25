@@ -1,6 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TestBuilder.ViewModels" xmlns:views="using:TestBuilder.Views" x:Class="TestBuilder.Views.LabelPrintingView"
              x:DataType="vm:LabelPrintingViewModel">
+  <TabControl SelectedIndex="{Binding SelectedSection, Mode=TwoWay}">
+    <TabItem Header="Печать">
   <ScrollViewer>
     <StackPanel Margin="24" Spacing="16" MaxWidth="1120" HorizontalAlignment="Stretch">
       <TextBlock Text="Проверка печати этикетки" FontSize="24" FontWeight="SemiBold" />
@@ -53,7 +55,7 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <Button Content="Настроить шаблоны…" Command="{Binding EditTemplatesCommand}"/>
+        <Button Content="Типы этикеток" Command="{Binding EditTemplatesCommand}"/>
         <Grid x:Name="LabelDetailsGrid" ColumnDefinitions="*,24,400">
         <StackPanel Spacing="12">
         <TextBlock Text="Серийный номер" />
@@ -107,4 +109,9 @@
       <views:LabelPreviewControl x:Name="LastLabelPreview" Preview="{Binding LastPreview}" IsVisible="{Binding HasLastPreview}" Height="130" Width="340" HorizontalAlignment="Left"/>
     </StackPanel>
   </ScrollViewer>
+    </TabItem>
+    <TabItem Header="Типы этикеток">
+      <views:LabelTypesView DataContext="{Binding Types}" />
+    </TabItem>
+  </TabControl>
 </UserControl>

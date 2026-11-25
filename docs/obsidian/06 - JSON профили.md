@@ -3,8 +3,61 @@ tags:
   - testbuilder
   - json
   - serialization
-updated: 2026-11-21
+updated: 2026-11-24
 ---
+
+## Геометрия штатных ZPL и шрифт названия — 2026-11-24
+
+У новых штатных ZPL WidthDots=300, HeightDots=158, BarcodeModuleDots=3,
+BarcodeTopDots=104, BarcodeHeightDots=50. Два nullable поля шаблона
+NameFontMaxWidthDots / NameCharacterWidthFactor задают бюджет имени:
+новые 17 / 0.65, null сохраняет прежние 25 / 1 для точного повтора.
+Это поля LabelTemplateDefinition, копируемые JSON вместе с шаблоном;
+формат типов и профилей не изменён. Предыдущие точные штатные команды
+добавлены в label-template-upgrades.json. При обновлении сырого stock
+меняются только совпадающие штатные размеры/шрифты; Layout сохраняется.
+Без явной высоты восстанавливаются размеры и OriginXDots. Исходный
+JSON и пользовательские профили автоматически не переписываются.
+
+
+## Универсальные записи этикеток — 2026-11-24
+
+Текущий формат schemaVersion=2 читает прежнюю версию 1. Универсальные ID: shared:board,
+shared:device, shared:device-cabinet; productModelId у них отсутствует.
+Старые записи с ProductModelId остаются в местном файле для совместимости
+без строк редактора; custom:<guid> показаны как свои типы. Новый экспорт
+содержит три заготовки, свои типы и Assignments. Сохранение типа объединяет файл по ID
+и не удаляет прежние записи. Общий тип имеет приоритет над старой привязкой
+к модели. Нейтральные Name/DeviceCode/SerialOffset относятся к образцу;
+рабочий код и диапазон подставляются из модели/прежней ноды. Layout.Value
+хранит {{Name}}, {{Mac}}, {{SerialText}}, {{Barcode}}, {{Cabinet}},
+поэтому нули и текст образца не фиксируются в печатаемых элементах.
+
+
+## Формат общих типов этикеток — 2026-11-24
+
+Новый JSON catalog/label-types.json (поставка reference/labels/types.json):
+`{schemaVersion:2, types:[{id,name,productModelId?,template,baseTypeId?}], assignments:[{productModelId,labelTypeId}]}`. Template — полная
+LabelTemplateDefinition; name обёртки — название типа, имя печатаемого изделия
+подставляется из модели или DataBindings. productModelId типа — прежняя запись;
+новые связи живут в assignments (один тип на модель). Пустой labelTypeId —
+явный возврат к автоматическому выбору, в том числе поверх поставки.
+Общие ID: shared:device, shared:board, shared:device-cabinet; копии custom:<guid>.
+BaseTypeId хранит заготовку для возврата геометрии. DataBindings nullable:
+Name/Serial/ShortSerial/Mac/DeviceCode/Cabinet → {source,value}. По умолчанию
+Model для имени/кода/шкафа, Step для остальных. Variable — имя переменной;
+Constant доступен имени/коду/шкафу, Automatic — короткому номеру. null
+сохраняет прежнее поведение. Просмотр не материализует источники в JSON.
+Слияние по ID или productModelId сохраняет остальные записи; повторяющиеся
+привязки отклоняются. Локальный тип имеет приоритет над поставкой.
+Старые label-templates.json / templates.json не заменяются этим файлом.
+Профили при настройке типов не переписываются. Portable export включает
+эффективный тип в labelTemplate каждой ноды, включая вложенные графы/кнопки;
+для DataBindings ставится Print Label (bindings v1), затем Layout → layout v1,
+форматы → data v1. Старый runtime отвергает неизвестный тип ноды. Ноды повтора
+сохраняют прежний источник. Старое приложение types.json не применяет; для
+распространения типов требуется обновление программы.
+
 
 ## Данные этикетки — 2026-11-24
 

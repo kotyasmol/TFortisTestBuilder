@@ -14,8 +14,10 @@ using TestBuilder.Tests.Support;
 namespace TestBuilder.Tests.SerializationTests;
 
 [Collection("Graph editor UI")]
-public class ProfileCatalogTransferTests
+public class ProfileCatalogTransferTests : IDisposable
 {
+    private readonly TestBuilder.Tests.Views.FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     internal static EquipmentModel Card => new("portable-test-product", "Переносимое изделие")
     {
         LabelCode = 90,
@@ -64,7 +66,15 @@ public class ProfileCatalogTransferTests
         {
             if (expected is JsonObject obj && actual is JsonObject other)
             {
-                if (other["labelTemplate"] != null && obj["labelTemplate"] == null) obj["labelTemplate"] = other["labelTemplate"]!.DeepClone();
+                if (other["labelTemplate"] != null && obj["labelTemplate"] == null)
+                {
+                    obj["labelTemplate"] = other["labelTemplate"]!.DeepClone();
+                    if (obj["type"]?.GetValue<string>() == "Print Label" && other["type"]?.GetValue<string>() == "Print Label (data v1)")
+                    {
+                        Assert.NotNull(other["labelTemplate"]!["barcodeFormat"]);
+                        obj["type"] = "Print Label (data v1)"; // Old executables must reject the newly embedded data rules.
+                    }
+                }
                 foreach (var property in obj) if (property.Value != null && other[property.Key] is { } value) CopyTemplates(property.Value, value);
             }
             else if (expected is JsonArray array && actual is JsonArray values)
