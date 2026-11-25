@@ -227,6 +227,8 @@ public class FreshUserJourneyTests
                 Assert.True(addModel.IsEffectivelyVisible);
                 Click(shell, addModel);
                 var card = Assert.Single(shell.OpenPages().OfType<CatalogItemEditorView>());
+                Assert.Equal(new[] { "Изделие и этикетка", "Серийные номера", "Отчёт RTL" },
+                    card.GetVisualDescendants().OfType<TabControl>().Single().Items.Cast<TabItem>().Select(t => t.Header));
                 Capture(card, prefix + "-03-new-model-empty");
                 Field(card, "Название изделия").Text = board ? "QA новая плата X1" : "QA новый коммутатор X24";
                 Field(card, "Альтернативные названия").Text = "QA-ALIAS-" + prefix;
@@ -235,6 +237,9 @@ public class FreshUserJourneyTests
                 Assert.False(File.Exists(EquipmentCatalog.LocalPath(clean.Profiles)));
                 Field(card, "Код модели на этикетке").Text = "888";
                 Field(card, "Название комплектации 0").Text = "QA комплект";
+                Field(card, "Шкаф комплектации 0").Text = "QA корпус";
+                Assert.Equal(Field(card, "Название комплектации 0").TranslatePoint(default, card)!.Value.Y,
+                    Field(card, "Шкаф комплектации 0").TranslatePoint(default, card)!.Value.Y);
                 Tab(card, 1); Field(card, "Тип на сервере").Text = board ? "QA-BOARD" : "QA-SWITCH";
                 if (board)
                 {
@@ -253,7 +258,7 @@ public class FreshUserJourneyTests
                     Field(card, "Префикс MAC").Text = "C0:11:A6:58";
                     Field(card, "Имя платы при записи Pro MAC").Text = "QA-BOARD-V1";
                 }
-                Tab(card, 3); Field(card, "Шкаф комплектации 0").Text = "QA корпус";
+                Tab(card, 0);
                 Capture(card, prefix + "-04-model-filled");
                 Click(card, "Сохранить в справочник"); Assert.False(card.IsVisible);
                 var model = Assert.IsType<EquipmentModel>(vm.SelectedEquipmentModel);

@@ -38,26 +38,34 @@ internal sealed class CatalogItemEditorView : WorkspacePage
         var label = AddField(general, "Код модели на этикетке", model.LabelCode?.ToString("D3", CultureInfo.InvariantCulture) ?? "",
             help: "Для этикеток. Три цифры из утверждённого справочника этикеток (000–999). Это код модели в штрихкоде, а не начало серийного номера.");
         general.Children.Add(new TextBlock { Text = "Комплектации этикетки", FontWeight = FontWeight.SemiBold });
-        general.Children.Add(Hint("В строках 0–9 укажите названия нужных вариантов, например «Plastim + PWR180». Код строки станет первой цифрой штрихкода. Неиспользуемые строки оставьте пустыми."));
+        general.Children.Add(Hint("Укажите название комплектации и подпись шкафа для того же кода, например «Plastim + PWR180» и «Plastim». Пустая подпись — печать без шкафа. Неиспользуемые строки оставьте пустыми."));
         var variants = new TextBox[10];
+        var cabinets = new TextBox[10];
         var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,16,*") };
         for (var column = 0; column < 2; column++)
         {
             var fields = new StackPanel { Spacing = 6 };
+            var headings = new Grid { ColumnDefinitions = new ColumnDefinitions("38,*,*") };
+            foreach (var (title, index) in new[] { ("Код", 0), ("Комплектация", 1), ("Шкаф на этикетке", 2) })
+            {
+                var heading = new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 8, 0) };
+                Grid.SetColumn(heading, index); headings.Children.Add(heading);
+            }
+            fields.Children.Add(headings);
             for (var code = column * 5; code < column * 5 + 5; code++)
-                variants[code] = AddField(fields, NumberText(code), model.LabelVariants?.GetValueOrDefault(code) ?? "",
-                    "Название комплектации", "38,*", $"Название комплектации {code}");
+            {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("38,*,*") };
+                row.Children.Add(new TextBlock { Text = NumberText(code), VerticalAlignment = VerticalAlignment.Center });
+                variants[code] = AddTableField(row, 1, model.LabelVariants?.GetValueOrDefault(code) ?? "",
+                    "Название комплектации", $"Название комплектации {code}");
+                cabinets[code] = AddTableField(row, 2, model.LabelCabinets?.GetValueOrDefault(code) ?? "",
+                    "Подпись шкафа", $"Шкаф комплектации {code}");
+                fields.Children.Add(row);
+            }
             Grid.SetColumn(fields, column * 2);
             columns.Children.Add(fields);
         }
         general.Children.Add(columns);
-
-        var cabinetsPanel = new StackPanel { Spacing = 8 };
-        cabinetsPanel.Children.Add(Hint("Для каждого варианта укажите короткое название шкафа, которое нужно напечатать, например «Plastim». Название комплектации с этим кодом должно быть заполнено на первой вкладке. Пустая подпись — печать без шкафа."));
-        var cabinets = new TextBox[10];
-        for (var code = 0; code < cabinets.Length; code++)
-            cabinets[code] = AddField(cabinetsPanel, $"Комплектация {code}", model.LabelCabinets?.GetValueOrDefault(code) ?? "",
-                "Например, Fibox или Plastim", accessibleName: $"Шкаф комплектации {code}");
 
         var serial = new StackPanel { Spacing = 8 };
         serial.Children.Add(Hint("Здесь задаются правила для всей модели. Конкретный номер устройства выдаёт сервер. Параметры новой серии получите у администратора сервера или инженера. Для штатной ZPL-этикетки коммутатора диапазон и база обязательны."));
@@ -123,7 +131,6 @@ internal sealed class CatalogItemEditorView : WorkspacePage
         AddTab("Изделие и этикетка", general);
         AddTab("Серийные номера", serial);
         AddTab("Отчёт RTL", report);
-        AddTab("Шкаф на этикетке", cabinetsPanel);
         var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
@@ -202,6 +209,14 @@ internal sealed class CatalogItemEditorView : WorkspacePage
     }
 
     private static TextBlock Hint(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap };
+
+    private static TextBox AddTableField(Grid row, int column, string value, string hint, string accessibleName)
+    {
+        var field = new TextBox { Text = value, Watermark = hint, Margin = new Thickness(0, 0, column == 1 ? 8 : 0, 0) };
+        AutomationProperties.SetName(field, accessibleName);
+        Grid.SetColumn(field, column); row.Children.Add(field);
+        return field;
+    }
 
     private static TextBox AddField(StackPanel panel, string caption, string value, string? hint = null,
         string columns = "210,*", string? accessibleName = null, string? help = null)

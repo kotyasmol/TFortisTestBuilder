@@ -51,7 +51,7 @@ public class DeviceProfileTests
                 Press(card, "Заполнить из поставки");
                 Assert.Equal("2665535", Field(card, "Последний серийный номер").Text);
                 Assert.Equal("C0:11:A6:1A", Field(card, "Префикс MAC").Text);
-                Tab(card, 3);
+                Tab(card, 0);
                 Field(card, "Шкаф комплектации 1").Text = "TestCase";
                 Layout(card);
                 WorkspacePageTesting.CaptureRenderedFrame(card)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-cabinets.png"));
