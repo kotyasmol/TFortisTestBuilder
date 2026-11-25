@@ -75,7 +75,7 @@ public partial class NetworkSetupView : UserControl
     {
         if (DataContext is not NetworkSetupViewModel { CanEdit: true } vm || sender is not Button { DataContext: ComputerNetworkAdapterViewModel card } ||
             TopLevel.GetTopLevel(this) is not Window owner) return;
-        try { await new NetworkAdapterSettingsWindow(vm.CreateAdapterSettings(card.Adapter.Id)).ShowDialog(owner); }
+        try { await new NetworkAdapterSettingsView(vm.CreateAdapterSettings(card.Adapter.Id)).ShowAsync(owner); }
         catch (Exception ex) { vm.Status = ex.Message; }
     }
 

@@ -14,10 +14,10 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class NetworkPlanEditorTests
 {
-    private static void Click(Window window, string text) => window.GetVisualDescendants().OfType<Button>()
+    private static void Click(Control window, string text) => window.GetVisualDescendants().OfType<Button>()
         .Single(b => Equals(b.Content, text)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-    private static DataGrid Grid(Window window) => window.GetVisualDescendants().OfType<DataGrid>().Single(g => g.Name == "NetworkPlanAddresses");
+    private static DataGrid Grid(Control window) => window.GetVisualDescendants().OfType<DataGrid>().Single(g => g.Name == "NetworkPlanAddresses");
 
     [Theory]
     [InlineData(false)]
@@ -34,7 +34,7 @@ public class NetworkPlanEditorTests
             var plan = NetworkTestPlans.TenPorts();
             plan.Addresses.Add(new() { Name = "Новая карта", Ip = "192.168.0.12" });
             settings.NetworkPlan = plan;
-            var window = new NetworkPlanWindow { Width = 900 };
+            var window = new NetworkPlanView { Width = 900 };
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -42,7 +42,7 @@ public class NetworkPlanEditorTests
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                using var frame = window.CaptureRenderedFrame();
+                using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                 frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-plan-validation-{dark}.png"));
                 Assert.True(window.IsVisible);
                 Assert.Same(plan, settings.NetworkPlan);
@@ -65,7 +65,7 @@ public class NetworkPlanEditorTests
             Avalonia.Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             var source = NetworkTestPlans.TenPorts();
             BenchNetworkPlan? saved = null;
-            var window = new NetworkPlanWindow(source, plan => saved = plan) { Width = width };
+            var window = new NetworkPlanView(source, plan => saved = plan) { Width = width };
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -73,7 +73,7 @@ public class NetworkPlanEditorTests
                 window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 Assert.Equal(12, Grid(window).ItemsSource.Cast<BenchNetworkAddress>().Count());
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                using var frame = window.CaptureRenderedFrame();
+                using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                 frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-plan-added-{dark}.png"));
                 Click(window, "Сохранить план");
                 Assert.False(window.IsVisible);
@@ -96,7 +96,7 @@ public class NetworkPlanEditorTests
         await session.Dispatch(() =>
         {
             var source = NetworkTestPlans.TenPorts(); BenchNetworkPlan? saved = null;
-            var window = new NetworkPlanWindow(source, plan => saved = plan);
+            var window = new NetworkPlanView(source, plan => saved = plan);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -132,7 +132,7 @@ public class NetworkPlanEditorTests
                 saveSettings: () => { saves++; if (fail) throw new IOException("Нет места на диске"); });
             vm.Rows[0].SelectedAdapter = cards[1]; // An unsaved swap must survive editing the plan.
             vm.Rows[2].SelectedAdapter = null; // An explicit empty choice must also survive.
-            var window = new NetworkPlanWindow(source, vm.SaveAddressPlan);
+            var window = new NetworkPlanView(source, vm.SaveAddressPlan);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -163,7 +163,7 @@ public class NetworkPlanEditorTests
         await session.Dispatch(() =>
         {
             var source = NetworkTestPlans.TenPorts(); var saves = 0;
-            var window = new NetworkPlanWindow(source, _ => saves++);
+            var window = new NetworkPlanView(source, _ => saves++);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -181,7 +181,7 @@ public class NetworkPlanEditorTests
         await session.Dispatch(() =>
         {
             var source = NetworkTestPlans.TenPorts(); var saves = 0;
-            var window = new NetworkPlanWindow(source, _ => saves++);
+            var window = new NetworkPlanView(source, _ => saves++);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();

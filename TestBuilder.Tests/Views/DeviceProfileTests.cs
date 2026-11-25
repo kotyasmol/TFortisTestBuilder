@@ -37,9 +37,9 @@ public class DeviceProfileTests
                 Layout(catalog);
                 var list = catalog.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels");
                 Assert.Equal("PSW-2G8F+Box", Assert.IsType<EquipmentCatalogDataView.CatalogRow>(Assert.Single(list.ItemsSource.Cast<object>())).Name);
-                catalog.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-026.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(catalog)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-026.png"));
                 Press(catalog, "Редактировать изделие…");
-                var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var card = Assert.Single(catalog.OpenPages().OfType<CatalogItemEditorView>());
                 Layout(card);
                 Assert.Equal("026", Field(card, "Код модели на этикетке").Text);
                 Tab(card, 1);
@@ -54,7 +54,7 @@ public class DeviceProfileTests
                 Tab(card, 3);
                 Field(card, "Шкаф комплектации 1").Text = "TestCase";
                 Layout(card);
-                card.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-cabinets.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(card)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-cabinets.png"));
                 Press(card, "Сохранить в справочник");
                 Assert.False(card.IsVisible);
                 var saved = EquipmentCatalog.Load(folder.Path).Resolve("psw-2g8f-plus-box", null)!;
@@ -63,16 +63,16 @@ public class DeviceProfileTests
             }
             finally { catalog.Close(); }
 
-            static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
-            static void Press(Window window, string caption)
+            static void Layout(Control window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
+            static void Press(Control window, string caption)
             {
                 window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, caption))
                     .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Layout(window);
             }
-            static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
+            static TextBox Field(Control window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
                 .Single(field => AutomationProperties.GetName(field) == caption);
-            static void Tab(Window window, int index) { window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index; Layout(window); }
+            static void Tab(Control window, int index) { window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index; Layout(window); }
         }, CancellationToken.None);
     }
 
@@ -99,10 +99,10 @@ public class DeviceProfileTests
                 Assert.True(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddCatalogDataModel").IsEnabled);
                 Assert.False(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "EditCatalogDataModel").IsEnabled);
                 Press(catalog, "Добавить изделие…");
-                var card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var card = Assert.Single(catalog.OpenPages().OfType<CatalogItemEditorView>());
                 Assert.False(catalog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "AddCatalogDataModel").IsEnabled);
                 Press(catalog, "Добавить изделие…");
-                Assert.Same(card, Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>()));
+                Assert.Same(card, Assert.Single(catalog.OpenPages().OfType<CatalogItemEditorView>()));
                 Layout(card);
                 Field(card, "Название изделия").Text = "Тестовая плата X1";
                 Field(card, "Альтернативные названия").Text = "Fixture X1";
@@ -131,7 +131,7 @@ public class DeviceProfileTests
                 Layout(catalog);
                 Assert.Equal(created.Id, Assert.IsType<EquipmentCatalogDataView.CatalogRow>(catalog.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == "CatalogDataModels").SelectedItem).Model.Id);
                 Press(catalog, "Редактировать изделие…");
-                card = Assert.Single(catalog.OwnedWindows.OfType<CatalogSerialsWindow>());
+                card = Assert.Single(catalog.OpenPages().OfType<CatalogItemEditorView>());
                 Layout(card);
                 Field(card, "Название изделия").Text = "Плата X1";
                 SelectTab(card, 2);
@@ -146,27 +146,27 @@ public class DeviceProfileTests
             }
             finally { catalog.Close(); }
 
-            static void Layout(Window window)
+            static void Layout(Control window)
             {
                 Dispatcher.UIThread.RunJobs();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();
             }
 
-            static void Press(Window window, string caption)
+            static void Press(Control window, string caption)
             {
                 window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, caption))
                     .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Layout(window);
             }
 
-            static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
+            static TextBox Field(Control window, string caption) => window.GetVisualDescendants().OfType<TextBox>()
                 .Single(field => AutomationProperties.GetName(field) == caption);
 
-            static CheckBox Toggle(Window window, string caption) => window.GetVisualDescendants().OfType<CheckBox>()
+            static CheckBox Toggle(Control window, string caption) => window.GetVisualDescendants().OfType<CheckBox>()
                 .Single(field => Equals(field.Content, caption));
 
-            static void SelectTab(Window window, int index)
+            static void SelectTab(Control window, int index)
             {
                 window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index;
                 Layout(window);
@@ -200,7 +200,7 @@ public class DeviceProfileTests
                 var model = view.FindControl<ComboBox>("DeviceModelPicker")!;
                 Assert.Null(model.SelectedItem);
                 Click(view.FindControl<Button>("AddCatalogModelButton")!, window);
-                var dialog = Assert.Single(window.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var dialog = Assert.Single(window.OpenPages().OfType<CatalogItemEditorView>());
                 var modelName = dialog.GetVisualDescendants().OfType<TextBox>()
                     .Single(field => AutomationProperties.GetName(field) == "Название изделия");
                 var saveModel = dialog.GetVisualDescendants().OfType<Button>()
@@ -259,7 +259,7 @@ public class DeviceProfileTests
                 if (artifacts != null)
                 {
                     Directory.CreateDirectory(artifacts);
-                    using var frame = window.CaptureRenderedFrame();
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                     frame?.Save(Path.Combine(artifacts, $"device-profile-{dark}.png"));
                 }
             }
@@ -276,11 +276,11 @@ public class DeviceProfileTests
                 var save = view.GetVisualDescendants().OfType<Button>().Single(b => ReferenceEquals(b.Command, vm.SaveGraphCommand));
                 Click(save, window);
             }
-            void Click(Button button, Window host)
+            void Click(Button button, Control host)
             {
                 host.UpdateLayout();
                 var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), host)!.Value;
-                host.MouseDown(point, MouseButton.Left); host.MouseUp(point, MouseButton.Left); Layout();
+                WorkspacePageTesting.MouseDown(host, point, MouseButton.Left); WorkspacePageTesting.MouseUp(host, point, MouseButton.Left); Layout();
             }
         }, CancellationToken.None);
     }
@@ -375,10 +375,10 @@ public class DeviceProfileTests
                 if (artifacts != null)
                 {
                     Directory.CreateDirectory(artifacts);
-                    using var frame = window.CaptureRenderedFrame();
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                     frame?.Save(Path.Combine(artifacts, "graph-serial-series.png"));
                 }
-                Assert.InRange(view.FindControl<AutoCompleteBox>("ProfileNameInput")!.Bounds.Width, 130, window.ClientSize.Width);
+                Assert.InRange(view.FindControl<AutoCompleteBox>("ProfileNameInput")!.Bounds.Width, 130, window.Bounds.Size.Width);
 
                 vm.UseCatalogSerials = false;
                 Layout();

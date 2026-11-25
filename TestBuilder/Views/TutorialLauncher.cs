@@ -17,14 +17,13 @@ internal static class TutorialLauncher
         if (!TutorialSession.ShouldOffer(AppSettings.Instance)) return;
         TutorialSession.RecordOffer(AppSettings.Instance);
         var welcome = CreateWelcome();
-        if (await welcome.ShowDialog<bool>(owner) && owner.IsVisible) await StartAsync(owner);
+        if (await welcome.ShowAsync<bool>(owner) && owner.IsVisible) await StartAsync(owner);
     }
 
-    internal static Window CreateWelcome()
+    internal static WorkspacePage CreateWelcome()
     {
-        var window = new Window { Title = "Знакомство с TestBuilder", Width = 600, SizeToContent = SizeToContent.Height,
-            CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        window.Bind(Window.BackgroundProperty, new DynamicResourceExtension("SurfaceBrush"));
+        var window = new WorkspacePage { Title = "Знакомство с TestBuilder", MaxWidth = 720, VerticalAlignment = VerticalAlignment.Top };
+        window.Bind(WorkspacePage.BackgroundProperty, new DynamicResourceExtension("SurfaceBrush"));
         var content = new StackPanel { Margin = new Thickness(30), Spacing = 18 };
         content.Children.Add(new TextBlock { Text = "Хотите попробовать программу?", FontSize = 24, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         content.Children.Add(new TextBlock { Text = "Вы выберете и запустите учебную проверку, измените профиль, создадите новое устройство и соедините успешный исход и отмену в редакторе. Подсказки покажут, куда нажимать.", FontSize = 16, TextWrapping = TextWrapping.Wrap });
@@ -40,7 +39,7 @@ internal static class TutorialLauncher
     public static async Task StartAsync(Window owner)
     {
         if (owner.DataContext is MainWindowViewModel vm && (vm.TestVM.IsTestRunning || vm.TestVM.IsConnecting)) return;
-        if (owner.OwnedWindows.OfType<TutorialWindow>().FirstOrDefault() is { } existing) { existing.Activate(); return; }
-        await new TutorialWindow().ShowDialog(owner);
+        if (WorkspacePageHost.Find(owner)?.Pages.OfType<TutorialView>().Any() == true) return;
+        await new TutorialView().ShowAsync(owner);
     }
 }

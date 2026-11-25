@@ -56,7 +56,7 @@ public class EquipmentCatalogDataTests
                 Assert.Contains(fields, field => field.Name == "Шкаф комплектации 1" && field.Value == "CustomCase");
                 Assert.Contains(fields, field => field.Name == "Номер для аварийного отчёта" && field.Value == "2600001");
                 Assert.Contains(fields, field => field.Name == "Дополнительное поле изделия: fixtureData" && field.Value == "keep-me");
-                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-all-catalog-data-{dark}.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(window)!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-all-catalog-data-{dark}.png"));
                 window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = 1;
                 Layout(window);
                 var json = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataJson");
@@ -72,7 +72,7 @@ public class EquipmentCatalogDataTests
                 Assert.True(edit.IsEnabled);
                 edit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Layout(window);
-                var card = Assert.Single(window.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var card = Assert.Single(window.OpenPages().OfType<CatalogItemEditorView>());
                 Layout(card);
                 Assert.Equal(model.Name, Field(card, "Название изделия").Text);
                 card.Close(); Layout(window);
@@ -127,7 +127,7 @@ public class EquipmentCatalogDataTests
             using var bus = new ModbusService();
             using var profile = new TestViewModel(bus, new SlaveManager(bus));
             var model = profile.EquipmentModels.Single(item => item.Id == "psw-2g8f-plus-box");
-            var card = new CatalogSerialsWindow(profile, model);
+            var card = new CatalogItemEditorView(profile, model);
             card.Show(); Layout(card);
             try
             {
@@ -138,17 +138,17 @@ public class EquipmentCatalogDataTests
                 Assert.Contains("2600001 − 2600000 = 00001", AutomationProperties.GetHelpText(Field(card, "База короткого номера")));
                 Assert.Contains(card.GetVisualDescendants().OfType<TextBlock>(), text =>
                     text.Text?.Contains("Карточка не создаёт тип на сервере") == true && text.IsEffectivelyVisible);
-                card.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-field-help.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(card)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-catalog-field-help.png"));
             }
             finally { card.Close(); }
         }, CancellationToken.None);
     }
 
-    private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
-    private static DataGrid Grid(Window window, string name) => window.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == name);
-    private static TextBox Search(Window window) => window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch");
-    private static TextBox Field(Window window, string caption) => window.GetVisualDescendants().OfType<TextBox>().Single(box => AutomationProperties.GetName(box) == caption);
-    private static void Reload(Window window)
+    private static void Layout(Control window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
+    private static DataGrid Grid(Control window, string name) => window.GetVisualDescendants().OfType<DataGrid>().Single(grid => grid.Name == name);
+    private static TextBox Search(Control window) => window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "CatalogDataSearch");
+    private static TextBox Field(Control window, string caption) => window.GetVisualDescendants().OfType<TextBox>().Single(box => AutomationProperties.GetName(box) == caption);
+    private static void Reload(Control window)
     {
         window.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "ReloadCatalogData")
             .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));

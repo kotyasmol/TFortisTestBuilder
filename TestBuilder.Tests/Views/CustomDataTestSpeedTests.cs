@@ -22,10 +22,10 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class CustomDataTestSpeedTests
 {
-    private static T Find<T>(Window window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
-    private static void Click(Window window, string title) => window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, title))
+    private static T Find<T>(Control window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+    private static void Click(Control window, string title) => window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, title))
         .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-    private static void Layout(Window window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); }
+    private static void Layout(Control window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); }
     private static RunDataTestNodeViewModel Node() => new() { PortsText = "A,192.168.0.2,192.168.0.3,100", DisabledPortsText = "B,192.168.0.4,192.168.0.5,100" };
 
     [Theory]
@@ -63,14 +63,14 @@ public class CustomDataTestSpeedTests
         {
             var theme = Application.Current!.RequestedThemeVariant;
             Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
-            var node = Node(); var original = node.PortsText; var window = new DataTestPairsWindow(node);
+            var node = Node(); var original = node.PortsText; var window = new DataTestPairsView(node);
             try
             {
                 window.Show(); Layout(window);
                 Find<TextBox>(window, "AllPairsSpeed").Text = "675"; Click(window, "Применить всем"); Layout(window);
                 var inputs = window.GetVisualDescendants().OfType<TextBox>().Where(t => t.Name == "PairSpeed").ToArray();
                 Assert.All(inputs, input => Assert.Equal("675", input.Text)); Assert.Equal(original, node.PortsText);
-                using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-custom-speed-{dark}.png"));
+                using (var frame = WorkspacePageTesting.CaptureRenderedFrame(window)) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-custom-speed-{dark}.png"));
                 var active = inputs.Single(t => ((DataTestPairRow)t.DataContext!).Enabled);
                 active.Text = "12.5"; Click(window, "Применить к ноде");
                 Assert.True(window.IsVisible); Assert.Equal(original, node.PortsText);
@@ -91,7 +91,7 @@ public class CustomDataTestSpeedTests
         await session.Dispatch(() =>
         {
             var source = NetworkPortBatchTests.Plan(2, 100); BenchNetworkPlan? saved = null;
-            var window = new NetworkPlanWindow(source, plan => saved = plan); var old = AppSettings.Instance.NetworkPlan;
+            var window = new NetworkPlanView(source, plan => saved = plan); var old = AppSettings.Instance.NetworkPlan;
             try
             {
                 window.Show(); Layout(window);
@@ -114,7 +114,7 @@ public class CustomDataTestSpeedTests
         await session.Dispatch<bool>(async () =>
         {
             var source = new BenchNetworkPlan { Addresses = new() }; var owner = new Window(); owner.Show();
-            var window = new NetworkPortBatchWindow(source); var result = window.ShowDialog<BenchNetworkPlan?>(owner);
+            var window = new NetworkPortBatchView(source); var result = window.ShowAsync<BenchNetworkPlan?>(owner);
             try
             {
                 Layout(window); Find<TextBox>(window, "BatchSpeed").Text = ""; Click(window, "Добавить в план");

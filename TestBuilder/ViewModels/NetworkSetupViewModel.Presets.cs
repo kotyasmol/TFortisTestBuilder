@@ -107,7 +107,7 @@ public partial class NetworkSetupViewModel
     private async Task SavePreset()
     {
         if (!CanEdit || Owner is not { } owner) return;
-        var name = await new Views.NetworkPresetNameWindow().ShowDialog<string?>(owner);
+        var name = await new Views.NetworkPresetNameView().ShowAsync<string?>(owner);
         if (name == null || !CanEdit) return;
         try
         {

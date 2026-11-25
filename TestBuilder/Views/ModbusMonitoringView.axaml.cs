@@ -50,8 +50,8 @@ public partial class ModbusMonitoringView : UserControl
 
         dataGrid.SelectedItem = null;
 
-        var dialog = new WriteRegisterDialog(slave, register, vm.CanWrite);
-        await dialog.ShowDialog(TopLevel.GetTopLevel(this) as Window ?? throw new Exception("No window"));
+        var dialog = new WriteRegisterView(slave, register, vm.CanWrite);
+        await dialog.ShowAsync(TopLevel.GetTopLevel(this) as Window ?? throw new Exception("No window"));
     }
 
     private async void OnCopyLogs(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

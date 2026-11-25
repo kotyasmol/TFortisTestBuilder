@@ -39,7 +39,7 @@ public class ProfileCatalogImportViewTests
                 window.Show(); foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true; Layout();
                 var item = list.GetVisualDescendants().OfType<ListBoxItem>().Single(i => ReferenceEquals(i.DataContext, profile));
                 var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Right); window.MouseUp(point, MouseButton.Right); Layout();
+                WorkspacePageTesting.MouseDown(window, point, MouseButton.Right); WorkspacePageTesting.MouseUp(window, point, MouseButton.Right); Layout();
                 var export = list.ProfileMenu!.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Экспорт профиля"));
                 Assert.Same(vm.ExportProfileCommand, export.Command); Assert.Same(profile, export.CommandParameter);
                 Assert.True(export.IsEnabled); list.ProfileMenu.Close();
@@ -62,16 +62,16 @@ public class ProfileCatalogImportViewTests
     public async Task ConflictShowsBothIdentitiesAndAnExplicitChoiceInBothThemes(bool dark, CatalogImportChoice choice)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             var owner = new Window { Width = 1000, Height = 850 }; owner.Show();
             var incoming = ProfileCatalogTransferTests.Card;
             var local = incoming with { Name = "Местное изделие", SerialSeries = incoming.SerialSeries! with { ServerDeviceType = "Местный тип" } };
-            var dialog = new ProfileCatalogImportDialog(new(local, incoming));
+            var dialog = new ProfileCatalogImportView(new(local, incoming));
             try
             {
-                var result = dialog.ShowDialog<CatalogImportChoice>(owner);
+                var result = dialog.ShowAsync<CatalogImportChoice>(owner);
                 dialog.UpdateLayout(); Dispatcher.UIThread.RunJobs(); dialog.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
                 var texts = dialog.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
                 Assert.Contains(texts, t => t?.Contains("Местный тип") == true);
@@ -81,20 +81,21 @@ public class ProfileCatalogImportViewTests
                 foreach (var button in buttons)
                 {
                     var pos = button.TranslatePoint(default, dialog)!.Value;
-                    Assert.InRange(pos.X + button.Bounds.Width, 0, dialog.ClientSize.Width);
-                    Assert.InRange(pos.Y + button.Bounds.Height, 0, dialog.ClientSize.Height);
+                    Assert.InRange(pos.X + button.Bounds.Width, 0, dialog.Bounds.Size.Width);
+                    Assert.InRange(pos.Y + button.Bounds.Height, 0, dialog.Bounds.Size.Height);
                 }
                 var folder = Environment.GetEnvironmentVariable("TESTBUILDER_LAYOUT_CAPTURES");
                 if (!string.IsNullOrEmpty(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    using var frame = dialog.CaptureRenderedFrame(); frame!.Save(Path.Combine(folder, $"catalog-conflict-{(dark ? "dark" : "light")}.png"));
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(dialog); frame!.Save(Path.Combine(folder, $"catalog-conflict-{(dark ? "dark" : "light")}.png"));
                 }
                 var caption = choice switch { CatalogImportChoice.Local => "Карточка этого компьютера", CatalogImportChoice.Profile => "Карточка из профиля", _ => "Отмена" };
                 buttons.Single(b => Equals(b.Content, caption)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.Equal(choice, await result);
             }
             finally { dialog.Close(); owner.Close(); }
+            return true;
         }, CancellationToken.None);
     }
 }

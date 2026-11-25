@@ -33,7 +33,7 @@ public partial class TestViewModel
         if (!CanEditQuickActions || owner == null) return;
         var graph = RootGraph;
         var draft = graph.PingMonitor?.Copy() ?? new PingMonitorSettings { ShowInEngineer = !IsBoardProfile };
-        var result = await new Views.PingSettingsWindow(draft).ShowDialog<PingMonitorSettings?>(owner);
+        var result = await new Views.PingSettingsView(draft).ShowAsync<PingMonitorSettings?>(owner);
         if (result != null && CanEditQuickActions && ReferenceEquals(graph, RootGraph)) ApplyPingSettings(result);
     }
 

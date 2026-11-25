@@ -49,7 +49,7 @@ public class NetworkPairAdditionTests
                 Find<Expander>(window, "NetworkPlanSection").IsExpanded = true; Layout(window);
                 MouseClick(window, Find<Button>(window, "AddNetworkPairs"));
                 var host = Find<ContentControl>(window, "NetworkPairEditorHost");
-                var form = host.Content; Assert.NotNull(form); Assert.Empty(window.OwnedWindows);
+                var form = host.Content; Assert.NotNull(form); Assert.Empty(window.Owner().OwnedWindows);
                 Press(window, "AddNetworkPairs"); Assert.Same(form, host.Content);
                 Find<NumericUpDown>(window, "BatchCount").Value = 12;
                 Find<TextBox>(window, "BatchSpeed").Text = "275"; Layout(window);
@@ -57,7 +57,7 @@ public class NetworkPairAdditionTests
                 Capture(window, "form-" + dark);
                 vm.RowSearch = "no match"; vm.RowFilterIndex = 2;
                 MouseClick(window, Find<Button>(window, "ConfirmNetworkBatch"));
-                Assert.False(host.IsVisible); Assert.Null(host.Content); Assert.Empty(window.OwnedWindows);
+                Assert.False(host.IsVisible); Assert.Null(host.Content); Assert.Empty(window.Owner().OwnedWindows);
                 Assert.Equal(1, saves); Assert.Equal(26, settings.NetworkPlan.Addresses.Count);
                 Assert.Equal(original, JsonSerializer.Serialize(source));
                 Assert.Equal(JsonSerializer.Serialize(source.Addresses), JsonSerializer.Serialize(settings.NetworkPlan.Addresses.Take(2)));
@@ -71,7 +71,7 @@ public class NetworkPairAdditionTests
                 Assert.Same(vm.Rows[2], Find<DataGrid>(window, "NetworkPlanAdaptersGrid").SelectedItem);
                 var addedRow = Find<DataGrid>(window, "NetworkPlanAdaptersGrid").GetVisualDescendants().OfType<DataGridRow>()
                     .Single(r => ReferenceEquals(r.DataContext, vm.Rows[2]));
-                Assert.InRange(addedRow.TranslatePoint(new Point(0, addedRow.Bounds.Height), window)!.Value.Y, 0, window.ClientSize.Height);
+                Assert.InRange(addedRow.TranslatePoint(new Point(0, addedRow.Bounds.Height), window)!.Value.Y, 0, window.Bounds.Size.Height);
                 Assert.Equal(oldPairs, node.PortsText);
                 node.ImportNetworkPlanCommand.Execute(null);
                 Assert.Equal(13, node.ParsePorts().Count()); Assert.True(node.AllowGigabit);
@@ -160,13 +160,13 @@ public class NetworkPairAdditionTests
         await session.Dispatch(() =>
         {
             var source = InitialPlan(); BenchNetworkPlan? saved = null;
-            var window = new NetworkPlanWindow(source, p => saved = p) { Width = 1100, Height = 800 };
+            var window = new NetworkPlanView(source, p => saved = p) { Width = 1100, Height = 800 };
             try
             {
                 window.Show(); Layout(window);
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Добавить пары…"))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window);
-                Assert.Empty(window.OwnedWindows);
+                Assert.Empty(window.Owner().OwnedWindows);
                 Find<NumericUpDown>(window, "BatchCount").Value = 150;
                 Find<TextBox>(window, "BatchSpeed").Text = "750";
                 Find<Expander>(window, "BatchAddressSettings").IsExpanded = true; Layout(window);
@@ -188,17 +188,17 @@ public class NetworkPairAdditionTests
     }
 
     private static T Find<T>(Control root, string name) where T : Control => root.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
-    private static void Press(Window window, string name) { Find<Button>(window, name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window); }
-    private static void Layout(Window window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
-    private static void MouseClick(Window window, Control control)
+    private static void Press(Control window, string name) { Find<Button>(window, name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Layout(window); }
+    private static void Layout(Control window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
+    private static void MouseClick(Control window, Control control)
     {
         control.BringIntoView(); Layout(window);
         var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
-    private static void Capture(Window window, string step)
+    private static void Capture(Control window, string step)
     {
         var folder = Path.Combine(Path.GetTempPath(), "tfortis-network-pairs-20261123"); Directory.CreateDirectory(folder);
-        using var frame = window.CaptureRenderedFrame(); frame!.Save(Path.Combine(folder, step + ".png"));
+        using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame!.Save(Path.Combine(folder, step + ".png"));
     }
 }

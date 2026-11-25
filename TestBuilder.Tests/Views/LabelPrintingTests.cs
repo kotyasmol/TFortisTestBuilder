@@ -281,7 +281,7 @@ public class LabelPrintingTests : IDisposable
                 Assert.False(view.FindControl<Button>("PrintTestLabelButton")!.IsEffectivelyEnabled);
                 allowed = true; vm.RefreshAvailability(); Dispatcher.UIThread.RunJobs();
                 window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-label-printing.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(window)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-label-printing.png"));
             }
             finally { window.Close(); }
         }, CancellationToken.None);
@@ -323,13 +323,13 @@ public class LabelPrintingTests : IDisposable
         {
             using var modbus = new ModbusService();
             using var profile = new TestViewModel(modbus, new SlaveManager(modbus));
-            foreach (var window in new Window[] { new DiscoverySettingsWindow(), new NetworkPlanWindow(), new LabelTemplatesWindow(),
-                new CatalogSerialsWindow(profile, new EquipmentModel("sample", "PSW+Box 8x2Pro")) })
+            foreach (var window in new ContentControl[] { new DiscoverySettingsView(), new NetworkPlanView(), new LabelTemplatesWindow(),
+                new CatalogItemEditorView(profile, new EquipmentModel("sample", "PSW+Box 8x2Pro")) })
             {
                 try {
                     window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                     AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                    window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-{window.GetType().Name}.png"));
+                    WorkspacePageTesting.CaptureRenderedFrame(window)!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-{window.GetType().Name}.png"));
                     Assert.True(window.Bounds.Width > 0);
                 } finally { window.Close(); }
             }

@@ -10,6 +10,6 @@ public partial class LogEntryView : UserControl
 
     private void OnOpenErrorHelp(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is LogEntry { Code: { } code }) UserGuideWindow.ShowErrorHelp(this, code);
+        if (DataContext is LogEntry { Code: { } code }) UserGuideView.ShowErrorHelp(this, code);
     }
 }

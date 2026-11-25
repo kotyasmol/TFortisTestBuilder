@@ -1,0 +1,100 @@
+<views:WorkspacePage xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:TestBuilder.Views" xmlns:editor="using:TestBuilder.Views.TestViews" xmlns:converters="using:TestBuilder.Converters" xmlns:models="using:TestBuilder.Models"
+        x:Class="TestBuilder.Views.ProfileActionEditorView"
+        x:CompileBindings="False" Title="Кнопка профиля" Background="{DynamicResource AppBackgroundBrush}">
+  <views:WorkspacePage.Resources>
+    <converters:ContrastTextConverter x:Key="SwatchContrast" />
+  </views:WorkspacePage.Resources>
+  <views:WorkspacePage.Styles>
+    <Style Selector="Button.colorSwatch">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground">
+        <MultiBinding Converter="{StaticResource SwatchContrast}">
+          <Binding Path="Background" RelativeSource="{RelativeSource Self}" />
+          <Binding Path="$parent[Window].Background" />
+        </MultiBinding>
+      </Setter>
+    </Style>
+    <Style Selector="Button.colorSwatch.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Content" Value="✓" />
+    </Style>
+    <Style Selector="Button.colorSwatch.systemColor">
+      <Setter Property="Content" Value="Системный" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+    <Style Selector="Button.colorSwatch.systemColor.selected">
+      <Setter Property="Content" Value="✓ Системный" />
+    </Style>
+  </views:WorkspacePage.Styles>
+  <Grid RowDefinitions="Auto,*,Auto" Margin="12">
+    <StackPanel Spacing="8" Margin="0,0,0,12">
+      <Grid ColumnDefinitions="*,220,180" RowDefinitions="Auto,Auto">
+        <TextBlock Text="Название кнопки" />
+        <TextBlock Grid.Column="1" Text="Отображение" Margin="12,0,0,0" />
+        <TextBlock Grid.Column="2" Text="Цвет" Margin="12,0,0,0" />
+        <TextBox x:Name="NameInput" Grid.Row="1" MaxLength="100" Watermark="Например, питание" />
+        <ComboBox x:Name="DisplayInput" Grid.Row="1" Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Stretch" SelectionChanged="OnDisplayChanged">
+          <ComboBoxItem Content="Кнопка" /><ComboBoxItem Content="Переключатель" /><ComboBoxItem Content="Круговой индикатор" />
+        </ComboBox>
+        <TextBox x:Name="ColorInput" Grid.Row="1" Grid.Column="2" Margin="12,0,0,0" Watermark="#2563EB" TextChanged="OnColorChanged" />
+      </Grid>
+      <StackPanel x:Name="ColorPalette" Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Цвета:" VerticalAlignment="Center" />
+        <Button Classes="colorSwatch systemColor" Background="{DynamicResource ControlBackgroundBrush}" Width="112" Height="28" Tag="{x:Static models:ProfileActionDefinition.SystemColor}" Click="OnPickColor" ToolTip.Tip="Системный" />
+        <Button Classes="colorSwatch" Background="#2563EB" Width="32" Height="28" Tag="#2563EB" Click="OnPickColor" ToolTip.Tip="Синий" />
+        <Button Classes="colorSwatch" Background="#0F766E" Width="32" Height="28" Tag="#0F766E" Click="OnPickColor" ToolTip.Tip="Бирюзовый" />
+        <Button Classes="colorSwatch" Background="#15803D" Width="32" Height="28" Tag="#15803D" Click="OnPickColor" ToolTip.Tip="Зелёный" />
+        <Button Classes="colorSwatch" Background="#EAB308" Width="32" Height="28" Tag="#EAB308" Click="OnPickColor" ToolTip.Tip="Жёлтый" />
+        <Button Classes="colorSwatch" Background="#EA580C" Width="32" Height="28" Tag="#EA580C" Click="OnPickColor" ToolTip.Tip="Оранжевый" />
+        <Button Classes="colorSwatch" Background="#B91C1C" Width="32" Height="28" Tag="#B91C1C" Click="OnPickColor" ToolTip.Tip="Красный" />
+        <Button Classes="colorSwatch" Background="#7C3AED" Width="32" Height="28" Tag="#7C3AED" Click="OnPickColor" ToolTip.Tip="Фиолетовый" />
+        <TextBlock x:Name="ToggleHint" Text="Источник показаний — на вкладке «Состояние»." VerticalAlignment="Center" Margin="12,0,0,0" />
+      </StackPanel>
+    </StackPanel>
+    <TabControl x:Name="GraphTabs" Grid.Row="1">
+      <TabItem x:Name="OnTab" Header="Действие"><editor:GraphEditorView x:Name="OnEditor" /></TabItem>
+      <TabItem x:Name="OffTab" Header="Повторное нажатие — выключить"><editor:GraphEditorView x:Name="OffEditor" /></TabItem>
+      <TabItem Header="Состояние"><views:ProfileActionStateEditorView x:Name="StateEditor" /></TabItem>
+      <TabItem Header="Тексты">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="LabelsEditor" Spacing="12" Margin="16" MaxWidth="820" HorizontalAlignment="Left">
+            <CheckBox Content="Показывать строку состояния на кнопке" IsChecked="{Binding ShowStatus}" />
+            <TextBlock Text="Пустое поле убирает подпись для этого состояния. Причина ошибки остаётся в подсказке и журнале." TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="240,500" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+              <TextBlock Text="До запуска (обычная кнопка)" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding Ready}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="1" Text="Состояние неизвестно" VerticalAlignment="Center" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Unknown}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="2" Text="Включено" VerticalAlignment="Center" />
+              <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding On}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="3" Text="Выключено" VerticalAlignment="Center" />
+              <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Off}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="4" Text="Во время выполнения" VerticalAlignment="Center" />
+              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Running}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="5" Text="Успешное завершение" VerticalAlignment="Center" />
+              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Success}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="6" Text="Ошибка" VerticalAlignment="Center" />
+              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Error}" MaxLength="120" Margin="0,4" />
+              <TextBlock Grid.Row="7" Text="Остановлено оператором" VerticalAlignment="Center" />
+              <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding Cancelled}" MaxLength="120" Margin="0,4" />
+            </Grid>
+            <TextBlock Text="Во время выполнения можно указать свой текст или шаблон: {step} — название шага, {done} — выполнено шагов, {total} — всего шагов («?» для ветвлений и циклов)." TextWrapping="Wrap" />
+            <TextBlock Text="Переключатель после успешной команды показывает подпись «Включено» или «Выключено». При привязке к Modbus она определяется показаниями регистров." TextWrapping="Wrap" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+      <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+      <Button Grid.Column="1" Content="Отмена" Click="OnCancel" Margin="0,0,8,0" />
+      <Button Grid.Column="2" Content="Применить к профилю" Click="OnApply" />
+    </Grid>
+  </Grid>
+</views:WorkspacePage>

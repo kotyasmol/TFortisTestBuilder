@@ -18,7 +18,7 @@ public class SharedCatalogScopeTests
     public async Task EditingALabelForANodeNeverWritesTheSharedCatalog()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var clean = new FreshUserJourneyTests.CleanWorkstation();
             var templates = LabelTemplateCatalog.Defaults();
@@ -41,6 +41,7 @@ public class SharedCatalogScopeTests
                 Assert.Equal(before, JsonSerializer.Serialize(source)); Assert.Equal(bytes, File.ReadAllBytes(path));
             }
             finally { window.Close(); owner.Close(); }
+            return true;
         }, CancellationToken.None);
     }
 

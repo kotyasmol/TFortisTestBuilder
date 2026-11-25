@@ -23,8 +23,8 @@ namespace TestBuilder.Tests.Views;
 [Collection("Graph editor UI")]
 public class ManyPortNetworkTests
 {
-    private static T Find<T>(Window window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
-    private static void Click(Window window, string label) => window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, label))
+    private static T Find<T>(Control window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+    private static void Click(Control window, string label) => window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, label))
         .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     private static BenchAdapter[] Cards(BenchNetworkPlan plan) => plan.Addresses.Select((a, i) =>
         new BenchAdapter($"card-{i}", $"Ethernet {i + 1}", $"00112233{i:0000}", i % 3 == 0 ? "Down" : "Up", a.Ip, 1000)).ToArray();
@@ -118,10 +118,10 @@ public class ManyPortNetworkTests
                 grid.BringIntoView(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 Assert.Equal(24, grid.ItemsSource.Cast<object>().Count());
                 Assert.InRange(grid.GetVisualDescendants().OfType<DataGridRow>().Count(), 1, 15);
-                using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-24-{dark}.png"));
+                using (var frame = WorkspacePageTesting.CaptureRenderedFrame(window)) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-24-{dark}.png"));
                 Find<TextBox>(window, "NetworkPortSearch").Text = "Порт 24"; Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
                 Assert.Single(vm.VisibleRows); Assert.Equal("card-23", vm.VisibleRows[0].SelectedAdapter!.Id);
-                using (var frame = window.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-search-{dark}.png"));
+                using (var frame = WorkspacePageTesting.CaptureRenderedFrame(window)) frame!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-network-search-{dark}.png"));
                 Assert.Equal(24, vm.Rows.Count);
                 Find<TextBox>(window, "NetworkPortSearch").Text = ""; Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
                 grid.ScrollIntoView(vm.Rows[^1], grid.Columns[0]); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
@@ -139,15 +139,15 @@ public class ManyPortNetworkTests
         await session.Dispatch<bool>(async () =>
         {
             var source = new BenchNetworkPlan { Addresses = new() }; BenchNetworkPlan? saved = null;
-            var owner = new NetworkPlanWindow(source, plan => saved = plan);
+            var owner = new NetworkPlanView(source, plan => saved = plan);
             try
             {
                 owner.Show(); owner.UpdateLayout(); Dispatcher.UIThread.RunJobs();
                 Click(owner, "Добавить порты…"); Dispatcher.UIThread.RunJobs();
-                var dialog = Assert.IsType<NetworkPortBatchWindow>(Assert.Single(owner.OwnedWindows));
+                var dialog = Assert.Single(owner.OpenPages().OfType<NetworkPortBatchView>());
                 dialog.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
                 Assert.Contains("24", Find<TextBlock>(dialog, "BatchSummary").Text);
-                using (var frame = dialog.CaptureRenderedFrame()) frame!.Save(Path.Combine(Path.GetTempPath(), "tfortis-network-batch.png"));
+                using (var frame = WorkspacePageTesting.CaptureRenderedFrame(dialog)) frame!.Save(Path.Combine(Path.GetTempPath(), "tfortis-network-batch.png"));
                 Click(dialog, "Добавить в план");
                 for (var i = 0; i < 20 && owner.GetVisualDescendants().OfType<DataGrid>().Single().ItemsSource.Cast<object>().Count() != 24; i++)
                 { await Task.Delay(10); Dispatcher.UIThread.RunJobs(); }
@@ -156,7 +156,7 @@ public class ManyPortNetworkTests
                 Click(owner, "Сохранить план"); Assert.NotNull(saved); Assert.Equal(24, saved.Addresses.Count);
                 Assert.Equal(12, saved.BuildDataTestPairs().Split(Environment.NewLine).Length);
             }
-            finally { foreach (var dialog in owner.OwnedWindows.ToArray()) dialog.Close(); owner.Close(); }
+            finally { foreach (var dialog in owner.OpenPages().ToArray()) dialog.Close(); owner.Close(); }
             return true;
         }, CancellationToken.None);
     }
@@ -168,7 +168,7 @@ public class ManyPortNetworkTests
         await session.Dispatch(() =>
         {
             var source = NetworkPortBatchTests.Plan(); BenchNetworkPlan? saved = null;
-            var window = new NetworkPlanWindow(source, plan => saved = plan);
+            var window = new NetworkPlanView(source, plan => saved = plan);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();

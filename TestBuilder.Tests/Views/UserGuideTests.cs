@@ -91,7 +91,7 @@ public class UserGuideTests
             Assert.Contains("id=\"label-types\"", html); Assert.Contains(article.Title, html);
             Assert.DoesNotContain(UserGuide.Search("Отступ всего макета", "Справочник нод"), a => a.Id == article.Id);
             Assert.DoesNotContain("выберите обновлённый макет в ноде заново", UserGuide.PlainText());
-            var window = new UserGuideWindow();
+            var window = new UserGuideView();
             try
             {
                 window.Show(); Dispatcher.UIThread.RunJobs();

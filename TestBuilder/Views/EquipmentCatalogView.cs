@@ -73,8 +73,8 @@ public sealed class EquipmentCatalogView : UserControl
             data.RefreshAvailability();
             try
             {
-                var saved = await new CatalogSerialsWindow(profile, model, createNew, selectForProfile: false)
-                    .ShowDialog<EquipmentModel?>(owner);
+                var saved = await new CatalogItemEditorView(profile, model, createNew, selectForProfile: false)
+                    .ShowAsync<EquipmentModel?>(owner);
                 if (saved == null) return;
                 data.Refresh(profile.CurrentEquipmentCatalog, profile.CatalogStatus, profile.CatalogOverridesPath);
                 data.RevealModel(saved.Id);

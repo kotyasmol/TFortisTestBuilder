@@ -79,7 +79,7 @@ public class DataTestPairEditorTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() => {
             var node = new RunDataTestNodeViewModel { PortsText = "Пара 1,192.168.0.2,192.168.0.3,100" };
-            var window = new DataTestPairsWindow(node);
+            var window = new DataTestPairsView(node);
             try
             {
                 window.Show(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs();
@@ -89,7 +89,7 @@ public class DataTestPairEditorTests
                 window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "PairSpeed").Text = "375";
                 Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), "tfortis-datatest-pairs.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(window)!.Save(Path.Combine(Path.GetTempPath(), "tfortis-datatest-pairs.png"));
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Применить к ноде"))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.Equal("Пара 1,192.168.0.4,192.168.0.3,375", node.PortsText);

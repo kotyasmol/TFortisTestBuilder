@@ -1,0 +1,58 @@
+<views:WorkspacePage xmlns="https://github.com/avaloniaui" xmlns:views="using:TestBuilder.Views" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestBuilder.ViewModels" x:Class="TestBuilder.Views.FailureCleanupOrderView"
+        x:DataType="vm:FailureCleanupOrderViewModel" Title="Порядок аварийных действий"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <views:WorkspacePage.Styles>
+    <Style Selector="Border.cleanupRow">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+    <Style Selector="Border.cleanupRow.dragging">
+      <Setter Property="Opacity" Value="0.55" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    </Style>
+    <Style Selector="Border.cleanupRow:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    </Style>
+  </views:WorkspacePage.Styles>
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <TextBlock Text="Перетащите строки в нужном порядке. Подтесты выполняются сверху вниз; отключённые пропускаются."
+               TextWrapping="Wrap" Margin="0,0,0,16" />
+    <TextBlock Grid.Row="1" IsVisible="{Binding !HasItems}" TextWrapping="Wrap"
+               Foreground="{DynamicResource TextSecondaryBrush}"
+               Text="Нет аварийных подтестов. Включите у нужного подтеста в основном графе «Выполнять при ошибке и остановке»." />
+    <ScrollViewer x:Name="OrderScroll" Grid.Row="1" IsVisible="{Binding HasItems}" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+      <ItemsControl x:Name="OrderItems" ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:FailureCleanupItemViewModel">
+            <Grid x:Name="CleanupOrderRow" Margin="0,0,0,8" Background="Transparent" Cursor="SizeAll"
+                  PointerPressed="OnRowPressed" ToolTip.Tip="Перетащите для изменения порядка">
+              <Border Classes="cleanupRow" Classes.dragging="{Binding IsDragging}" Padding="12" CornerRadius="8" BorderThickness="1"
+                      MinHeight="62">
+              <Grid ColumnDefinitions="24,32,*">
+                <Path Width="12" Height="20" Stretch="Uniform" VerticalAlignment="Center"
+                      Fill="{DynamicResource TextSecondaryBrush}"
+                      Data="M0 0 H4 V4 H0 Z M8 0 H12 V4 H8 Z M0 8 H4 V12 H0 Z M8 8 H12 V12 H8 Z M0 16 H4 V20 H0 Z M8 16 H12 V20 H8 Z" />
+                <TextBlock Grid.Column="1" Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" Margin="10,0,0,0">
+                  <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                  <TextBlock Text="Отключён" IsVisible="{Binding IsDisabled}" FontSize="12"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+              </Grid>
+              </Border>
+              <Border IsVisible="{Binding DropBefore}" Height="3" VerticalAlignment="Top" CornerRadius="1"
+                      Background="{DynamicResource PrimaryBrush}" IsHitTestVisible="False" />
+              <Border IsVisible="{Binding DropAfter}" Height="3" VerticalAlignment="Bottom" CornerRadius="1"
+                      Background="{DynamicResource PrimaryBrush}" IsHitTestVisible="False" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Отмена" Click="OnCancel" />
+      <Button Content="Применить к профилю" IsEnabled="{Binding HasItems}" Classes="primary" Click="OnApply" />
+    </StackPanel>
+  </Grid>
+</views:WorkspacePage>

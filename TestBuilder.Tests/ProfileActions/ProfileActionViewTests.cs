@@ -26,7 +26,7 @@ public class ProfileActionViewTests
     public async Task FailedAction_ShowsShortStatusAndDetailTooltip_WithoutGrowingButton(bool operatorMode, bool light)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
@@ -59,6 +59,7 @@ public class ProfileActionViewTests
             }
             finally { window.Close(); }
             return true;
+            return true;
         }, default);
     }
 
@@ -69,7 +70,7 @@ public class ProfileActionViewTests
         await session.Dispatch(() =>
         {
             ProfileActionDefinition saved;
-            var editor = new ProfileActionEditorWindow();
+            var editor = new ProfileActionEditorView();
             try
             {
                 editor.Show(); Layout(editor);
@@ -83,7 +84,7 @@ public class ProfileActionViewTests
             }
             finally { editor.Close(); }
 
-            var reopened = new ProfileActionEditorWindow(saved, null);
+            var reopened = new ProfileActionEditorView(saved, null);
             try
             {
                 reopened.Show(); Layout(reopened);
@@ -122,7 +123,7 @@ public class ProfileActionViewTests
                         var expected = button == system ? background : Color.Parse("#15803D");
                         Assert.Equal(expected, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
                         var point = button.TranslatePoint(new Point(10, 10), window)!.Value;
-                        window.MouseMove(point); Layout(window);
+                        WorkspacePageTesting.MouseMove(window, point); Layout(window);
                         Assert.Equal(expected, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
                         foreach (var label in button.GetVisualDescendants().OfType<TextBlock>())
                         {
@@ -130,7 +131,7 @@ public class ProfileActionViewTests
                             Assert.Equal(button.Foreground, label.Foreground);
                         }
                     }
-                    window.MouseMove(new Point(400, 380)); Layout(window);
+                    WorkspacePageTesting.MouseMove(window, new Point(400, 380)); Layout(window);
                     Capture(window, $"action-system-color-{theme}.png");
                 }
                 Assert.Equal(ProfileActionDefinition.SystemColor, saved.Color);
@@ -189,8 +190,8 @@ public class ProfileActionViewTests
                 }
 
                 var point = run.TranslatePoint(new Point(run.Bounds.Width / 2, run.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Left); AssertStable();
-                window.MouseUp(point, MouseButton.Left);
+                WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); AssertStable();
+                WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
                 var first = action.RunCommand.ExecutionTask!;
                 Assert.True(action.IsRunning); AssertStable();
                 Capture(window, $"action-{display}-{operatorMode}-{light}-running.png");
@@ -319,11 +320,11 @@ public class ProfileActionViewTests
             vm.IsQuickActionsCollapsed = false;
             var bar = new ProfileActionBar { DataContext = vm };
             var window = new Window { Width = 420, Height = 420, Content = bar };
-            DeleteProfileActionDialog? dialog = null;
+            DeleteProfileActionConfirmationView? dialog = null;
             vm.ConfirmDeleteQuickActionAsync = name =>
             {
-                dialog = new DeleteProfileActionDialog(name);
-                return dialog.ShowDialog<bool>(window);
+                dialog = new DeleteProfileActionConfirmationView(name);
+                return dialog.ShowAsync<bool>(window);
             };
             try
             {
@@ -342,7 +343,7 @@ public class ProfileActionViewTests
                     RequestDelete();
                     if (cancellation == "button")
                         Click(dialog!, dialog!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Отмена")));
-                    else if (cancellation == "escape") dialog!.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+                    else if (cancellation == "escape") WorkspacePageTesting.KeyPressQwerty(dialog!, PhysicalKey.Escape, RawInputModifiers.None);
                     else dialog!.Close();
                     await vm.DeleteQuickActionCommand.ExecutionTask!;
                     Layout(window);
@@ -378,7 +379,7 @@ public class ProfileActionViewTests
         await session.Dispatch(() =>
         {
             var source = new ProfileActionDefinition { Name = "Питание", Display = ProfileActionDisplay.Toggle };
-            var window = new ProfileActionEditorWindow(source, null);
+            var window = new ProfileActionEditorView(source, null);
             try
             {
                 window.Show(); Layout(window);
@@ -464,19 +465,19 @@ public class ProfileActionViewTests
             finally { File.Delete(path); }
         }, CancellationToken.None);
     }
-    private static void Click(Window window, Control control)
+    private static void Click(Control window, Control control)
     {
         var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs();
     }
-    private static void Capture(Window window, string file)
+    private static void Capture(Control window, string file)
     {
         var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
         if (string.IsNullOrEmpty(path)) return;
-        Directory.CreateDirectory(path); using var frame = window.CaptureRenderedFrame(); frame?.Save(Path.Combine(path, file));
+        Directory.CreateDirectory(path); using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame?.Save(Path.Combine(path, file));
     }
 }

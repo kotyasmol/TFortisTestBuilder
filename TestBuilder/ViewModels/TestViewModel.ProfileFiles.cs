@@ -21,12 +21,12 @@ public partial class TestViewModel
     internal Func<Task<bool>> ConfirmDiscardProfileAsync { get; set; } = () => ShowProfileConfirmationAsync(() => new(
         "Закрыть профиль?", "Закрыть без сохранения",
         "В профиле есть несохранённые изменения. Закрыть его без сохранения?"));
-    internal Func<Func<Views.ReloadProfileDialog>, Task<bool>> ShowDeleteProfileDialogAsync { get; set; } = ShowProfileConfirmationAsync;
+    internal Func<Func<Views.ReloadProfileConfirmationView>, Task<bool>> ShowDeleteProfileDialogAsync { get; set; } = ShowProfileConfirmationAsync;
     internal Func<CatalogImportConflict, Task<CatalogImportChoice>> ResolveCatalogImportAsync { get; set; } = async conflict =>
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
-            return await new Views.ProfileCatalogImportDialog(conflict).ShowDialog<CatalogImportChoice>(owner);
+            return await new Views.ProfileCatalogImportView(conflict).ShowAsync<CatalogImportChoice>(owner);
         return CatalogImportChoice.Cancel;
     };
 
@@ -48,11 +48,11 @@ public partial class TestViewModel
         return true;
     };
 
-    private static async Task<bool> ShowProfileConfirmationAsync(Func<Views.ReloadProfileDialog> createDialog)
+    private static async Task<bool> ShowProfileConfirmationAsync(Func<Views.ReloadProfileConfirmationView> createDialog)
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
-            return await createDialog().ShowDialog<bool>(owner);
+            return await createDialog().ShowAsync<bool>(owner);
         return false;
     }
 
@@ -111,7 +111,7 @@ public partial class TestViewModel
         {
             if (Avalonia.Application.Current?.ApplicationLifetime is
                 Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
-                return await new Views.ProfileNameDialog(profile, copy, suggested, validate).ShowDialog<string?>(owner);
+                return await new Views.ProfileNameView(profile, copy, suggested, validate).ShowAsync<string?>(owner);
             return null;
         };
 
@@ -205,7 +205,7 @@ public partial class TestViewModel
             try
             {
                 var text = ProfileDependencies.Describe(RootGraph, EquipmentCatalog.Load(ProfilesFolder));
-                await new Views.ProfileDependenciesWindow(text).ShowDialog(owner);
+                await new Views.ProfileDependenciesView(text).ShowAsync(owner);
             }
             catch (Exception ex) { StatusMessage = $"Не удалось прочитать зависимости: {ex.Message}"; LogUiException("Зависимости профиля", ex); }
         }

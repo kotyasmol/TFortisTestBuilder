@@ -188,7 +188,7 @@ public class WindowLayoutTests
         }
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();
@@ -198,12 +198,12 @@ public class WindowLayoutTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    private static void Capture(Window window, string name, int width, bool dark)
+    private static void Capture(Control window, string name, int width, bool dark)
     {
         var folder = Environment.GetEnvironmentVariable("TESTBUILDER_LAYOUT_CAPTURES");
         if (string.IsNullOrEmpty(folder)) return;
         Directory.CreateDirectory(folder);
-        using var frame = window.CaptureRenderedFrame();
+        using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
         Assert.NotNull(frame);
         frame.Save(Path.Combine(folder, $"{name}-{width}-{(dark ? "dark" : "light")}.png"));
     }

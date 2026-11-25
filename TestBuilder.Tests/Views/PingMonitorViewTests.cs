@@ -84,7 +84,7 @@ public class PingMonitorViewTests
                 owner.Show(); Layout(owner);
                 var configure = panel.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Настройки пинга");
                 Click(owner, configure);
-                var dialog = Assert.IsType<PingSettingsWindow>(owner.OwnedWindows.Single()); Layout(dialog);
+                var dialog = Assert.IsType<PingSettingsView>(owner.OpenPages().Single()); Layout(dialog);
                 var draft = Assert.IsType<PingSettingsViewModel>(dialog.DataContext);
                 dialog.FindControl<CheckBox>("EnabledInput")!.IsChecked = true;
                 var apply = dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Применить к профилю"));
@@ -98,7 +98,7 @@ public class PingMonitorViewTests
                 Assert.True(vm.RootGraph.PingMonitor.ShowInOperator);
                 var saved = GraphSerializer.Serialize(vm, "profile");
                 Click(owner, configure);
-                dialog = Assert.IsType<PingSettingsWindow>(owner.OwnedWindows.Single()); Layout(dialog);
+                dialog = Assert.IsType<PingSettingsView>(owner.OpenPages().Single()); Layout(dialog);
                 dialog.FindControl<TextBox>("HostInput")!.Text = "different.local";
                 Click(dialog, dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Отмена")));
                 await vm.ConfigurePingCommand.ExecutionTask!;
@@ -154,16 +154,16 @@ public class PingMonitorViewTests
         }, CancellationToken.None);
     }
 
-    private static void Click(Window window, Button button)
+    private static void Click(Control window, Button button)
     {
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         var dir = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS"); if (string.IsNullOrEmpty(dir)) return;
-        Directory.CreateDirectory(dir); using var frame = window.CaptureRenderedFrame(); frame?.Save(Path.Combine(dir, name));
+        Directory.CreateDirectory(dir); using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame?.Save(Path.Combine(dir, name));
     }
 }

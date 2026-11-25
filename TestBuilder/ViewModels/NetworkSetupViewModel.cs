@@ -236,7 +236,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
         if (!CanEdit || row.SelectedAdapter == null) return;
         if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return;
         var adapterId = row.SelectedAdapter.Id;
-        var name = await new TestBuilder.Views.NetworkAdapterNameWindow(row.SelectedAdapter.Name).ShowDialog<string?>(desktop.MainWindow);
+        var name = await new TestBuilder.Views.NetworkAdapterNameView(row.SelectedAdapter.Name).ShowAsync<string?>(desktop.MainWindow);
         if (name == null || !CanEdit) return;
         IsBusy = true;
         try { Status = await DataTestNetworkConfigurator.RenameAsync(adapterId, name) ?? "Карта переименована."; }
@@ -250,7 +250,7 @@ public partial class NetworkSetupViewModel : ViewModelBase
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
         {
-            await new TestBuilder.Views.NetworkPlanWindow(AppSettings.Instance.NetworkPlan, SaveAddressPlan).ShowDialog<bool>(desktop.MainWindow);
+            await new TestBuilder.Views.NetworkPlanView(AppSettings.Instance.NetworkPlan, SaveAddressPlan).ShowAsync<bool>(desktop.MainWindow);
         }
     }
 

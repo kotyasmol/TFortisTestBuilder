@@ -70,7 +70,7 @@ public class PartialRunViewTests
     public async Task PartialRun_UsesSlaveContext_ResetsAfterRun_AndCannotBeConfiguredByOperator()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -101,6 +101,7 @@ public class PartialRunViewTests
             Assert.False(vm.CanConfigureNodeRun(node));
             vm.IsTestRunning = false;
             return true;
+            return true;
         }, CancellationToken.None);
     }
 
@@ -108,7 +109,7 @@ public class PartialRunViewTests
     public async Task FailedPartialRun_StillExecutesFailureCleanup()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -126,6 +127,7 @@ public class PartialRunViewTests
             Assert.False(vm.HasPartialRun);
             Assert.False(vm.IsTestRunning);
             return true;
+            return true;
         }, CancellationToken.None);
     }
 
@@ -133,7 +135,7 @@ public class PartialRunViewTests
     public async Task NestedSelection_StaysInsideItsWorkspace_AndLoadingProfileClearsSelection()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -160,6 +162,7 @@ public class PartialRunViewTests
                 Assert.False(node.IsRunStart);
             }
             finally { File.Delete(path); }
+            return true;
             return true;
         }, CancellationToken.None);
     }

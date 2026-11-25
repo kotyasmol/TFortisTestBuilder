@@ -45,6 +45,7 @@ public class StationBoardViewTests
             vm.SelectedProfile = Profile(file);
             var view = new StationDashboardView { DataContext = vm };
             var window = new Window { Width = width, Height = height, Content = view };
+            WorkspacePageHost.For(window);
             try
             {
                 window.Show(); Layout(window);
@@ -57,20 +58,20 @@ public class StationBoardViewTests
                 var splitter = view.FindControl<GridSplitter>("BoardStagesSplitter")!;
                 var boardWidth = preview.Bounds.Width; var stagesWidth = stages.Bounds.Width;
                 var grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(grip, MouseButton.Left);
-                window.MouseMove(grip.WithX(grip.X - 100));
-                window.MouseUp(grip.WithX(grip.X - 100), MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, grip, MouseButton.Left);
+                WorkspacePageTesting.MouseMove(window, grip.WithX(grip.X - 100));
+                WorkspacePageTesting.MouseUp(window, grip.WithX(grip.X - 100), MouseButton.Left); Layout(window);
                 Assert.True(preview.Bounds.Width < boardWidth - 80);
                 Assert.True(stages.Bounds.Width > stagesWidth + 80);
                 grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(grip, MouseButton.Left);
-                window.MouseMove(grip.WithX(grip.X - 2000));
-                window.MouseUp(grip.WithX(grip.X - 2000), MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, grip, MouseButton.Left);
+                WorkspacePageTesting.MouseMove(window, grip.WithX(grip.X - 2000));
+                WorkspacePageTesting.MouseUp(window, grip.WithX(grip.X - 2000), MouseButton.Left); Layout(window);
                 Assert.True(preview.Bounds.Width >= 240);
                 grip = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(grip, MouseButton.Left);
-                window.MouseMove(grip.WithX(grip.X + 2000));
-                window.MouseUp(grip.WithX(grip.X + 2000), MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, grip, MouseButton.Left);
+                WorkspacePageTesting.MouseMove(window, grip.WithX(grip.X + 2000));
+                WorkspacePageTesting.MouseUp(window, grip.WithX(grip.X + 2000), MouseButton.Left); Layout(window);
                 Assert.True(view.FindControl<Grid>("BoardWorkspace")!.ColumnDefinitions[2].ActualWidth >= 220);
 
                 Assert.Equal("100%", preview.FindControl<TextBlock>("ZoomText")!.Text);
@@ -85,14 +86,14 @@ public class StationBoardViewTests
                 Assert.True(canvas.Zoom > 1);
                 var zoom = canvas.Zoom;
                 Click(window, preview.FindControl<Button>("ExpandButton")!); Layout(window);
-                var expanded = Assert.Single(window.OwnedWindows.OfType<BoardPreviewWindow>());
+                var expanded = Assert.Single(window.OpenPages().OfType<BoardResultView>());
                 var largePreview = expanded.GetVisualDescendants().OfType<BoardPreviewView>().Single();
                 Assert.Equal("Проверяется", largePreview.DisplayedState(id));
                 await vm.NodeCompletedAsync(runtime, StepResult.False, context, default); Layout(window); Layout(expanded);
                 Assert.Equal("Ошибка", preview.DisplayedState(id)); Assert.Equal("Ошибка", largePreview.DisplayedState(id));
                 Assert.Equal(zoom, canvas.Zoom);
                 Capture(expanded, (dark ? "dark" : "light") + "-expanded");
-                expanded.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None); Layout(window);
+                WorkspacePageTesting.KeyPressQwerty(expanded, PhysicalKey.Escape, RawInputModifiers.None); Layout(window);
                 Assert.False(expanded.IsVisible);
                 Click(window, preview.FindControl<Button>("FitButton")!); Assert.Equal(1, canvas.Zoom);
                 vm.SelectedProfile = Profile("station_dashboard_demo.json"); Layout(window);
@@ -213,10 +214,10 @@ public class StationBoardViewTests
             {
                 window.Show(); Layout(window);
                 var center = new Point(350, 250);
-                window.MouseDown(center, MouseButton.Left); window.MouseUp(center, MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, center, MouseButton.Left); WorkspacePageTesting.MouseUp(window, center, MouseButton.Left); Layout(window);
                 Assert.Equal("R1", canvas.SelectedId);
                 canvas.ZoomIn(); var zoom = canvas.Zoom;
-                window.MouseDown(center, MouseButton.Left); window.MouseMove(new Point(430, 280)); window.MouseUp(new Point(430, 280), MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, center, MouseButton.Left); WorkspacePageTesting.MouseMove(window, new Point(430, 280)); WorkspacePageTesting.MouseUp(window, new Point(430, 280), MouseButton.Left); Layout(window);
                 Assert.Equal(zoom, canvas.Zoom); Assert.Equal("R1", canvas.SelectedId);
                 canvas.ZoomOut(); Assert.Equal(1, canvas.Zoom);
                 for (var i = 0; i < 30; i++) canvas.ZoomIn(); Assert.Equal(8, canvas.Zoom);
@@ -230,8 +231,8 @@ public class StationBoardViewTests
 
     static IEnumerable<NodeViewModel> Flatten(IEnumerable<NodeViewModel> nodes)
     { foreach (var n in nodes) { yield return n; if (n is ICompositeNodeViewModel c) foreach (var child in Flatten(c.BodyGraph.Nodes)) yield return child; } }
-    static void Click(Window w, Control c)
-    { var p = c.TranslatePoint(new Point(c.Bounds.Width / 2, c.Bounds.Height / 2), w)!.Value; w.MouseDown(p, MouseButton.Left); w.MouseUp(p, MouseButton.Left); Layout(w); }
-    static void Layout(Window w) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
-    static void Capture(Window w, string name) { Directory.CreateDirectory(Output); Layout(w); using var frame = w.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(Path.Combine(Output, name + ".png")); }
+    static void Click(Control w, Control c)
+    { var p = c.TranslatePoint(new Point(c.Bounds.Width / 2, c.Bounds.Height / 2), w)!.Value; WorkspacePageTesting.MouseDown(w, p, MouseButton.Left); WorkspacePageTesting.MouseUp(w, p, MouseButton.Left); Layout(w); }
+    static void Layout(Control w) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
+    static void Capture(Control w, string name) { Directory.CreateDirectory(Output); Layout(w); using var frame = WorkspacePageTesting.CaptureRenderedFrame(w); Assert.NotNull(frame); frame.Save(Path.Combine(Output, name + ".png")); }
 }

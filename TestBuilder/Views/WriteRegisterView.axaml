@@ -1,0 +1,33 @@
+<views:WorkspacePage xmlns="https://github.com/avaloniaui"
+        xmlns:views="using:TestBuilder.Views" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TestBuilder.Views.WriteRegisterView"
+        Title="Запись регистра">
+
+    <StackPanel Margin="15" Spacing="10">
+
+        <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Text="Адрес устройства:" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" x:Name="SlaveIdBox" />
+        </Grid>
+
+        <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Text="Адрес:" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" x:Name="AddressBox" IsReadOnly="True" />
+        </Grid>
+
+        <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Text="Значение:" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" x:Name="ValueBox" />
+        </Grid>
+
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,5" />
+
+        <TextBlock x:Name="ResultText" Text="Нет данных" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Content="Отправить" x:Name="SendButton" Width="100" />
+            <Button Content="Отмена" x:Name="CancelButton" Width="90" />
+        </StackPanel>
+
+    </StackPanel>
+</views:WorkspacePage>

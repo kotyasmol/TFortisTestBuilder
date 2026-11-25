@@ -81,7 +81,7 @@ public class ProfileUiIntegrityTests
                 Assert.Equal(before, Save(vm));
                 foreach (var action in vm.RootGraph.QuickActions)
                 {
-                    var actionWindow = new ProfileActionEditorWindow(action, vm.RootGraph.Hardware);
+                    var actionWindow = new ProfileActionEditorView(action, vm.RootGraph.Hardware);
                     var editors = new[] { "OnEditor", "OffEditor" }.Select(name =>
                         (TestViewModel)actionWindow.FindControl<GraphEditorView>(name)!.DataContext!).ToArray();
                     var snapshots = editors.Select(Save).ToArray();
@@ -105,7 +105,7 @@ public class ProfileUiIntegrityTests
             }
             finally { window.Close(); }
 
-            void Visit(TestViewModel editor, GraphWorkspaceViewModel graph, Window owner)
+            void Visit(TestViewModel editor, GraphWorkspaceViewModel graph, Control owner)
             {
                 Layout(owner);
                 foreach (var node in graph.Nodes.OfType<CompositeNodeViewModel>().ToArray())
@@ -200,7 +200,7 @@ public class ProfileUiIntegrityTests
         }
         return string.Join("\n", values);
     }
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs();

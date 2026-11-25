@@ -48,7 +48,7 @@ public class ReportTemplateEditorTests
                 Assert.True(toolbar.IsEffectivelyVisible && toolbar.IsEffectivelyEnabled);
 
                 var edit = vm.ConfigureReportTemplateAsync(owner);
-                var dialog = Assert.IsType<ReportTemplateWindow>(owner.OwnedWindows.Single());
+                var dialog = Assert.IsType<ReportTemplateView>(owner.OpenPages().Single());
                 Layout(dialog);
                 var draft = Assert.IsType<ReportTemplateEditorViewModel>(dialog.DataContext);
                 var fields = dialog.FindControl<ListBox>("FieldList")!;
@@ -64,7 +64,7 @@ public class ReportTemplateEditorTests
                 Assert.Same(template, vm.RootGraph.ReportTemplate);
 
                 edit = vm.ConfigureReportTemplateAsync(owner);
-                dialog = Assert.IsType<ReportTemplateWindow>(owner.OwnedWindows.Single());
+                dialog = Assert.IsType<ReportTemplateView>(owner.OpenPages().Single());
                 Layout(dialog);
                 draft = Assert.IsType<ReportTemplateEditorViewModel>(dialog.DataContext);
                 fields = dialog.FindControl<ListBox>("FieldList")!;
@@ -100,11 +100,11 @@ public class ReportTemplateEditorTests
             var draft = new ReportTemplateEditorViewModel(null, source =>
                 source == ReportSourceKind.Variable ? keys : [], initiallyIncludeKnownVariables: true);
             var owner = new Window { Width = 1280, Height = 700 };
-            var dialog = new ReportTemplateWindow(draft);
+            var dialog = new ReportTemplateView(draft);
             try
             {
                 owner.Show();
-                var edit = dialog.ShowDialog<ReportTemplateEditResult?>(owner);
+                var edit = dialog.ShowAsync<ReportTemplateEditResult?>(owner);
                 Layout(dialog);
                 var useTemplate = dialog.GetVisualDescendants().OfType<CheckBox>()
                     .Single(box => Equals(box.Content, "Выбирать строки отчёта вручную"));
@@ -160,19 +160,19 @@ public class ReportTemplateEditorTests
         }, CancellationToken.None);
     }
 
-    private static Button FindButton(Window window, string title) => window.GetVisualDescendants()
+    private static Button FindButton(Control window, string title) => window.GetVisualDescendants()
         .OfType<Button>().Single(button => Equals(button.Content, title));
 
-    private static void Click(Window window, Button button)
+    private static void Click(Control window, Button button)
     {
         button.BringIntoView(); Layout(window);
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left);
-        window.MouseUp(point, MouseButton.Left);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left);
+        WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
         Layout(window);
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
@@ -181,12 +181,12 @@ public class ReportTemplateEditorTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         var folder = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
         if (string.IsNullOrEmpty(folder)) return;
         Directory.CreateDirectory(folder);
-        using var frame = window.CaptureRenderedFrame();
+        using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
         frame?.Save(Path.Combine(folder, name));
     }
 }

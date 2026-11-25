@@ -39,7 +39,7 @@ namespace TestBuilder.ViewModels
         private async Task ConfigureDiscovery()
         {
             if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
-                await new TestBuilder.Views.DiscoverySettingsWindow().ShowDialog(desktop.MainWindow);
+                await new TestBuilder.Views.DiscoverySettingsView().ShowAsync(desktop.MainWindow);
         }
 
         public void RefreshTutorialAvailability() { OnPropertyChanged(nameof(CanStartTutorial)); ConfigureDiscoveryCommand.NotifyCanExecuteChanged(); }

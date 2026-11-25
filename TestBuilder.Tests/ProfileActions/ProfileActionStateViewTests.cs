@@ -22,7 +22,7 @@ public class ProfileActionStateViewTests
         await session.Dispatch(() =>
         {
             var original = new ProfileActionDefinition { Display = ProfileActionDisplay.Toggle, StateBinding = ProfileActionStateTests.Binding() };
-            var window = new ProfileActionEditorWindow(original, ProfileActionStateTests.Hardware()) { Width = width };
+            var window = new ProfileActionEditorView(original, ProfileActionStateTests.Hardware()) { Width = width };
             try
             {
                 window.Show(); window.FindControl<TabControl>("GraphTabs")!.SelectedIndex = 2; Layout(window);
@@ -55,7 +55,7 @@ public class ProfileActionStateViewTests
                     Assert.True(position.X >= 0 && position.X + control.Bounds.Width <= panel.Bounds.Width);
                 }
                 var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
-                if (path != null) { Directory.CreateDirectory(path); using var frame = window.CaptureRenderedFrame(); frame?.Save(Path.Combine(path, $"action-state-{width}.png")); }
+                if (path != null) { Directory.CreateDirectory(path); using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame?.Save(Path.Combine(path, $"action-state-{width}.png")); }
                 extra.RemoveCommand.Execute(null); Assert.Single(vm.Rules[0].Conditions);
                 vm.UseModbus = false; Assert.Null(window.BuildResult().StateBinding);
                 vm.UseModbus = true; Assert.NotNull(window.BuildResult().StateBinding);
@@ -71,7 +71,7 @@ public class ProfileActionStateViewTests
         {
             var original = new ProfileActionDefinition { Name = "Повторить этикетку" };
             ProfileActionDefinition saved;
-            var editor = new ProfileActionEditorWindow(original, null) { Width = 940 };
+            var editor = new ProfileActionEditorView(original, null) { Width = 940 };
             try
             {
                 editor.Show(); editor.FindControl<TabControl>("GraphTabs")!.SelectedIndex = 3; Layout(editor);
@@ -86,10 +86,10 @@ public class ProfileActionStateViewTests
                 Assert.False(saved.Labels!.ShowStatus); Assert.Equal("", saved.Labels.Ready);
                 Assert.Equal("Печать…", saved.Labels.Running); Assert.Equal("Отправлено принтеру", saved.Labels.Success);
                 var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
-                if (path != null) { Directory.CreateDirectory(path); using var frame = editor.CaptureRenderedFrame(); frame?.Save(Path.Combine(path, "action-labels.png")); }
+                if (path != null) { Directory.CreateDirectory(path); using var frame = WorkspacePageTesting.CaptureRenderedFrame(editor); frame?.Save(Path.Combine(path, "action-labels.png")); }
             }
             finally { editor.Close(); }
-            var reopened = new ProfileActionEditorWindow(saved, null);
+            var reopened = new ProfileActionEditorView(saved, null);
             try
             {
                 reopened.Show(); reopened.FindControl<TabControl>("GraphTabs")!.SelectedIndex = 3; Layout(reopened);
@@ -100,6 +100,6 @@ public class ProfileActionStateViewTests
         }, default);
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
 }

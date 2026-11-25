@@ -36,7 +36,7 @@ public partial class StationDashboardView : UserControl
     private void OpenErrorHelp(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel vm && vm.Station.ErrorCode is { } code)
-            UserGuideWindow.ShowErrorHelp(this, code);
+            UserGuideView.ShowErrorHelp(this, code);
     }
 
     private void OpenSettings(object? sender, RoutedEventArgs e)

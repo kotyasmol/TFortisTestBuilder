@@ -17,7 +17,7 @@ public partial class TestViewModel
         if (!CanEditQuickActions || owner == null) return;
         var graph = RootGraph;
         var draft = new FailureCleanupOrderViewModel(FailureCleanupOrder.GetNodes(graph, includeDisabled: true));
-        var result = await new Views.FailureCleanupOrderWindow(draft).ShowDialog<SubtestNodeViewModel[]?>(owner);
+        var result = await new Views.FailureCleanupOrderView(draft).ShowAsync<SubtestNodeViewModel[]?>(owner);
         if (result == null || !CanEditQuickActions || !ReferenceEquals(graph, RootGraph)) return;
         try { ApplyFailureCleanupOrder(result); }
         catch (InvalidOperationException ex) { StatusMessage = ex.Message; }

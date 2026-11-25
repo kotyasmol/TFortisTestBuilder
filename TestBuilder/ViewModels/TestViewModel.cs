@@ -52,7 +52,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     private readonly ProfileEditHistory _history;
     private CancellationTokenSource? _testRunCts;
     private string? _runConnectionFailure;
-    private Views.ModbusReconnectDialog? _modbusReconnectDialog;
+    private Views.ModbusReconnectView? _modbusReconnectDialog;
     private TaskCompletionSource<bool> _pauseCompletion =
         CreateCompletedPauseCompletion();
 
@@ -785,7 +785,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
         if (Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop &&
             desktop.MainWindow is { } owner)
-            return await new ClearGraphDialog().ShowDialog<bool>(owner);
+            return await new ClearGraphConfirmationView().ShowAsync<bool>(owner);
         return false;
     };
 
@@ -1138,7 +1138,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
     {
         if (_modbusReconnectDialog == null)
         {
-            _modbusReconnectDialog = new Views.ModbusReconnectDialog();
+            _modbusReconnectDialog = new Views.ModbusReconnectView();
             _modbusReconnectDialog.Closed += (_, _) => _modbusReconnectDialog = null;
 
             var mainWindow = Avalonia.Application.Current?.ApplicationLifetime
@@ -1147,9 +1147,7 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                     : null;
 
             if (mainWindow != null)
-                _modbusReconnectDialog.Show(mainWindow);
-            else
-                _modbusReconnectDialog.Show();
+                _ = _modbusReconnectDialog.ShowAsync(mainWindow);
         }
 
         _modbusReconnectDialog.SetMessage(message, canClose);
@@ -1360,9 +1358,9 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                 OperatorInput = async (message, token) => await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     if (mainWindow == null) throw new InvalidOperationException("Не найдено окно ввода.");
-                    var dialog = new Views.OperatorActionDialog(message, requestInput: true);
+                    var dialog = new Views.OperatorActionView(message, requestInput: true);
                     using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close()));
-                    await dialog.ShowDialog(mainWindow); token.ThrowIfCancellationRequested();
+                    await dialog.ShowAsync(mainWindow); token.ThrowIfCancellationRequested();
                     return dialog.Confirmed ? dialog.InputText : null;
                 }),
                 OperatorPrompt = async message =>
@@ -1373,10 +1371,10 @@ public partial class TestViewModel : ViewModelBase, IGraphEditor, IExecutionObse
                             return await Station.RequestActionAsync(message, context!.CancellationToken);
                         if (mainWindow == null)
                             throw new InvalidOperationException("Не найдено окно для инструкции оператору.");
-                        var dialog = new Views.OperatorActionDialog(message);
+                        var dialog = new Views.OperatorActionView(message);
                         using var registration = context!.CancellationToken.Register(() =>
                             Dispatcher.UIThread.Post(() => dialog.Close()));
-                        await dialog.ShowDialog(mainWindow);
+                        await dialog.ShowAsync(mainWindow);
                         context.CancellationToken.ThrowIfCancellationRequested();
                         return dialog.Confirmed;
                     });

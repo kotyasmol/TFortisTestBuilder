@@ -95,8 +95,7 @@ public partial class BoardPreviewView : UserControl
     private void Expand(object? sender, RoutedEventArgs e)
     {
         if (_vm == null || TopLevel.GetTopLevel(this) is not Window owner) return;
-        var existing = owner.OwnedWindows.OfType<BoardPreviewWindow>().FirstOrDefault();
-        if (existing != null) existing.Activate();
-        else new BoardPreviewWindow(_vm).Show(owner);
+        if (WorkspacePageHost.Find(owner)?.Pages.OfType<BoardResultView>().Any() != true)
+            _ = new BoardResultView(_vm).ShowAsync(owner);
     }
 }

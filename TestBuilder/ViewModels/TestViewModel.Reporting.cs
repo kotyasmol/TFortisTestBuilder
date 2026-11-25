@@ -23,7 +23,7 @@ public partial class TestViewModel
             kind => ReportSourceCatalog.Collect(graph, kind, observedNames));
         var draft = new ReportTemplateEditorViewModel(old, kind => knownKeys[kind],
             initiallyIncludeKnownVariables: old == null && ReportSourceCatalog.UsesAllVariables(graph));
-        var result = await new ReportTemplateWindow(draft).ShowDialog<ReportTemplateEditResult?>(owner);
+        var result = await new ReportTemplateView(draft).ShowAsync<ReportTemplateEditResult?>(owner);
         if (result == null || !CanEditQuickActions || path != _currentProfilePath ||
             !ReferenceEquals(old, graph.ReportTemplate)) return;
 

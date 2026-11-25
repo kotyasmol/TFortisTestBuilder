@@ -1,0 +1,41 @@
+<views:WorkspacePage xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:TestBuilder.Views"
+        x:Class="TestBuilder.Views.OperatorActionView"
+        x:DataType="views:OperatorActionViewModel"
+        Title="Требуется действие оператора" MaxWidth="800">
+
+    <Grid Margin="24" RowDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Row="0"
+                   Text="Требуется действие оператора"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap" />
+
+        <ScrollViewer Grid.Row="1"
+                      Margin="0,16,0,16"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="12"><TextBlock Text="{Binding Message}"
+                       FontSize="14"
+                       Opacity="0.8"
+                       TextWrapping="Wrap" />
+            <TextBox x:Name="InputBox" Watermark="Введите или отсканируйте значение" MaxLength="1024" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="10"
+                    Margin="0,8,0,0">
+            <Button Content="Продолжить"
+                    Width="130"
+                    Click="OnConfirm" />
+            <Button Content="Отмена"
+                    Width="100"
+                    Click="OnCancel" />
+        </StackPanel>
+    </Grid>
+
+</views:WorkspacePage>

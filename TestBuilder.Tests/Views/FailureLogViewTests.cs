@@ -88,10 +88,10 @@ public class FailureLogViewTests
                 link.BringIntoView(); Layout(window);
                 var click = link.TranslatePoint(new Point(link.Bounds.Width / 2, link.Bounds.Height / 2), window)!.Value;
                 Assert.InRange(click.Y, 0, window.Bounds.Height);
-                window.MouseDown(click, MouseButton.Left);
-                window.MouseUp(click, MouseButton.Left);
+                WorkspacePageTesting.MouseDown(window, click, MouseButton.Left);
+                WorkspacePageTesting.MouseUp(window, click, MouseButton.Left);
                 Layout(window);
-                var help = Assert.Single(window.OwnedWindows.OfType<UserGuideWindow>());
+                var help = Assert.Single(window.OpenPages().OfType<UserGuideView>());
                 try
                 {
                     Layout(help);
@@ -158,7 +158,7 @@ public class FailureLogViewTests
                 Layout(window);
                 var open = view.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Коды ошибок"));
                 open.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                var help = Assert.Single(window.OwnedWindows.OfType<UserGuideWindow>());
+                var help = Assert.Single(window.OpenPages().OfType<UserGuideView>());
                 try
                 {
                     Layout(help);
@@ -187,7 +187,7 @@ public class FailureLogViewTests
         return subtest;
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();

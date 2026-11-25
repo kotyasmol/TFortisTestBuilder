@@ -84,7 +84,7 @@ public class NetworkToolsLayoutTests
     public async Task ProbeCanStillBeStoppedWhenDiagnosticsIsHidden()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var clean = new FreshUserJourneyTests.CleanWorkstation();
             var preset = Preset(); AppSettings.Instance.NetworkPlan = preset.CopyPlan();
@@ -106,6 +106,7 @@ public class NetworkToolsLayoutTests
                 Assert.Equal(before, JsonSerializer.Serialize(AppSettings.Instance.NetworkPlan));
             }
             finally { vm.CancelProbeCommand.Execute(null); window.Close(); }
+            return true;
         }, CancellationToken.None);
     }
 

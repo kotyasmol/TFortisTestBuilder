@@ -32,7 +32,7 @@ public class TutorialTests
             var previousTheme = Application.Current!.RequestedThemeVariant;
             var previousCompleted = AppSettings.Instance.TutorialCompletedVersion;
             Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
-            var window = new TutorialWindow { Width = width, Height = dark ? 780 : 850 };
+            var window = new TutorialView { Width = width, Height = dark ? 780 : 850 };
             try
             {
                 window.Show(); Layout(window);
@@ -49,7 +49,7 @@ public class TutorialTests
                 Capture(window, dark, "result");
                 Click(window, Named(window, "TutorialEditor")); await At(window, TutorialStep.Rename);
                 var name = window.Target!.GetVisualDescendants().OfType<TextBox>().First();
-                name.Focus(); name.Text = "Мой учебный профиль"; window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None); Layout(window);
+                name.Focus(); name.Text = "Мой учебный профиль"; WorkspacePageTesting.KeyPressQwerty(window, PhysicalKey.Enter, RawInputModifiers.None); Layout(window);
                 await At(window, TutorialStep.Parameter);
                 Capture(window, dark, "parameter");
                 Assert.IsType<TextBox>(window.Target).Text = "500";
@@ -71,10 +71,10 @@ public class TutorialTests
                 await Task.Delay(150); Layout(window);
                 Assert.Equal(TutorialStep.ActionMessage, window.Step); // Do not advance while the operator is still typing.
                 Capture(window, dark, "message");
-                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                WorkspacePageTesting.KeyPressQwerty(window, PhysicalKey.Tab, RawInputModifiers.None);
                 await At(window, TutorialStep.Help); ClickTarget(window);
                 await At(window, TutorialStep.CloseHelp);
-                var help = Assert.Single(window.OwnedWindows.OfType<NodeHelpWindow>());
+                var help = Assert.Single(window.OpenPages().OfType<NodeHelpView>());
                 Layout(help); Capture(help, dark, "help");
                 Click(help, help.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "✕ Закрыть")));
                 await At(window, TutorialStep.ConnectStart);
@@ -95,11 +95,11 @@ public class TutorialTests
                 Connect(window, action.FalseOut, end.Input[0]);
                 await At(window, TutorialStep.Name);
                 var newName = window.Target!.GetVisualDescendants().OfType<TextBox>().First();
-                newName.Focus(); newName.Text = "Пробная проверка"; window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                newName.Focus(); newName.Text = "Пробная проверка"; WorkspacePageTesting.KeyPressQwerty(window, PhysicalKey.Enter, RawInputModifiers.None);
                 await At(window, TutorialStep.Save);
                 ClickTarget(window); await At(window, TutorialStep.Run);
                 ClickTarget(window); await At(window, TutorialStep.ConfirmGraph);
-                var prompt = Assert.Single(window.OwnedWindows.OfType<OperatorActionDialog>());
+                var prompt = Assert.Single(window.OpenPages().OfType<OperatorActionView>());
                 Layout(prompt); Capture(prompt, dark, "own-prompt");
                 Assert.Contains(prompt.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Проверьте индикатор");
                 Click(prompt, prompt.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, dark ? "Отмена" : "Продолжить")));
@@ -173,18 +173,18 @@ public class TutorialTests
             {
                 settings.TutorialOfferedVersion = 0; owner.Show(); Layout(owner);
                 var offer = TutorialLauncher.OfferOnFirstLaunchAsync(owner);
-                Layout(owner); var welcome = owner.OwnedWindows.Single();
+                Layout(owner); var welcome = owner.OpenPages().Single();
                 Capture(welcome, false, "welcome");
                 Click(welcome, Named(welcome, "SkipTutorial")); await offer;
                 Assert.False(TutorialSession.ShouldOffer(settings));
                 var restored = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(settings))!;
                 Assert.False(TutorialSession.ShouldOffer(restored));
-                await TutorialLauncher.OfferOnFirstLaunchAsync(owner); Assert.Empty(owner.OwnedWindows);
+                await TutorialLauncher.OfferOnFirstLaunchAsync(owner); Assert.Empty(owner.OpenPages());
                 var vm = (TestBuilder.ViewModels.MainWindowViewModel)owner.DataContext!;
                 vm.OpenSettingsCommand.Execute(null); Layout(owner);
                 var replay = owner.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Интерактивное обучение"));
                 Click(owner, replay); Layout(owner);
-                var tutorial = Assert.Single(owner.OwnedWindows.OfType<TutorialWindow>());
+                var tutorial = Assert.Single(owner.OpenPages().OfType<TutorialView>());
                 await At(tutorial, TutorialStep.Model);
                 tutorial.Close();
             }
@@ -199,7 +199,7 @@ public class TutorialTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch<bool>(async () =>
         {
-            var window = new TutorialWindow(); window.Show();
+            var window = new TutorialView(); window.Show();
             try
             {
                 await At(window, TutorialStep.Model); ClickTarget(window); await At(window, TutorialStep.Profile);
@@ -219,7 +219,7 @@ public class TutorialTests
         }, CancellationToken.None);
     }
 
-    static void Drop(TutorialWindow window, string type)
+    static void Drop(TutorialView window, string type)
     {
         var editor = window.GetVisualDescendants().OfType<NodifyEditor>().Single();
         var data = new DataObject(); data.Set("NodeType", type);
@@ -227,7 +227,7 @@ public class TutorialTests
         Layout(window);
     }
 
-    static void Connect(TutorialWindow window, ConnectorViewModel from, ConnectorViewModel to)
+    static void Connect(TutorialView window, ConnectorViewModel from, ConnectorViewModel to)
     {
         var editor = window.GetVisualDescendants().OfType<NodifyEditor>().Single();
         var output = editor.GetVisualDescendants().OfType<Connector>().Single(c => ReferenceEquals(c.DataContext, from));
@@ -239,17 +239,17 @@ public class TutorialTests
         // Existing wires must not intercept a connector, including the return path into Delay.
         var hit = Assert.IsAssignableFrom<Visual>(window.InputHitTest(a));
         Assert.Contains(output, hit.GetVisualAncestors().OfType<Connector>());
-        window.MouseMove(a); window.MouseDown(a, MouseButton.Left);
-        window.MouseMove((a + b) / 2); window.MouseMove(b); window.MouseUp(b, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseMove(window, a); WorkspacePageTesting.MouseDown(window, a, MouseButton.Left);
+        WorkspacePageTesting.MouseMove(window, (a + b) / 2); WorkspacePageTesting.MouseMove(window, b); WorkspacePageTesting.MouseUp(window, b, MouseButton.Left); Layout(window);
     }
 
-    static void AssertNoNodeOverlap(TutorialWindow w)
+    static void AssertNoNodeOverlap(TutorialView w)
     {
         var boxes = w.GetVisualDescendants().OfType<ItemContainer>().Where(c => c.DataContext is NodeViewModel)
             .Select(c => new Rect(((NodeViewModel)c.DataContext!).Location, c.Bounds.Size)).ToArray();
         for (var i = 0; i < boxes.Length; i++) for (var j = i + 1; j < boxes.Length; j++) Assert.False(boxes[i].Intersects(boxes[j]));
     }
-    static async Task At(TutorialWindow w, TutorialStep step)
+    static async Task At(TutorialView w, TutorialStep step)
     {
         var until = DateTime.UtcNow.AddSeconds(8);
         while (w.Step != step && DateTime.UtcNow < until) { await Task.Delay(30); Layout(w); }
@@ -258,14 +258,14 @@ public class TutorialTests
         Assert.True(w.Step == step, $"Expected {step}, actual {w.Step}; {w.Model.StatusMessage}");
         if (w.Target != null) Assert.True(w.HighlightBounds.Width > 0 && w.HighlightBounds.Height > 0);
     }
-    static void ClickTarget(TutorialWindow w) { Assert.NotNull(w.Target); Click(w, w.Target!); }
-    static Button Named(Window w, string name) => w.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);
-    static void Click(Window w, Control c)
+    static void ClickTarget(TutorialView w) { Assert.NotNull(w.Target); Click(w, w.Target!); }
+    static Button Named(Control w, string name) => w.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);
+    static void Click(Control w, Control c)
     {
         var p = c.TranslatePoint(new Point(c.Bounds.Width / 2, c.Bounds.Height / 2), w)!.Value;
-        w.MouseDown(p, MouseButton.Left); w.MouseUp(p, MouseButton.Left); Layout(w);
+        WorkspacePageTesting.MouseDown(w, p, MouseButton.Left); WorkspacePageTesting.MouseUp(w, p, MouseButton.Left); Layout(w);
     }
-    static void Layout(Window w) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
-    static void Capture(Window w, bool dark, string name)
-    { Directory.CreateDirectory(Output); Layout(w); using var frame = w.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(Path.Combine(Output, $"{(dark ? "dark" : "light")}-{name}.png")); }
+    static void Layout(Control w) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
+    static void Capture(Control w, bool dark, string name)
+    { Directory.CreateDirectory(Output); Layout(w); using var frame = WorkspacePageTesting.CaptureRenderedFrame(w); Assert.NotNull(frame); frame.Save(Path.Combine(Output, $"{(dark ? "dark" : "light")}-{name}.png")); }
 }

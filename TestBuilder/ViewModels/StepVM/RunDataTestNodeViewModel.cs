@@ -80,7 +80,7 @@ namespace TestBuilder.ViewModels.StepVM
             if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return;
             try
             {
-                if (await new TestBuilder.Views.DataTestPairsWindow(this).ShowDialog<bool>(desktop.MainWindow))
+                if (await new TestBuilder.Views.DataTestPairsView(this).ShowAsync<bool>(desktop.MainWindow))
                     NetworkPlanStatus = "Пары изменены. Сохраните профиль.";
             }
             catch (Exception ex) { NetworkPlanStatus = ex.Message; }

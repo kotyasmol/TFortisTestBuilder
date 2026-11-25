@@ -110,7 +110,7 @@ public class DynamicNetworkPlanTests
             settings.DataTestAdapterIds = new() { ["192.168.0.2"] = "card-0" };
             var source = settings.NetworkPlan; var bindings = settings.DataTestAdapterIds;
             var vm = new NetworkSetupViewModel(() => new[] { Card(0) }, () => true, loadPresets: () => Array.Empty<NetworkConfigurationPreset>());
-            var window = new NetworkPlanWindow(source, vm.SaveAddressPlan);
+            var window = new NetworkPlanView(source, vm.SaveAddressPlan);
             try
             {
                 window.Show(); Layout(window);
@@ -138,7 +138,7 @@ public class DynamicNetworkPlanTests
             Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             var vm = new NetworkSetupViewModel(() => new[] { Card(0) }, () => true, loadPresets: () => Array.Empty<NetworkConfigurationPreset>());
             var editor = vm.CreateAdapterSettings("card-0");
-            var window = new NetworkAdapterSettingsWindow(editor) { Width = 850, Height = 820 };
+            var window = new NetworkAdapterSettingsView(editor) { Width = 850, Height = 820 };
             try
             {
                 window.Show(); Find<TabControl>(window, "AdapterSettingsTabs").SelectedIndex = 2; Layout(window);
@@ -156,7 +156,7 @@ public class DynamicNetworkPlanTests
                 void Capture(string step)
                 {
                     Layout(window); var folder = Path.Combine(Path.GetTempPath(), "tfortis-dynamic-plan-20261123"); Directory.CreateDirectory(folder);
-                    using var frame = window.CaptureRenderedFrame(); frame!.Save(Path.Combine(folder, step + (dark ? "-dark" : "-light") + ".png"));
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame!.Save(Path.Combine(folder, step + (dark ? "-dark" : "-light") + ".png"));
                 }
             }
             finally { window.Close(); Application.Current.RequestedThemeVariant = theme; }
@@ -164,5 +164,5 @@ public class DynamicNetworkPlanTests
     }
     private static BenchAdapter Card(int i) => new("card-" + i, "Ethernet " + i, "00112233" + i.ToString("X4"), "Up", "", 1000);
     private static T Find<T>(Control root, string name) where T : Control => root.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
-    private static void Layout(Window window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
+    private static void Layout(Control window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
 }

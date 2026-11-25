@@ -86,7 +86,7 @@ public class RegisterIndicatorViewTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
-            var window = new RegisterIndicatorEditorWindow(RegisterIndicatorTests.Indicator(), RegisterIndicatorTests.Hardware());
+            var window = new RegisterIndicatorEditorView(RegisterIndicatorTests.Indicator(), RegisterIndicatorTests.Hardware());
             try
             {
                 window.Show(); Layout(window);
@@ -96,7 +96,7 @@ public class RegisterIndicatorViewTests
                 Assert.Same(vm.SelectedRegister, register.SelectedItem);
                 var listButton = window.FindControl<Button>("RegisterListButton")!;
                 var point = listButton.TranslatePoint(new Point(18, 18), window)!.Value;
-                window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+                WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
                 Assert.True(register.IsDropDownOpen);
                 var popup = register.GetVisualDescendants().OfType<Popup>().Single();
                 var list = popup.Child!.GetVisualDescendants().OfType<ListBox>().FirstOrDefault() ?? popup.Child as ListBox;
@@ -213,11 +213,11 @@ public class RegisterIndicatorViewTests
         public Task<bool> CheckPortAsync(CancellationToken ct = default) => throw new InvalidOperationException("Unexpected probe");
         public void SubscribeRegister(byte slave, ushort address, Action<ushort[]> callback) { }
     }
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS"); if (string.IsNullOrEmpty(path)) return;
-        Directory.CreateDirectory(path); using var frame = window.CaptureRenderedFrame(); frame?.Save(Path.Combine(path, name));
+        Directory.CreateDirectory(path); using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame?.Save(Path.Combine(path, name));
     }
 }

@@ -67,14 +67,14 @@ public class ThemeContrastTests
                         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
                         foreach (var state in new[] { "normal", "hover", "pressed" })
                         {
-                            window.MouseMove(state == "normal" ? new Point(740, 420) : point);
-                            if (state == "pressed") window.MouseDown(point, MouseButton.Left);
+                            WorkspacePageTesting.MouseMove(window, state == "normal" ? new Point(740, 420) : point);
+                            if (state == "pressed") WorkspacePageTesting.MouseDown(window, point, MouseButton.Left);
                             Layout(window);
                             CheckButton(button, $"{dark}/{button.Tag}/{enabled}/{state}", failures);
                             if (button == swatch && enabled)
                                 Assert.Equal(Colors.Orange, ((ISolidColorBrush)button.GetVisualDescendants()
                                     .OfType<ContentPresenter>().Single(p => p.Name == "PART_ContentPresenter").Background!).Color);
-                            if (state == "pressed") window.MouseUp(point, MouseButton.Left);
+                            if (state == "pressed") WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
                         }
                     }
                     Capture(window, $"buttons-{dark}-{enabled}");
@@ -296,7 +296,7 @@ public class ThemeContrastTests
         {
             using var bus = new TestBuilder.Services.Modbus.ModbusService();
             var slave = new TestBuilder.Domain.Modbus.Models.PS2Model(21, bus);
-            var window = new WriteRegisterDialog(slave, new() { Address = 5 });
+            var window = new WriteRegisterView(slave, new() { Address = 5 });
             var failures = new List<string>();
             try
             {
@@ -314,7 +314,7 @@ public class ThemeContrastTests
                     foreach (var button in window.GetVisualDescendants().OfType<Button>())
                     {
                         var point = button.TranslatePoint(new Point(0, button.Bounds.Height), window)!.Value;
-                        Assert.InRange(point.Y, 1, window.ClientSize.Height);
+                        Assert.InRange(point.Y, 1, window.Bounds.Size.Height);
                         CheckButton(button, "Register dialog/" + dark, failures);
                     }
                     Capture(window, "register-dialog-" + dark);
@@ -364,12 +364,12 @@ public class ThemeContrastTests
         var a = Luminance(first); var b = Luminance(second);
         return (Math.Max(a, b) + .05) / (Math.Min(a, b) + .05);
     }
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         var folder = Environment.GetEnvironmentVariable("TFORTIS_CONTRAST_CAPTURES");
         if (string.IsNullOrEmpty(folder)) return;
-        Directory.CreateDirectory(folder); using var frame = window.CaptureRenderedFrame(); frame?.Save(Path.Combine(folder, name + ".png"));
+        Directory.CreateDirectory(folder); using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame?.Save(Path.Combine(folder, name + ".png"));
     }
 }

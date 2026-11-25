@@ -67,7 +67,7 @@ public class ReprintLabelActionTests
     public async Task OperatorButton_UsesFullTestResult_WithoutConnection_AndDoesNotReplaceIt()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
@@ -102,6 +102,7 @@ public class ReprintLabelActionTests
             Assert.Contains(vm.TestingLogger.Entries, entry => entry.IsError &&
                 entry.Message.Contains("[Кнопка: Повторить этикетку]") && entry.Message.Contains("нет подготовленной этикетки"));
             return true;
+            return true;
         }, default);
     }
 
@@ -112,7 +113,7 @@ public class ReprintLabelActionTests
         await session.Dispatch(() =>
         {
             var original = ReprintAction();
-            var editor = new ProfileActionEditorWindow(original, null);
+            var editor = new ProfileActionEditorView(original, null);
             try
             {
                 editor.Show(); Dispatcher.UIThread.RunJobs(); editor.UpdateLayout();

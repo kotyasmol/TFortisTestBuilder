@@ -115,7 +115,7 @@ public class LastTestLabelTests : IDisposable
     public async Task FullRun_PublishesFailedPrint_PartialRunDoesNot_AndNextRunClearsStaleLabel()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var bus = new ModbusService();
             using var vm = new TestViewModel(bus, new SlaveManager(bus));
@@ -136,6 +136,7 @@ public class LastTestLabelTests : IDisposable
             print.ManualSerialNumber = "";
             await vm.RunGraphCommand.ExecuteAsync(null);
             Assert.Equal(2, events.Count); Assert.Null(events.Last().Label);
+            return true;
             return true;
         }, CancellationToken.None);
     }

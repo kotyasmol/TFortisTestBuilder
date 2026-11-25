@@ -21,6 +21,7 @@ namespace TestBuilder.Views
         public MainWindow()
         {
             InitializeComponent();
+            WorkspacePageHost.For(this);
 
             // Устанавливаем DataContext после того как все контролы созданы
             DataContextChanged += (_, _) => AssignDataContexts();

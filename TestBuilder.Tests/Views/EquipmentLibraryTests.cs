@@ -130,7 +130,7 @@ public class EquipmentLibraryTests
     public async Task NewEquipmentDialogValidatesAndSavesReusableDefinition()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             var library = new EquipmentLibrary(Path.Combine(folder, "equipment.json"));
@@ -157,6 +157,7 @@ public class EquipmentLibraryTests
                 Assert.Contains(new EquipmentLibrary(Path.Combine(folder, "equipment.json")).Load(), e => e.Id == result.Id);
             }
             finally { editor.Close(); owner.Close(); if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+            return true;
         }, CancellationToken.None);
     }
 

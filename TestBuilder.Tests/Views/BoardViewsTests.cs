@@ -35,7 +35,7 @@ public class BoardViewsTests
                 foreach (var region in vm.RootGraph.Board.Regions)
                     if (vm.GetBoardRegionState(region.Id) == "Проверяется") checking.Add(region.Id);
             };
-            var window = new BoardWindow(vm, false);
+            var window = new BoardEditorView(vm, false);
             try
             {
                 window.Show();
@@ -52,7 +52,7 @@ public class BoardViewsTests
                 Dispatcher.UIThread.RunJobs();
                 window.UpdateLayout();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
-                using var frame = window.CaptureRenderedFrame();
+                using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                 Assert.NotNull(frame);
                 var output = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS") ?? Path.Combine(Path.GetTempPath(), "tfortis-board-ui");
                 Directory.CreateDirectory(output);
@@ -105,16 +105,16 @@ public class BoardViewsTests
         {
             using var bus=new ModbusService();using var vm=new TestViewModel(bus,new SlaveManager(bus)){IsOperatorView=false};
             var path=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../profiles/RTL-POE · Проверка платы · 11.11.26.json"));GraphSerializer.Deserialize(File.ReadAllText(path),vm);
-            var guide=UserGuideWindow.ReadGuide();Assert.Contains("Запустить готовую проверку",guide);Assert.Contains("Modbus",guide);Assert.True(TestBuilder.Services.Help.UserGuide.All.Count>=50);
-            var windows=new Window[]{new HardwareEditorWindow(vm),new BoardWindow(vm,true),new BoardWindow(vm,false),new UserGuideWindow(),new MainWindow { Width=1100, Height=680 }};
+            var guide=UserGuideView.ReadGuide();Assert.Contains("Запустить готовую проверку",guide);Assert.Contains("Modbus",guide);Assert.True(TestBuilder.Services.Help.UserGuide.All.Count>=50);
+            var windows=new ContentControl[]{new HardwareEditorWindow(vm),new BoardEditorView(vm,true),new BoardEditorView(vm,false),new UserGuideView(),new MainWindow { Width=1100, Height=680 }};
             foreach(var window in windows)
             {
                 try{window.Show();Dispatcher.UIThread.RunJobs();window.UpdateLayout();window.InvalidateVisual();AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);Dispatcher.UIThread.RunJobs();Assert.True(window.Bounds.Width>0);
-                    var bitmap=window.CaptureRenderedFrame();if(bitmap!=null){var dir=Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS")??Path.Combine(Path.GetTempPath(),"tfortis-board-ui");Directory.CreateDirectory(dir);bitmap.Save(Path.Combine(dir,window.GetType().Name+(window.Title?.Contains("Редактор")==true?"-edit":"")+".png"));bitmap.Dispose();}}
+                    var bitmap=WorkspacePageTesting.CaptureRenderedFrame(window);if(bitmap!=null){var dir=Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS")??Path.Combine(Path.GetTempPath(),"tfortis-board-ui");Directory.CreateDirectory(dir);bitmap.Save(Path.Combine(dir,window.GetType().Name+((window as Window)?.Title?.Contains("Редактор")==true?"-edit":"")+".png"));bitmap.Dispose();}}
                 finally{window.Content = null; window.Close();AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);Dispatcher.UIThread.RunJobs();}
             }
             var settings=new SettingsView{DataContext=new SettingsViewModel()};var host=new Window{Content=settings};
-            try{host.Show();Dispatcher.UIThread.RunJobs();var open=Assert.Single(settings.GetVisualDescendants().OfType<Button>().Where(b=>Equals(b.Content,"Полная инструкция")));open.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Dispatcher.UIThread.RunJobs();var opened=Assert.Single(host.OwnedWindows.OfType<UserGuideWindow>());Assert.True(opened.IsVisible);opened.Close();}
+            try{host.Show();Dispatcher.UIThread.RunJobs();var open=Assert.Single(settings.GetVisualDescendants().OfType<Button>().Where(b=>Equals(b.Content,"Полная инструкция")));open.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Dispatcher.UIThread.RunJobs();var opened=Assert.Single(host.OpenPages().OfType<UserGuideView>());Assert.True(opened.IsVisible);opened.Close();}
             finally{host.Content = null; host.Close();AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);Dispatcher.UIThread.RunJobs();}
         },CancellationToken.None);
     }

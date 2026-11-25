@@ -31,7 +31,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     private Point _labelResizeStartPoint;
     private double _labelResizeStartWidth;
     private double _labelResizeStartHeight;
-    internal NodeHelpWindow? HelpWindow { get; private set; }
+    internal NodeHelpView? HelpWindow { get; private set; }
     internal ContextMenu? NodeRunMenu { get; private set; }
     private bool _isMultiSelect;
     private Point? _contextPress;
@@ -131,7 +131,7 @@ public partial class GraphEditorView : UserControl, IDisposable
     private async void OnOpenProfileBoard(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TestViewModel { CanEditGraph: true, IsBoardProfile: true } vm && TopLevel.GetTopLevel(this) is Window owner)
-            await new BoardWindow(vm, true).ShowDialog(owner);
+            await new BoardEditorView(vm, true).ShowAsync(owner);
     }
 
     private async void OnConfigurePing(object? sender, RoutedEventArgs e)
@@ -154,7 +154,7 @@ public partial class GraphEditorView : UserControl, IDisposable
         DeviceModelPicker.IsDropDownOpen = false;
         try
         {
-            await new CatalogSerialsWindow(vm, vm.NewCatalogModel(), createNew: true).ShowDialog(owner);
+            await new CatalogItemEditorView(vm, vm.NewCatalogModel(), createNew: true).ShowAsync(owner);
         }
         catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or
             UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
@@ -609,14 +609,15 @@ public partial class GraphEditorView : UserControl, IDisposable
     private void ShowHelpWindow()
     {
         if (HelpNode == null || TopLevel.GetTopLevel(this) is not Window owner) return;
+        WorkspacePageHost.For(owner);
         if (HelpWindow == null)
         {
-            HelpWindow = new NodeHelpWindow();
+            HelpWindow = new NodeHelpView();
             HelpWindow.Closed += (_, _) => { HelpWindow = null; IsNodeHelpOpen = false; HelpNode = null; };
-            HelpWindow.Show(owner);
+            HelpWindow.SetNode(HelpNode!);
+            _ = HelpWindow.ShowAsync(owner);
         }
-        HelpWindow.SetNode(HelpNode);
-        HelpWindow.Activate();
+        HelpWindow?.SetNode(HelpNode!);
     }
 
     private void OpenNodeHelp(Control? control)

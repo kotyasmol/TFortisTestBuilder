@@ -45,7 +45,7 @@ public class ComputerNetworkAdaptersTests
                 var beforePlan = JsonSerializer.Serialize(AppSettings.Instance.NetworkPlan);
                 var button = grid.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "Настроить…"));
                 Click(window, button);
-                var dialog = Assert.Single(window.OwnedWindows.OfType<NetworkAdapterSettingsWindow>());
+                var dialog = Assert.Single(window.OpenPages().OfType<NetworkAdapterSettingsView>());
                 var editor = dialog.Editor; Assert.Equal("real-0", editor.Current.Id);
                 dialog.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "AdapterSystemName").Text = "Не сохранено";
                 Capture(dialog, "adapter-info-" + dark);
@@ -132,7 +132,7 @@ public class ComputerNetworkAdaptersTests
             var vm = new NetworkSetupViewModel(() => cards, () => true, loadPresets: () => Array.Empty<NetworkConfigurationPreset>());
             var editor = vm.CreateAdapterSettings("real-1", operations);
             var before = JsonSerializer.Serialize(AppSettings.Instance.NetworkPlan);
-            var dialog = new NetworkAdapterSettingsWindow(editor) { Width = 680, Height = 650 };
+            var dialog = new NetworkAdapterSettingsView(editor) { Width = 680, Height = 650 };
             try
             {
                 dialog.Show();
@@ -186,17 +186,17 @@ public class ComputerNetworkAdaptersTests
         Assert.DoesNotContain("192.168.0.20", AppSettings.Instance.AppliedDataTestAdapterIds.Keys);
     }
 
-    private static T Find<T>(Window window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
-    private static void Layout(Window window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
-    private static void Click(Window window, Button button)
+    private static T Find<T>(Control window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
+    private static void Layout(Control window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
+    private static void Click(Control window, Button button)
     {
         button.BringIntoView(); Layout(window);
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         Layout(window); var folder = Path.Combine(Path.GetTempPath(), "tfortis-real-adapters-20261123"); Directory.CreateDirectory(folder);
-        using var frame = window.CaptureRenderedFrame(); frame!.Save(Path.Combine(folder, name + ".png"));
+        using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); frame!.Save(Path.Combine(folder, name + ".png"));
     }
 }

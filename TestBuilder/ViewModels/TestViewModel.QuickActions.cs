@@ -64,7 +64,7 @@ public partial class TestViewModel
     private async Task AddQuickAction()
     {
         if (!CanEditQuickActions || ActionOwner == null) return;
-        var result = await new Views.ProfileActionEditorWindow(new ProfileActionDefinition(), RootGraph.Hardware).ShowDialog<ProfileActionDefinition?>(ActionOwner);
+        var result = await new Views.ProfileActionEditorView(new ProfileActionDefinition(), RootGraph.Hardware).ShowAsync<ProfileActionDefinition?>(ActionOwner);
         if (result == null || !CanEditQuickActions) return;
         _history.Execute(RootGraph, new ProfileMetadataCommand(() => RootGraph.QuickActions.Add(result), () => RootGraph.QuickActions.Remove(result)));
     }
@@ -74,7 +74,7 @@ public partial class TestViewModel
         if (!CanEditQuickActions || action == null || ActionOwner == null) return;
         var index = RootGraph.QuickActions.IndexOf(action.Definition);
         if (index < 0) return;
-        var result = await new Views.ProfileActionEditorWindow(action.Definition, RootGraph.Hardware).ShowDialog<ProfileActionDefinition?>(ActionOwner);
+        var result = await new Views.ProfileActionEditorView(action.Definition, RootGraph.Hardware).ShowAsync<ProfileActionDefinition?>(ActionOwner);
         if (result == null || !CanEditQuickActions) return;
         var previous = action.Definition;
         _history.Execute(RootGraph, new ProfileMetadataCommand(() => RootGraph.QuickActions[index] = result, () => RootGraph.QuickActions[index] = previous));
@@ -84,7 +84,7 @@ public partial class TestViewModel
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop &&
             desktop.MainWindow is { } owner)
-            return await new Views.DeleteProfileActionDialog(name).ShowDialog<bool>(owner);
+            return await new Views.DeleteProfileActionConfirmationView(name).ShowAsync<bool>(owner);
         return false;
     };
 
@@ -169,9 +169,9 @@ public partial class TestViewModel
     {
         return await Dispatcher.UIThread.InvokeAsync(async () => {
             if (ActionOwner == null) throw new InvalidOperationException("Нет окна для подтверждения действия.");
-            var dialog = new Views.OperatorActionDialog(message, requestInput: input);
+            var dialog = new Views.OperatorActionView(message, requestInput: input);
             using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close()));
-            await dialog.ShowDialog(ActionOwner); token.ThrowIfCancellationRequested();
+            await dialog.ShowAsync(ActionOwner); token.ThrowIfCancellationRequested();
             return dialog.Confirmed ? (input ? dialog.InputText : "OK") : null;
         });
     }

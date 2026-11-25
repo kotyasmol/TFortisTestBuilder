@@ -115,7 +115,7 @@ public class UsabilityTests
                 var entry = view.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("nodeEntry") && b.DataContext is OperatorActionNodeViewModel);
                 var before = vm.Nodes.ToArray();
                 var point = entry.TranslatePoint(new Point(entry.Bounds.Width / 2, entry.Bounds.Height / 2), window)!.Value;
-                window.MouseMove(point);
+                WorkspacePageTesting.MouseMove(window, point);
                 var until = DateTime.UtcNow.AddSeconds(3);
                 while (!ToolTip.GetIsOpen(entry) && DateTime.UtcNow < until) { await Task.Delay(50); Layout(window); }
                 Assert.True(ToolTip.GetIsOpen(entry));
@@ -138,6 +138,7 @@ public class UsabilityTests
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
+            using var clean = new FreshUserJourneyTests.CleanWorkstation();
             using var vm = new MainWindowViewModel();
             var oldTheme = Application.Current!.RequestedThemeVariant;
             Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -170,7 +171,7 @@ public class UsabilityTests
                     Assert.NotEmpty(article.Blocks.Single(b => b.Kind == "steps").Items);
                     Assert.Equal(article.Summary, node.HelpSummary);
                 }
-                var guide = new UserGuideWindow();
+                var guide = new UserGuideView();
                 try
                 {
                     guide.Show(); Layout(guide); Capture(guide, $"guide-{dark}");
@@ -187,7 +188,7 @@ public class UsabilityTests
                     section.SelectedItem = "Каталог и хранение данных"; search.Text = "PROD"; Layout(guide);
                     articles.SelectedItem = articles.Items.OfType<GuideArticle>().Single(a => a.Id == "catalog-to-prod"); Layout(guide);
                     Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("Карточка из профиля"));
-                    Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("isComplete: true"));
+                    Assert.Contains(guide.GetVisualDescendants().OfType<SelectableTextBlock>(), t => t.Text!.Contains("catalog/label-types.json"));
                     section.SelectedItem = "Профили"; Layout(guide);
                     search.Text = "фотодатчиков"; Layout(guide);
                     Assert.Empty(articles.Items);
@@ -220,9 +221,9 @@ public class UsabilityTests
         }, CancellationToken.None);
     }
     private static double Luminance(Color c) { double Channel(byte x) { var v = x / 255d; return v <= .04045 ? v / 12.92 : Math.Pow((v + .055) / 1.055, 2.4); } return .2126 * Channel(c.R) + .7152 * Channel(c.G) + .0722 * Channel(c.B); }
-    private static void Click(Window window, Control control) { var p = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value; window.MouseDown(p, MouseButton.Left); window.MouseUp(p, MouseButton.Left); }
+    private static void Click(Control window, Control control) { var p = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value; WorkspacePageTesting.MouseDown(window, p, MouseButton.Left); WorkspacePageTesting.MouseUp(window, p, MouseButton.Left); }
     private static string Profile(string name) => TestBuilder.Tests.Support.TestProfilePaths.Find(name);
     private static string Output() { var path = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS") ?? Path.Combine(Path.GetTempPath(), "tfortis-usability-ui"); Directory.CreateDirectory(path); return path; }
-    private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
-    private static void Capture(Window window, string name) { using var frame = window.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(Path.Combine(Output(), name + ".png")); }
+    private static void Layout(Control window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
+    private static void Capture(Control window, string name) { using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); Assert.NotNull(frame); frame.Save(Path.Combine(Output(), name + ".png")); }
 }

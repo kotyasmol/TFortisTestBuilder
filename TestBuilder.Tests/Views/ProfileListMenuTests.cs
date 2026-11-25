@@ -167,18 +167,18 @@ public class ProfileListMenuTests
             var selectedNode = vm.Nodes.Single();
             var view = new ProfileListView { DataContext = vm };
             var window = new Window { Width = 340, Height = 620, Content = view };
-            ProfileNameDialog? dialog = null;
+            ProfileNameView? dialog = null;
             vm.PromptProfileNameAsync = (profile, copy, name, validate) =>
             {
-                dialog = new ProfileNameDialog(profile, copy, name, validate);
-                return dialog.ShowDialog<string?>(window);
+                dialog = new ProfileNameView(profile, copy, name, validate);
+                return dialog.ShowAsync<string?>(window);
             };
             try
             {
                 window.Show(); foreach (var group in vm.EngineerProfileGroups) group.IsExpanded = true; Layout(window);
                 var item = view.GetVisualDescendants().OfType<ListBoxItem>().Single(x => ReferenceEquals(x.DataContext, source));
                 var point = item.TranslatePoint(new Point(30, item.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Right); window.MouseUp(point, MouseButton.Right); Layout(window);
+                WorkspacePageTesting.MouseDown(window, point, MouseButton.Right); WorkspacePageTesting.MouseUp(window, point, MouseButton.Right); Layout(window);
                 Assert.True(view.ProfileMenu!.IsOpen);
                 Assert.Equal(otherPath, vm.SelectedProfile!.FilePath);
                 Assert.Same(selectedNode, vm.Nodes.Single());
@@ -187,7 +187,7 @@ public class ProfileListMenuTests
                 Assert.Same(vm.CopyProfileCommand, menuItem.Command);
                 view.ProfileMenu.Close();
                 var pending = ((IAsyncRelayCommand)menuItem.Command!).ExecuteAsync(menuItem.CommandParameter);
-                var shownDialog = Assert.IsType<ProfileNameDialog>(dialog);
+                var shownDialog = Assert.IsType<ProfileNameView>(dialog);
                 Layout(shownDialog);
                 var input = shownDialog.GetVisualDescendants().OfType<TextBox>().Single();
                 Assert.Equal("Проверка — копия", input.Text);
@@ -199,7 +199,7 @@ public class ProfileListMenuTests
                 input.Text = "Проверка — копия";
                 Layout(shownDialog);
                 var folder = Environment.GetEnvironmentVariable("TFORTIS_UI_ARTIFACTS");
-                if (!string.IsNullOrWhiteSpace(folder)) { Directory.CreateDirectory(folder); using var frame = shownDialog.CaptureRenderedFrame(); frame?.Save(Path.Combine(folder, "copy-profile-shownDialog.png")); }
+                if (!string.IsNullOrWhiteSpace(folder)) { Directory.CreateDirectory(folder); using var frame = WorkspacePageTesting.CaptureRenderedFrame(shownDialog); frame?.Save(Path.Combine(folder, "copy-profile-shownDialog.png")); }
                 Click(shownDialog, create); await pending; Layout(window);
                 Assert.Equal("Модель А · Проверка — копия", vm.SelectedProfile!.DisplayName);
                 Assert.Equal("Проверка — копия", vm.ProfileDescription);
@@ -213,10 +213,10 @@ public class ProfileListMenuTests
         }, CancellationToken.None);
     }
 
-    private static void Click(Window window, Control control)
+    private static void Click(Control window, Control control)
     {
         var point = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
 
     [Fact]
@@ -240,8 +240,8 @@ public class ProfileListMenuTests
             currentNode.Milliseconds = 99;
             var view = new ProfileListView { DataContext = vm };
             var window = new Window { Width = 340, Height = 620, Content = view };
-            ReloadProfileDialog? dialog = null;
-            vm.ShowDeleteProfileDialogAsync = create => (dialog = create()).ShowDialog<bool>(window);
+            ReloadProfileConfirmationView? dialog = null;
+            vm.ShowDeleteProfileDialogAsync = create => (dialog = create()).ShowAsync<bool>(window);
             try
             {
                 window.Show();
@@ -289,7 +289,7 @@ public class ProfileListMenuTests
                 Layout(window);
                 var item = view.GetVisualDescendants().OfType<ListBoxItem>().Single(x => ReferenceEquals(x.DataContext, profile));
                 var point = item.TranslatePoint(new Point(30, item.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(point, MouseButton.Right); window.MouseUp(point, MouseButton.Right); Layout(window);
+                WorkspacePageTesting.MouseDown(window, point, MouseButton.Right); WorkspacePageTesting.MouseUp(window, point, MouseButton.Right); Layout(window);
                 var menu = Assert.IsType<ContextMenu>(view.ProfileMenu);
                 Assert.True(menu.IsOpen);
                 Assert.Same(other, vm.SelectedProfile);
@@ -305,12 +305,12 @@ public class ProfileListMenuTests
 
             void ClickButton(string name)
             {
-                var shown = Assert.IsType<ReloadProfileDialog>(dialog);
+                var shown = Assert.IsType<ReloadProfileConfirmationView>(dialog);
                 Click(shown, shown.GetVisualDescendants().OfType<Button>().Single(x => Equals(x.Content, name)));
             }
         }, CancellationToken.None);
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(3); Dispatcher.UIThread.RunJobs(); }
 }

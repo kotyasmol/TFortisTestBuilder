@@ -66,7 +66,7 @@ public class FreshUserJourneyTests
                 window.Show(); Layout(window); Assert.Empty(vm.Adapters); Assert.False(vm.CanApply);
                 Capture(window, "network-01-no-adapters");
                 var empty = new BenchNetworkPlan { Addresses = new() };
-                var batch = new NetworkPortBatchWindow(empty); var result = batch.ShowDialog<BenchNetworkPlan?>(window); Layout(batch);
+                var batch = new NetworkPortBatchView(empty); var result = batch.ShowAsync<BenchNetworkPlan?>(window); Layout(batch);
                 Click(batch, "24 портов");
                 batch.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "BatchSpeed").Text = "125";
                 Capture(batch, "network-02-new-24-port-plan");
@@ -226,7 +226,7 @@ public class FreshUserJourneyTests
                 Assert.Equal("Новое изделие…", addModel.Content);
                 Assert.True(addModel.IsEffectivelyVisible);
                 Click(shell, addModel);
-                var card = Assert.Single(shell.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var card = Assert.Single(shell.OpenPages().OfType<CatalogItemEditorView>());
                 Capture(card, prefix + "-03-new-model-empty");
                 Field(card, "Название изделия").Text = board ? "QA новая плата X1" : "QA новый коммутатор X24";
                 Field(card, "Альтернативные названия").Text = "QA-ALIAS-" + prefix;
@@ -533,33 +533,33 @@ public class FreshUserJourneyTests
         }
     }
 
-    private static void Layout(Window window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
-    private static void Click(Window window, string caption)
+    private static void Layout(Control window) { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(2); Dispatcher.UIThread.RunJobs(); }
+    private static void Click(Control window, string caption)
     {
         var button = window.GetVisualDescendants().OfType<Button>().Single(b => b.IsEffectivelyVisible && Equals(b.Content, caption));
         Click(window, button);
     }
-    private static void Click(Window window, Button button)
+    private static void Click(Control window, Button button)
     {
         Assert.True(button.IsEffectivelyEnabled);
         button.BringIntoView(); Layout(window);
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
         Layout(window);
     }
-    private static void Capture(Window window, string name)
+    private static void Capture(Control window, string name)
     {
         Directory.CreateDirectory(Evidence);
-        using var frame = window.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(Path.Combine(Evidence, name + ".png"));
+        using var frame = WorkspacePageTesting.CaptureRenderedFrame(window); Assert.NotNull(frame); frame.Save(Path.Combine(Evidence, name + ".png"));
         var controls = window.GetVisualDescendants().OfType<Control>().Where(c => c is Button or TextBox or ComboBox or CheckBox or NumericUpDown or DataGrid)
             .Select(c => new { Type = c.GetType().Name, c.Name, AccessibleName = AutomationProperties.GetName(c), c.IsEffectivelyVisible, c.IsEffectivelyEnabled,
                 Text = c switch { ContentControl b => b.Content?.ToString(), TextBox t => t.Text, _ => null } }).ToArray();
         File.WriteAllText(Path.Combine(Evidence, name + ".controls.json"), JsonSerializer.Serialize(controls, new JsonSerializerOptions { WriteIndented = true }));
     }
-    private static TextBox Field(Window window, string label) => window.GetVisualDescendants().OfType<TextBox>().Single(c => AutomationProperties.GetName(c) == label);
-    private static CheckBox Check(Window window, string label) => window.GetVisualDescendants().OfType<CheckBox>().Single(c => Equals(c.Content, label));
-    private static void Tab(Window window, int index) { window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index; Layout(window); }
-    private static void EditCell(Window window, DataGrid grid, int row, int column, string value)
+    private static TextBox Field(Control window, string label) => window.GetVisualDescendants().OfType<TextBox>().Single(c => AutomationProperties.GetName(c) == label);
+    private static CheckBox Check(Control window, string label) => window.GetVisualDescendants().OfType<CheckBox>().Single(c => Equals(c.Content, label));
+    private static void Tab(Control window, int index) { window.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex = index; Layout(window); }
+    private static void EditCell(Control window, DataGrid grid, int row, int column, string value)
     {
         grid.SelectedIndex = row; grid.CurrentColumn = grid.Columns[column]; grid.Focus(); Assert.True(grid.BeginEdit()); Layout(window);
         grid.GetVisualDescendants().OfType<TextBox>().Single(t => t.IsEffectivelyVisible).Text = value;

@@ -70,8 +70,8 @@ public class GraphEditorViewTests
 
                 void Click()
                 {
-                    window.MouseDown(point, MouseButton.Left);
-                    window.MouseUp(point, MouseButton.Left);
+                    WorkspacePageTesting.MouseDown(window, point, MouseButton.Left);
+                    WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
                     Layout(window);
                 }
 
@@ -167,8 +167,8 @@ public class GraphEditorViewTests
                 var item = profiles.GetVisualDescendants().OfType<ListBoxItem>()
                         .Single(item => ReferenceEquals(item.DataContext, profile));
                     var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
-                    window.MouseDown(point, MouseButton.Left);
-                    window.MouseUp(point, MouseButton.Left);
+                    WorkspacePageTesting.MouseDown(window, point, MouseButton.Left);
+                    WorkspacePageTesting.MouseUp(window, point, MouseButton.Left);
                 }
             }
             finally { window.Close(); }
@@ -431,7 +431,7 @@ public class GraphEditorViewTests
     public async Task ClearGraph_CancelPreservesGraph_ConfirmCanBeUndone_AndRunBlocksPendingClear()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -459,6 +459,7 @@ public class GraphEditorViewTests
             Assert.Equal(count, vm.Nodes.Count);
             vm.IsTestRunning = false;
             return true;
+            return true;
         }, CancellationToken.None);
     }
 
@@ -466,7 +467,7 @@ public class GraphEditorViewTests
     public async Task HelpCard_CopiesWholeText_AndClosesWithButton()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
-        await session.Dispatch(async () =>
+        await session.Dispatch<bool>(async () =>
         {
             using var modbus = new ModbusService();
             using var vm = new TestViewModel(modbus, new SlaveManager(modbus));
@@ -486,13 +487,14 @@ public class GraphEditorViewTests
                 search.Text = ""; Layout(view.HelpWindow!);
                 var copy = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Копировать"));
                 copy.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-                Assert.Equal($"Самопроверка устройства\n\n{node.HelpText}", await view.HelpWindow!.Clipboard!.GetTextAsync());
+                Assert.Equal($"Самопроверка устройства\n\n{node.HelpText}", await view.HelpWindow!.Owner().Clipboard!.GetTextAsync());
                 var close = view.HelpWindow!.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "✕ Закрыть"));
                 close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Assert.False(view.IsNodeHelpOpen);
                 Assert.Null(view.HelpNode);
             }
             finally { window.Close(); }
+            return true;
             return true;
         }, CancellationToken.None);
     }
@@ -527,7 +529,7 @@ public class GraphEditorViewTests
                     }
                     var button = view.GetVisualDescendants().OfType<Button>().Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == name);
                     var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-                    window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+                    WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
                 }
                 editor.ViewportZoom = 0.5;
                 Click("Увеличить масштаб"); Assert.True(editor.ViewportZoom > 0.5);
@@ -605,7 +607,7 @@ public class GraphEditorViewTests
                 if (!string.IsNullOrEmpty(captureFolder))
                 {
                     Directory.CreateDirectory(captureFolder);
-                    using var frame = window.CaptureRenderedFrame();
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                     frame!.Save(Path.Combine(captureFolder, $"inactive-node-{(dark ? "dark" : "light")}.png"));
                 }
                 vm.IsTestRunning = true;
@@ -615,7 +617,7 @@ public class GraphEditorViewTests
                 Assert.False(profileToggle.Focusable);
                 if (!string.IsNullOrEmpty(captureFolder))
                 {
-                    using var frame = window.CaptureRenderedFrame();
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                     frame!.Save(Path.Combine(captureFolder, $"running-node-{(dark ? "dark" : "light")}.png"));
                 }
                 vm.IsTestRunning = false;
@@ -673,7 +675,7 @@ public class GraphEditorViewTests
                 if (!string.IsNullOrEmpty(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    using var frame = window.CaptureRenderedFrame();
+                    using var frame = WorkspacePageTesting.CaptureRenderedFrame(window);
                     frame!.Save(Path.Combine(folder, $"model-review-{(dark ? "dark" : "light")}.png"));
                 }
                 var trigger = Visual(review).GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ColorPickerTrigger");
@@ -698,7 +700,7 @@ public class GraphEditorViewTests
         }, CancellationToken.None);
     }
 
-    private static void Layout(Window window)
+    private static void Layout(Control window)
     {
         window.UpdateLayout();
         Dispatcher.UIThread.RunJobs();

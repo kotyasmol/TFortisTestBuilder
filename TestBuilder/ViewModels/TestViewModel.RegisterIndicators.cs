@@ -82,8 +82,8 @@ public partial class TestViewModel
     {
         if (!CanEditQuickActions || ActionOwner == null) return;
         var graph = RootGraph;
-        var result = await new Views.RegisterIndicatorEditorWindow(new RegisterIndicatorDefinition(), graph.Hardware)
-            .ShowDialog<RegisterIndicatorDefinition?>(ActionOwner);
+        var result = await new Views.RegisterIndicatorEditorView(new RegisterIndicatorDefinition(), graph.Hardware)
+            .ShowAsync<RegisterIndicatorDefinition?>(ActionOwner);
         if (result == null || !CanEditQuickActions || !ReferenceEquals(graph, RootGraph)) return;
         _history.Execute(graph, new ProfileMetadataCommand(() => graph.RegisterIndicators.Add(result), () => graph.RegisterIndicators.Remove(result)));
     }
@@ -94,8 +94,8 @@ public partial class TestViewModel
         if (!CanEditQuickActions || indicator == null || ActionOwner == null) return;
         var graph = RootGraph;
         var previous = indicator.Definition;
-        var result = await new Views.RegisterIndicatorEditorWindow(previous, graph.Hardware)
-            .ShowDialog<RegisterIndicatorDefinition?>(ActionOwner);
+        var result = await new Views.RegisterIndicatorEditorView(previous, graph.Hardware)
+            .ShowAsync<RegisterIndicatorDefinition?>(ActionOwner);
         if (result == null || !CanEditQuickActions || !ReferenceEquals(graph, RootGraph)) return;
         var index = graph.RegisterIndicators.IndexOf(previous);
         if (index < 0) return;
@@ -105,7 +105,7 @@ public partial class TestViewModel
     internal Func<string, Task<bool>> ConfirmDeleteRegisterIndicatorAsync { get; set; } = async name =>
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow is { } owner)
-            return await new Views.DeleteProfileActionDialog(name, registerIndicator: true).ShowDialog<bool>(owner);
+            return await new Views.DeleteProfileActionConfirmationView(name, registerIndicator: true).ShowAsync<bool>(owner);
         return false;
     };
 

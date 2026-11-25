@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -13,11 +13,10 @@ namespace TestBuilder.Views
         public string WorkspaceModeGroupName { get; } = System.Guid.NewGuid().ToString();
         public string ThemeGroupName { get; } = System.Guid.NewGuid().ToString();
 
-        private void OnOpenUserGuide(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private async void OnOpenUserGuide(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            var guide = new UserGuideWindow();
-            if (TopLevel.GetTopLevel(this) is Window owner) guide.Show(owner);
-            else guide.Show();
+            var guide = new UserGuideView();
+            if (TopLevel.GetTopLevel(this) is Window owner) await guide.ShowAsync(owner);
         }
 
         public SettingsView()
@@ -26,7 +25,7 @@ namespace TestBuilder.Views
             WindowsPrinterManagement.IsVisible = OperatingSystem.IsWindows();
         }
 
-        private void OnOpenErrorHelp(object? sender, RoutedEventArgs e) => UserGuideWindow.ShowErrorHelp(this);
+        private void OnOpenErrorHelp(object? sender, RoutedEventArgs e) => UserGuideView.ShowErrorHelp(this);
 
         private void OnOpenLabelTemplates(object? sender, RoutedEventArgs e)
         {

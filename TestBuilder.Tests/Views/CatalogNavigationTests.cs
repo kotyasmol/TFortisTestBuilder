@@ -82,10 +82,10 @@ public class CatalogNavigationTests
                 Assert.Equal(shell.TestVM.EquipmentModels.Count, models.ItemsSource.Cast<object>().Count());
                 var edit = page.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "EditCatalogDataModel");
                 edit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Layout(window);
-                var card = Assert.Single(window.OwnedWindows.OfType<CatalogSerialsWindow>());
+                var card = Assert.Single(window.OpenPages().OfType<CatalogItemEditorView>());
                 card.Close(); Layout(window);
                 Assert.Equal(before, GraphSerializer.Serialize(shell.TestVM, shell.TestVM.CurrentProfileName));
-                window.CaptureRenderedFrame()!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-catalog-navigation-{dark}-{width}.png"));
+                WorkspacePageTesting.CaptureRenderedFrame(window)!.Save(Path.Combine(Path.GetTempPath(), $"tfortis-catalog-navigation-{dark}-{width}.png"));
 
                 GraphSerializer.Deserialize("""{"name":"Плата","productKind":"Board","nodes":[],"connections":[]}""", shell.TestVM);
                 Layout(window);
@@ -108,10 +108,10 @@ public class CatalogNavigationTests
         }, CancellationToken.None);
     }
 
-    private static void Layout(Window window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
-    private static void Click(Window window, Button button)
+    private static void Layout(Control window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
+    private static void Click(Control window, Button button)
     {
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-        window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Layout(window);
+        WorkspacePageTesting.MouseDown(window, point, MouseButton.Left); WorkspacePageTesting.MouseUp(window, point, MouseButton.Left); Layout(window);
     }
 }
