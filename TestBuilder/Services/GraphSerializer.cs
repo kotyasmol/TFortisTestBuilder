@@ -108,7 +108,8 @@ namespace TestBuilder.Services
             WaitVariableUntilNodeViewModel => "Wait Variable Until",
             BuildTestReportNodeViewModel report when !string.IsNullOrWhiteSpace(report.ExpectedSerialPrefix) => ReportWithSerialPrefixType,
             BuildTestReportNodeViewModel => "Build Test Report",
-            PrintLabelNodeViewModel p => p.LabelTemplate?.DataBindings != null ? "Print Label (bindings v1)"
+            PrintLabelNodeViewModel p => !string.IsNullOrWhiteSpace(p.LabelTypeId) || p.LabelTemplate?.PrintAreaWidthDots != null ? "Print Label (type v1)"
+                : p.LabelTemplate?.DataBindings != null ? "Print Label (bindings v1)"
                 : p.LabelTemplate?.Layout != null ? "Print Label (layout v1)"
                 : p.LabelTemplate is { SerialTextFormat: not null } or { BarcodeFormat: not null } ? "Print Label (data v1)"
                 : p.UseLastTestLabel ? "Print Label (last test v1)" : "Print Label",
@@ -462,6 +463,7 @@ namespace TestBuilder.Services
                         n.UseQtProZplFormat = pl.UseQtProZplFormat;
                         n.LabelModel = pl.LabelModel;
                         n.LabelTemplate = pl.LabelTemplate?.Copy();
+                        n.LabelTypeId = pl.LabelTypeId;
                         n.FailOnPrinterError = pl.FailOnPrinterError;
                         break;
 
@@ -963,7 +965,7 @@ namespace TestBuilder.Services
                         IncludeAllVariables = n.IncludeAllVariables ?? false
                     },
 
-                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" or "Print Label (last test v1)" or "Print Label (layout v1)" or "Print Label (data v1)" or "Print Label (bindings v1)" => new PrintLabelNodeViewModel
+                    "Print Label" or "PRINT_LABEL" or "Печать этикетки" or "Print Label (last test v1)" or "Print Label (layout v1)" or "Print Label (data v1)" or "Print Label (bindings v1)" or "Print Label (type v1)" => new PrintLabelNodeViewModel
                     {
                         Location = location,
                         UseLastTestLabel = n.UseLastTestLabel ?? (type == "Print Label (last test v1)"),
@@ -979,6 +981,7 @@ namespace TestBuilder.Services
                         UseQtProZplFormat = n.UseQtProZplFormat ?? false,
                         LabelModel = n.LabelModel ?? DeviceLabelModel.PswUpsBox8x2Pro,
                         LabelTemplate = n.LabelTemplate?.CopyUpgraded(),
+                        LabelTypeId = n.LabelTypeId,
                         FailOnPrinterError = n.FailOnPrinterError ?? true
                     },
 

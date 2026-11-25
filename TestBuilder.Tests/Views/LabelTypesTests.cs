@@ -442,9 +442,16 @@ public class LabelTypesTests
                 var barcode = window.GetVisualDescendants().OfType<NumericUpDown>().Single(n => n.Name == "LabelBarcodeHeight");
                 top.Value = .5m; barcode.Value = 4; Layout(window);
                 Assert.Equal(.508m, vm.Types.TopMargin); Assert.True(vm.Types.IsDirty);
+                var editorView = window.GetVisualDescendants().OfType<LabelTemplateEditorView>().Single();
+                var editorModel = vm.Types.Editor; var item = vm.Types.Selected;
+                editorView.Tabs.SelectedIndex = 2; editorModel!.Selected = editorModel.Elements.Single(e => e.Kind == "Barcode");
+                var element = editorModel.Selected; Layout(window);
                 var save = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "SaveLabelType");
                 save.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); save.Command!.Execute(null); Layout(window);
                 Assert.Contains("Тип сохранён", vm.Types.Status); Assert.False(vm.Types.IsDirty);
+                Assert.Same(editorModel, vm.Types.Editor); Assert.Same(item, vm.Types.Selected);
+                Assert.Same(editorView, window.GetVisualDescendants().OfType<LabelTemplateEditorView>().Single());
+                Assert.Equal(2, editorView.Tabs.SelectedIndex); Assert.Same(element, editorModel.Selected);
                 Assert.Empty(window.OwnedWindows);
                 using var capture = window.CaptureRenderedFrame();
                 var folder = Environment.GetEnvironmentVariable("TFORTIS_LABEL_TYPES_EVIDENCE");

@@ -1747,8 +1747,16 @@
                     <TextBlock IsVisible="{Binding UseLastTestLabel}" Text="Модель, SN, MAC и шаблон — из последнего полного теста. Если принтер не выбран, используется очередь из того теста." TextWrapping="Wrap" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}" />
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualSerialMode}"><TextBlock Grid.Column="0" Text="Серийный номер:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
-                    <ComboBox IsVisible="{Binding IsNewLabelMode}" ItemsSource="{Binding PrintFormats}" SelectedIndex="{Binding SelectedPrintFormat}" HorizontalAlignment="Stretch"/>
-                    <Button x:Name="EditProfileLabel" IsVisible="{Binding IsNewLabelMode}" Content="Этикетка ноды…" Click="OnEditProfileLabel"/>
+                    <TextBlock IsVisible="{Binding IsNewLabelMode}" Text="Шаблон этикетки" FontSize="{StaticResource FontCaption}"/>
+                    <ComboBox x:Name="NodeLabelType" IsVisible="{Binding IsNewLabelMode}" ItemsSource="{Binding LabelTypeChoices}" SelectedItem="{Binding SelectedLabelType, Mode=TwoWay}" Loaded="OnLabelTypesLoaded" DropDownOpened="OnLabelTypesOpened" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding LabelTypeStatus}" TextWrapping="Wrap" FontSize="{StaticResource FontCaption}"/>
+                    <Button x:Name="OpenSharedLabelTypes" IsVisible="{Binding IsNewLabelMode}" Content="Открыть шаблоны" Click="OnOpenSharedLabelTypes"/>
+                    <Expander Header="Совместимость со старым профилем" IsVisible="{Binding IsLegacyFormatVisible}">
+                      <StackPanel Spacing="6">
+                        <ComboBox ItemsSource="{Binding PrintFormats}" SelectedIndex="{Binding SelectedPrintFormat}" HorizontalAlignment="Stretch"/>
+                        <Button Content="Перенести прежний макет в шаблоны" Click="OnCopyProfileLabelType"/>
+                      </StackPanel>
+                    </Expander>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualQtProMode}"><TextBlock Grid.Column="0" Text="MAC вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualMacAddress}" Watermark="C0:11:A6:20:01:AC" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Переменная короткого номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Переменная MAC:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
@@ -1867,6 +1875,5 @@
       </Grid>
     </Grid>
   </Grid>
-  <Border x:Name="ProfileLabelHost" Background="{DynamicResource AppBackgroundBrush}" IsVisible="False" />
   </Grid>
 </UserControl>

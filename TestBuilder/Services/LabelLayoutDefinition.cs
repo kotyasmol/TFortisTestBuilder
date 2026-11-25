@@ -65,7 +65,11 @@ public sealed class LabelLayoutDefinition
     {
         Validate();
         var zpl = t.Language == "ZPL";
-        var b = new StringBuilder(zpl ? $"^XA^LH0,0^PW{t.OriginXDots + t.WidthDots}^LL{t.HeightDots ?? 150}^MD{Darkness}" : $"\r\nN\r\nZB\r\nq{t.OriginXDots + t.WidthDots}\r\nI8,C,001\r\n");
+        // Legacy centered media uses absolute print-head coordinates (OriginX > 0).
+        // Narrowing ^PW to the right edge of that label shifts centered media in TSC's
+        // ZPL emulation. Keep the printer's calibrated print area in that mode.
+        var printWidth = t.PrintAreaWidthDots is { } area ? $"^PW{area}" : t.OriginXDots == 0 ? $"^PW{t.WidthDots}" : "";
+        var b = new StringBuilder(zpl ? $"^XA^LH0,0{printWidth}^LL{t.HeightDots ?? 150}^MD{Darkness}" : $"\r\nN\r\nZB\r\nq{t.OriginXDots + t.WidthDots}\r\nI8,C,001\r\n");
         foreach (var e in Elements.Where(e => e.Visible))
         {
             var text = Resolve(t, e, serial, shortSerial, mac);

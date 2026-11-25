@@ -24,9 +24,12 @@ internal static class ProfilePortableExport
                 : model.GetValueKind() == JsonValueKind.Number ? ((DeviceLabelModel)model.GetValue<int>()).ToString() : model.GetValue<string>();
             var template = node["labelTemplate"]?.Deserialize<LabelTemplateDefinition>(EquipmentCatalog.JsonOptions)
                 ?? LabelTemplateCatalog.Legacy(id).CopyUpgraded();
-            if (types.Types.Count > 0 || types.Assignments.Count > 0) template = LabelTypeStore.Resolve(template, product, product?.Name, file: types);
+            var typeId = node["labelTypeId"]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(typeId) || types.Types.Count > 0 || types.Assignments.Count > 0)
+                template = LabelTypeStore.Resolve(template, product, product?.Name, file: types, preferredTypeId: typeId);
             node["labelTemplate"] = JsonSerializer.SerializeToNode(template, EquipmentCatalog.JsonOptions);
-            if (template.DataBindings != null) node["type"] = "Print Label (bindings v1)";
+            if (!string.IsNullOrWhiteSpace(typeId) || template.PrintAreaWidthDots != null) node["type"] = "Print Label (type v1)";
+            else if (template.DataBindings != null) node["type"] = "Print Label (bindings v1)";
             else if (template.Layout != null) node["type"] = "Print Label (layout v1)";
             else if (template.SerialTextFormat != null || template.BarcodeFormat != null) node["type"] = "Print Label (data v1)";
         }

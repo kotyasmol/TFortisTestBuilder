@@ -81,46 +81,36 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     public void SelectAllNodes() => Editor.SelectAll();
 
-    private void OnEditProfileLabel(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: PrintLabelNodeViewModel node }) OpenLabelEditor(node);
-    }
+    private void OnLabelTypesLoaded(object? sender, RoutedEventArgs e) => RefreshLabelTypes(sender);
+    private void OnLabelTypesOpened(object? sender, EventArgs e) => RefreshLabelTypes(sender);
+    private static void RefreshLabelTypes(object? sender)
+    { if (sender is Control { DataContext: PrintLabelNodeViewModel node }) node.RefreshLabelTypes(); }
 
-    internal void OpenLabelEditor(PrintLabelNodeViewModel node)
+    private void OnOpenSharedLabelTypes(object? sender, RoutedEventArgs e)
     {
-        if (ProfileLabelHost.IsVisible || DataContext is not TestViewModel { CanEditGraph: true } vm || !vm.Nodes.Contains(node)) return;
+        if (sender is not Control { DataContext: PrintLabelNodeViewModel node } || DataContext is not TestViewModel vm
+            || TopLevel.GetTopLevel(this)?.DataContext is not MainWindowViewModel shell) return;
+        shell.SelectedPage = "Labels"; shell.LabelPrintingVM.SelectedSection = 1;
+        var types = shell.LabelPrintingVM.Types; types.EnsureLoaded(); types.SelectedSection = 0; types.Search = "";
+        var fallback = node.LabelTemplate ?? LabelTemplateCatalog.Legacy(node.UseQtProZplFormat ? node.LabelModel.ToString() : "SerialOnlyEpl");
+        var id = node.LabelTypeId ?? LabelTypeStore.TypeIdFor(fallback, vm.SelectedEquipmentModel, vm.ProfileLabelVariant);
         try
         {
-            var source = node.LabelTemplate ?? LabelTemplateCatalog.Legacy(node.UseQtProZplFormat ? node.LabelModel.ToString() : "SerialOnlyEpl");
-            var workspace = vm.CurrentGraph;
-            Action? openShared = null;
-            if (TopLevel.GetTopLevel(this)?.DataContext is MainWindowViewModel shell)
-                openShared = () =>
-                {
-                    shell.SelectedPage = "Labels"; shell.LabelPrintingVM.SelectedSection = 1;
-                    var types = shell.LabelPrintingVM.Types; types.EnsureLoaded(); types.SelectedSection = 0; types.Search = "";
-                    var id = LabelTypeStore.TypeIdFor(source, vm.SelectedEquipmentModel, vm.ProfileLabelVariant);
-                    try
-                    {
-                        var resolved = LabelTypeStore.Resolve(source, vm.SelectedEquipmentModel, vm.DeviceName, vm.ProfileLabelVariant);
-                        if (types.Types.Any(t => t.Definition.Id == resolved.Id)) id = resolved.Id;
-                    }
-                    catch (Exception ex) when (LabelTypesViewModel.IsCatalogError(ex)) { types.Status = ex.Message; }
-                    types.Selected = types.Types.FirstOrDefault(t => t.Definition.Id == id) ?? types.Selected;
-                };
-            var view = new ProfileLabelEditorView(source, () => vm.CanEditGraph, vm.SelectedEquipmentModel, vm.DeviceName, vm.ProfileLabelVariant, openShared);
-            view.Finished += result =>
-            {
-                if (result != null && vm.CanEditGraph && ReferenceEquals(vm.CurrentGraph, workspace) && workspace.Nodes.Contains(node)) node.LabelTemplate = result.Copy();
-                CloseLabelEditor();
-            };
-            ProfileLabelHost.Child = view; GraphContent.IsVisible = false; ProfileLabelHost.IsVisible = true;
+            var resolved = LabelTypeStore.Resolve(fallback, vm.SelectedEquipmentModel, vm.DeviceName, vm.ProfileLabelVariant, preferredTypeId: node.LabelTypeId);
+            if (types.Types.Any(t => t.Definition.Id == resolved.Id)) id = resolved.Id;
         }
-        catch (Exception ex) when (LabelTypesViewModel.IsCatalogError(ex)) { vm.StatusMessage = ex.Message; }
+        catch (Exception ex) when (LabelTypesViewModel.IsCatalogError(ex)) { types.Status = ex.Message; }
+        types.Selected = types.Types.FirstOrDefault(t => t.Definition.Id == id) ?? types.Selected;
     }
 
-    private void CloseLabelEditor()
-    { ProfileLabelHost.Child = null; ProfileLabelHost.IsVisible = false; GraphContent.IsVisible = true; }
+    private void OnCopyProfileLabelType(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control { DataContext: PrintLabelNodeViewModel node } || DataContext is not TestViewModel { CanEditGraph: true } vm
+            || TopLevel.GetTopLevel(this)?.DataContext is not MainWindowViewModel shell) return;
+        OnOpenSharedLabelTypes(sender, e);
+        var source = node.LabelTemplate ?? LabelTemplateCatalog.Legacy(node.UseQtProZplFormat ? node.LabelModel.ToString() : "SerialOnlyEpl");
+        shell.LabelPrintingVM.Types.CopyFromProfile(source, vm.DeviceName);
+    }
 
     private void OnOpenProfileHardware(object? sender, RoutedEventArgs e)
     {
@@ -218,7 +208,6 @@ public partial class GraphEditorView : UserControl, IDisposable
             return;
 
         _isDisposed = true;
-        CloseLabelEditor();
         HelpWindow?.Close();
         NodeRunMenu?.Close();
 
@@ -247,7 +236,6 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (ProfileLabelHost.IsVisible) return;
         if (DataContext is not TestViewModel vm) return;
         // Let text fields handle selection/copy, including read-only fields during a run.
         if ((e.Source as Control)?.GetSelfAndVisualAncestors().Any(c => c is TextBox) == true) return;
@@ -432,7 +420,6 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private void OnDataContextChanged(object? dataContext)
     {
-        CloseLabelEditor();
         DetachViewModel();
 
         _viewModel = dataContext as TestViewModel;
@@ -484,7 +471,6 @@ public partial class GraphEditorView : UserControl, IDisposable
 
     private void FitCurrentGraph()
     {
-        if (ProfileLabelHost.IsVisible) CloseLabelEditor();
         // A dispatcher callback can run before the first layout or while an ancestor
         // is hidden. Keep the request until Nodify has measured the current graph.
         _fitPending = true;

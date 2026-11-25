@@ -540,6 +540,9 @@ namespace TestBuilder.Serialization
         [JsonPropertyName("labelTemplate")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TestBuilder.Services.LabelTemplateDefinition? LabelTemplate { get; set; }
+        [JsonPropertyName("labelTypeId")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? LabelTypeId { get; set; }
 
         [JsonPropertyName("failOnPrinterError")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

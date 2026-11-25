@@ -49,6 +49,8 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
     public int? HeightDots { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int OriginXDots { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? PrintAreaWidthDots { get; set; }
     public int BarcodeModuleDots { get; set; } = 2;
     public int BarcodeTopDots { get; set; } = 112;
     public int BarcodeHeightDots { get; set; } = 34;
@@ -115,6 +117,7 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
             throw new InvalidOperationException("Служебный префикс — до 10 цифр; код изделия и комплектации не могут быть отрицательными.");
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Language is not ("ZPL" or "EPL") ||
             WidthDots is < 1 or > 10000 || HeightDots is < 1 or > 32000 || OriginXDots is < 0 or > 22000 ||
+            PrintAreaWidthDots is < 1 or > 32000 || PrintAreaWidthDots.HasValue && PrintAreaWidthDots < OriginXDots + WidthDots ||
             BarcodeModuleDots is < 1 or > 10 || BarcodeTopDots is < 0 or > 32000 || BarcodeHeightDots is < 1 or > 32000 ||
             PrinterDpi is not (203 or 300) || SerialOffset < 0 || ShortSerialMax < 0 ||
             NameFontMaxWidthDots is < 1 or > 1000 || NameCharacterWidthFactor is < .1m or > 2m ||

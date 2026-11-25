@@ -147,6 +147,19 @@ public partial class LabelTypesViewModel : ObservableObject, IDisposable
     }
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private void NewType() => CreateType(Prototype ?? Prototypes[1], false);
+    internal void CopyFromProfile(LabelTemplateDefinition source, string profileName)
+    {
+        if (!CanEdit) return;
+        try
+        {
+            EnsureLoaded();
+            var family = LabelTypeStore.TypeIdFor(source, null);
+            var neutral = LabelTypeStore.UniversalTemplate(family, source);
+            CreateType(new(source.Id, profileName + " — макет", null, neutral, family), true);
+            Status = "Копия прежнего макета. Сохраните тип, затем выберите его в ноде и сохраните профиль.";
+        }
+        catch (Exception ex) when (IsCatalogError(ex)) { Status = ex.Message; }
+    }
     [RelayCommand(CanExecute = nameof(CanSave))]
     private void CopyType()
     {
@@ -243,10 +256,9 @@ public partial class LabelTypesViewModel : ObservableObject, IDisposable
             _stored = merged; _revision = LabelTemplateStore.Revision(StoragePath);
             Selected!.Accept(type); Selected.Baseline = Fingerprint(TypeName, Editor!.Template);
             OnPropertyChanged(nameof(IsDirty)); _saved();
-            if (!HasDrafts) Load();
-            else foreach (var row in _assignments) row.UpdateChoices(TypeChoices());
-            Status = LabelTypeStore.IsUniversal(type.Id) ? "Тип сохранён. Новая печать использует его при автоматическом выборе."
-                : "Тип сохранён. Назначьте его нужным моделям на вкладке «Привязки изделий».";
+            foreach (var row in _assignments) row.UpdateChoices(TypeChoices());
+            Status = LabelTypeStore.IsUniversal(type.Id) ? "Тип сохранён. Новая печать использует его при выборе в ноде или автоматически по составу."
+                : "Тип сохранён. Выберите его в ноде «Печать этикетки» или назначьте моделям на вкладке «Привязки изделий».";
         }
         catch (Exception ex) when (IsCatalogError(ex)) { Status = ex.Message; }
     }

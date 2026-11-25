@@ -62,7 +62,7 @@ public sealed class LabelLayoutCanvas : LabelPreviewControl
             _resizing = new Rect(r.Right - 7, r.Bottom - 7, 14, 14).Contains(p);
         }
         if (!_resizing) Editor.Selected = Editor.Elements.Reverse().FirstOrDefault(element => element.Visible && Editor.BoundsOf(element).Contains(ToDots(p)));
-        if (Editor.Selected == null) return;
+        if (Editor.Selected == null || !Editor.AllowCanvasEditing) { _resizing = false; return; }
         _start = ToDots(p); _original = Editor.BoundsOf(Editor.Selected); _originalModule = Editor.Selected.Module; _dragging = true; e.Pointer.Capture(this); e.Handled = true;
     }
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -72,14 +72,15 @@ public sealed class LabelLayoutCanvas : LabelPreviewControl
         var delta = ToDots(e.GetPosition(this)) - _start;
         if (_resizing && Editor.Selected is { } element)
         {
-            element.Width = Math.Max(1, (int)Math.Round(_original.Width + delta.X));
-            element.Height = Math.Max(1, (int)Math.Round(_original.Height + delta.Y));
+            element.Width = Math.Clamp((int)Math.Round(_original.Width + delta.X), 1, Editor.Template.WidthDots);
+            element.Height = Math.Clamp((int)Math.Round(_original.Height + delta.Y), 1, Editor.Template.HeightDots ?? 150);
             if (element.Kind == "Barcode")
             {
                 var modules = _original.Width / _originalModule;
-                element.Module = Math.Clamp((int)Math.Round(element.Width / Math.Max(1, modules)), 1, 10);
+                var maximum = Math.Clamp((int)(Editor.Template.WidthDots / (modules + 20)), 1, 10);
+                element.Module = Math.Clamp((int)Math.Round(element.Width / Math.Max(1, modules)), 1, maximum);
             }
-            Editor.Selected = null; Editor.Selected = element; Editor.Refresh();
+            Editor.Selected = null; Editor.Selected = element; Editor.Move(element.X, element.Y);
         }
         else Editor.Move(_original.X + delta.X, _original.Y + delta.Y);
         e.Handled = true;
@@ -89,7 +90,7 @@ public sealed class LabelLayoutCanvas : LabelPreviewControl
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (Editor.Selected is not { } selected) return;
+        if (!Editor.AllowCanvasEditing || Editor.Selected is not { } selected) return;
         var step = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 10 : 1;
         switch (e.Key)
         {

@@ -37,7 +37,7 @@ public sealed class LabelTemplateEditorView : UserControl
             actions.Children.Add(ActionButton("+ " + kind.Title.Replace(" Code 128", ""), () => editor.Add(kind.Key)));
         actions.Children.Add(ActionButton("Копировать", editor.CopySelected)); actions.Children.Add(ActionButton("Удалить", editor.Remove)); actions.Children.Add(ActionButton("По центру", editor.Center));
         preview.Children.Add(actions);
-        preview.Children.Add(new TextBlock { Text = "Выберите элемент на этикетке и перетащите. Размер меняется за нижний правый угол.", TextWrapping = TextWrapping.Wrap, FontSize = 12 });
+        var drag = Check("Перемещать и растягивать мышью", "AllowCanvasEditing"); drag.Name = "EnableLabelDragging"; preview.Children.Add(drag);
         var result = new SelectableTextBlock { Name = "LabelBarcodeSummary", TextWrapping = TextWrapping.Wrap, FontSize = 12 };
         void Summary() => result.Text = editor.Preview?.Elements.FirstOrDefault(e => e.Bars.Length > 0) is { } bar ? "Штрихкод: " + bar.EncodedData : editor.Preview?.Message;
         editor.Changed += Summary; Summary();
@@ -122,6 +122,9 @@ public sealed class LabelTemplateEditorView : UserControl
         paper.Children.Add(Field("Ширина этикетки, мм", Number("PaperWidth", "LabelPaperWidth", 1, 800, .5m)));
         paper.Children.Add(Field("Высота этикетки, мм", Number("PaperHeight", "LabelPaperHeight", 1, 2000, .5m)));
         paper.Children.Add(Field("Сдвиг печати по X, мм", Number("Origin", "LabelPrintOrigin", 0, 1800, .25m)));
+        var printArea = Number("PrintAreaWidth", "LabelPrintAreaWidth", 0, 2700, .25m);
+        ToolTip.SetTip(printArea, "Ширина области принтера, не белой этикетки. 0 — оставить настройку принтера для прежних макетов со сдвигом X.");
+        paper.Children.Add(Field("Область печати принтера, мм", printArea));
         var dpi = new ComboBox { ItemsSource = new[] { 203, 300 }, HorizontalAlignment = HorizontalAlignment.Stretch }; dpi.Bind(ComboBox.SelectedItemProperty, new Binding("Dpi", BindingMode.TwoWay)); paper.Children.Add(Field("Разрешение принтера, dpi", dpi));
         var language = new ComboBox { ItemsSource = new[] { "ZPL", "EPL" }, HorizontalAlignment = HorizontalAlignment.Stretch }; language.Bind(ComboBox.SelectedItemProperty, new Binding("Language", BindingMode.TwoWay)); paper.Children.Add(Field("Язык принтера", language));
         paper.Children.Add(Field("Яркость ZPL", Number("Darkness", "LabelDarkness", -30, 30, 1, "0")));
@@ -175,8 +178,15 @@ public sealed class LabelTemplateEditorView : UserControl
             (!decimal.TryParse(n.Text, n.ParsingNumberStyle, n.NumberFormat, out var value) || value < n.Minimum || value > n.Maximum || n.FormatString == "0" && value != decimal.Truncate(value))));
     private NumericUpDown Number(string property, string name, decimal min, decimal max, decimal step, string format = "0.###")
     {
-        var box = new NumericUpDown { Name = name, Minimum = min, Maximum = max, Increment = step, FormatString = format, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var box = new FocusedWheelNumber { Name = name, Minimum = min, Maximum = max, Increment = step, FormatString = format, HorizontalAlignment = HorizontalAlignment.Stretch };
         box.Bind(NumericUpDown.ValueProperty, new Binding(property, BindingMode.TwoWay)); _inputs.Add(box); return box;
+    }
+    private sealed class FocusedWheelNumber : NumericUpDown
+    {
+        protected override void OnPointerWheelChanged(Avalonia.Input.PointerWheelEventArgs e)
+        {
+            if (IsKeyboardFocusWithin) base.OnPointerWheelChanged(e);
+        }
     }
     private static TextBox Text(string property, string name) { var box = new TextBox { Name = name }; box.Bind(TextBox.TextProperty, new Binding(property, BindingMode.TwoWay)); return box; }
     internal static Control Field(string title, Control input)

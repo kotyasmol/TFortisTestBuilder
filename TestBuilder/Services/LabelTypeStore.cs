@@ -158,12 +158,19 @@ public static class LabelTypeStore
     }
 
     internal static LabelTemplateDefinition Resolve(LabelTemplateDefinition fallback, EquipmentModel? model,
-        string? deviceName, int variant = 0, IReadOnlyList<LabelTypeDefinition>? types = null, LabelTypeFile? file = null)
+        string? deviceName, int variant = 0, IReadOnlyList<LabelTypeDefinition>? types = null, LabelTypeFile? file = null, string? preferredTypeId = null)
     {
         file ??= types == null ? LoadFile(AppSettings.Instance.ResolvedGraphsFolder) : new() { Types = types.ToList() };
         types ??= file.Types;
         if (model == null && (types.Count > 0 || file.Assignments.Count > 0) && !string.IsNullOrWhiteSpace(deviceName))
             model = EquipmentCatalog.Load(AppSettings.Instance.ResolvedGraphsFolder).Resolve(null, deviceName);
+        if (!string.IsNullOrWhiteSpace(preferredTypeId))
+        {
+            var saved = Available(file).FirstOrDefault(t => string.Equals(t.Id, preferredTypeId, StringComparison.OrdinalIgnoreCase));
+            var explicitTemplate = saved?.Template ?? (string.Equals(fallback.Id, preferredTypeId, StringComparison.OrdinalIgnoreCase)
+                ? fallback : throw new InvalidDataException($"Не найден шаблон этикетки '{preferredTypeId}'."));
+            return ApplyPresentation(explicitTemplate, fallback, model, deviceName, variant);
+        }
         var typeId = TypeIdFor(fallback, model, variant);
         var assignedId = AssignedTypeId(file, model?.Id);
         var assigned = assignedId == null ? null : Available(file).FirstOrDefault(t => string.Equals(t.Id, assignedId, StringComparison.OrdinalIgnoreCase))

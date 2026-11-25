@@ -211,6 +211,7 @@ public class LabelLayoutTests : IDisposable
                 window.Show(); Layout(window);
                 var canvas = window.GetVisualDescendants().OfType<LabelLayoutCanvas>().Single();
                 vm.Selected = vm.Elements.Single(e => e.Kind == "Barcode");
+                vm.AllowCanvasEditing = true; vm.PaperWidth = 30;
                 var previous = vm.Selected.X; canvas.Focus(); window.KeyPress(Key.Right, RawInputModifiers.None); window.KeyRelease(Key.Right, RawInputModifiers.None); Layout(window);
                 Assert.Equal(previous + 1, vm.Selected.X);
                 var rect = canvas.ScreenBounds(vm.Selected); var scale = rect.Height / vm.Selected.Height;

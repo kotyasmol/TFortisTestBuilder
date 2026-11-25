@@ -49,6 +49,7 @@ namespace TestBuilder.Domain.Steps
         private readonly LabelTemplateDefinition _template;
         private readonly bool _useLastTestLabel;
         private readonly bool _preserveTemplate;
+        private readonly string? _labelTypeId;
         private string DeviceName => _template.Name;
 
         public PrintLabelStep(
@@ -64,7 +65,7 @@ namespace TestBuilder.Domain.Steps
             bool useQtProZplFormat,
             bool failOnPrinterError,
             DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
-            LabelTemplateDefinition? template = null, bool useLastTestLabel = false)
+            LabelTemplateDefinition? template = null, bool useLastTestLabel = false, string? labelTypeId = null)
             : this(
                 logger,
                 printerName,
@@ -79,7 +80,7 @@ namespace TestBuilder.Domain.Steps
                 failOnPrinterError,
                 WindowsRawLabelPrinter.Shared,
                 DefaultPrinterTimeoutMs,
-                labelModel, template, useLastTestLabel)
+                labelModel, template, useLastTestLabel, labelTypeId: labelTypeId)
         {
         }
 
@@ -98,7 +99,7 @@ namespace TestBuilder.Domain.Steps
             IRawLabelPrinter printer,
             int printerTimeoutMs,
             DeviceLabelModel labelModel = DeviceLabelModel.PswUpsBox8x2Pro,
-            LabelTemplateDefinition? template = null, bool useLastTestLabel = false, bool preserveTemplate = false)
+            LabelTemplateDefinition? template = null, bool useLastTestLabel = false, bool preserveTemplate = false, string? labelTypeId = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _printerName = printerName?.Trim() ?? string.Empty;
@@ -119,6 +120,7 @@ namespace TestBuilder.Domain.Steps
             var source = useLastTestLabel ? new LabelTemplateDefinition() :
                 template ?? LabelTemplateCatalog.Legacy(useQtProZplFormat ? labelModel.ToString() : "SerialOnlyEpl");
             _preserveTemplate = preserveTemplate;
+            _labelTypeId = labelTypeId;
             _template = preserveTemplate ? source.Copy() : source.CopyUpgraded();
             _template.Validate();
             _failOnPrinterError = failOnPrinterError;
@@ -167,7 +169,7 @@ namespace TestBuilder.Domain.Steps
             try
             {
                 printTemplate = !_preserveTemplate && !preserveTemplateName
-                    ? LabelTypeStore.Resolve(_template, model, context.DeviceModel, context.LabelVariant)
+                    ? LabelTypeStore.Resolve(_template, model, context.DeviceModel, context.LabelVariant, preferredTypeId: _labelTypeId)
                     : model != null ? LabelPrintContent.ForModel(_template, model, context.LabelVariant)
                     : preserveTemplateName ? _template.Copy() : LabelPrintContent.ForDevice(_template, context.DeviceModel);
                 // Manual entry, samples and history already supply their own values.

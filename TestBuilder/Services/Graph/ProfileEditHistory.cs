@@ -21,7 +21,7 @@ public sealed class ProfileEditHistory : IDisposable
         "ConnectOnly", "Copies", "CpuIdVariableName", "CustomName", "DataSourceFlags", "Description", "DestinationIp", "DeviceId", "DeviceType", "DurationMs",
         "Endpoint", "ExpectedPackets", "ExpectedSerialPrefix", "ExpectedValue", "FailMessage", "FailOnError", "FailOnPrinterError",
         "FailOnTimeout", "FirmwarePath", "FixedSerialNumber", "ForceUpdate", "FromSlaveId", "IncludeAllVariables",
-        "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel", "LabelTemplate",
+        "Inclusive", "InterPairDelayMs", "IntervalMs", "IsEnabled", "LabelHeight", "LabelModel", "LabelTemplate", "LabelSelection",
         "LabelWidth", "LeftVariableName", "LiveRead", "LocalIp", "LocalPort", "LocalReportsDirectory",
         "Location", "MacPrefix", "MacVariableName", "ManualMacAddress", "ManualSerialNumber", "Max",
         "MaxPortTestTimeMs", "Message", "InputVariable", "Milliseconds", "Min", "Mode", "Name",
@@ -80,7 +80,8 @@ public sealed class ProfileEditHistory : IDisposable
         { node.PropertyChanged -= Changed; _nodes.Remove(node); }
         foreach (var (node, graph) in nodes.Where(p => !_nodes.ContainsKey(p.Key)))
         {
-            var values = node.GetType().GetProperties().Where(p => p.CanRead && p.CanWrite && StoredProperties.Contains(p.Name))
+            var values = node.GetType().GetProperties().Where(p => p.CanRead && p.CanWrite && StoredProperties.Contains(p.Name)
+                    && !(node is PrintLabelNodeViewModel && p.Name is "LabelTemplate" or "UseQtProZplFormat"))
                 .ToDictionary(p => p, p => p.GetValue(node));
             _nodes.Add(node, (graph, values)); node.PropertyChanged += Changed;
         }

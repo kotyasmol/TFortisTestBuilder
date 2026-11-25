@@ -82,8 +82,10 @@ public class UserGuideTests
             foreach (var term in new[] { "Что печатать в элементе", "Свой текст / формат", "столбца", "Образец остаётся видимым" })
                 Assert.Contains(term, article.BodyText);
             var nodeGuide = Assert.Single(UserGuide.All, a => a.Id == "PrintLabelNodeViewModel");
-            foreach (var term in new[] { "Этикетка ноды…", "в области графа", "Применить к ноде", "Отмена", "Общие типы этикеток" })
+            foreach (var term in new[] { "Шаблон этикетки", "Открыть шаблоны", "По изделию профиля", "текущей вкладке", "Перенести прежний макет в шаблоны" })
                 Assert.Contains(term, nodeGuide.BodyText);
+            Assert.DoesNotContain("Этикетка ноды…", nodeGuide.BodyText);
+            Assert.Contains("Перемещать и растягивать мышью", UserGuide.All.Single(a => a.Id == "label-layout").BodyText);
             Assert.DoesNotContain("Выбрать / настроить шаблон…", nodeGuide.BodyText);
             Assert.Contains(UserGuide.Search("Привязки изделий", "Этикетки"), a => a.Id == article.Id);
             Assert.DoesNotContain(UserGuide.Search("Привязки изделий", "Сеть и DataTest"), a => a.Id == article.Id);

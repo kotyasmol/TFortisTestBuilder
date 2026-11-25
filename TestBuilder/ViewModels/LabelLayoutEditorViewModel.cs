@@ -72,11 +72,14 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
         cabinet = Template.CabinetName ?? "";
         Selected = Elements.FirstOrDefault(); Refresh();
     }
+    [ObservableProperty] private bool allowCanvasEditing;
+
     private decimal Mm(int dots) => Math.Round(dots * 25.4m / Template.PrinterDpi, 3);
     private int Dots(decimal? mm) => mm.HasValue ? checked((int)Math.Round(mm.Value * Template.PrinterDpi / 25.4m, MidpointRounding.AwayFromZero)) : throw new InvalidOperationException("Введите размер.");
     public decimal? PaperWidth { get => Mm(Template.WidthDots); set { Template.WidthDots = Dots(value); Refresh(); } }
     public decimal? PaperHeight { get => Mm(Template.HeightDots ?? 150); set { Template.HeightDots = Dots(value); Refresh(); } }
     public decimal? Origin { get => Mm(Template.OriginXDots); set { Template.OriginXDots = Dots(value); Refresh(); } }
+    public decimal? PrintAreaWidth { get => Mm(Template.PrintAreaWidthDots ?? 0); set { var dots = Dots(value); Template.PrintAreaWidthDots = dots == 0 ? null : dots; Refresh(); } }
     public int Dpi
     {
         get => Template.PrinterDpi;
@@ -87,6 +90,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
             int Scale(int n) => Math.Max(1, (int)Math.Round(n * ratio));
             Template.WidthDots = Scale(Template.WidthDots); Template.HeightDots = Scale(Template.HeightDots ?? 150);
             Template.OriginXDots = (int)Math.Round(Template.OriginXDots * ratio);
+            if (Template.PrintAreaWidthDots is { } area) Template.PrintAreaWidthDots = (int)Math.Round(area * ratio);
             foreach (var e in Elements) { e.X = (int)Math.Round(e.X * ratio); e.Y = (int)Math.Round(e.Y * ratio); e.Width = Scale(e.Width); e.Height = Scale(e.Height); e.FontWidth = Scale(e.FontWidth); e.Module = Math.Clamp(Scale(e.Module), 1, 10); }
             Template.PrinterDpi = value; NotifyFields(); Refresh();
         }
@@ -128,7 +132,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     partial void OnScannedCodeChanged(string value) => Refresh();
     private void NotifyFields()
     {
-        foreach (var property in new[] { nameof(ElementName), nameof(Value), nameof(ContentField), nameof(IsCustomContent), nameof(Kind), nameof(Visible), nameof(FitText), nameof(Alignment), nameof(SelectedAlignment), nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(FontWidth), nameof(Module), nameof(Stroke), nameof(PaperWidth), nameof(PaperHeight), nameof(Origin), nameof(Dpi), nameof(HasSelection), nameof(HasTextOptions), nameof(HasBarcodeOptions), nameof(HasBoxOptions), nameof(HasValue) }) OnPropertyChanged(property);
+        foreach (var property in new[] { nameof(ElementName), nameof(Value), nameof(ContentField), nameof(IsCustomContent), nameof(Kind), nameof(Visible), nameof(FitText), nameof(Alignment), nameof(SelectedAlignment), nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(FontWidth), nameof(Module), nameof(Stroke), nameof(PaperWidth), nameof(PaperHeight), nameof(Origin), nameof(PrintAreaWidth), nameof(Dpi), nameof(HasSelection), nameof(HasTextOptions), nameof(HasBarcodeOptions), nameof(HasBoxOptions), nameof(HasValue) }) OnPropertyChanged(property);
     }
     public void Add(string kind)
     {
@@ -147,8 +151,10 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     public void Move(double x, double y)
     {
         if (Selected == null) return;
-        Selected.X = Math.Clamp((int)Math.Round(x), 0, Math.Max(0, Template.WidthDots - 1));
-        Selected.Y = Math.Clamp((int)Math.Round(y), 0, Math.Max(0, (Template.HeightDots ?? 150) - 1)); NotifyFields(); Refresh();
+        var bounds = BoundsOf(Selected);
+        var quiet = Selected.Kind == "Barcode" ? 10 * Selected.Module : 0;
+        Selected.X = Math.Clamp((int)Math.Round(x), quiet, Math.Max(quiet, Template.WidthDots - (int)Math.Ceiling(bounds.Width) - quiet));
+        Selected.Y = Math.Clamp((int)Math.Round(y), 0, Math.Max(0, (Template.HeightDots ?? 150) - Selected.Height)); NotifyFields(); Refresh();
     }
     public void Center()
     {

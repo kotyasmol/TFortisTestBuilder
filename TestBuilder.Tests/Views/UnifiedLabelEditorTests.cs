@@ -24,57 +24,33 @@ public class UnifiedLabelEditorTests
     [Theory]
     [InlineData(false, 1280, 800)]
     [InlineData(true, 1024, 768)]
-    public async Task NodeTemplateAndElementsShareTheGraphWorkspaceAndCancelDoesNotChangeTheProfile(bool light, int width, int height)
+    public async Task NodeOnlyChoosesSavedTemplatesAndOpeningItsPickerDoesNotEditTheProfile(bool light, int width, int height)
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(GraphEditorViewTests));
         await session.Dispatch(() =>
         {
             using var clean = new FreshUserJourneyTests.CleanWorkstation();
             Application.Current!.RequestedThemeVariant = light ? ThemeVariant.Light : ThemeVariant.Dark;
+            var saved = LabelTypeStore.UniversalTemplate(LabelTypeStore.DeviceTypeId); saved.Id = "custom:node-choice";
+            LabelTypeStore.Save(LabelTypeStore.LocalPath(clean.Profiles), new LabelTypeFile { Types = new() { new(saved.Id, "Шаблон стенда", null, saved) } });
             using var bus = new ModbusService(); using var vm = new TestViewModel(bus, new SlaveManager(bus)) { IsOperatorView = false };
-            vm.Nodes.Clear(); var template = LabelTemplateCatalog.Defaults()[0];
-            var node = new PrintLabelNodeViewModel { LabelTemplate = template.Copy() }; vm.Nodes.Add(node);
-            var source = JsonSerializer.Serialize(node.LabelTemplate); var graph = GraphSerializer.Serialize(vm, "Test");
+            vm.Nodes.Clear(); var node = new PrintLabelNodeViewModel { LabelTemplate = LabelTemplateCatalog.Defaults()[0] }; vm.Nodes.Add(node);
+            var before = GraphSerializer.Serialize(vm, "Test");
             var view = new GraphEditorView { DataContext = vm }; var window = new Window { Content = view, Width = width, Height = height };
             try
             {
                 window.Show(); Layout(window);
-                Click(Find<Button>(window, "EditProfileLabel")); Layout(window);
-                var workspace = Find<ProfileLabelEditorView>(window, "ProfileLabelWorkspace");
-                var editor = Find<LabelTemplateEditorView>(workspace, "UnifiedLabelEditor");
-                Assert.True(workspace.IsEffectivelyVisible); Assert.Empty(window.OwnedWindows);
-                Assert.False(Find<Grid>(view, "GraphContent").IsVisible);
-                Assert.Equal(graph, GraphSerializer.Serialize(vm, "Test"));
-                // Selection and direct manipulation affect the template draft, never graph shortcuts.
-                var canvas = Assert.Single(editor.GetVisualDescendants().OfType<LabelLayoutCanvas>());
-                editor.Editor.Selected = editor.Editor.Elements.Single(e => e.Kind == "Barcode");
-                canvas.Focus(); var x = editor.Editor.Selected.X;
-                window.KeyPress(Key.Right, RawInputModifiers.None); window.KeyRelease(Key.Right, RawInputModifiers.None); Layout(window);
-                Assert.Equal(x + 1, editor.Editor.Selected.X);
-                Assert.Single(vm.Nodes);
-                var fields = Find<LabelFieldGrid>(editor, "LabelElementGeometry");
-                Assert.True(fields.Bounds.Height < 150);
-                var inputX = Find<NumericUpDown>(editor, "LayoutX"); var inputY = Find<NumericUpDown>(editor, "LayoutY");
-                Assert.Equal(inputX.TranslatePoint(default, editor)!.Value.Y, inputY.TranslatePoint(default, editor)!.Value.Y);
-                Evidence(window, light, "node-layout");
-                editor.Tabs.SelectedIndex = 1; Layout(window); Assert.True(canvas.IsEffectivelyVisible);
-                Evidence(window, light, "node-sources");
-                var sources = Find<LabelFieldGrid>(editor, "LabelSourcesGrid"); Assert.True(sources.Bounds.Height < 480, $"Sources={sources.Bounds}");
-                editor.Tabs.SelectedIndex = 2; Layout(window); Assert.True(canvas.IsEffectivelyVisible);
-                var formats = Find<LabelDataSettingsView>(editor);
-                Assert.True(((Control)formats.Content!).DesiredSize.Height < 450);
-                Evidence(window, light, "node-formats");
-                Click(Find<Button>(workspace, "CancelProfileLabel")); Layout(window);
-                Assert.Empty(view.GetVisualDescendants().OfType<ProfileLabelEditorView>());
-                Assert.True(Find<Grid>(view, "GraphContent").IsVisible); Assert.Equal(source, JsonSerializer.Serialize(node.LabelTemplate));
-                Assert.Equal(graph, GraphSerializer.Serialize(vm, "Test")); Assert.False(File.Exists(LabelTypeStore.LocalPath(clean.Profiles)));
-                // A second visit creates one inline editor and applies one undoable profile edit.
-                Click(Find<Button>(window, "EditProfileLabel")); Layout(window); editor = Find<LabelTemplateEditorView>(window, "UnifiedLabelEditor");
-                editor.Editor.PaperHeight = 18; Find<NumericUpDown>(editor, "LabelTopMargin").Value = .5m;
-                Click(Find<Button>(window, "ApplyProfileLabel")); Layout(window);
-                Assert.NotEqual(source, JsonSerializer.Serialize(node.LabelTemplate)); Assert.Equal(6, node.LabelTemplate!.Layout!.Elements.Min(e => e.Y));
-                Assert.Empty(window.OwnedWindows); Assert.False(File.Exists(LabelTypeStore.LocalPath(clean.Profiles)));
-                vm.UndoCommand.Execute(null); Assert.Equal(source, JsonSerializer.Serialize(node.LabelTemplate));
+                Assert.Equal(before, GraphSerializer.Serialize(vm, "Test"));
+                Assert.Empty(window.GetVisualDescendants().OfType<LabelTemplateEditorView>());
+                Assert.Empty(window.GetVisualDescendants().OfType<Button>().Where(b => b.Name == "EditProfileLabel"));
+                var picker = Find<ComboBox>(window, "NodeLabelType"); picker.IsDropDownOpen = true; Layout(window); picker.IsDropDownOpen = false;
+                Assert.Equal(before, GraphSerializer.Serialize(vm, "Test"));
+                picker.SelectedItem = node.LabelTypeChoices.Single(t => t.Id == saved.Id); Layout(window);
+                Assert.Equal(saved.Id, node.LabelTypeId); Assert.Equal(saved.Id, node.LabelTemplate!.Id);
+                Assert.Contains("Print Label (type v1)", GraphSerializer.Serialize(vm, "Test"));
+                vm.UndoCommand.Execute(null); Assert.Equal(before, GraphSerializer.Serialize(vm, "Test"));
+                vm.RedoCommand.Execute(null); Assert.Equal(saved.Id, node.LabelTypeId);
+                Assert.Empty(window.OwnedWindows); Evidence(window, light, "node-saved-template");
             }
             finally { window.Close(); view.Dispose(); Application.Current!.RequestedThemeVariant = ThemeVariant.Default; }
         }, default);
@@ -166,9 +142,7 @@ public class UnifiedLabelEditorTests
             {
                 window.Show(); Layout(window);
                 var graph = window.GetVisualDescendants().OfType<GraphEditorView>().Single(v => v.DataContext == shell.TestVM);
-                graph.OpenLabelEditor(node); Layout(window); var workspace = Find<ProfileLabelEditorView>(window, "ProfileLabelWorkspace");
-                Find<LabelTemplateEditorView>(workspace, "UnifiedLabelEditor").Editor.TopMargin = .25m;
-                Click(workspace.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Общие типы этикеток"))); Layout(window);
+                Click(Find<Button>(graph, "OpenSharedLabelTypes")); Layout(window);
                 Assert.Equal("Labels", shell.SelectedPage); Assert.Equal(1, shell.LabelPrintingVM.SelectedSection);
                 Assert.Equal(0, shell.LabelPrintingVM.Types.SelectedSection);
                 Assert.Equal(expectedId, shell.LabelPrintingVM.Types.Selected!.Definition.Id);
@@ -194,10 +168,9 @@ public class UnifiedLabelEditorTests
             try
             {
                 owner.Show(); var task = dialog.ShowDialog(owner); Layout(dialog);
-                Click(Find<Button>(dialog, "EditProfileLabel")); Layout(dialog);
+                var picker = Find<ComboBox>(dialog, "NodeLabelType"); picker.IsDropDownOpen = true; Layout(dialog); picker.IsDropDownOpen = false;
                 Assert.Same(dialog, Assert.Single(owner.OwnedWindows)); Assert.Empty(dialog.OwnedWindows);
-                Assert.True(Find<ProfileLabelEditorView>(dialog, "ProfileLabelWorkspace").IsEffectivelyVisible);
-                Click(Find<Button>(dialog, "CancelProfileLabel")); Layout(dialog);
+                Assert.Empty(dialog.GetVisualDescendants().OfType<LabelTemplateEditorView>());
                 Assert.True(dialog.IsVisible); Assert.False(task.IsCompleted); Assert.Empty(dialog.OwnedWindows);
             }
             finally { dialog.Close(); owner.Close(); view.Dispose(); }
