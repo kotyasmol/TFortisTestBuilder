@@ -140,6 +140,8 @@ public class SavedLabelWorkflowTests
                 window.MouseDown(start, MouseButton.Left); window.MouseMove(start + new Vector(30, 15)); window.MouseUp(start + new Vector(30, 15), MouseButton.Left);
                 Assert.Equal(before, JsonSerializer.Serialize(editor.Template)); Assert.False(editor.AllowCanvasEditing);
                 var input = view.GetVisualDescendants().OfType<NumericUpDown>().Single(n => n.Name == "LabelTopMargin");
+                Assert.True(input.Bounds.Height >= 24, $"Numeric input is not rendered: {input.Bounds}");
+                Assert.NotEmpty(input.GetVisualDescendants().OfType<TextBox>());
                 var point = input.TranslatePoint(new Point(input.Bounds.Width / 2, input.Bounds.Height / 2), window)!.Value;
                 window.MouseWheel(point, new Vector(0, 2)); Layout(window);
                 Assert.Equal(before, JsonSerializer.Serialize(editor.Template));

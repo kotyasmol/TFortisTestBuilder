@@ -183,6 +183,7 @@ public sealed class LabelTemplateEditorView : UserControl
     }
     private sealed class FocusedWheelNumber : NumericUpDown
     {
+        protected override Type StyleKeyOverride => typeof(NumericUpDown);
         protected override void OnPointerWheelChanged(Avalonia.Input.PointerWheelEventArgs e)
         {
             if (IsKeyboardFocusWithin) base.OnPointerWheelChanged(e);
