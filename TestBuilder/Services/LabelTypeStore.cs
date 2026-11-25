@@ -194,7 +194,7 @@ public static class LabelTypeStore
             // Legacy nodes can carry their model's identity without an external catalog card.
             // A family supplies presentation, never a representative model's serial range or type.
             copy.DeviceCode = fallback.DeviceCode; copy.SerialOffset = fallback.SerialOffset;
-            copy.MatchServerSerial = fallback.MatchServerSerial;
+            copy.MatchServerSerial = fallback.MatchServerSerial && copy.UseShortSerial;
             copy.FirstSerialNumber = fallback.FirstSerialNumber; copy.ShortSerialMax = fallback.ShortSerialMax;
             copy.BarcodePrefix = fallback.BarcodePrefix; copy.VariantCode = variant;
             copy.VariantName = fallback.VariantName; copy.CabinetName = fallback.CabinetName;

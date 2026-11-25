@@ -214,7 +214,8 @@
 
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*">
+  <Grid>
+  <Grid x:Name="GraphContent" RowDefinitions="Auto,*">
 
     <Border Grid.Row="0" Padding="10,8,10,4" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -1747,7 +1748,7 @@
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualSerialMode}"><TextBlock Grid.Column="0" Text="Серийный номер:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualSerialNumber}" Watermark="только цифры" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableSerialMode}"><TextBlock Grid.Column="0" Text="Переменная серийного номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <ComboBox IsVisible="{Binding IsNewLabelMode}" ItemsSource="{Binding PrintFormats}" SelectedIndex="{Binding SelectedPrintFormat}" HorizontalAlignment="Stretch"/>
-                    <Button IsVisible="{Binding IsNewLabelMode}" Content="Выбрать / настроить шаблон…" Command="{Binding ChooseTemplateCommand}"/>
+                    <Button x:Name="EditProfileLabel" IsVisible="{Binding IsNewLabelMode}" Content="Этикетка ноды…" Click="OnEditProfileLabel"/>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsManualQtProMode}"><TextBlock Grid.Column="0" Text="MAC вручную:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding ManualMacAddress}" Watermark="C0:11:A6:20:01:AC" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Переменная короткого номера:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding SerialShortVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
                     <Grid ColumnDefinitions="132,*" IsVisible="{Binding IsVariableQtProMode}"><TextBlock Grid.Column="0" Text="Переменная MAC:" VerticalAlignment="Center" FontSize="{StaticResource FontCaption}" Foreground="{DynamicResource TextSecondaryBrush}"  TextWrapping="Wrap" Margin="0,0,8,0" /><TextBox Grid.Column="1" Text="{Binding MacVariableName}" FontSize="{StaticResource FontCaption}" /></Grid>
@@ -1865,5 +1866,7 @@
         <testviews:NodePaletteView Grid.Column="1" Width="280" IsVisible="{Binding !IsPaletteCollapsed}" />
       </Grid>
     </Grid>
+  </Grid>
+  <Border x:Name="ProfileLabelHost" Background="{DynamicResource AppBackgroundBrush}" IsVisible="False" />
   </Grid>
 </UserControl>

@@ -453,7 +453,7 @@ public class FreshUserJourneyTests
             var before = JsonSerializer.Serialize(print.LabelTemplate);
             vm.SelectedEquipmentModel = target;
             var result = print.LabelTemplate!;
-            var visual = new LabelLayoutEditorWindow(result);
+            var visual = new Window { Content = new LabelTemplateEditorView(new LabelLayoutEditorViewModel(result)), Width = 1280, Height = 880 };
             try { visual.Show(); Layout(visual); Capture(visual, "05-label-after-model-change"); } finally { visual.Close(); }
             Assert.Contains("{{Name}}", result.Layout!.Elements.First(e => e.Kind == "Text").Value);
             Assert.Equal(target.Name, result.Layout.Elements.First(e => e.Kind == "Text").Name);

@@ -79,6 +79,12 @@ public class UserGuideTests
                 "Привязки изделий", "Сохранить привязки", "Автоматически по изделию", "schemaVersion=2", "Dut.default_mac",
                 "Постоянное значение", "успешный шаг до печати", "Ручная печать", "снимок" })
                 Assert.Contains(term, article.BodyText);
+            foreach (var term in new[] { "Что печатать в элементе", "Свой текст / формат", "столбца", "Образец остаётся видимым" })
+                Assert.Contains(term, article.BodyText);
+            var nodeGuide = Assert.Single(UserGuide.All, a => a.Id == "PrintLabelNodeViewModel");
+            foreach (var term in new[] { "Этикетка ноды…", "в области графа", "Применить к ноде", "Отмена", "Общие типы этикеток" })
+                Assert.Contains(term, nodeGuide.BodyText);
+            Assert.DoesNotContain("Выбрать / настроить шаблон…", nodeGuide.BodyText);
             Assert.Contains(UserGuide.Search("Привязки изделий", "Этикетки"), a => a.Id == article.Id);
             Assert.DoesNotContain(UserGuide.Search("Привязки изделий", "Сеть и DataTest"), a => a.Id == article.Id);
             var html = WebUtility.HtmlDecode(UserGuide.ExportHtml());

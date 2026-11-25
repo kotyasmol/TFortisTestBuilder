@@ -96,17 +96,35 @@ public sealed class LabelTemplatesWindow : Window
         var fields = new StackPanel { Spacing = 6 };
         var commandOnlyInputs = new List<TextBox>();
         var previewPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 12) };
+        var right = new ContentControl();
         previewPanel.Children.Add(new TextBlock { Text = "Пример этикетки", FontWeight = Avalonia.Media.FontWeight.SemiBold });
         var editLayout = new Button { Content = "Редактор элементов…", Name = "EditLabelLayout" };
-        editLayout.Click += async (_, _) =>
+        editLayout.Click += (_, _) =>
         {
             try
             {
                 if (inputs.Any(DataValidationErrors.GetHasErrors)) throw new InvalidOperationException("Исправьте значения шаблона перед открытием редактора.");
                 if (list.SelectedItem is not LabelTemplateDefinition selected) return;
-                var edited = await new LabelLayoutEditorWindow(selected).ShowDialog<LabelTemplateDefinition?>(this);
-                if (edited == null) return;
-                var index = templates.IndexOf(selected); templates[index] = edited; list.SelectedItem = edited;
+                var original = right.Content;
+                save.IsEnabled = list.IsEnabled = actions.IsEnabled = false;
+                void ReturnToTemplates() { right.Content = original; save.IsEnabled = list.IsEnabled = actions.IsEnabled = true; }
+                var editor = new LabelTemplateEditorView(new TestBuilder.ViewModels.LabelLayoutEditorViewModel(selected));
+                editor.PrintControls.Content = new LabelEditorPrintView(editor.Editor, () => IsEnabled);
+                var pane = new DockPanel(); var buttons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+                var applyLayout = new Button { Content = "Применить макет", Name = "ApplyInlineLabelLayout", Margin = new Thickness(0, 0, 8, 0) };
+                applyLayout.Click += (_, _) =>
+                {
+                    try
+                    {
+                        if (editor.HasInputErrors()) throw new InvalidOperationException("Исправьте поля этикетки.");
+                        var edited = editor.Editor.Apply(); var index = templates.IndexOf(selected);
+                        templates[index] = edited; list.SelectedItem = edited; ReturnToTemplates();
+                    }
+                    catch (Exception ex) { status.Text = ex.Message; }
+                };
+                var back = new Button { Content = "Назад к шаблонам", Name = "BackToLabelTemplates" };
+                back.Click += (_, _) => ReturnToTemplates();
+                buttons.Children.Add(applyLayout); buttons.Children.Add(back); DockPanel.SetDock(buttons, Dock.Top); pane.Children.Add(buttons); pane.Children.Add(editor); right.Content = pane;
             }
             catch (Exception ex) { status.Text = ex.Message; }
         };
@@ -164,8 +182,8 @@ public sealed class LabelTemplatesWindow : Window
         fields.Children.Add(useCommand);
         list.SelectionChanged += (_, _) => { fields.DataContext = list.SelectedItem; command.IsReadOnly = (list.SelectedItem as LabelTemplateDefinition)?.Layout != null;
             foreach (var box in commandOnlyInputs) box.IsEnabled = !command.IsReadOnly; UpdatePreview(); };
-        var right = new DockPanel(); DockPanel.SetDock(previewPanel, Dock.Top); right.Children.Add(previewPanel);
-        right.Children.Add(new ScrollViewer { Content = fields }); Grid.SetColumn(right, 2); grid.Children.Add(right);
+        var form = new DockPanel(); DockPanel.SetDock(previewPanel, Dock.Top); form.Children.Add(previewPanel);
+        form.Children.Add(new ScrollViewer { Content = fields }); right.Content = form; Grid.SetColumn(right, 2); grid.Children.Add(right);
         root.Children.Add(grid); Content = root;
         list.SelectedItem = templates.FirstOrDefault(t => t.Id == profileTemplate?.Id) ?? templates.FirstOrDefault();
         save.Click += (_, _) =>

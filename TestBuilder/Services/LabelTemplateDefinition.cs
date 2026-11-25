@@ -11,7 +11,7 @@ using System.Text;
 namespace TestBuilder.Services;
 public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPropertyChanged
 {
-    private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD\{\{Name\}\}\^FS");
+    private static readonly Regex FittedZplName = new(@"\^FO(\d+),\d+\^A0N?,\d+,\{\{FitNameWidth\}\}\^FD([^\^]*)\^FS");
     private static readonly Regex FittedZplSerial = new(@"\^FO(\d+),(\d+)\^A0N?,\d+,\{\{SerialTextWidth\}\}\^FDSN: \{\{(?:Serial|SerialText)\}\}\^FS");
 
     [JsonExtensionData]
@@ -184,15 +184,18 @@ public sealed class LabelTemplateDefinition : System.ComponentModel.INotifyPrope
         var field = FittedZplName.Match(Command);
         if (Language != "ZPL" || !int.TryParse(field.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var x) || x > 32000)
             throw new InvalidOperationException("Для подгонки названия укажите координату X в ^FO и ширину {{FitNameWidth}} в ^A0.");
+        var text = field.Groups[2].Value == "{{Name}}" ? Name : field.Groups[2].Value;
+        if (text.Contains("{{", StringComparison.Ordinal))
+            throw new InvalidOperationException("Подгонка названия поддерживает {{Name}} или постоянный текст.");
 
         const int rightMargin = 20;
         var standardWidth = NameFontMaxWidthDots ?? 25;
         const int minimumWidth = 10;
         var available = OriginXDots + WidthDots - Math.Max(x, OriginXDots) - rightMargin;
         // Older snapshots retain the original full-width budget; current stock uses its measured ratio.
-        var width = Math.Min(standardWidth, (int)Math.Floor(available / (Name.Length * (NameCharacterWidthFactor ?? 1m))));
+        var width = Math.Min(standardWidth, (int)Math.Floor(available / (Math.Max(1, text.Length) * (NameCharacterWidthFactor ?? 1m))));
         if (width < minimumWidth)
-            throw new InvalidOperationException($"Название «{Name}» не помещается. Проверьте ширину этикетки или выберите другой макет.");
+            throw new InvalidOperationException($"Название «{text}» не помещается. Проверьте ширину этикетки или выберите другой макет.");
         return width;
     }
 }

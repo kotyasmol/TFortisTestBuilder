@@ -61,15 +61,6 @@ namespace TestBuilder.ViewModels.StepVM
             OnPropertyChanged(nameof(CurrentTemplateName));
             OnPropertyChanged(nameof(SelectedPrintFormat));
         }
-        [RelayCommand]
-        private async System.Threading.Tasks.Task ChooseTemplate()
-        {
-            if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
-            {
-                var selected = await new TestBuilder.Views.LabelTemplatesWindow(LabelTemplate, profileOnly: true).ShowDialog<LabelTemplateDefinition?>(desktop.MainWindow);
-                if (selected != null) LabelTemplate = selected.Copy();
-            }
-        }
         [ObservableProperty] private string printerName = "TSC TE310";
         [ObservableProperty] private bool useDefaultPrinter = true;
         [ObservableProperty] private string serialVariableName = "SerialNumber";

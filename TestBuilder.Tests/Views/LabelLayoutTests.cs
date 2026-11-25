@@ -35,6 +35,19 @@ public class LabelLayoutTests : IDisposable
         template.Layout = LabelLayoutDefinition.FromTemplate(template); return template.Copy();
     }
     [Fact]
+    public void ATemplateWithALiteralFittedNameOpensWithoutLosingItsTextOrOriginalCommand()
+    {
+        var template = LabelTemplateCatalog.Defaults()[0];
+        template.Command = template.Command.Replace("{{Name}}", template.Name);
+        var before = JsonSerializer.Serialize(template);
+        var editor = new LabelLayoutEditorViewModel(template);
+        Assert.Contains(editor.Elements, e => e.Value == template.Name);
+        Assert.Equal(template.Command, editor.Template.Layout!.OriginalCommand);
+        Assert.Null(editor.Preview!.BarcodeError); Assert.True(editor.Preview.HasContent);
+        Assert.Equal(before, JsonSerializer.Serialize(template));
+    }
+
+    [Fact]
     public void EplAndUnsupportedLegacyCommandsAreHandledExplicitly()
     {
         var t = LabelTemplateCatalog.Defaults()[2]; t.Layout = LabelLayoutDefinition.FromTemplate(t);
@@ -191,10 +204,11 @@ public class LabelLayoutTests : IDisposable
             var theme = Avalonia.Application.Current!.RequestedThemeVariant;
             Avalonia.Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
             var source = LabelTemplateCatalog.Defaults()[0]; var original = JsonSerializer.Serialize(source);
-            var window = new LabelLayoutEditorWindow(source);
+            var vm = new LabelLayoutEditorViewModel(source);
+            var window = new Window { Content = new LabelTemplateEditorView(vm), Width = 1280, Height = 880 };
             try
             {
-                window.Show(); Layout(window); var vm = window.Editor;
+                window.Show(); Layout(window);
                 var canvas = window.GetVisualDescendants().OfType<LabelLayoutCanvas>().Single();
                 vm.Selected = vm.Elements.Single(e => e.Kind == "Barcode");
                 var previous = vm.Selected.X; canvas.Focus(); window.KeyPress(Key.Right, RawInputModifiers.None); window.KeyRelease(Key.Right, RawInputModifiers.None); Layout(window);
@@ -212,9 +226,9 @@ public class LabelLayoutTests : IDisposable
                 vm.ScannedCode = vm.Template.Barcode(42); Assert.Contains("совпадает", vm.Diagnostics);
                 var applied = vm.Apply(); Assert.NotNull(applied.Layout);
                 Assert.Throws<InvalidOperationException>(() => vm.Module = 2.5m);
-                var picker = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "LabelFieldPicker");
+                var picker = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "LabelContentSource");
                 var field = picker.Items[0]; picker.SelectedItem = field; Layout(window);
-                Assert.Equal("{{Name}}", vm.Value); Assert.Null(picker.SelectedItem);
+                Assert.Equal("{{Name}}", vm.Value); Assert.Equal(field, picker.SelectedItem);
                 vm.Value = "Другой текст"; picker.SelectedItem = field; Layout(window);
                 Assert.Equal("{{Name}}", vm.Value); vm.Value = "{{Barcode}}";
                 Assert.Equal(original, JsonSerializer.Serialize(source));

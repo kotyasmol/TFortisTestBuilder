@@ -15,8 +15,10 @@ using TestBuilder.Views;
 namespace TestBuilder.Tests.Views;
 
 [Collection("Graph editor UI")]
-public class LabelPreviewTests
+public class LabelPreviewTests : IDisposable
 {
+    private readonly FreshUserJourneyTests.CleanWorkstation _workstation = new();
+    public void Dispose() => _workstation.Dispose();
     [Theory]
     [InlineData("00000000", "1C", 158)]
     [InlineData("3200428", "1B", 224)]
@@ -56,28 +58,29 @@ public class LabelPreviewTests
         var template = LabelTemplateCatalog.Defaults().Single(t => t.Id == "PswUpsBox8x2Pro");
         var preview = LabelPreview.FromInput(template, "3200428", "C0:11:A6:20:01:AC");
         var sn = preview.Elements.Single(e => e.Text.StartsWith("SN:"));
-        Assert.Equal(295, preview.Width);
-        Assert.Equal(154, preview.Height);
+        Assert.Equal(300, preview.Width);
+        Assert.Equal(158, preview.Height);
         Assert.Equal(494, preview.Left);
         var name = preview.Elements.Single(e => e.Text == template.Name);
-        Assert.Equal((494d, 35d, 36d), (name.X, name.Y, name.Height));
+        Assert.Equal((494d, 0d, 36d), (name.X, name.Y, name.Height));
         Assert.Equal(25, sn.Height);
         var mac = preview.Elements.Single(e => e.Text.StartsWith("MAC:"));
-        Assert.Equal((510d, 70d, 25d), (mac.X, mac.Y, mac.Height));
-        Assert.Equal((510d, 95d), (sn.X, sn.Y));
+        Assert.Equal((500d, 44d, 25d), (mac.X, mac.Y, mac.Height));
+        Assert.Equal((500d, 70d), (sn.X, sn.Y));
         var bars = preview.Elements.Single(e => e.Bars.Length > 0);
         Assert.Equal(Code128Encoding.EncodeAuto("03200428"), bars.Bars);
-        Assert.Equal(158, bars.Width);
-        Assert.InRange(bars.X - preview.Left - bars.QuietZone, 48, 49);
-        Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 48, 49);
+        Assert.Equal(237, bars.Width);
+        Assert.InRange(bars.X - preview.Left - bars.QuietZone, 1, 2);
+        Assert.InRange(preview.Left + preview.Width - bars.X - bars.Width - bars.QuietZone, 1, 2);
         Assert.True(bars.Y + bars.Height <= preview.Height);
         Assert.Null(preview.BarcodeError);
     }
 
     [Theory]
-    [InlineData("PSW-2G", 25)]
-    [InlineData("PSW-2G4F-Box", 22)]
-    [InlineData("PSW+UPS-Box 8x2Pro", 15)]
+    [InlineData("PSW-2G", 17)]
+    [InlineData("PSW-2G4F-Box", 17)]
+    [InlineData("PSW+UPS-Box 8x2Pro", 17)]
+    [InlineData("012345678901234567890123456789", 14)]
     public void ZplNameFitsWithoutChangingOtherFields(string name, int expectedWidth)
     {
         var template = LabelTemplateCatalog.Defaults()[0];
@@ -87,9 +90,9 @@ public class LabelPreviewTests
 
         var rendered = LabelPrintContent.Render(template, "3200428", 428, mac);
 
-        var title = $"^XA^MD10^FO494,35^A0,36,{expectedWidth}^FD{name}^FS";
+        var title = $"^XA^MD10^FO494,0^A0,36,{expectedWidth}^FD{name}^FS";
         Assert.Equal(title + original[(original.IndexOf("^FS", StringComparison.Ordinal) + 3)..], rendered);
-        Assert.True(name.Length * expectedWidth <= template.WidthDots - 20);
+        Assert.True(name.Length * expectedWidth * (template.NameCharacterWidthFactor ?? 1m) <= template.WidthDots - 20);
     }
 
     [Fact]
@@ -201,7 +204,7 @@ public class LabelPreviewTests
             vm.RefreshTemplates();
             Assert.Equal(1, vm.SelectedType); Assert.Equal(selectedId, vm.LabelOptions[1].Id);
             Assert.Contains(vm.Preview!.Elements, e => e.Text == "New 1234");
-            Assert.Contains(vm.LabelOptions[1].Preview.Elements, e => e.Text == "New 12345678");
+            Assert.Contains(vm.LabelOptions[1].Preview.Elements, e => e.EncodedData == "00000000");
         }
         finally { AppSettings.Instance.LabelTemplates = original; }
     }

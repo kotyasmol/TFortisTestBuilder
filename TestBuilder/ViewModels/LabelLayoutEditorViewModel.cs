@@ -10,6 +10,7 @@ using TestBuilder.Services;
 namespace TestBuilder.ViewModels;
 
 public sealed record LabelElementKind(string Key, string Title) { public override string ToString() => Title; }
+public sealed record LabelContentField(string Key, string Title) { public override string ToString() => Title; }
 
 public partial class LabelLayoutEditorViewModel : ObservableObject
 {
@@ -17,6 +18,34 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     public ObservableCollection<LabelLayoutElement> Elements { get; }
     public static LabelElementKind[] Kinds { get; } = { new("Text", "Текст"), new("Barcode", "Штрихкод Code 128"), new("Box", "Рамка / линия") };
     public static LabelElementKind[] Alignments { get; } = { new("L", "Слева"), new("C", "По центру"), new("R", "Справа") };
+    public static LabelContentField[] ContentFields { get; } = {
+        new("Name", "Название устройства"), new("Mac", "MAC"), new("SerialText", "SN по настройкам"),
+        new("Barcode", "Штрихкод по настройкам"), new("Cabinet", "Шкаф"), new("Variant", "Комплектация"),
+        new("Serial", "Полный серийный номер"), new("ShortSerial", "Короткий номер"), new("Custom", "Свой текст / формат") };
+    private bool _customContentRequested;
+    public bool IsCustomContent => HasValue && (_customContentRequested || ContentField?.Key == "Custom");
+    public LabelContentField? ContentField
+    {
+        get => _customContentRequested ? ContentFields.Last() : ContentFields.FirstOrDefault(f => f.Key != "Custom" && Value == FieldValue(f.Key)) ?? ContentFields.Last();
+        set
+        {
+            if (value == null || ContentField?.Key == value.Key) return;
+            _customContentRequested = value.Key == "Custom";
+            if (!_customContentRequested) Value = FieldValue(value.Key);
+            OnPropertyChanged(); OnPropertyChanged(nameof(IsCustomContent));
+        }
+    }
+    private string FieldValue(string field) => Selected?.Kind == "Barcode" ? "{{" + field + "}}" : field switch
+    { "Mac" => "MAC: {{Mac}}", "SerialText" => "SN: {{SerialText}}", _ => "{{" + field + "}}" };
+    public decimal? TopMargin
+    {
+        get => Elements.Count > 0 ? Mm(Elements.Min(e => e.Y)) : null;
+        set { if (Elements.Count > 0 && value.HasValue && TopMargin != value) { var delta = Dots(value) - Elements.Min(e => e.Y); foreach (var e in Elements) e.Y += delta; RefreshFields(); } }
+    }
+    private LabelLayoutElement? FirstBarcode => Elements.FirstOrDefault(e => e.Kind == "Barcode" && e.Visible);
+    public bool HasBarcode => FirstBarcode != null;
+    public decimal? BarcodeHeight { get => FirstBarcode is { } bar ? Mm(bar.Height) : null; set { if (FirstBarcode is { } bar && value.HasValue && BarcodeHeight != value) { bar.Height = Dots(value); RefreshFields(); } } }
+    public decimal? BarcodeModule { get => FirstBarcode?.Module; set { if (FirstBarcode is { } bar && value.HasValue && value == decimal.Truncate(value.Value) && BarcodeModule != value) { bar.Module = checked((int)value.Value); RefreshFields(); } } }
     public bool HasSelection => Selected != null;
     public bool HasTextOptions => Selected?.Kind == "Text";
     public bool HasBarcodeOptions => Selected?.Kind == "Barcode";
@@ -65,7 +94,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     public string Language { get => Template.Language; set { Template.Language = value; Refresh(); } }
     public decimal? Darkness { get => Template.Layout!.Darkness; set { Template.Layout!.Darkness = checked((int)(value ?? throw new InvalidOperationException("Введите яркость."))); Refresh(); } }
     public string ElementName { get => Selected?.Name ?? ""; set { if (Selected != null) Selected.Name = value; Refresh(); } }
-    public string Value { get => Selected?.Value ?? ""; set { if (Selected != null) Selected.Value = value; OnPropertyChanged(); Refresh(); } }
+    public string Value { get => Selected?.Value ?? ""; set { if (Selected != null) Selected.Value = value; OnPropertyChanged(); OnPropertyChanged(nameof(ContentField)); OnPropertyChanged(nameof(IsCustomContent)); Refresh(); } }
     public LabelElementKind? Kind { get => Kinds.FirstOrDefault(k => k.Key == Selected?.Kind); set { if (Selected != null && value != null) { Selected.Kind = value.Key; if (value.Key == "Box") Selected.Value = ""; } NotifyFields(); Refresh(); } }
     public bool Visible { get => Selected?.Visible == true; set { if (Selected != null) Selected.Visible = value; Refresh(); } }
     public bool FitText { get => Selected?.FitText == true; set { if (Selected != null) Selected.FitText = value; Refresh(); } }
@@ -92,14 +121,14 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
     public decimal? FontWidth { get => Read(e => e.FontWidth); set => Write(value, (e, n) => e.FontWidth = n); }
     public decimal? Module { get => Selected?.Module; set { if (value != decimal.Truncate(value ?? 0)) throw new InvalidOperationException("Модуль — целое число точек."); if (Selected != null) Selected.Module = checked((int)(value ?? throw new InvalidOperationException("Введите модуль."))); OnPropertyChanged(nameof(Width)); Refresh(); } }
     public decimal? Stroke { get => Selected?.Stroke; set { if (Selected != null) Selected.Stroke = checked((int)(value ?? throw new InvalidOperationException("Введите толщину."))); Refresh(); } }
-    partial void OnSelectedChanged(LabelLayoutElement? value) { NotifyFields(); Changed?.Invoke(); }
+    partial void OnSelectedChanged(LabelLayoutElement? value) { _customContentRequested = false; NotifyFields(); OnPropertyChanged(nameof(IsCustomContent)); Changed?.Invoke(); }
     partial void OnSerialChanged(string value) => Refresh();
     partial void OnMacChanged(string value) => Refresh();
     partial void OnCabinetChanged(string value) => Refresh();
     partial void OnScannedCodeChanged(string value) => Refresh();
     private void NotifyFields()
     {
-        foreach (var property in new[] { nameof(ElementName), nameof(Value), nameof(Kind), nameof(Visible), nameof(FitText), nameof(Alignment), nameof(SelectedAlignment), nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(FontWidth), nameof(Module), nameof(Stroke), nameof(PaperWidth), nameof(PaperHeight), nameof(Origin), nameof(Dpi), nameof(HasSelection), nameof(HasTextOptions), nameof(HasBarcodeOptions), nameof(HasBoxOptions), nameof(HasValue) }) OnPropertyChanged(property);
+        foreach (var property in new[] { nameof(ElementName), nameof(Value), nameof(ContentField), nameof(IsCustomContent), nameof(Kind), nameof(Visible), nameof(FitText), nameof(Alignment), nameof(SelectedAlignment), nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(FontWidth), nameof(Module), nameof(Stroke), nameof(PaperWidth), nameof(PaperHeight), nameof(Origin), nameof(Dpi), nameof(HasSelection), nameof(HasTextOptions), nameof(HasBarcodeOptions), nameof(HasBoxOptions), nameof(HasValue) }) OnPropertyChanged(property);
     }
     public void Add(string kind)
     {
@@ -180,6 +209,7 @@ public partial class LabelLayoutEditorViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or OverflowException) { diagnostics += ex.Message + "\n"; }
         Diagnostics = diagnostics + Preview.Message;
+        foreach (var property in new[] { nameof(TopMargin), nameof(BarcodeHeight), nameof(BarcodeModule), nameof(HasBarcode) }) OnPropertyChanged(property);
         OnPropertyChanged(nameof(Preview)); OnPropertyChanged(nameof(Diagnostics)); OnPropertyChanged(nameof(Command)); Changed?.Invoke();
     }
     public LabelTemplateDefinition Apply()

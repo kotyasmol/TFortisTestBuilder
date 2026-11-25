@@ -16,19 +16,23 @@ internal sealed class LabelDataSettingsView : UserControl
     private readonly ComboBox _barcodeSource = new() { Name = "BarcodeDataSource", ItemsSource = new[] { "Тип + короткий номер", "Служебный префикс + тип + короткий номер", "Только короткий номер", "Полный серийный номер", "Свой формат", "Последние цифры полного номера" }, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ComboBox _serialDigits = Digits("PrintedSerialDigits"), _barcodeDigits = Digits("BarcodeSerialDigits"), _typeDigits = Digits("BarcodeTypeDigits");
     private readonly TextBox _serialFormat = new() { Name = "PrintedSerialFormat" }, _barcodeFormat = new() { Name = "BarcodeDataFormat" }, _service = new() { Name = "BarcodeServicePrefix" };
+    private readonly Control _serialFormatField, _barcodeFormatField, _serviceField;
 
     public LabelDataSettingsView()
     {
         var root = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(0, 8, 0, 8) };
-        Add(root, "Что печатать в строке SN", _serialSource); Add(root, "Цифр SN в тексте", _serialDigits);
-        Add(root, "Формат надписи SN", _serialFormat);
+        root.Children.Add(new TextBlock { Text = "Надпись SN", FontWeight = FontWeight.SemiBold });
+        var serial = new LabelFieldGrid { Name = "SerialFormatFields", MaxColumns = 2, MinColumnWidth = 150 };
+        Add(serial, "Что печатать в строке SN", _serialSource); Add(serial, "Цифр SN в тексте", _serialDigits); root.Children.Add(serial);
+        _serialFormatField = LabelTemplateEditorView.Field("Формат надписи SN", _serialFormat); root.Children.Add(_serialFormatField);
+        root.Children.Add(new TextBlock { Text = "Штрихкод", FontWeight = FontWeight.SemiBold });
         Add(root, "Что кодировать в штрихкоде", _barcodeSource);
-        var digits = new Grid { ColumnDefinitions = new("*,12,*") };
-        var a = new StackPanel { Spacing = 4 }; Add(a, "Цифр типа устройства", _typeDigits); digits.Children.Add(a);
-        var b = new StackPanel { Spacing = 4 }; Add(b, "Цифр SN в штрихкоде", _barcodeDigits); Grid.SetColumn(b, 2); digits.Children.Add(b); root.Children.Add(digits);
-        Add(root, "Служебный префикс (если включён в формат)", _service);
-        Add(root, "Формат данных штрихкода", _barcodeFormat);
-        root.Children.Add(new TextBlock { Text = "{{Serial}} — полный номер, {{ShortSerial:5}} — номер после вычитания смещения с нулями до 5 цифр, {{SerialTail:5}} — последние 5 цифр полного номера, {{DeviceCode:3}} — тип, {{ServicePrefix}} — служебный префикс, {{VariantCode}} — код комплектации, {{Mac}} — MAC. Короткий SN требует включённого разбора и смещения. Разрядность дополняет нулями; обрезание выполняет только SerialTail.", TextWrapping = TextWrapping.Wrap, Classes = { "hint" } });
+        var digits = new LabelFieldGrid { Name = "BarcodeFormatFields", MaxColumns = 3, MinColumnWidth = 105 };
+        Add(digits, "Цифр типа устройства", _typeDigits); Add(digits, "Цифр SN в штрихкоде", _barcodeDigits);
+        _serviceField = LabelTemplateEditorView.Field("Служебный префикс (если включён в формат)", _service); digits.Children.Add(_serviceField); root.Children.Add(digits);
+        _barcodeFormatField = LabelTemplateEditorView.Field("Формат данных штрихкода", _barcodeFormat); root.Children.Add(_barcodeFormatField);
+        root.Children.Add(new Expander { Header = "Поля собственного формата", HorizontalAlignment = HorizontalAlignment.Stretch,
+            Content = new TextBlock { Text = "{{Serial}} — полный номер, {{ShortSerial:5}} — номер после вычитания смещения с нулями до 5 цифр, {{SerialTail:5}} — последние 5 цифр полного номера, {{DeviceCode:3}} — тип, {{ServicePrefix}} — служебный префикс, {{VariantCode}} — код комплектации, {{Mac}} — MAC. Разрядность дополняет нулями; обрезание выполняет только SerialTail.", TextWrapping = TextWrapping.Wrap, FontSize = 12 } });
         Content = root;
         DataContextChanged += (_, _) => Load();
         _serialSource.SelectionChanged += (_, _) => ApplyPreset(true); _serialDigits.SelectionChanged += (_, _) => ApplyPreset(true);
@@ -72,6 +76,9 @@ internal sealed class LabelDataSettingsView : UserControl
         _serialDigits.IsEnabled = _serialSource.SelectedIndex is 0 or 3;
         _typeDigits.IsEnabled = _barcodeSource.SelectedIndex is 0 or 1;
         _barcodeDigits.IsEnabled = _barcodeSource.SelectedIndex is 0 or 1 or 2 or 5;
+        _serialFormatField.IsVisible = _serialSource.SelectedIndex == 2;
+        _barcodeFormatField.IsVisible = _barcodeSource.SelectedIndex == 4;
+        _serviceField.IsVisible = _barcodeSource.SelectedIndex == 1 || (_barcodeFormat.Text?.Contains("{{ServicePrefix}}", StringComparison.Ordinal) ?? false);
     }
     private void LoadDigits(LabelTemplateDefinition t)
     {
@@ -138,6 +145,6 @@ internal sealed class LabelDataSettingsView : UserControl
     private static void Add(Panel panel, string label, Control control)
     {
         Avalonia.Automation.AutomationProperties.SetName(control, label);
-        panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }); panel.Children.Add(control);
+        panel.Children.Add(LabelTemplateEditorView.Field(label, control));
     }
 }
